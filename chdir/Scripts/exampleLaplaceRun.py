@@ -1,3 +1,6 @@
+import sys
+print(sys.path)
+sys.path.append('C:/Users/eugen/OneDrive/Documents/EAGER Project/Simulator/logistigate-analysis/chdir/Lib')
 import random
 import numpy as np
 import scipy.optimize as spo

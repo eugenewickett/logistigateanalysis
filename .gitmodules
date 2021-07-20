@@ -1,0 +1,3 @@
+[submodule "logistigate"]
+	path = logistigate
+	url = https://github.com/eugenewickett/logistigate
