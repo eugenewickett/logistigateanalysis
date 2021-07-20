@@ -1,14 +1,10 @@
-import sys
-print(sys.path)
-sys.path.append('C:/Users/eugen/OneDrive/Documents/EAGER Project/Simulator/logistigate-analysis/chdir/Lib')
 import random
 import numpy as np
 import scipy.optimize as spo
 import scipy.stats as spstat
 import scipy.special as sps
-import logistigate.utilities as util
-import logistigate.methods as methods
-
+import logistigate.logistigate.utilities as util # Pull from the submodule "develop" branch
+import logistigate.logistigate.methods as methods # Pull from the submodule "develop" branch
 
 def examiningLaplaceApprox():
     '''
@@ -18,13 +14,13 @@ def examiningLaplaceApprox():
     '''
 
     # First generate a random system using a fixed seed
-    newSysDict = generateRandDataDict(numImp=3, numOut=10, numSamples=50 * 20,
+    newSysDict = util.generateRandDataDict(numImp=3, numOut=10, numSamples=50 * 20,
                                            diagSens=0.9, diagSpec=0.99,
                                            dataType='Tracked', randSeed=5)
     _ = util.GetVectorForms(newSysDict)
     newSysDict.update({'prior': methods.prior_normal(var=5)}) # Set prior variance here
     # Form Laplace approximation estimates
-    outDict = FormEstimates(newSysDict, retOptStatus=True)
+    outDict = methods.FormEstimates(newSysDict, retOptStatus=True)
     print(np.diag(outDict['hess'])) # Negative diagonals present
     print(np.diag(outDict['hessinv']))
     soln = np.append(outDict['impEst'],outDict['outEst'])
@@ -71,119 +67,6 @@ def examiningLaplaceApprox():
     print(np.diag(soln_hess))
 
     return
-
-def generateRandDataDict(numImp=5, numOut=50, diagSens=0.90,
-                         diagSpec=0.99, numSamples=50 * 20,
-                         dataType='Tracked', transMatLambda=1.1,
-                         randSeed=-1,trueRates=[]):
-    """
-    Randomly generates an example input data dictionary for the entered inputs.
-    SFP rates are generated according to a beta(2,9) distribution, while
-    transition rates are distributed according to a scaled Pareto(1.1) distribution.
-
-    INPUTS
-    ------
-    Takes the following arguments:
-        numImp, numOut: integer
-            Number of importers and outlets
-        diagSens, diagSpec: float
-            Diagnostic sensitivity, specificity
-        numSamples: integer
-            Total number of data points to generate
-        dataType: string
-            'Tracked' or 'Untracked'
-
-    OUTPUTS
-    -------
-    Returns dataTblDict dictionary with the following keys:
-        dataTbl: list
-            If Tracked, each list entry should have three elements, as follows:
-                Element 1: string; Name of outlet/lower echelon entity
-                Element 2: string; Name of importer/upper echelon entity
-                Element 3: integer; 0 or 1, where 1 signifies aberration detection
-            If Untracked, each list entry should have two elements, as follows:
-                Element 1: string; Name of outlet/lower echelon entity
-                Element 2: integer; 0 or 1, where 1 signifies aberration detection
-        outletNames/importerNames: list of strings
-        transMat: Numpy matrix
-            Matrix of transition probabilities between importers and outlets
-        diagSens, diagSpec, type
-            From inputs, where 'type' = 'dataType'
-    """
-    dataTblDict = {}
-
-    impNames = ['Importer ' + str(i + 1) for i in range(numImp)]
-    outNames = ['Outlet ' + str(i + 1) for i in range(numOut)]
-
-    # Generate random true SFP rates
-    if trueRates == []:
-        trueRates = np.zeros(numImp + numOut)  # importers first, outlets second
-        if randSeed >= 0:
-            random.seed(randSeed)
-        trueRates[:numImp] = [random.betavariate(1, 9) for i in range(numImp)]
-        trueRates[numImp:] = [random.betavariate(1, 9) for i in range(numOut)]
-
-    # Generate random transition matrix
-    transMat = np.zeros(shape=(numOut, numImp))
-    if randSeed >= 0:
-        random.seed(randSeed + 1)
-    for outInd in range(numOut):
-        rowRands = [random.paretovariate(transMatLambda) for i in range(numImp)]
-        if numImp > 10:  # Only keep 10 randomly chosen importers, if numImp > 10
-            rowRands[10:] = [0.0 for i in range(numImp - 10)]
-            random.shuffle(rowRands)
-
-        normalizedRands = [rowRands[i] / sum(rowRands) for i in range(numImp)]
-        # only keep transition probabilities above 2%
-        # normalizedRands = [normalizedRands[i] if normalizedRands[i]>0.02 else 0.0 for i in range(numImp)]
-
-        # normalizedRands = [normalizedRands[i] / sum(normalizedRands) for i in range(numImp)]
-        transMat[outInd, :] = normalizedRands
-
-    # np.linalg.det(transMat.T @ transMat) / numOut
-    # 1.297 for n=50
-
-    # Generate testing data
-    testingDataList = []
-    if dataType == 'Tracked':
-        if randSeed >= 0:
-            random.seed(randSeed + 2)
-            np.random.seed(randSeed)
-        for currSamp in range(numSamples):
-            currOutlet = random.sample(outNames, 1)[0]
-            currImporter = random.choices(impNames, weights=transMat[outNames.index(currOutlet)], k=1)[0]
-            currOutRate = trueRates[numImp + outNames.index(currOutlet)]
-            currImpRate = trueRates[impNames.index(currImporter)]
-            realRate = currOutRate + currImpRate - currOutRate * currImpRate
-            realResult = np.random.binomial(1, p=realRate)
-            if realResult == 1:
-                result = np.random.binomial(1, p=diagSens)
-            if realResult == 0:
-                result = np.random.binomial(1, p=1 - diagSpec)
-            testingDataList.append([currOutlet, currImporter, result])
-    elif dataType == 'Untracked':
-        if randSeed >= 0:
-            random.seed(randSeed + 3)
-            np.random.seed(randSeed)
-        for currSamp in range(numSamples):
-            currOutlet = random.sample(outNames, 1)[0]
-            currImporter = random.choices(impNames, weights=transMat[outNames.index(currOutlet)], k=1)[0]
-            currOutRate = trueRates[numImp + outNames.index(currOutlet)]
-            currImpRate = trueRates[impNames.index(currImporter)]
-            realRate = currOutRate + currImpRate - currOutRate * currImpRate
-            realResult = np.random.binomial(1, p=realRate)
-            if realResult == 1:
-                result = np.random.binomial(1, p=diagSens)
-            if realResult == 0:
-                result = np.random.binomial(1, p=1 - diagSpec)
-            testingDataList.append([currOutlet, result])
-
-    dataTblDict.update({'outletNames': outNames, 'importerNames': impNames,
-                        'diagSens': 0.90, 'diagSpec': 0.99, 'type': dataType,
-                        'dataTbl': testingDataList, 'transMat': transMat,
-                        'trueRates': trueRates})
-
-    return dataTblDict
 
 
 def FormEstimates(dataTblDict, retOptStatus=False, printUpdate=True):
