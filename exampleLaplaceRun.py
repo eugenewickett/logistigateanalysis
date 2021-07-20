@@ -1,10 +1,23 @@
-import random
 import numpy as np
 import scipy.optimize as spo
 import scipy.stats as spstat
 import scipy.special as sps
 import logistigate.logistigate.utilities as util # Pull from the submodule "develop" branch
+
+# Workaround for the 'methods' file not being able to locate the 'mcmcsamplers' folder for importing
+import sys
+import os
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate','logistigate')))
+
 import logistigate.logistigate.methods as methods # Pull from the submodule "develop" branch
+
+def update(): # CURRENTLY NOT UPDATING AS EXPECTED
+    import git
+    repo = git.Repo('C:/Users/eugen/OneDrive/Documents/EAGER Project/Simulator/logistigate-analysis')
+    for submodule in repo.submodules:
+        submodule.update(init=True)
+    return
 
 def examiningLaplaceApprox():
     '''
