@@ -3,6 +3,8 @@ import sys
 import os
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate','logistigate')))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate','logistigate','mcmcsamplers')))
+
 
 import logistigate.logistigate.utilities as util # Pull from the submodule "develop" branch
 import logistigate.logistigate.methods as methods # Pull from the submodule "develop" branch
@@ -442,7 +444,7 @@ def MQDdataScript():
     util.printEstimates(logistigateDict2)
 
     # Run with Cambodia provinces
-    dataTblDict_CAM = util.testresultsfiletotable(dataDict['dataTbl_CAM'])
+    dataTblDict_CAM = util.testresultsfiletotable(dataDict['dataTbl_CAM'], csvName=False)
     countryMean = np.sum(dataTblDict_CAM['Y']) / np.sum(dataTblDict_CAM['N'])
     dataTblDict_CAM.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -468,10 +470,11 @@ def MQDdataScript():
     totalEntities = logistigateDict_CAM['importerNum'] + logistigateDict_CAM['outletNum']
     sampMedians = [np.median(logistigateDict_CAM['postSamples'][:,i]) for i in range(totalEntities)]
     highImporterInds = [i for i, x in enumerate(sampMedians[:logistigateDict_CAM['importerNum']]) if x > 0.4]
-    util.plotPostSamples(logistigateDict_CAM,importerIndsSubset=highImporterInds,subTitleStr=['\nCambodia - Subset','\nCambodia'])
-    util.printEstimates(logistigateDict_CAM,importerIndsSubset=highImporterInds)
+    util.plotPostSamples(logistigateDict_CAM, importerIndsSubset=highImporterInds,subTitleStr=['\nCambodia - Subset','\nCambodia'])
+    util.printEstimates(logistigateDict_CAM, importerIndsSubset=highImporterInds)
     # Run with Cambodia provinces filtered for outlet-type samples
-    dataTblDict_CAM_filt = util.testresultsfiletotable('MQDfiles/MQD_CAMBODIA_FACILITYFILTER.csv')
+    dataTblDict_CAM_filt = util.testresultsfiletotable(dataDict['dataTbl_CAM_filt'], csvName=False)
+    #dataTblDict_CAM_filt = util.testresultsfiletotable('MQDfiles/MQD_CAMBODIA_FACILITYFILTER.csv')
     countryMean = np.sum(dataTblDict_CAM_filt['Y']) / np.sum(dataTblDict_CAM_filt['N'])
     dataTblDict_CAM_filt.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -513,7 +516,7 @@ def MQDdataScript():
                          subTitleStr=['\nCambodia - 3rd Third (Antibiotics)', '\nCambodia (Antibiotics)'])
     util.printEstimates(logistigateDict_CAM_antibiotic)
     # Run with Cambodia provinces filtered for antimalarials
-    dataTblDict_CAM_antimalarial = util.testresultsfiletotable('MQDfiles/MQD_CAMBODIA_ANTIMALARIAL.csv')
+    dataTblDict_CAM_antimalarial = util.testresultsfiletotable(dataDict['dataTbl_CAM_antimalarial'], csvName=False)
     countryMean = np.sum(dataTblDict_CAM_antimalarial['Y']) / np.sum(dataTblDict_CAM_antimalarial['N'])
     dataTblDict_CAM_antimalarial.update({'diagSens': 1.0,
                                        'diagSpec': 1.0,
@@ -568,7 +571,7 @@ def MQDdataScript():
     plt.close()
 
     outletIndsSubset = range(numOut)
-    outNames = [logistigateDict_CAM_antimalarial['outletNames'][i][9:] for i in outletIndsSubset]
+    outNames = [logistigateDict_CAM_antimalarial['outletNames'][i] for i in outletIndsSubset]
     outLowers = [np.quantile(logistigateDict_CAM_antimalarial['postSamples'][:, numImp + l], lowerQuant) for l in outletIndsSubset]
     outUppers = [np.quantile(logistigateDict_CAM_antimalarial['postSamples'][:, numImp + l], upperQuant) for l in outletIndsSubset]
     midpoints = [outUppers[i] - (outUppers[i] - outLowers[i]) / 2 for i in range(len(outUppers))]
@@ -596,17 +599,10 @@ def MQDdataScript():
     plt.show()
     plt.close()
 
-
-
-
-
-
-
     util.Summarize(logistigateDict_CAM_antimalarial)
-    np.sum(logistigateDict_CAM_antimalarial['Y'][1])
 
     # Run with Ethiopia provinces
-    dataTblDict_ETH = util.testresultsfiletotable('../examples/data/MQD_ETHIOPIA.csv')
+    dataTblDict_ETH = util.testresultsfiletotable('MQDfiles/MQD_ETHIOPIA.csv')
     countryMean = np.sum(dataTblDict_ETH['Y']) / np.sum(dataTblDict_ETH['N'])
     dataTblDict_ETH.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -618,7 +614,8 @@ def MQDdataScript():
     util.printEstimates(logistigateDict_ETH)
 
     # Run with Ghana provinces
-    dataTblDict_GHA = util.testresultsfiletotable('../examples/data/MQD_GHANA.csv')
+    dataTblDict_GHA = util.testresultsfiletotable(dataDict['dataTbl_GHA'], csvName=False)
+    #dataTblDict_GHA = util.testresultsfiletotable('MQDfiles/MQD_GHANA.csv')
     countryMean = np.sum(dataTblDict_GHA['Y']) / np.sum(dataTblDict_GHA['N'])
     dataTblDict_GHA.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -639,7 +636,8 @@ def MQDdataScript():
                          subTitleStr=['\nGhana - Subset', '\nGhana - Subset'])
     util.printEstimates(logistigateDict_GHA, importerIndsSubset=highImporterInds,outletIndsSubset=highOutletInds)
     # Run with Ghana provinces filtered for outlet-type samples
-    dataTblDict_GHA_filt = util.testresultsfiletotable('../examples/data/MQD_GHANA_FACILITYFILTER.csv')
+    dataTblDict_GHA_filt = util.testresultsfiletotable(dataDict['dataTbl_GHA_filt'], csvName=False)
+    #dataTblDict_GHA_filt = util.testresultsfiletotable('MQDfiles/MQD_GHANA_FACILITYFILTER.csv')
     countryMean = np.sum(dataTblDict_GHA_filt['Y']) / np.sum(dataTblDict_GHA_filt['N'])
     dataTblDict_GHA_filt.update({'diagSens': 1.0,
                                  'diagSpec': 1.0,
@@ -651,7 +649,8 @@ def MQDdataScript():
                          subTitleStr=['\nGhana (filtered)', '\nGhana (filtered)'])
     util.printEstimates(logistigateDict_GHA_filt)
     # Run with Ghana provinces filtered for antimalarials
-    dataTblDict_GHA_antimalarial = util.testresultsfiletotable('MQDfiles/MQD_GHANA_ANTIMALARIAL.csv')
+    dataTblDict_GHA_antimalarial = util.testresultsfiletotable(dataDict['dataTbl_GHA_antimalarial'], csvName=False)
+    #dataTblDict_GHA_antimalarial = util.testresultsfiletotable('MQDfiles/MQD_GHANA_ANTIMALARIAL.csv')
     countryMean = np.sum(dataTblDict_GHA_antimalarial['Y']) / np.sum(dataTblDict_GHA_antimalarial['N'])
     dataTblDict_GHA_antimalarial.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -703,6 +702,7 @@ def MQDdataScript():
 
     outletIndsSubset = range(numOut)
     outNames = [logistigateDict_GHA_antimalarial['outletNames'][i][6:] for i in outletIndsSubset]
+    outNames[7] = 'Western'
     outLowers = [np.quantile(logistigateDict_GHA_antimalarial['postSamples'][:, numImp + l], lowerQuant) for l in
                  outletIndsSubset]
     outUppers = [np.quantile(logistigateDict_GHA_antimalarial['postSamples'][:, numImp + l], upperQuant) for l in
@@ -734,11 +734,8 @@ def MQDdataScript():
 
     util.Summarize(logistigateDict_GHA_antimalarial)
 
-
-
-
     # Run with Kenya provinces
-    dataTblDict_KEN = util.testresultsfiletotable('../examples/data/MQD_KENYA.csv')
+    dataTblDict_KEN = util.testresultsfiletotable('MQDfiles/MQD_KENYA.csv')
     countryMean = np.sum(dataTblDict_KEN['Y']) / np.sum(dataTblDict_KEN['N'])
     dataTblDict_KEN.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -751,7 +748,7 @@ def MQDdataScript():
 
 
     # Run with Laos provinces
-    dataTblDict_LAO = util.testresultsfiletotable('../examples/data/MQD_LAOS.csv')
+    dataTblDict_LAO = util.testresultsfiletotable('MQDfiles/MQD_LAOS.csv')
     countryMean = np.sum(dataTblDict_LAO['Y']) / np.sum(dataTblDict_LAO['N'])
     dataTblDict_LAO.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -764,7 +761,7 @@ def MQDdataScript():
 
 
     # Run with Mozambique provinces
-    dataTblDict_MOZ = util.testresultsfiletotable('../examples/data/MQD_MOZAMBIQUE.csv')
+    dataTblDict_MOZ = util.testresultsfiletotable('MQDfiles/MQD_MOZAMBIQUE.csv')
     countryMean = np.sum(dataTblDict_MOZ['Y']) / np.sum(dataTblDict_MOZ['N'])
     dataTblDict_MOZ.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -776,7 +773,7 @@ def MQDdataScript():
     util.printEstimates(logistigateDict_MOZ)
 
     # Run with Nigeria provinces
-    dataTblDict_NIG = util.testresultsfiletotable('../examples/data/MQD_NIGERIA.csv')
+    dataTblDict_NIG = util.testresultsfiletotable('MQDfiles/MQD_NIGERIA.csv')
     countryMean = np.sum(dataTblDict_NIG['Y']) / np.sum(dataTblDict_NIG['N'])
     dataTblDict_NIG.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -788,7 +785,7 @@ def MQDdataScript():
     util.printEstimates(logistigateDict_NIG)
 
     # Run with Peru provinces
-    dataTblDict_PER = util.testresultsfiletotable('../examples/data/MQD_PERU.csv')
+    dataTblDict_PER = util.testresultsfiletotable('MQDfiles/MQD_PERU.csv')
     countryMean = np.sum(dataTblDict_PER['Y']) / np.sum(dataTblDict_PER['N'])
     dataTblDict_PER.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -814,7 +811,7 @@ def MQDdataScript():
                          subTitleStr=['\nPeru - Subset', '\nPeru - Subset'])
     util.printEstimates(logistigateDict_PER, importerIndsSubset=highImporterInds, outletIndsSubset=highOutletInds)
     # Run with Peru provinces filtered for outlet-type samples
-    dataTblDict_PER_filt = util.testresultsfiletotable('../examples/data/MQD_PERU_FACILITYFILTER.csv')
+    dataTblDict_PER_filt = util.testresultsfiletotable('MQDfiles/MQD_PERU_FACILITYFILTER.csv')
     countryMean = np.sum(dataTblDict_PER_filt['Y']) / np.sum(dataTblDict_PER_filt['N'])
     dataTblDict_PER_filt.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -831,7 +828,7 @@ def MQDdataScript():
                          subTitleStr=['\nPeru - 2nd Half (filtered)', '\nPeru (filtered)'])
     util.printEstimates(logistigateDict_PER_filt)
     # Run with Peru provinces filtered for antibiotics
-    dataTblDict_PER_antibiotics = util.testresultsfiletotable('../examples/data/MQD_PERU_ANTIBIOTIC.csv')
+    dataTblDict_PER_antibiotics = util.testresultsfiletotable('MQDfiles/MQD_PERU_ANTIBIOTIC.csv')
     countryMean = np.sum(dataTblDict_PER_antibiotics['Y']) / np.sum(dataTblDict_PER_antibiotics['N'])
     dataTblDict_PER_antibiotics.update({'diagSens': 1.0,
                                  'diagSpec': 1.0,
@@ -849,7 +846,8 @@ def MQDdataScript():
     util.printEstimates(logistigateDict_PER_antibiotics)
 
     # Run with Philippines provinces
-    dataTblDict_PHI = util.testresultsfiletotable('MQDfiles/MQD_PHILIPPINES.csv')
+    dataTblDict_PHI = util.testresultsfiletotable(dataDict['dataTbl_PHI'], csvName=False)
+    #dataTblDict_PHI = util.testresultsfiletotable('MQDfiles/MQD_PHILIPPINES.csv')
     countryMean = np.sum(dataTblDict_PHI['Y']) / np.sum(dataTblDict_PHI['N'])
     dataTblDict_PHI.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -909,7 +907,7 @@ def MQDdataScript():
     plt.close()
 
     outletIndsSubset = range(numOut)
-    outNames = [logistigateDict_PHI['outletNames'][i][6:] for i in outletIndsSubset]
+    outNames = [logistigateDict_PHI['outletNames'][i] for i in outletIndsSubset]
     outLowers = [np.quantile(logistigateDict_PHI['postSamples'][:, numImp + l], lowerQuant) for l in
                  outletIndsSubset]
     outUppers = [np.quantile(logistigateDict_PHI['postSamples'][:, numImp + l], upperQuant) for l in
@@ -939,20 +937,11 @@ def MQDdataScript():
     plt.show()
     plt.close()
 
-
     util.Summarize(logistigateDict_PHI)
-
-
-
-
-
-
     util.printEstimates(logistigateDict_PHI, importerIndsSubset=highImporterInds, outletIndsSubset=highOutletInds)
 
-
-
     # Run with Philippines provinces filtered for outlet-type samples
-    dataTblDict_PHI_filt = util.testresultsfiletotable('../examples/data/MQD_PHILIPPINES_FACILITYFILTER.csv')
+    dataTblDict_PHI_filt = util.testresultsfiletotable('MQDfiles/MQD_PHILIPPINES_FACILITYFILTER.csv')
     countryMean = np.sum(dataTblDict_PHI_filt['Y']) / np.sum(dataTblDict_PHI_filt['N'])
     dataTblDict_PHI_filt.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -964,7 +953,7 @@ def MQDdataScript():
     util.printEstimates(logistigateDict_PHI_filt)
 
     # Run with Thailand provinces
-    dataTblDict_THA = util.testresultsfiletotable('../examples/data/MQD_THAILAND.csv')
+    dataTblDict_THA = util.testresultsfiletotable('MQDfiles/MQD_THAILAND.csv')
     countryMean = np.sum(dataTblDict_THA['Y']) / np.sum(dataTblDict_THA['N'])
     dataTblDict_THA.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
@@ -976,7 +965,7 @@ def MQDdataScript():
     util.printEstimates(logistigateDict_THA)
 
     # Run with Viet Nam provinces
-    dataTblDict_VIE = util.testresultsfiletotable('../examples/data/MQD_VIETNAM.csv')
+    dataTblDict_VIE = util.testresultsfiletotable('MQDfiles/MQD_VIETNAM.csv')
     countryMean = np.sum(dataTblDict_VIE['Y']) / np.sum(dataTblDict_VIE['N'])
     dataTblDict_VIE.update({'diagSens': 1.0,
                             'diagSpec': 1.0,
