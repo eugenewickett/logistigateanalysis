@@ -8,15 +8,8 @@ import os
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate','logistigate')))
 
-import logistigate.logistigate.utilities as util # Pull from the submodule "develop" branch
-import logistigate.logistigate.methods as methods # Pull from the submodule "develop" branch
-
-def update(): # CURRENTLY NOT UPDATING
-    import git
-    repo = git.Repo('C:/Users/eugen/OneDrive/Documents/EAGER Project/Simulator/logistigate-analysis')
-    for submodule in repo.submodules:
-        submodule.update(init=True)
-    return
+import utilities as util # Pull from the submodule "develop" branch
+import methods as methods # Pull from the submodule "develop" branch
 
 def examiningLaplaceApprox():
     '''
@@ -30,7 +23,11 @@ def examiningLaplaceApprox():
                                            diagSens=0.9, diagSpec=0.99,
                                            dataType='Tracked', randSeed=5)
     _ = util.GetVectorForms(newSysDict)
-    newSysDict.update({'prior': methods.prior_normal(var=5)}) # Set prior variance here
+    newSysDict.update({'prior': methods.prior_normal(var=3)}) # Set prior variance here
+    #import inspect
+    #lines = inspect.getsource(methods.prior_normal)
+    #print(lines)
+
     # Form Laplace approximation estimates
     outDict = methods.FormEstimates(newSysDict, retOptStatus=True)
     print(np.diag(outDict['hess'])) # Negative diagonals present
@@ -41,11 +38,35 @@ def examiningLaplaceApprox():
     soln_jac = methods.Tracked_LogPost_Grad(soln_trans,newSysDict['N'], newSysDict['Y'],
                                             newSysDict['diagSens'], newSysDict['diagSpec'],
                                             prior=newSysDict['prior'])
-    soln_hess = methods.Tracked_NegLogPost_Hess(soln_trans, newSysDict['N'], newSysDict['Y'],
+    soln_hess = methods.Tracked_LogPost_Hess(soln_trans, newSysDict['N'], newSysDict['Y'],
                                             newSysDict['diagSens'], newSysDict['diagSpec'],
                                             prior=newSysDict['prior'])
     print(soln_jac) # Gradient seems within tolerance of 0
     print(np.diag(soln_hess))
+
+    # Check 2nd-order derivatives at this point
+    (nOut, nImp) = newSysDict['N'].shape
+    # Use a non-default prior
+    # prior = methods.prior_normal(mu=1, var=2)
+    # Grab the likelihood and gradient at beta0
+    dL0 = methods.Tracked_LogPost_Grad(soln_trans, newSysDict['N'], newSysDict['Y'],
+                                            newSysDict['diagSens'], newSysDict['diagSpec'],
+                                            prior=newSysDict['prior'])
+    ddL0 = methods.Tracked_LogPost_Hess(soln_trans, newSysDict['N'], newSysDict['Y'],
+                                            newSysDict['diagSens'], newSysDict['diagSpec'],
+                                            prior=newSysDict['prior'])
+    print(np.diag(ddL0))
+    # Move in every direction and flag if the difference from the gradient is more than epsilon
+    for k in range(nImp + nOut):
+        beta1 = 1 * soln_trans[:]
+        beta1[k] = beta1[k] + 10 ** (-5)
+        dL1 = methods.Tracked_LogPost_Grad(beta1, newSysDict['N'], newSysDict['Y'],
+                                            newSysDict['diagSens'], newSysDict['diagSpec'],
+                                            prior=newSysDict['prior'])
+        print((dL1 - dL0) * (10 ** (5)))
+        print(ddL0[k])
+        #print((dL1 - dL0) * (10 ** (5)) - ddL0[k])
+        print(np.linalg.norm((dL1 - dL0) * (10 ** (5)) - ddL0[k]))
 
     # Do it line by line here (from methods.FormEstimates)
     N, Y = newSysDict['N'], newSysDict['Y']
@@ -78,6 +99,22 @@ def examiningLaplaceApprox():
     print(np.diag(hess))
     print(np.diag(soln_hess))
 
+    # Check 2nd-order derivatives at this point
+    (nOut, nImp) = N.shape
+    # Use a non-default prior
+    #prior = methods.prior_normal(mu=1, var=2)
+    # Grab the likelihood and gradient at beta0
+    dL0 = methods.Tracked_LogPost_Grad(best_x, N, Y, Sens, Spec, prior)
+    ddL0 = methods.Tracked_LogPost_Hess(best_x, N, Y, Sens, Spec, prior)
+    print(np.diag(ddL0))
+    # Move in every direction and flag if the difference from the gradient is more than epsilon
+    for k in range(nImp + nOut):
+        beta1 = 1 * best_x[:]
+        beta1[k] = beta1[k] + 10 ** (-5)
+        dL1 = methods.Tracked_LogPost_Grad(beta1, N, Y, Sens, Spec, prior)
+        print((dL1 - dL0) * (10 ** (5)) - ddL0[k])
+        print(np.linalg.norm((dL1 - dL0) * (10 ** (5)) - ddL0[k]))
+
     return
 
 def laplaceTests():
@@ -96,8 +133,8 @@ def laplaceTests():
     # Ran for 100 systems of size 10/100; no instance of a non-successful optimizer exit
 
     # Check the generated Hessian diagonals WRT the prior variance; try for 3 different system sizes
-    priorVarList = [1,3,5,7,9]
-    numSystems = 500
+    priorVarList = [1,5,9]
+    numSystems = 100
 
     resultsMat_5_20 = np.zeros((len(priorVarList), numSystems)) # for proportion of Hessian diagonals that are negative
     avgdevsMat_5_20 = np.zeros((len(priorVarList), numSystems)) # for SIZE of negative diagonals
