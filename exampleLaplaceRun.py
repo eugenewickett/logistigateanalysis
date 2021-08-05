@@ -669,6 +669,31 @@ def TESTTOBEREMOVEDLATER():
 
     return
 
+def testing():
+    # For testing the Laplace and MCMC methods under non-diffuse sourcing matrices
+    testing = util.generateRandDataDict(numImp=5, numOut=3, diagSens=0.90,
+                         diagSpec=0.99, numSamples=5 * 50,
+                         dataType='Tracked', transMatLambda=0.05,
+                         randSeed=3,trueRates=[])
+    _ = util.GetVectorForms(testing)
+    print(testing['transMat'])
+    import numpy as np
+    print(testing['N'])
+    print(testing['Y'])
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    testing.update({'diagSens': 0.90,
+                        'diagSpec': 0.99,
+                        'numPostSamples': 500,
+                        'prior': methods.prior_normal(),
+                        'MCMCdict': MCMCdict})
+    logistigateDict = runlogistigate(testing)
+    util.plotPostSamples(logistigateDict)
+
+    return
+
+
+
+
 
 if __name__ == '__main__':
     examiningLaplaceApprox()
