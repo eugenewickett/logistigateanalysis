@@ -42,7 +42,6 @@ runfile('C:/Users/chris/Dropbox/SFP_Research/DiagnosticTool/DiagnosticTool.py',
 DiagnosticTool(['PAD', 'aPAD', 'Mobile Lab', 'HPLC'], .3, [3, 5, 60, 606], [.90, .94, .97, 1], [.9, .85, .97, 1], 10000, 10, 4)
 '''
 
-
 def DiagnosticTool(names, threshold, unit_cost, sensitivity, specificity, budget,
                    num_out, num_imp, setting_iterations=5, track_type='Tracked', SFP_rate_type='random'):  # todo: trans_mat_store = []):
 
