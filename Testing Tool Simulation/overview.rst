@@ -17,7 +17,7 @@ calculated using the inferences.
 The efficacy of different testing tools is measured through four metrics, detailed as follows:
 
 * Interval scoring: What proportion of true node SFP rates fall within the credible intervals formed under different testing tools?
-* Gneiting scoring: What are the interval scores, penalized for distance if the true rate is missed, for the credible intervals formed under different testing tools?
+* Gneiting loss: What are the interval scores, penalized for distance if the true rate is missed, for the credible intervals formed under different testing tools?
 * Suspect accuracy: What are the Type I and Type II error rates for each testing tool with respect to suspecting nodes with SFP rates above the suspect threshold, t?
 * Exoneration accuracy: What are the Type I and Type II error rates for each testing tool with respect to exonerating nodes with SFP rates below the exoneration threshold, u?
 

@@ -26,10 +26,12 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import warnings
+import pickle
 
 # Generate lists for each parameter used in the simulator
+lst_dataType = ['Tracked'] # 'Tracked' or 'Untracked'
 lst_numTN = [50] # Number of test nodes
-lst_rho = [0.5,1.0,2.0] # Ratio of supply nodes to test nodes; num. SNs = rho*num. of TNs
+lst_rho = [0.5] # Ratio of supply nodes to test nodes; num. SNs = rho*num. of TNs; [0.5,1.0,2.0]
 lst_credInt_alpha = [0.9] # Alpha level for credible intervals
 lst_u = [0.05] # Exoneration threshold
 lst_t = [0.3] # Suspect threshold
@@ -37,38 +39,42 @@ lst_t = [0.3] # Suspect threshold
 SFPDist_1: SFP rates of [0.01, 0.1, 0.25, 0.5, 0.75] w probabilities [0.5, 0.2, 0.15, 0.1, 0.05]
 SFPBeta_1-5: SFP rates generated from beta(1,5)
 '''
-lst_trueSFPratesSet = ['SFPDist_1', 'SFPBeta_1-5']
-lst_lamb = [0.8, 1.0, 1.2] # Pareto scale parameter characterizing the sourcing probability matrix
-lst_zeta = [2, 3, 4, 5] # Number of non-zero entries of the sourcing probability matrix, in multiples of numTN
+lst_trueSFPratesSet = ['SFPDist_1'] # ['SFPBeta_1-5'}
+lst_lamb = [1.0] # Pareto scale parameter characterizing the sourcing probability matrix; [0.8, 1.0, 1.2]
+lst_zeta = [5] # Number of non-zero entries of the sourcing probability matrix, in multiples of numTN; [2, 3, 4, 5]
 lst_priorMean = [-5] # Prior mean
 lst_priorVar = [5] # Prior variance
-lst_numSamples = [50*100] # How many samples to test per iteration
+lst_numSamples = [3000] # How many samples to test per iteration
 
-m = 500 # How frequently to recalculate the MCMC samples
-N = 1000 # Number of systems to generate
+m = 500 # How frequently (in samples) to recalculate the MCMC samples
+N = 50 # Number of systems to generate
 
 # Generate list of testing tools, which are lists of [name, sensitivity, specificity]
-lst_TT = [['HiDiag',1.0,1.0], ['MdDiag',0.8,0.95], ['LoDiag',0.6,0.9]]
+lst_TT = [['HiDiag',1.0,1.0],  ['LoDiag',0.6,0.9]] # ['MdDiag',0.8,0.95],
 
+currSysTime = time.time() # For tracking how long it takes to run a batch of simulations
 # Generate dictionary of scenarios to run
 scenList = {}
 scenNum = 0
-for numTN in lst_numTN:
-    for rho in lst_rho:
-        for alpha in lst_credInt_alpha:
-            for u in lst_u:
-                for t in lst_t:
-                    for trueSFPratesSet in lst_trueSFPratesSet:
-                        for lamb in lst_lamb:
-                            for zeta in lst_zeta:
-                                for priorMean in lst_priorMean:
-                                    for priorVar in lst_priorVar:
-                                        for numSamples in lst_numSamples:
-                                            scenList[scenNum] = {'numTN':numTN, 'rho':rho, 'alpha':alpha, 'u':u, 't':t,
-                                                 'trueSFPratesSet':trueSFPratesSet, 'lamb':lamb, 'zeta':zeta,
-                                                 'priorMean':priorMean, 'priorVar':priorVar, 'numSamples':numSamples}
-                                            scenNum += 1
-                                            #scenList.append([numTN,rho,alpha,u,t,trueSFPratesSet,lamb,zeta,priorMean,priorVar,numSamples])
+for dataType in lst_dataType:
+    for numTN in lst_numTN:
+        for rho in lst_rho:
+            for alpha in lst_credInt_alpha:
+                for u in lst_u:
+                    for t in lst_t:
+                        for trueSFPratesSet in lst_trueSFPratesSet:
+                            for lamb in lst_lamb:
+                                for zeta in lst_zeta:
+                                    for priorMean in lst_priorMean:
+                                        for priorVar in lst_priorVar:
+                                            for numSamples in lst_numSamples:
+                                                scenList[scenNum] = {'dataType':dataType,'numTN':numTN, 'rho':rho,
+                                                                     'alpha':alpha, 'u':u, 't':t,
+                                                                     'trueSFPratesSet':trueSFPratesSet, 'lamb':lamb,
+                                                                     'zeta':zeta, 'priorMean':priorMean,
+                                                                     'priorVar':priorVar, 'numSamples':numSamples}
+                                                scenNum += 1
+                                                #scenList.append([numTN,rho,alpha,u,t,trueSFPratesSet,lamb,zeta,priorMean,priorVar,numSamples])
 
 #####################################
 
@@ -76,14 +82,25 @@ for numTN in lst_numTN:
 # Run iterations for each testing tool and collect data, per the entered scenarios
 # Store each iteration output row in a list (output functions should be able to process data in this way), one row for each metric
 outputDict = {}
-for scen in scenList: # scenario loop
-    for iter in range(N): # system iteration loop
-        # REPLACE WITH SINGLE FUNCTION CALL LATER, WITH THE FOLLOWING INPUTS:
-        #   scen
+outputRow = 0 # For iterating the outputDict rows
+# Set random seeds
+'''
+randSeed = 3
+if randSeed >= 0:
+    random.seed(randSeed + 2)
+    np.random.seed(randSeed)
+'''
+# Set MCMC dict specs
+MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 2000, 'delta': 0.4}
 
+for scenInd in scenList: # scenario loop
+    scen = scenList[scenInd]
+    for simIter in range(N): # system iteration loop
+        # todo: REPLACE WITH SINGLE FUNCTION CALL LATER, WITH THE FOLLOWING INPUTS: scen, m
         # Generate a new system
         curr_numTN = scen['numTN'] # number of test nodes
         curr_numSN = int(scen['rho']*curr_numTN) # number of supply nodes
+
         # Generate true SFP rates
         if scen['trueSFPratesSet'] == 'SFPDist_1':
             # [0.01, 0.1, 0.25, 0.5, 0.75] w probabilities [0.5, 0.2, 0.15, 0.1, 0.05]
@@ -98,7 +115,13 @@ for scen in scenList: # scenario loop
         else:
             print('Enter a valid argument for the true SFP rates.')
             break
+        # How many suspects and exonerated do we have?
+        suspNum_TN = len([i for i in curr_trueRates_TN if i>=scen['t']])
+        suspNum_SN = len([i for i in curr_trueRates_SN if i >= scen['t']])
+        exonNum_TN = len([i for i in curr_trueRates_TN if i <= scen['u']])
+        exonNum_SN = len([i for i in curr_trueRates_SN if i <= scen['u']])
         # Generate a sourcing matrix, Q
+        # todo: Make function in logistigate utilities for generating a random Q using size, number of pos. entries, and distribution
         Q = np.zeros(shape=(curr_numTN, curr_numSN))
         # First decide the positive entries of Q; need at least positive entry for each row so pick those first
         for TNind in range(curr_numTN):
@@ -133,34 +156,165 @@ for scen in scenList: # scenario loop
                 Q[randRowInd, SNind] = 1.
         # We now have a Q with a 1.0 in every row and column, with zeta*curr_numTN total positive entries
         # Now make each row of Q Pareto-distributed, characterized by the lamb parameter
-        
-        print(Q)
+        for TNind in range(curr_numTN):
+            paretoRow = np.array([random.paretovariate(scen['lamb']) for i in range(curr_numSN)])
+            newRow = [paretoRow[i]*Q[TNind][i] for i in range(curr_numSN)]
+            rowSum = np.sum(newRow)
+            newRow = [newRow[i]/rowSum for i in range(curr_numSN)] # Normalize
+            Q[TNind] = newRow
+        # Now generate data for each testing tool
+        TTdataArr = [[] for TT in lst_TT] # Initialize data list for each testing tool
+        metricsArr = [[[[],[]], [[],[]], [[],[]], [[],[]], [[],[]], [[],[]]] for TT in lst_TT] # Initialize metrics list
+            # For each testing tool, we have TN and SN lists for metrics of basic interval scoring, Gneiting loss,
+            #       suspect Type I error, suspect Type II error, exoneration Type I error, exoneration Type II error
+        for currSamp in range(scen['numSamples']):
+            currTN = random.choice(range(curr_numTN))
+            currSN = random.choices(range(curr_numSN), weights=Q[currTN], k=1)[0]
+            consolRate = curr_trueRates_TN[currTN] + (1 - curr_trueRates_TN[currTN]) * curr_trueRates_SN[currSN]
+            realResult = np.random.binomial(1, p=consolRate)
+            if realResult == 1:
+                for TTind, currTT in enumerate(lst_TT): # What happens when we use different testing tools
+                    testResult = np.random.binomial(1,p=currTT[1])
+                    if scen['dataType'] == 'Tracked':
+                        TTdataArr[TTind].append([currTN, currSN, testResult])
+                    elif scen['dataType'] == 'Untracked':
+                        TTdataArr[TTind].append([currTN, testResult])
+                    else:
+                        print('dataType misspecified, try again.')
+                        break
+            if realResult == 0:
+                for TTind, currTT in enumerate(lst_TT):  # What happens when we use different testing tools
+                    testResult = np.random.binomial(1, p=1.-currTT[2])
+                    if scen['dataType'] == 'Tracked':
+                        TTdataArr[TTind].append([currTN, currSN, testResult])
+                    elif scen['dataType'] == 'Untracked':
+                        TTdataArr[TTind].append([currTN, testResult])
+                    else:
+                        print('dataType misspecified, try again.')
+                        break
+            # If we have reached a recalculation point, we do that here
+            if np.mod(currSamp+1,m)==0 and currSamp>0:
+                print('sample number ' + str(currSamp) + ' for iteration ' + str(simIter))
+                TNnames = np.arange(curr_numTN).tolist()
+                SNnames = np.arange(curr_numSN).tolist()
+                # Do for each testing tool
+                for TTind, currTT in enumerate(lst_TT):
+                    currDataDict = {'type':scen['dataType'], 'dataTbl':TTdataArr[TTind],
+                                    'outletNames':TNnames, 'importerNames':SNnames}
+                    currDataDict = util.GetVectorForms(currDataDict)
+                    currDataDict.update({'diagSens':currTT[1]-1e-3, 'diagSpec':currTT[2]-1e-3,
+                                         'MCMCdict':MCMCdict,
+                                         'prior':methods.prior_normal(scen['priorMean'],scen['priorVar']),
+                                         'numPostSamples':500})
+                    # Generate MCMC samples
+                    currDataDict = methods.GeneratePostSamples(currDataDict)
+                    print(currDataDict['postSamplesGenTime'])
+                    # Evaluate MCMC samples vs. true SFP rates
+                    curr_trueRates_TN, curr_trueRates_SN
+                    MCMCsamples = currDataDict['postSamples']
 
-        '''
-        for outInd in range(numOut):
-            rowRands = [random.paretovariate(transMatLambda) for i in range(numImp)]
-            if numImp > 10:  # Only keep 10 randomly chosen importers, if numImp > 10
-                rowRands[10:] = [0.0 for i in range(numImp - 10)]
-                random.shuffle(rowRands)
+                    basicInt_TN, basicInt_SN = 0, 0 # Basic interval scoring
+                    gnLoss_TN, gnLoss_SN = 0, 0  # Gneiting loss
+                    suspErr1_TN, suspErr1_SN = 0, 0 # Suspect Type I error
+                    suspErr2_TN, suspErr2_SN  = 0, 0 # Suspect Type II error
+                    exonErr1_TN, exonErr1_SN = 0, 0 # Exonerate Type I error
+                    exonErr2_TN, exonErr2_SN = 0, 0 # Exonerate Type II error
+                    for TNind in range(curr_numTN): # Iterate through test nodes
+                        currMCMCInt = [np.quantile(MCMCsamples[:, curr_numSN + TNind], (1-scen['alpha'])/2),
+                                       np.quantile(MCMCsamples[:, curr_numSN + TNind], 1-((1-scen['alpha'])/2))]
+                        # Evaluate different metrics
+                        currTR = curr_trueRates_TN[TNind]
+                        if currTR >= currMCMCInt[0] and currTR <= currMCMCInt[1]: # Interval contains true SFP rate
+                            basicInt_TN += 1
+                            gnLoss_TN += (currMCMCInt[1] - currMCMCInt[0])
+                        else: # Interval does not contain true SFP rate
+                            gnLoss_TN += (currMCMCInt[1] - currMCMCInt[0]) + (2 / (1-scen['alpha'])) * \
+                                         min(np.abs(currTR - currMCMCInt[1]), np.abs(currTR - currMCMCInt[0]))
+                        # Suspect classifiction
+                        if currTR < scen['t']: # Node is below suspect threshold
+                            if currMCMCInt[0] >= scen['t']: # Type I error
+                                suspErr1_TN += 1
+                        else: # Node is above suspect threshold
+                            if currMCMCInt[0] < scen['t']: # Type II error
+                                suspErr2_TN += 1
+                        # Exoneration classification
+                        if currTR > scen['u']: # Node is above exoneration threshold
+                            if currMCMCInt[1] <= scen['u']: # Type I error
+                                exonErr1_TN += 1
+                        else: # Node is below exoneration threshold
+                            if currMCMCInt[1] > scen['u']: # Type II error
+                                exonErr2_TN += 1
 
-            normalizedRands = [rowRands[i] / sum(rowRands) for i in range(numImp)]
-            # only keep transition probabilities above 2%
-            # normalizedRands = [normalizedRands[i] if normalizedRands[i]>0.02 else 0.0 for i in range(numImp)]
+                    for SNind in range(curr_numSN): # Iterate through supply nodes
+                        currMCMCInt = [np.quantile(MCMCsamples[:, SNind], (1-scen['alpha'])/2),
+                                       np.quantile(MCMCsamples[:, SNind], 1-((1-scen['alpha'])/2))]
+                        # Evaluate different metrics
+                        currTR = curr_trueRates_SN[SNind]
+                        if currTR >= currMCMCInt[0] and currTR <= currMCMCInt[1]: # Interval contains true SFP rate
+                            basicInt_SN += 1
+                            gnLoss_SN += (currMCMCInt[1] - currMCMCInt[0])
+                        else: # Interval does not contain true SFP rate
+                            gnLoss_SN += (currMCMCInt[1] - currMCMCInt[0]) + (2 / (1-scen['alpha'])) * \
+                                         min(np.abs(currTR - currMCMCInt[1]), np.abs(currTR - currMCMCInt[0]))
+                        # Suspect classifiction
+                        if currTR < scen['t']: # Node is below suspect threshold
+                            if currMCMCInt[0] >= scen['t']: # Type I error
+                                suspErr1_SN += 1
+                        else: # Node is above suspect threshold
+                            if currMCMCInt[0] < scen['t']: # Type II error
+                                suspErr2_SN += 1
+                        # Exoneration classification
+                        if currTR > scen['u']: # Node is above exoneration threshold
+                            if currMCMCInt[1] <= scen['u']: # Type I error
+                                exonErr1_SN += 1
+                        else: # Node is below exoneration threshold
+                            if currMCMCInt[1] > scen['u']: # Type II error
+                                exonErr2_SN += 1
+                    # Update the metrics array; test nodes then supply nodes within each metric
+                    metricsArr[TTind][0][0].append(basicInt_TN / curr_numTN) # Basic interval scoring
+                    metricsArr[TTind][0][1].append(basicInt_SN / curr_numSN)
+                    metricsArr[TTind][1][0].append(gnLoss_TN) # Gneiting loss
+                    metricsArr[TTind][1][1].append(gnLoss_SN)
+                    if suspNum_TN > 0: # Suspect Type I and II error
+                        metricsArr[TTind][2][0].append(suspErr1_TN / suspNum_TN)
+                        metricsArr[TTind][3][0].append(suspErr2_TN / suspNum_TN)
+                    if suspNum_SN > 0:
+                        metricsArr[TTind][2][1].append(suspErr1_SN / suspNum_SN)
+                        metricsArr[TTind][3][1].append(suspErr2_SN / suspNum_SN)
+                    if exonNum_TN > 0: # Exoneration Type I and II error
+                        metricsArr[TTind][4][0].append(exonErr1_TN / exonNum_TN)
+                        metricsArr[TTind][5][0].append(exonErr2_TN / exonNum_TN)
+                    if exonNum_SN > 0:
+                        metricsArr[TTind][4][1].append(exonErr1_SN / exonNum_SN)
+                        metricsArr[TTind][5][1].append(exonErr2_SN / exonNum_SN)
 
-            # normalizedRands = [normalizedRands[i] / sum(normalizedRands) for i in range(numImp)]
-            transMat[outInd, :] = normalizedRands
-        '''
-        for TT in lst_TT: # testing tool loop
-            curr_TTname = TT[0]
-            curr_sens = TT[1]
-            curr_spec = TT[2]
+                # END recalculation if statement
+            # END data collection loop
 
-
-
-
-            # END testing tool loop
+        # STORE LINES OF OUTPUT FOR THIS ITERATION
+        rowDict = {'lst_TT': lst_TT, 'scen':scen, 'simIter':simIter, 'Q':Q, 'trueRates_TN':curr_trueRates_TN,
+                   'trueRates_SN':curr_trueRates_SN, 'metricsArr':metricsArr}
+        outputDict[outputRow] = rowDict
+        outputRow += 1
         # END system iteration loop
     # END scenario loop
+# Write the outputDict to a file
+outputFilePath  = os.getcwd() + '\\output dictionaries'
+if not os.path.exists(outputFilePath): # Generate this folder if one does not already exist
+    os.makedirs(outputFilePath)
+    #outputFileName = os.path.basename(sys.argv[0])[:-3] + '_OUTPUT' # Current file name
+outputFileName = os.path.join(outputFilePath, 'OP_'+str(time.time())[:10])
+pickle.dump(outputDict, open(outputFileName,'wb'))
+
+# Total run time
+batchRunTime = time.time() - currSysTime
+print('Batch took ' + str(batchRunTime)[:4] + ' seconds')
 
 
 
+
+### OUTPUT ANALYSIS HERE
+# How to read back a stored dictionary
+openFileName = os.path.join(os.getcwd() + '\\output dictionaries', 'OP_1635372392') # Change to desired output file
+openFile = open(openFileName,'rb') # Read the file
+openDict = pickle.load(openFile)
