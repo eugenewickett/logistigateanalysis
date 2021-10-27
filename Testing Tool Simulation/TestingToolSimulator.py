@@ -78,6 +78,9 @@ for numTN in lst_numTN:
 outputDict = {}
 for scen in scenList: # scenario loop
     for iter in range(N): # system iteration loop
+        # REPLACE WITH SINGLE FUNCTION CALL LATER, WITH THE FOLLOWING INPUTS:
+        #   scen
+
         # Generate a new system
         curr_numTN = scen['numTN'] # number of test nodes
         curr_numSN = int(scen['rho']*curr_numTN) # number of supply nodes
@@ -95,9 +98,58 @@ for scen in scenList: # scenario loop
         else:
             print('Enter a valid argument for the true SFP rates.')
             break
-        # Generate a sourcing matrix
+        # Generate a sourcing matrix, Q
+        Q = np.zeros(shape=(curr_numTN, curr_numSN))
+        # First decide the positive entries of Q; need at least positive entry for each row so pick those first
+        for TNind in range(curr_numTN):
+            randSNind = random.choice(range(curr_numSN))
+            Q[TNind, randSNind] = 1.0
+        # Next choose (zeta-1)*curr_numTN entries randomly and set to 1
+        numEntries = int(np.floor((scen['zeta']-1)*curr_numTN))
+        if numEntries > (curr_numTN*curr_numSN)-curr_numTN: # zeta is too big
+            print('zeta argument is too large, choose another.')
+            break
+        for entryInd in range(numEntries):
+            entryBool = False
+            while entryBool == False:
+                # Choose a row with zeros
+                entryRowInd = random.choice(range(curr_numTN))
+                if np.sum(Q[entryRowInd]) < curr_numSN:
+                    entryBool = True
+            TNcandidates = np.arange(curr_numTN)
+            QrowZeroInds = [i for i in range(curr_numSN) if (Q[entryRowInd,i]==0)] # Eligible indices
+            Q[entryRowInd, random.choice(QrowZeroInds)] = 1.0
+        # Move entries so that every supply node has at least one test node it provides for
+        for SNind in range(curr_numSN):
+            if np.sum(Q[:, SNind]) == 0.0:
+                # Find eligible SNs for swapping
+                QcolNonZeroInds = [i for i in range(curr_numSN) if (np.sum(Q[:,i])>1.0)]
+                # Choose random eligible column
+                randColInd = random.choice(QcolNonZeroInds)
+                QrowPosInds = [i for i in range(curr_numTN) if Q[i,randColInd]==1.0]
+                randRowInd = random.choice(QrowPosInds)
+                # Swap
+                Q[randRowInd, randColInd] = 0.
+                Q[randRowInd, SNind] = 1.
+        # We now have a Q with a 1.0 in every row and column, with zeta*curr_numTN total positive entries
+        # Now make each row of Q Pareto-distributed, characterized by the lamb parameter
         
+        print(Q)
 
+        '''
+        for outInd in range(numOut):
+            rowRands = [random.paretovariate(transMatLambda) for i in range(numImp)]
+            if numImp > 10:  # Only keep 10 randomly chosen importers, if numImp > 10
+                rowRands[10:] = [0.0 for i in range(numImp - 10)]
+                random.shuffle(rowRands)
+
+            normalizedRands = [rowRands[i] / sum(rowRands) for i in range(numImp)]
+            # only keep transition probabilities above 2%
+            # normalizedRands = [normalizedRands[i] if normalizedRands[i]>0.02 else 0.0 for i in range(numImp)]
+
+            # normalizedRands = [normalizedRands[i] / sum(normalizedRands) for i in range(numImp)]
+            transMat[outInd, :] = normalizedRands
+        '''
         for TT in lst_TT: # testing tool loop
             curr_TTname = TT[0]
             curr_sens = TT[1]
