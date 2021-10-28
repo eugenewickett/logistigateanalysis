@@ -31,7 +31,7 @@ import pickle
 # Generate lists for each parameter used in the simulator
 lst_dataType = ['Tracked'] # 'Tracked' or 'Untracked'
 lst_numTN = [50] # Number of test nodes
-lst_rho = [0.5] # Ratio of supply nodes to test nodes; num. SNs = rho*num. of TNs; [0.5,1.0,2.0]
+lst_rho = [2.] # Ratio of supply nodes to test nodes; num. SNs = rho*num. of TNs; [0.5,1.0,2.0]
 lst_credInt_alpha = [0.9] # Alpha level for credible intervals
 lst_u = [0.05] # Exoneration threshold
 lst_t = [0.3] # Suspect threshold
@@ -40,8 +40,8 @@ SFPDist_1: SFP rates of [0.01, 0.1, 0.25, 0.5, 0.75] w probabilities [0.5, 0.2, 
 SFPBeta_1-5: SFP rates generated from beta(1,5)
 '''
 lst_trueSFPratesSet = ['SFPDist_1'] # ['SFPBeta_1-5'}
-lst_lamb = [1.0] # Pareto scale parameter characterizing the sourcing probability matrix; [0.8, 1.0, 1.2]
-lst_zeta = [5] # Number of non-zero entries of the sourcing probability matrix, in multiples of numTN; [2, 3, 4, 5]
+lst_lamb = [0.8,1.2] # Pareto scale parameter characterizing the sourcing probability matrix; [0.8, 1.0, 1.2]
+lst_zeta = [5] # Number of non-zero entries of the sourcing probability matrix, in multiples of numTN; [5,4,3,2]
 lst_priorMean = [-5] # Prior mean
 lst_priorVar = [5] # Prior variance
 lst_numSamples = [3000] # How many samples to test per iteration
@@ -318,3 +318,22 @@ print('Batch took ' + str(batchRunTime)[:4] + ' seconds')
 openFileName = os.path.join(os.getcwd() + '\\output dictionaries', 'OP_1635372392') # Change to desired output file
 openFile = open(openFileName,'rb') # Read the file
 openDict = pickle.load(openFile)
+
+
+
+### Put output reader here ###
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
