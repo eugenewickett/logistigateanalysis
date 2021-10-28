@@ -31,7 +31,7 @@ import pickle
 # Generate lists for each parameter used in the simulator
 lst_dataType = ['Tracked'] # 'Tracked' or 'Untracked'
 lst_numTN = [50] # Number of test nodes
-lst_rho = [2.] # Ratio of supply nodes to test nodes; num. SNs = rho*num. of TNs; [0.5,1.0,2.0]
+lst_rho = [1.] # Ratio of supply nodes to test nodes; num. SNs = rho*num. of TNs; [0.5,1.0,2.0]
 lst_credInt_alpha = [0.9] # Alpha level for credible intervals
 lst_u = [0.05] # Exoneration threshold
 lst_t = [0.3] # Suspect threshold
@@ -40,8 +40,8 @@ SFPDist_1: SFP rates of [0.01, 0.1, 0.25, 0.5, 0.75] w probabilities [0.5, 0.2, 
 SFPBeta_1-5: SFP rates generated from beta(1,5)
 '''
 lst_trueSFPratesSet = ['SFPDist_1'] # ['SFPBeta_1-5'}
-lst_lamb = [0.8,1.2] # Pareto scale parameter characterizing the sourcing probability matrix; [0.8, 1.0, 1.2]
-lst_zeta = [5] # Number of non-zero entries of the sourcing probability matrix, in multiples of numTN; [5,4,3,2]
+lst_lamb = [1.] # Pareto scale parameter characterizing the sourcing probability matrix; [0.8, 1.0, 1.2]
+lst_zeta = [4] # Number of non-zero entries of the sourcing probability matrix, in multiples of numTN; [5,4,3,2]
 lst_priorMean = [-5] # Prior mean
 lst_priorVar = [5] # Prior variance
 lst_numSamples = [3000] # How many samples to test per iteration
@@ -315,13 +315,366 @@ print('Batch took ' + str(batchRunTime)[:4] + ' seconds')
 
 ### OUTPUT ANALYSIS HERE
 # How to read back a stored dictionary
-openFileName = os.path.join(os.getcwd() + '\\output dictionaries', 'OP_1635372392') # Change to desired output file
+openFileName = os.path.join(os.getcwd() + '\\output dictionaries', 'OP_1635437686') # Change to desired output file
 openFile = open(openFileName,'rb') # Read the file
 openDict = pickle.load(openFile)
 
+print(openDict.keys())
+print(openDict[0]['scen'])
+print(openDict[51]['scen'])
+print(openDict[144]['scen'])
 
 
-### Put output reader here ###
+lst_OPdicts = []
+for f in os.listdir(os.getcwd()+'\\output dictionaries'):
+    openFileName = os.path.join(os.getcwd() + '\\output dictionaries', f)  # Change to desired output file
+    openFile = open(openFileName, 'rb')  # Read the file
+    openDict = pickle.load(openFile)
+    lst_OPdicts.append(openDict.copy())
+
+
+
+
+scen1 = {'dataType': 'Tracked', 'numTN': 50, 'rho': 2.0, 'alpha': 0.9, 'u': 0.05, 't': 0.3,
+         'trueSFPratesSet': 'SFPDist_1', 'lamb': 0.8, 'zeta': 5, 'priorMean': -5, 'priorVar': 5, 'numSamples': 3000}
+scen2 = {'dataType': 'Tracked', 'numTN': 50, 'rho': 2.0, 'alpha': 0.9, 'u': 0.05, 't': 0.3,
+         'trueSFPratesSet': 'SFPDist_1', 'lamb': 1.2, 'zeta': 5, 'priorMean': -5, 'priorVar': 5, 'numSamples': 3000}
+lst_scens = [scen1]#[scen1, scen2]
+lst_TTs = [['HiDiag', 1.0, 1.0], ['LoDiag', 0.6, 0.9]]
+subtitle='(1,1) tool vs. (0.6,0.9) tool'
+
+
+# TEST FOR OUTPUT READER
+scen1 = {'dataType': 'Tracked', 'numTN': 50, 'rho': 2.0, 'alpha': 0.9, 'u': 0.05, 't': 0.3,
+         'trueSFPratesSet': 'SFPDist_1', 'lamb': 0.8, 'zeta': 5, 'priorMean': -5, 'priorVar': 5, 'numSamples': 3000}
+lst_TTs = [['HiDiag', 1.0, 1.0], ['LoDiag', 0.6, 0.9]]
+name = '(1,1) tool vs. (0.6,0.9) tool'
+
+GenerateChart(lst_OPdicts, lst_scens, lst_TTs, subtitle=name)
+
+# OUTPUT READER
+def GenerateChart(lst_OPdicts,lst_scens, lst_TTs, subtitle=''):
+    '''
+    This function finds all simulation output satisfying the characteristics entered and produces charts for each
+    metric.
+
+    INPUTS:
+        - lst_OPdicts:      LIST of output dictionaries with the required keys
+        - lst_scens:        LIST of scenario dictionaries to match with the 'scen' key of the replications in the output dictionaries
+        - lst_TTs:          LIST of testing tools, with each testing tool given as [name, sensitivity, specificity]
+        - subtitle:         STRING for desired subtitle on charts
+    OUTPUTS:
+        12 charts, one for each metric-node class combination, with 95% confidence intervals on the metrics as found
+        in the replications stored in the respective output dictionaries
+    '''
+    tempTToutputList = [[[[],[]], [[],[]], [[],[]], [[],[]], [[],[]], [[],[]]] for TT in lst_TTs]
+    scenOutputList = [tempTToutputList for scen in lst_scens]
+
+    for currOPdict in lst_OPdicts: # Loop through each output dictionary
+        for iterInd in currOPdict.keys():
+            currOutput = currOPdict[iterInd]
+            # Check that 'scen' matches one in the list
+            if currOutput['scen'] in lst_scens:
+                currScenInd = lst_scens.index(currOutput['scen'])
+            else:
+                currScenInd = -1
+            # Check that the testing tools are in the list
+            currTTinds = []
+            for TTind, TTval in enumerate(lst_TTs):
+                foundTT = False
+                for opTTind, opTT in enumerate(currOutput['lst_TT']):
+                    if opTT == TTval:
+                        currTTinds.append(opTTind)
+                        foundTT = True
+                if foundTT == False:
+                    currTTinds.append(-1)
+            # We now know where our metrics should go.
+            currOPmetrics = currOutput['metricsArr']
+            if currScenInd >= 0:
+                for lstTTind, TTind in enumerate(currTTinds):
+                    numSamples = currOutput['scen']['numSamples'] # Need this for plotting
+                    if TTind >= 0:
+                        currTTmetrics = currOPmetrics[TTind] # We have a set testing tool metrics for this scenario
+                        for metricInd, metric in enumerate(currTTmetrics):
+                            scenOutputList[currScenInd][lstTTind][metricInd][0].append(metric[0]) # Test node metric
+                            scenOutputList[currScenInd][lstTTind][metricInd][1].append(metric[1]) # Supply node metric
+
+    # scenOutputList now has all the information we need
+    # Now generate lists for producing charts
+    plotVec_TN_intScore = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_SN_intScore = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_TN_gneitLoss = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_SN_gneitLoss = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_TN_suspErr1 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_SN_suspErr1 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_TN_suspErr2 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_SN_suspErr2 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_TN_exonErr1 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_SN_exonErr1 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_TN_exonErr2 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+    plotVec_SN_exonErr2 = [[[[], []] for TT in lst_TTs] for scen in lst_scens]
+
+    num_m_steps = len(scenOutputList[0][0][0][0][0])
+    for scenInd, scen in enumerate(lst_scens):
+        for TTind, TT in enumerate(lst_TTs):
+
+            # Make n/m lists so we can form the 95% CIs
+            tempList_Met1_TN = [[] for i in range(num_m_steps)]
+            tempList_Met1_SN = [[] for i in range(num_m_steps)]
+            tempList_Met2_TN = [[] for i in range(num_m_steps)]
+            tempList_Met2_SN = [[] for i in range(num_m_steps)]
+            tempList_Met3_TN = [[] for i in range(num_m_steps)]
+            tempList_Met3_SN = [[] for i in range(num_m_steps)]
+            tempList_Met4_TN = [[] for i in range(num_m_steps)]
+            tempList_Met4_SN = [[] for i in range(num_m_steps)]
+            tempList_Met5_TN = [[] for i in range(num_m_steps)]
+            tempList_Met5_SN = [[] for i in range(num_m_steps)]
+            tempList_Met6_TN = [[] for i in range(num_m_steps)]
+            tempList_Met6_SN = [[] for i in range(num_m_steps)]
+
+            for item in scenOutputList[scenInd][TTind][0][0]: #1st metric, test nodes
+                for j in range(num_m_steps):
+                    tempList_Met1_TN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][0][1]: #1st metric, supply nodes
+                for j in range(num_m_steps):
+                    tempList_Met1_SN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][1][0]: #2nd metric, test nodes
+                for j in range(num_m_steps):
+                    tempList_Met2_TN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][1][1]: #2nd metric, supply nodes
+                for j in range(num_m_steps):
+                    tempList_Met2_SN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][2][0]: #3rd metric, test nodes
+                for j in range(num_m_steps):
+                    tempList_Met3_TN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][2][1]: #3rd metric, supply nodes
+                for j in range(num_m_steps):
+                    tempList_Met3_SN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][3][0]: #4th metric, test nodes
+                for j in range(num_m_steps):
+                    tempList_Met4_TN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][3][1]: #4th metric, supply nodes
+                for j in range(num_m_steps):
+                    tempList_Met4_SN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][4][0]: #5th metric, test nodes
+                for j in range(num_m_steps):
+                    tempList_Met5_TN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][4][1]: #5th metric, supply nodes
+                for j in range(num_m_steps):
+                    tempList_Met5_SN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][5][0]: #6th metric, test nodes
+                for j in range(num_m_steps):
+                    tempList_Met6_TN[j].append(item[j])
+            for item in scenOutputList[scenInd][TTind][5][1]: #6th metric, supply nodes
+                for j in range(num_m_steps):
+                    tempList_Met6_SN[j].append(item[j])
+            # Put 95% lower and upper bounds in plot vectors
+            plotVec_TN_intScore[scenInd][TTind][0] = [(np.quantile(tempList_Met1_TN[j],0.05)) for j in
+                                                      range(num_m_steps)] # Lower first
+            plotVec_TN_intScore[scenInd][TTind][1] = [(np.quantile(tempList_Met1_TN[j], 0.95)) for j in
+                                                      range(num_m_steps)] # Upper next
+            plotVec_SN_intScore[scenInd][TTind][0] = [(np.quantile(tempList_Met1_SN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_intScore[scenInd][TTind][1] = [(np.quantile(tempList_Met1_SN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+            plotVec_TN_gneitLoss[scenInd][TTind][0] = [(np.quantile(tempList_Met2_TN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_TN_gneitLoss[scenInd][TTind][1] = [(np.quantile(tempList_Met2_TN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_gneitLoss[scenInd][TTind][0] = [(np.quantile(tempList_Met2_SN[j], 0.05)) for j in
+                                                       range(num_m_steps)]
+            plotVec_SN_gneitLoss[scenInd][TTind][1] = [(np.quantile(tempList_Met2_SN[j], 0.95)) for j in
+                                                       range(num_m_steps)]
+            plotVec_TN_suspErr1[scenInd][TTind][0] = [(np.quantile(tempList_Met3_TN[j], 0.05)) for j in
+                                                       range(num_m_steps)]
+            plotVec_TN_suspErr1[scenInd][TTind][1] = [(np.quantile(tempList_Met3_TN[j], 0.95)) for j in
+                                                       range(num_m_steps)]
+            plotVec_SN_suspErr1[scenInd][TTind][0] = [(np.quantile(tempList_Met3_SN[j], 0.05)) for j in
+                                                       range(num_m_steps)]
+            plotVec_SN_suspErr1[scenInd][TTind][1] = [(np.quantile(tempList_Met3_SN[j], 0.95)) for j in
+                                                       range(num_m_steps)]
+            plotVec_TN_suspErr2[scenInd][TTind][0] = [(np.quantile(tempList_Met4_TN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_TN_suspErr2[scenInd][TTind][1] = [(np.quantile(tempList_Met4_TN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_suspErr2[scenInd][TTind][0] = [(np.quantile(tempList_Met4_SN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_suspErr2[scenInd][TTind][1] = [(np.quantile(tempList_Met4_SN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+            plotVec_TN_exonErr1[scenInd][TTind][0] = [(np.quantile(tempList_Met5_TN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_TN_exonErr1[scenInd][TTind][1] = [(np.quantile(tempList_Met5_TN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_exonErr1[scenInd][TTind][0] = [(np.quantile(tempList_Met5_SN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_exonErr1[scenInd][TTind][1] = [(np.quantile(tempList_Met5_SN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+            plotVec_TN_exonErr2[scenInd][TTind][0] = [(np.quantile(tempList_Met6_TN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_TN_exonErr2[scenInd][TTind][1] = [(np.quantile(tempList_Met6_TN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_exonErr2[scenInd][TTind][0] = [(np.quantile(tempList_Met6_SN[j], 0.05)) for j in
+                                                      range(num_m_steps)]
+            plotVec_SN_exonErr2[scenInd][TTind][1] = [(np.quantile(tempList_Met6_SN[j], 0.95)) for j in
+                                                      range(num_m_steps)]
+
+    # Now plot
+    import matplotlib.pyplot as plt
+    import matplotlib.colors as col
+    xTickLabels = np.arange(numSamples/num_m_steps,numSamples+numSamples/num_m_steps,numSamples/num_m_steps).tolist()
+    colorInd = np.linspace(0,1,len(lst_scens)*len(lst_TTs))
+
+    fig, ax = plt.subplots(3, 2, sharex='col')
+    fig.text(0.29, 0.01, 'Number of samples', ha='center')
+    fig.text(0.77, 0.01, 'Number of samples', ha='center')
+    # First metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_TN_intScore[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind+scenInd*len(lst_TTs)])
+
+            ax[0, 0].plot(xTickLabels,currInts[0], color=currCol,label='SCEN'+str(scenInd+1) + ', TT'+str(TTind+1))
+            ax[0, 0].plot(xTickLabels,currInts[1], color=currCol)
+            ax[0, 0].set_ylim(0.5, 1.1)
+            ax[0, 0].title.set_text('Interval Score')
+    ax[0, 0].legend(loc='lower left',fontsize=6)
+    # Second metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_TN_gneitLoss[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind+scenInd*len(lst_TTs)])
+            ax[0, 1].plot(xTickLabels,currInts[0], color=currCol,label='SCEN'+str(scenInd+1)+', TT'+str(TTind+1))
+            ax[0, 1].plot(xTickLabels,currInts[1], color=currCol)
+            #ax[0, 1].set_ylim(0, 1.)
+            ax[0, 1].title.set_text('Gneiting Loss')
+    ax[0, 1].legend(loc='upper right',fontsize=6)
+    # Third metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_TN_suspErr1[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[1, 0].plot(xTickLabels, currInts[0], color=currCol, label='SCEN' + str(scenInd+1) + ', TT' + str(TTind+1))
+            ax[1, 0].plot(xTickLabels, currInts[1], color=currCol)
+            ax[1, 0].set_ylim(0, 1.1)
+            ax[1, 0].title.set_text('Susp. Type I Err.')
+    ax[1, 0].legend(loc='upper left', fontsize=6)
+    # Fourth metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_TN_suspErr2[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[1, 1].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[1, 1].plot(xTickLabels, currInts[1], color=currCol)
+            ax[1, 1].set_ylim(0, 1.1)
+            ax[1, 1].title.set_text('Susp. Type II Err.')
+    ax[1, 1].legend(loc='lower left', fontsize=6)
+    # Fifth metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_TN_exonErr1[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[2, 0].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[2, 0].plot(xTickLabels, currInts[1], color=currCol)
+            ax[2, 0].set_ylim(0, 1.1)
+            ax[2, 0].title.set_text('Exon. Type I Err.')
+    ax[2, 0].legend(loc='upper left', fontsize=6)
+    # Sixth metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_TN_exonErr2[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[2, 1].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[2, 1].plot(xTickLabels, currInts[1], color=currCol)
+            ax[2, 1].set_ylim(0, 1.1)
+            ax[2, 1].title.set_text('Exon. Type II Err.')
+    ax[2, 1].legend(loc='lower left', fontsize=6)
+
+    plt.suptitle('95% CIs on Metrics for TEST NODES\n'+subtitle)
+    plt.tight_layout()
+    #plt.figure(figsize=(8, 10))
+    plt.show()
+
+    # Now supply nodes
+    fig, ax = plt.subplots(3, 2, sharex='col')
+    fig.text(0.29, 0.01, 'Number of samples', ha='center')
+    fig.text(0.77, 0.01, 'Number of samples', ha='center')
+    # First metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_SN_intScore[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+
+            ax[0, 0].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[0, 0].plot(xTickLabels, currInts[1], color=currCol)
+            ax[0, 0].set_ylim(0.5, 1.1)
+            ax[0, 0].title.set_text('Interval Score')
+    ax[0, 0].legend(loc='lower left', fontsize=6)
+    # Second metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_SN_gneitLoss[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[0, 1].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[0, 1].plot(xTickLabels, currInts[1], color=currCol)
+            # ax[0, 1].set_ylim(0, 1.)
+            ax[0, 1].title.set_text('Gneiting Loss')
+    ax[0, 1].legend(loc='upper right', fontsize=6)
+    # Third metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_SN_suspErr1[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[1, 0].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[1, 0].plot(xTickLabels, currInts[1], color=currCol)
+            ax[1, 0].set_ylim(0, 1.1)
+            ax[1, 0].title.set_text('Susp. Type I Err.')
+    ax[1, 0].legend(loc='upper left', fontsize=6)
+    # Fourth metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_SN_suspErr2[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[1, 1].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[1, 1].plot(xTickLabels, currInts[1], color=currCol)
+            ax[1, 1].set_ylim(0, 1.1)
+            ax[1, 1].title.set_text('Susp. Type II Err.')
+    ax[1, 1].legend(loc='lower left', fontsize=6)
+    # Fifth metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_SN_exonErr1[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[2, 0].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[2, 0].plot(xTickLabels, currInts[1], color=currCol)
+            ax[2, 0].set_ylim(0, 1.1)
+            ax[2, 0].title.set_text('Exon. Type I Err.')
+    ax[2, 0].legend(loc='upper left', fontsize=6)
+    # Sixth metric, test nodes
+    for scenInd in range(len(lst_scens)):
+        for TTind in range(len(lst_TTs)):
+            currInts = plotVec_SN_exonErr2[scenInd][TTind]
+            currCol = plt.cm.RdYlBu(colorInd[TTind + scenInd * len(lst_TTs)])
+            ax[2, 1].plot(xTickLabels, currInts[0], color=currCol,
+                          label='SCEN' + str(scenInd + 1) + ', TT' + str(TTind + 1))
+            ax[2, 1].plot(xTickLabels, currInts[1], color=currCol)
+            ax[2, 1].set_ylim(0, 1.1)
+            ax[2, 1].title.set_text('Exon. Type II Err.')
+    ax[2, 1].legend(loc='lower left', fontsize=6)
+
+    plt.suptitle('95% CIs on Metrics for SUPPLY NODES\n' + subtitle)
+    plt.tight_layout()
+    # plt.figure(figsize=(8, 10))
+    plt.show()
+
+    return
 
 
 
