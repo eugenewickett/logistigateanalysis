@@ -345,11 +345,18 @@ subtitle='(1,1) tool vs. (0.6,0.9) tool'
 
 
 # TEST FOR OUTPUT READER
-scen1 = {'dataType': 'Tracked', 'numTN': 50, 'rho': 2.0, 'alpha': 0.9, 'u': 0.05, 't': 0.3,
-         'trueSFPratesSet': 'SFPDist_1', 'lamb': 0.8, 'zeta': 5, 'priorMean': -5, 'priorVar': 5, 'numSamples': 3000}
-lst_TTs = [['HiDiag', 1.0, 1.0], ['LoDiag', 0.6, 0.9]]
-name = '(1,1) tool vs. (0.6,0.9) tool'
+lst_TTs = [['HiDiag', 1.0, 1.0], ['LoDiag', 0.6, 0.9]] # Probably don't change this for now
+# Change desired parameters; only do 1 scenario at a time
+rho = 1
+lamb = 1.
+zeta = 2
 
+scen1 = {'dataType': 'Tracked', 'numTN': 50, 'rho': rho, 'alpha': 0.9, 'u': 0.05, 't': 0.3,
+         'trueSFPratesSet': 'SFPDist_1', 'lamb': lamb, 'zeta': zeta, 'priorMean': -5, 'priorVar': 5, 'numSamples': 3000}
+#scen2 = {'dataType': 'Tracked', 'numTN': 50, 'rho': 0.5, 'alpha': 0.9, 'u': 0.05, 't': 0.3,
+         #'trueSFPratesSet': 'SFPDist_1', 'lamb': 1., 'zeta': 3, 'priorMean': -5, 'priorVar': 5, 'numSamples': 3000}
+lst_scens = [scen1]
+name = '(1,1) tool vs. (0.6,0.9) tool' + ', rho='+str(rho)+', lambda='+str(lamb)+', zeta='+str(zeta)
 GenerateChart(lst_OPdicts, lst_scens, lst_TTs, subtitle=name)
 
 # OUTPUT READER
@@ -376,6 +383,7 @@ def GenerateChart(lst_OPdicts,lst_scens, lst_TTs, subtitle=''):
             # Check that 'scen' matches one in the list
             if currOutput['scen'] in lst_scens:
                 currScenInd = lst_scens.index(currOutput['scen'])
+                print(currScenInd)
             else:
                 currScenInd = -1
             # Check that the testing tools are in the list
@@ -392,7 +400,7 @@ def GenerateChart(lst_OPdicts,lst_scens, lst_TTs, subtitle=''):
             currOPmetrics = currOutput['metricsArr']
             if currScenInd >= 0:
                 for lstTTind, TTind in enumerate(currTTinds):
-                    numSamples = currOutput['scen']['numSamples'] # Need this for plotting
+                    numSamples = currOutput['scen']['numSamples'] # Need this for plotting later
                     if TTind >= 0:
                         currTTmetrics = currOPmetrics[TTind] # We have a set testing tool metrics for this scenario
                         for metricInd, metric in enumerate(currTTmetrics):
