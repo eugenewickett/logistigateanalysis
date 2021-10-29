@@ -347,9 +347,9 @@ subtitle='(1,1) tool vs. (0.6,0.9) tool'
 # TEST FOR OUTPUT READER
 lst_TTs = [['HiDiag', 1.0, 1.0], ['LoDiag', 0.6, 0.9]] # Probably don't change this for now
 # Change desired parameters; only do 1 scenario at a time
-rho = 1
-lamb = 1.
-zeta = 2
+rho = 2.
+lamb = 1.2
+zeta = 5
 
 scen1 = {'dataType': 'Tracked', 'numTN': 50, 'rho': rho, 'alpha': 0.9, 'u': 0.05, 't': 0.3,
          'trueSFPratesSet': 'SFPDist_1', 'lamb': lamb, 'zeta': zeta, 'priorMean': -5, 'priorVar': 5, 'numSamples': 3000}
