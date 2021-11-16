@@ -19,9 +19,9 @@ from logistigate.logistigate import utilities as util # Pull from the submodule 
 from logistigate.logistigate import methods # Pull from the submodule "develop" branch
 from logistigate.logistigate import lg
 #import methods # Pull from the submodule "develop" branch
-import lg # Pull from the submodule "develop" branch
-reload(methods)
-reload(util)
+#import lg # Pull from the submodule "develop" branch
+#reload(methods)
+#reload(util)
 import statistics
 import random
 import scipy.stats as sps
