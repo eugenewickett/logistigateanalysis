@@ -261,44 +261,654 @@ def cleanMQD():
         'Manufacturer'] = 'Zhangjiakou Dongfang Phamaceutical'
 
     # Facility_Location
+    # Designated Cambodia districts:
+    '''
+    Anlong Veng District
+    Bakan District
+    Banlung District
+    Battambang City
+    Borkeo District
+    Cham Knan District
+    Chamroeun District
+    Chbamon District
+    Chheb District
+    Chom Ksan District
+    Choran Ksan District
+    Dongtong Market
+    Kampong Bay District
+    Kampong Cham District
+    Kampong Siam District
+    Kampong Thmor Market
+    Kampong Thom Capital
+    Kampong Trach District
+    Keo Seima District
+    Koh Kong District
+    Kolen District
+    Krakor District
+    Kratie District
+    Maung Russei District
+    Memot District
+    O Tavao District
+    Oyadav District
+    Pailin City
+    Peamror District
+    Pearing District
+    Phnom Kravanh District
+    Phnom Preal District
+    Ponhea Krek District
+    Posat City
+    Preah Vihear Town
+    Prey Chhor District
+    Prey Veng District
+    Pursat City
+    Roveahek District
+    Rovieng District
+    Sala Krau District
+    Sampov Meas District
+    Samraong District
+    Sangkum Thmei District
+    Senmonorom City
+    Smach Mean Chey District
+    Sre Ambel District
+    Srey Santhor District
+    Suong City
+    Svay Antor District
+    Svay Chrom District
+    Svay Rieng District
+    Takeo Capital
+    Trapeang Prasat District
+    Van Sai District
+    '''
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Anlong Veng District')
+        | (MQD_df_CAM.Facility_Location == 'O Chugnean Village, Anglong Veng Commune, Anglong Veng District. Phone: 012 297 224')
+        | (MQD_df_CAM.Facility_Location == 'O Chugnean Village, Anlong Veng Commune, Anlong Veng District. Tel. 012 429 643')
+        | (MQD_df_CAM.Facility_Location == 'O Chungchean Village, Anlong Veng Commune, Anlong Veng District')
+        | (MQD_df_CAM.Facility_Location == "O'Chungchean Village, Anlong Veng Commune, Anlong Veng District")
+        | (MQD_df_CAM.Facility_Location == "O'Chungchean Village, Anlong Veng Commune, Anlong Veng District")
+        | (MQD_df_CAM.Facility_Location == "O'Chungchean Village, Anlong Veng Commune, Anlong Veng District")
+        | (MQD_df_CAM.Facility_Location == "O'Chungchean Village, Anlong Veng Commune, Anlong Veng District"),
+        'Facility_Location'] = 'Anlong Veng District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Bakan District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Bakan District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Banlung District')
+        | (MQD_df_CAM.Facility_Location == 'Banlung')
+        | (MQD_df_CAM.Facility_Location == 'Banllung District')
+        | (MQD_df_CAM.Facility_Location == 'Banlung City')
+        | (MQD_df_CAM.Facility_Location == 'Banlung Market')
+        | (MQD_df_CAM.Facility_Location == 'Bor Keo, Banlung District')
+        | (MQD_df_CAM.Facility_Location == 'Andong Meas, Banlung')
+        | (MQD_df_CAM.Facility_Location == "O'yadav, Banlung")
+        | (MQD_df_CAM.Facility_Location == "O'yadav, Banlung District")
+        | (MQD_df_CAM.Facility_Location == 'Street #78, Banlung City')
+        | (MQD_df_CAM.Facility_Location == 'near Banlung Market')
+        | (MQD_df_CAM.Facility_Location == 'Srok Ban lung'),
+        'Facility_Location'] = 'Banlung District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Battambang City')
-        | (MQD_df_CAM.Facility_Location == 'Battambang city'),
+        | (MQD_df_CAM.Facility_Location == 'Battambang city')
+        | (MQD_df_CAM.Facility_Location == 'Maung Reussy Dist. Battambang province'),
         'Facility_Location'] = 'Battambang City'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Borkeo District')
+        | (MQD_df_CAM.Facility_Location == 'Borkeo district')
+        | (MQD_df_CAM.Facility_Location == 'Cabinet-Keo Akara, near Borkeo Market')
+        | (MQD_df_CAM.Facility_Location == 'Midwife- Saren, near Borkeo Market'),
+        'Facility_Location'] = 'Borkeo District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Cham Knan District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Cham Knan District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Chamroeun District')
+        | (MQD_df_CAM.Facility_Location == 'Cham Roeun District'),
+        'Facility_Location'] = 'Chamroeun District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'National Road No.4, Chbamon district')
+        | (MQD_df_CAM.Facility_Location == 'Chbamon District')
+        | (MQD_df_CAM.Facility_Location == 'No. 3B, Peanich Kam village, Roka Thom commune, Chbamon district')
+        | (MQD_df_CAM.Facility_Location == 'Peanichkam village, Roka Thom commune, Chbamon District')
+        | (MQD_df_CAM.Facility_Location == 'Roka Thom Commune, Chbamon District')
+        | (MQD_df_CAM.Facility_Location == '#01D, Psar Kampong Speu, Chbamon district'),
+        'Facility_Location'] = 'Chbamon District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Chheb District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Chheb District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Chom Ksan District')
+        | (MQD_df_CAM.Facility_Location == 'O Chhounh Village, Chom Ksan district')
+        | (MQD_df_CAM.Facility_Location == 'Sra Em village, Chom Ksan District'),
+        'Facility_Location'] = 'Chom Ksan District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Choran Ksan District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Choran Ksan District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Dongtong District')
+        | (MQD_df_CAM.Facility_Location == 'Dongtong Market')
+        | (MQD_df_CAM.Facility_Location == 'No. 50, South of Dongtong Market'),
+        'Facility_Location'] = 'Dongtong District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kampong Bay District')
+        | (MQD_df_CAM.Facility_Location == 'No. 93, St. 3, Kampong Bay district')
+        | (MQD_df_CAM.Facility_Location == 'No. 5, St. 3, Kampong Bay district')
+        | (MQD_df_CAM.Facility_Location == 'Kampong Bay district')
+        | (MQD_df_CAM.Facility_Location == '#79, Kampong Bay district')
+        | (MQD_df_CAM.Facility_Location == '#16, St. 7 Makara, Kandal village, Kampong Bay district'),
+        'Facility_Location'] = 'Kampong Bay District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kampong Cham City')
+        | (MQD_df_CAM.Facility_Location == 'Kampong Cham District')
+        | (MQD_df_CAM.Facility_Location == 'Memot Market, Kampong Cham')
+        | (MQD_df_CAM.Facility_Location == 'Steung Market, Kampong Cham')
+        | (MQD_df_CAM.Facility_Location == 'Street Preah Bath Ang Duong (East Phsar Thom), Kampong Cham')
+        | (MQD_df_CAM.Facility_Location == 'Street Preah Bath Ang Duong (Near Kosona Bridge), Kampong Cham'),
+        'Facility_Location'] = 'Kampong Cham District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kampong Siam District')
+        | (MQD_df_CAM.Facility_Location == 'Kampong Siam district'),
+        'Facility_Location'] = 'Kampong Siam District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kampong Thmor Market')
+        | (MQD_df_CAM.Facility_Location == '#66, Tral village, Kompong Thmor market')
+        | (MQD_df_CAM.Facility_Location == '66, Tral village, Kompong Thmor market')
+        | (MQD_df_CAM.Facility_Location == 'No. 3, Rd 6A, Kampong Thmor'),
+        'Facility_Location'] = 'Kampong Thmor Market'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kampong Thom Capital')
+        | (MQD_df_CAM.Facility_Location == 'Kampong Thom Market, Kampong Thom capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 15Eo, Kampong Thom market, Kampong Thom capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 43, Rd No. 6, Kampong Thom capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 9 Eo, Kampong Thom Market, Kampong Thom capital')
+        | (MQD_df_CAM.Facility_Location == 'No.45, Rd No. 6, Kampong Thom capital'),
+        'Facility_Location'] = 'Kampong Thom Capital'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kampong Trach District')
+        | (MQD_df_CAM.Facility_Location == 'Kampong Trach Village, Kampong Trach district'),
+        'Facility_Location'] = 'Kampong Trach District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Keo Seima District')
+        | (MQD_df_CAM.Facility_Location == 'Keoseima District')
+        | (MQD_df_CAM.Facility_Location == 'Keoseima district')
+        | (MQD_df_CAM.Facility_Location == 'Keosema District')
+        | (MQD_df_CAM.Facility_Location == "Khum Sre Kh'tob, Keo Seima district"),
+        'Facility_Location'] = 'Keo Seima District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Koh Kong District')
+        | (MQD_df_CAM.Facility_Location == 'Koh Kong Province')
+        | (MQD_df_CAM.Facility_Location == 'Kohk Kong Capital')
+        | (MQD_df_CAM.Facility_Location == "Pum trorpeagh , Sre'ambel  ,  koh kong  province."),
+        'Facility_Location'] = 'Koh Kong District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kolen District')
+        | (MQD_df_CAM.Facility_Location == 'Sro Yang Village, Sro Yang Commune, Kolen District'),
+        'Facility_Location'] = 'Kolen District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Krakor District')
+        | (MQD_df_CAM.Facility_Location == 'Chheutom Commune, Krakor District'),
+        'Facility_Location'] = 'Krakor District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Kratie District')
+        | (MQD_df_CAM.Facility_Location == 'Kratie commune, Kratie Distrist, Kratie'),
+        'Facility_Location'] = 'Kratie District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Maung Russei District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Maung Russei District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Memot District')
+        | (MQD_df_CAM.Facility_Location == 'Khum Dar, Memot District')
+        | (MQD_df_CAM.Facility_Location == 'OD Memut'),
+        'Facility_Location'] = 'Memot District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'O Tavao District')
+        | (MQD_df_CAM.Facility_Location == "Krachab, O'Tavao District")
+        | (MQD_df_CAM.Facility_Location == "Krachab, O'Tavao, Pailin"),
+        'Facility_Location'] = 'O Tavao District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Oyadav District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Oyadav District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Pailin City')
+        | (MQD_df_CAM.Facility_Location == 'O Ta Puk Leu')
+        | (MQD_df_CAM.Facility_Location == 'Pailin City')
+        | (MQD_df_CAM.Facility_Location == 'Pailin Ville')
+        | (MQD_df_CAM.Facility_Location == 'Pang Rolim, O Ta Vao, Pailin City')
+        | (MQD_df_CAM.Facility_Location == 'O Tapok Leu, Palin City')
+        | (MQD_df_CAM.Facility_Location == 'O Tapokleu, Pahy Market')
+        | (MQD_df_CAM.Facility_Location == 'O Tapuk Leu, Pailen City')
+        | (MQD_df_CAM.Facility_Location == 'O Tapuk Leu, Pailin City')
+        | (MQD_df_CAM.Facility_Location == 'O. Tapok Leu, Pahy Market')
+        | (MQD_df_CAM.Facility_Location == 'Opeut Village, Pailin. Tel. 017 492909')
+        | (MQD_df_CAM.Facility_Location == 'Pahee market, Pailin, Tel: 089 579829')
+        | (MQD_df_CAM.Facility_Location == 'Phsar Pahi, Pailin City')
+        | (MQD_df_CAM.Facility_Location == 'Phsar Pahi, Pailin City'),
+        'Facility_Location'] = 'Pailin City'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Peamror District')
+        | (MQD_df_CAM.Facility_Location == '#309, Prek Khsay commune, Peamror district')
+        | (MQD_df_CAM.Facility_Location == 'National Road N0.1, Prek Khsay commune, Peamror district'),
+        'Facility_Location'] = 'Peamror District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Pearing District')
+        | (MQD_df_CAM.Facility_Location == 'St. 8A. Roka commune, Pearing district'),
+        'Facility_Location'] = 'Pearing District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Phnom Kravanh District')
+        | (MQD_df_CAM.Facility_Location == 'Leach village, Phnom Kravanh district')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Kravanh District')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Krovanh District'),
+        'Facility_Location'] = 'Phnom Kravanh District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Phnom Preal District')
+        | (MQD_df_CAM.Facility_Location == 'Kondamrey - Phnom Preal')
+        | (MQD_df_CAM.Facility_Location == 'Koun Domrey, Phnom Preal District')
+        | (MQD_df_CAM.Facility_Location == 'O dontaleu Phnom Preal District')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Preal')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Preal District'),
+        'Facility_Location'] = 'Phnom Preal District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Ponhea Krek District')
+        | (MQD_df_CAM.Facility_Location == 'Ponhea Krek District'),
+        'Facility_Location'] = 'Ponhea Krek District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Posat City')
+        | (MQD_df_CAM.Facility_Location == 'Peal Nhek 2, Posat City'),
+        'Facility_Location'] = 'Posat City'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Preah Vihear Town')
+        | (MQD_df_CAM.Facility_Location == 'Preah Vihear Province')
+        | (MQD_df_CAM.Facility_Location == 'Preah Vihear Town')
+        | (MQD_df_CAM.Facility_Location == 'Preah Vihear Town')
+        | (MQD_df_CAM.Facility_Location == 'Preah Vihear Town'),
+        'Facility_Location'] = 'Preah Vihear Town'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Prey Chhor District')
+        | (MQD_df_CAM.Facility_Location == 'OD Prey Chhor')
+        | (MQD_df_CAM.Facility_Location == 'Phsar Prey Toteng, Prey Chhor District'),
+        'Facility_Location'] = 'Prey Chhor District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Prey Veng District')
+        | (MQD_df_CAM.Facility_Location == '#26A, St.15, Kampong Leav commune, Prey Veng district')
+        | (MQD_df_CAM.Facility_Location == '#36, St. 15, Kampong Leav commune, Prey Veng district'),
+        'Facility_Location'] = 'Prey Veng District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Pursat City')
+        | (MQD_df_CAM.Facility_Location == 'Peal Nhek 2, Pursat City')
+        | (MQD_df_CAM.Facility_Location == 'Phum Piel Nhek, Pursat')
+        | (MQD_df_CAM.Facility_Location == 'Village Peal Nhek 2, Pursat City'),
+        'Facility_Location'] = 'Pursat City'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Roveahek District')
+        | (MQD_df_CAM.Facility_Location == 'Angkor Prosre commune, Roveahek district')
+        | (MQD_df_CAM.Facility_Location == 'Kampong Trach commune, Roveahek district'),
+        'Facility_Location'] = 'Roveahek District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Rovieng District')
+        | (MQD_df_CAM.Facility_Location == 'Roveing District')
+        | (MQD_df_CAM.Facility_Location == 'Ro Vieng District, Tel.: 012 24 82 65')
+        | (MQD_df_CAM.Facility_Location == 'Ro Vieng District')
+        | (MQD_df_CAM.Facility_Location == 'Ro Veing District')
+        | (MQD_df_CAM.Facility_Location == 'Rovieng District')
+        | (MQD_df_CAM.Facility_Location == 'Rovieng District'),
+        'Facility_Location'] = 'Rovieng District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Salakrav District')
+        | (MQD_df_CAM.Facility_Location == 'Salakrav, Pailin tel.:097 555653')
+        | (MQD_df_CAM.Facility_Location == 'Salakrao District, Pailin,')
+        | (MQD_df_CAM.Facility_Location == 'Stoeung Kach,Sala Krao District')
+        | (MQD_df_CAM.Facility_Location == 'Steng Trong, Sala Krao District')
+        | (MQD_df_CAM.Facility_Location == 'Sala krao District')
+        | (MQD_df_CAM.Facility_Location == 'Sala Krao District')
+        | (MQD_df_CAM.Facility_Location == 'Sala Krau District')
+        | (MQD_df_CAM.Facility_Location == 'Prom market, Salakrav, Pailin. Tel.: 055 6900987')
+        | (MQD_df_CAM.Facility_Location == 'Prom market, Salakrav, Pailin Tel. 097 678936')
+        | (MQD_df_CAM.Facility_Location == 'Phsar Prom stoeung Kach, Salakrao District')
+        | (MQD_df_CAM.Facility_Location == 'Phsar  Prum, Stoeung Kach,Sala Krao District')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Preal, Sala Krao District')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Preal village, Salakrao District')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Preal Village, Salakrao District,')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Kuy, Salakrav, Pailin, Tel 011 911 293')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Koy,Sala krao District')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Koy Village, Salakrao')
+        | (MQD_df_CAM.Facility_Location == 'O donta krom, Khom Steung Trong, Salakrav, Pailin. Tel.: 012 27 44 65')
+        | (MQD_df_CAM.Facility_Location == 'Kondamrey Village, Phnom Preal, Salakrao District')
+        | (MQD_df_CAM.Facility_Location == 'Kondamrey Village, Phnom Preal, Salakrao District')
+        | (MQD_df_CAM.Facility_Location == 'Kondamrey Commune, Phnom Preal Dsitrict')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Koy Village, Salakrao')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Preal Village, Salakrao District,')
+        | (MQD_df_CAM.Facility_Location == 'Phnom Preal village, Salakrao District'),
+        'Facility_Location'] = 'Sala Krau District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Sampov Meas District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Sampov Meas District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City')
+        | (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City')
+        | (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City Tel. 012 983334')
+        | (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City Tel. 012 983335')
+        | (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City Tel. 012 983336')
+        | (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City Tel. 012 983337')
+        | (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City Tel. 012 983338')
+        | (MQD_df_CAM.Facility_Location == 'National Road No. 2, Samrong district, Khum Lom Chang')
+        | (MQD_df_CAM.Facility_Location == 'O smach Village, O Smach Commune, Samrong District')
+        | (MQD_df_CAM.Facility_Location == 'Samrong City')
+        | (MQD_df_CAM.Facility_Location == 'Samrong District')
+        | (MQD_df_CAM.Facility_Location == 'Samrong Village, Samrong Commune, Samrong City')
+        | (MQD_df_CAM.Facility_Location == 'Samraong City')
+        | (MQD_df_CAM.Facility_Location == 'Samrong Village, Samrong Commune, Samrong City')
+        | (MQD_df_CAM.Facility_Location == 'Samrong Village, Samrong Commune, Samrong City')
+        | (MQD_df_CAM.Facility_Location == 'Samrong Village, Samrong Commune, samrong City')
+        | (MQD_df_CAM.Facility_Location == 'Phum Thmey, Roveang, Sam Rong district'),
+        'Facility_Location'] = 'Samraong District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Sangkum Thmei District')
+        | (MQD_df_CAM.Facility_Location == 'Sangkomthmey District')
+        | (MQD_df_CAM.Facility_Location == 'Sangkum Thmei District')
+        | (MQD_df_CAM.Facility_Location == 'Sangkomthmey District, Tel: 011 56 99 26')
+        | (MQD_df_CAM.Facility_Location == 'Sangkom Thmei District, Tel.: 011 56 99 26'),
+        'Facility_Location'] = 'Sangkum Thmei District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Senmonorom City')
+        | (MQD_df_CAM.Facility_Location == 'Sangkat Speanmeanchey, Senmonorom City')
+        | (MQD_df_CAM.Facility_Location == 'Senmonorom District')
+        | (MQD_df_CAM.Facility_Location == 'Senmonorom district'),
+        'Facility_Location'] = 'Senmonorom City'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Smach Mean Chey District')
+        | (MQD_df_CAM.Facility_Location == ''),
+        'Facility_Location'] = 'Smach Mean Chey District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Sre Ambel District')
+        | (MQD_df_CAM.Facility_Location == 'Sre Ambel'),
+        'Facility_Location'] = 'Sre Ambel District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Village Prek Por Krom, Prek Por Commune, Srey Santhor District')
+        | (MQD_df_CAM.Facility_Location == 'Srey Santhor District, Kampong Cham')
+        | (MQD_df_CAM.Facility_Location == 'Srey Santhor District')
+        | (MQD_df_CAM.Facility_Location == 'Srey Santhor District')
+        | (MQD_df_CAM.Facility_Location == 'Prek Por Commune, Srey Santhor District, ')
+        | (MQD_df_CAM.Facility_Location == 'Rokar Village, Prek Por Commune, Srey Santhor District'),
+        'Facility_Location'] = 'Srey Santhor District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Steung Treng Downtown, Tel: 092 251125')
+        | (MQD_df_CAM.Facility_Location == 'Steung Treng Downtown, Tel: 092 958707')
+        | (MQD_df_CAM.Facility_Location == 'Steung Treng Downtown, Tel: 097 9822096')
+        | (MQD_df_CAM.Facility_Location == 'Steung Treng Downtown, Tel:011252525')
+        | (MQD_df_CAM.Facility_Location == 'Steung Treng down town')
+        | (MQD_df_CAM.Facility_Location == 'Steung Treng downtown, Tel: 017 808287')
+        | (MQD_df_CAM.Facility_Location == 'Steung Treng downtown, tel.: 099906174')
+        | (MQD_df_CAM.Facility_Location == 'Steung Treng downtown,Tel: 097 90 43 071'),
+        'Facility_Location'] = 'Steung Treng Downtown'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Suong City')
+        | (MQD_df_CAM.Facility_Location == '#65, National Road 7, Soung Commune, Suong City'),
+        'Facility_Location'] = 'Suong City'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Svay Antor District')
+        | (MQD_df_CAM.Facility_Location == 'Pich Chenda commune,Svay Antor district')
+        | (MQD_df_CAM.Facility_Location == 'Svay Antor commune, Svay Antor district'),
+        'Facility_Location'] = 'Svay Antor District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Svay Chrom District')
+        | (MQD_df_CAM.Facility_Location == 'National Road No. 1, Crol Kor commune, Svay Chrom district'),
+        'Facility_Location'] = 'Svay Chrom District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Svay Rieng District')
+        | (MQD_df_CAM.Facility_Location == '# 111, Svay Rieng capital')
+        | (MQD_df_CAM.Facility_Location == '#1, Rd. 6, Svay Rieng Commune, Svay Rieng district')
+        | (MQD_df_CAM.Facility_Location == '#5, Veal Yun Market, Svay Rieng capital')
+        | (MQD_df_CAM.Facility_Location == 'Svay Rieng Province')
+        | (MQD_df_CAM.Facility_Location == 'Veal Yun market, Svay Rieng capital')
+        | (MQD_df_CAM.Facility_Location == 'Svay Rieng District'),
+        'Facility_Location'] = 'Svay Rieng District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Takeo Capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 01, Khum Rokaknong, St. 8, Takeo capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 02, Sangkat Rokaknong, St. 8, Takeo capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 146, St. 2, Takeo capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 2, St. 23, Takeo Capital market')
+        | (MQD_df_CAM.Facility_Location == 'No. 215, St. 28, Corneer of market of Takeo capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 215, St. 28, Corner of market of Takeo capital')
+        | (MQD_df_CAM.Facility_Location == 'No. 5, St. 2, Khum Rokaknong, Takeo capital')
+        | (MQD_df_CAM.Facility_Location == 'Takeo capital market'),
+        'Facility_Location'] = 'Takeo Capital'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Trapaing Prasat District')
         | (MQD_df_CAM.Facility_Location == 'Trapaing Prasat Village, Trapaing Prasate Commune, Trapaing Prasate District')
         | (MQD_df_CAM.Facility_Location == 'Trapaing Prasate District')
+        | (MQD_df_CAM.Facility_Location == 'Trapeang Prasat District')
         | (MQD_df_CAM.Facility_Location == 'Trapaing Prasate Village, Trapaing Prasate Commune, Trapaing Prasate District')
         | (MQD_df_CAM.Facility_Location == 'Trapaing Prasate Village, Trapaing Prasate Commune, Trapaing Prasate District')
+        | (MQD_df_CAM.Facility_Location == 'Trapaing Prasate Village, Trapaing Prasate Commune, Trapaing Prasate District')
+        | (MQD_df_CAM.Facility_Location == 'Tumnub Dach Village, Tumnub Dach Commune, Trapaing Prasate Distict')
+        | (MQD_df_CAM.Facility_Location == 'Tumnub Dach Village, Tumnub Dach Commune, Trapaing prasate District')
+        | (MQD_df_CAM.Facility_Location == 'Tumnubdach Village, Tumnubdach Commune, Trapaing Prasate District')
         | (MQD_df_CAM.Facility_Location == 'Trapaing Prasate Village, Trapaing Prasate Commune, Trapaing Prasate District'),
-        'Facility_Location'] = 'Trapaing Prasat District'
+        'Facility_Location'] = 'Trapeang Prasat District'
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Location == 'Van Sai District')
+        | (MQD_df_CAM.Facility_Location == 'Srok Vern sai'),
+        'Facility_Location'] = 'Van Sai District'
 
-
-
-
+    # Facility_Name
+    MQD_df_CAM.loc[
+        (MQD_df_CAM.Facility_Name == '')
+        | (MQD_df_CAM.Facility_Name == ''),
+        'Facility_Name'] = ''
 
 
 
 
     MQD_df_CAM.keys()
-    a = MQD_df_CAM['Facility_Location'].astype('str').unique()
+    MQD_df_CAM[MQD_df_CAM.Facility_Location == "Salakrao District, Pailin,"].count()
+
+    a = MQD_df_CAM['Facility_Name'].astype('str').unique()
+    print(len(a))
     for item in sorted(a):
         print(item)
     piv = MQD_df_CAM.pivot_table(index=['Facility_Location'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
 
-    for item in piv.index:
+
+
+
+
+
+
+
+
+
+
+
+    # Ethiopia
+    # Province
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Province_Name == 'Alamata') | (MQD_df_ETH.Province_Name == 'Alamata-Site9')
+        | (MQD_df_ETH.Province_Name == 'Alamata-site9')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site7') | (MQD_df_ETH.Province_Name == 'Alamata-Site8')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site10') | (MQD_df_ETH.Province_Name == 'Alamata-Site11')
+        | (MQD_df_ETH.Province_Name == 'Alamata-site7') | (MQD_df_ETH.Province_Name == 'Alamata-site8')
+        | (MQD_df_ETH.Province_Name == 'Alamata-site10') | (MQD_df_ETH.Province_Name == 'Alamata-site11')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site12') | (MQD_df_ETH.Province_Name == 'Alamata-Site13')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site14') | (MQD_df_ETH.Province_Name == 'Alamata-Site15')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site16') | (MQD_df_ETH.Province_Name == 'Alamata-Site17')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site18') | (MQD_df_ETH.Province_Name == 'Alamata-Site19')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site20') | (MQD_df_ETH.Province_Name == 'Alamata-Site21')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site22') | (MQD_df_ETH.Province_Name == 'Alamata-Site23')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site24') | (MQD_df_ETH.Province_Name == 'Alamata-Site25')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site26') | (MQD_df_ETH.Province_Name == 'Alamata-Site27')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site28') | (MQD_df_ETH.Province_Name == 'Alamata-Site29')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site30') | (MQD_df_ETH.Province_Name == 'Alamata-Site31')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site32') | (MQD_df_ETH.Province_Name == 'Alamata-Site33')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site34') | (MQD_df_ETH.Province_Name == 'Alamata-Site35')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site36') | (MQD_df_ETH.Province_Name == 'Alamata-Site37')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site38') | (MQD_df_ETH.Province_Name == 'Alamata-Site39')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site40') | (MQD_df_ETH.Province_Name == 'Alamata-Site41')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site42') | (MQD_df_ETH.Province_Name == 'Alamata-Site43')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site44') | (MQD_df_ETH.Province_Name == 'Alamata-Site45')
+        | (MQD_df_ETH.Province_Name == 'Alamata-Site46'),
+        'Province_Name'] = 'Alamata'
+
+    # Facility_Location
+    '''
+    A/K S/C
+    Abobo
+    Adama City Admin
+    Agaro
+    Ambo City Admin
+    Arbaminchi
+    Arsi
+    Asayita
+    Asela Woreda
+    Assosa
+    Awash 7 Kilo
+    Babile
+    Bahir Dar
+    Borena
+    Central
+    Chefra
+    Chinakson
+    Chiro
+    Dessie
+    Diredawa
+    East Ethiopia
+    East Shoa
+    Gambela
+    Gedio
+    Gende Weha
+    Gimbi
+    Goji Zone
+    Gondar
+    Gulele
+    Haramaya
+    Harar
+    Hartishek
+    Hawasa
+    Jigjiga
+    Jimma
+    Kebribaya
+    Kirkos Sc
+    Larie
+    Lideta Sc
+    Logiya
+    Mekele
+    Metehara
+    Metema
+    Metu
+    Nedjo
+    Nekemte
+    North Showa
+    Northeast Ethiopia
+    Northwest Ethiopia
+    Semera
+    Shashamane
+    Shele
+    South Ethiopia
+    Southwest Ethiopia
+    Southwest Showa
+    Togochale
+    Walayta Sodo
+    Weldiya
+    West Ethiopia
+    West Showa
+    Wolayita
+    Wolisso Town Admin
+    '''
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Arbamichi') | (MQD_df_ETH.Facility_Location == 'Arbaminchi'),
+        'Facility_Location'] = 'Arbaminchi'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Bahirdar') | (MQD_df_ETH.Facility_Location == 'Bahir Dar'),
+        'Facility_Location'] = 'Bahir Dar'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Borena') | (MQD_df_ETH.Facility_Location == 'Borena Zone'),
+        'Facility_Location'] = 'Borena'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Centeral') | (MQD_df_ETH.Facility_Location == 'Central'),
+        'Facility_Location'] = 'Central'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Diredawa') | (MQD_df_ETH.Facility_Location == 'Dirredawa'),
+        'Facility_Location'] = 'Diredawa'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'East') | (MQD_df_ETH.Facility_Location == 'East Ethiopia'),
+        'Facility_Location'] = 'East Ethiopia'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Gambela') | (MQD_df_ETH.Facility_Location == 'Gambela Tawn')
+        | (MQD_df_ETH.Facility_Location == 'Gambela Town') | (MQD_df_ETH.Facility_Location == 'Gambella'),
+        'Facility_Location'] = 'Gambela'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Gedio') | (MQD_df_ETH.Facility_Location == 'Gedio Zone'),
+        'Facility_Location'] = 'Gedio'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Gulele') | (MQD_df_ETH.Facility_Location == 'Guilele Sc'),
+        'Facility_Location'] = 'Gulele'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Harar') | (MQD_df_ETH.Facility_Location == 'Harer'),
+        'Facility_Location'] = 'Harar'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Hartishek') | (MQD_df_ETH.Facility_Location == 'Hatshek'),
+        'Facility_Location'] = 'Hartishek'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Jimma') | (MQD_df_ETH.Facility_Location == 'Jimma  Tawn'),
+        'Facility_Location'] = 'Jimma'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Metu') | (MQD_df_ETH.Facility_Location == 'Metu Tawn')
+        | (MQD_df_ETH.Facility_Location == 'Metu Town'),
+        'Facility_Location'] = 'Metu'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Nekemete') | (MQD_df_ETH.Facility_Location == 'Nkemete')
+        | (MQD_df_ETH.Facility_Location == 'Nekemte'),
+        'Facility_Location'] = 'Nekemte'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'North Shoa') | (MQD_df_ETH.Facility_Location == 'North Showa'),
+        'Facility_Location'] = 'North Showa'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'North West Ethiopia')
+        | (MQD_df_ETH.Facility_Location == 'North west Ethiopia')
+        | (MQD_df_ETH.Facility_Location == 'Nothr west Ethiopia')
+        | (MQD_df_ETH.Facility_Location == 'North westEthiopia'),
+        'Facility_Location'] = 'Northwest Ethiopia'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'North east Ethiopia'),
+        'Facility_Location'] = 'Northeast Ethiopia'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'South') | (MQD_df_ETH.Facility_Location == 'South Ethiopia'),
+        'Facility_Location'] = 'South Ethiopia'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'South West Shoa'),
+        'Facility_Location'] = 'Southwest Showa'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'South west Ethiopia'),
+        'Facility_Location'] = 'Southwest Ethiopia'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'Walayta Sodo') | (MQD_df_ETH.Facility_Location == 'Walaytasodo'),
+        'Facility_Location'] = 'Walayta Sodo'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'West'),
+        'Facility_Location'] = 'West Ethiopia'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Location == 'West Shoa') | (MQD_df_ETH.Facility_Location == 'West Showa'),
+        'Facility_Location'] = 'West Showa'
+
+    # Facility_Name
+    
+
+
+
+
+    MQD_df_ETH.loc[MQD_df_ETH.Facility_Location == 'nan']
+    MQD_df_ETH['Facility_Location'].count()
+    a = MQD_df_ETH['Facility_Location'].astype('str').unique()
+    print(len(a))
+    for item in sorted(a):
         print(item)
-
-
-
-
-
-
-
-
-
-
+    MQD_df_ETH.pivot_table(index=['Province_Name'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
 
 
 
