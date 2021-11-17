@@ -14,9 +14,10 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, '../logistigate')))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, '../logistigate', 'logistigate')))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, '../logistigate', 'logistigate', 'mcmcsamplers')))
 
-import utilities as util # Pull from the submodule "develop" branch
-import methods # Pull from the submodule "develop" branch
-import lg # Pull from the submodule "develop" branch
+import logistigate.logistigate.utilities as util # Pull from the submodule "develop" branch
+import logistigate.logistigate.methods as methods# Pull from the submodule "develop" branch
+import logistigate.logistigate.lg as lg # Pull from the submodule "develop" branch
+
 reload(methods)
 reload(util)
 import statistics
