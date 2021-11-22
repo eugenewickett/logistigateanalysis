@@ -10,6 +10,40 @@ from logistigate.logistigate import methods
 from logistigate.logistigate import lg
 
 
+def assignlabels(df, coltogroup, categorylist=[], thresh=0.8 ):
+    '''
+    Function that takes a pandas dataframe, a column name, a score threshold, and an (optional) list of categories, and
+    return a pandas object with an added column of 'columnNameCLUSTER' where each corresponding element of column name
+    is set to the closest matching category, if a category list is provided, or to a representative element if a group
+    of elements have a matching fuzzywuzzy score above the score threshold
+    '''
+    import pandas as pd
+    from fuzzywuzzy import process
+    from fuzzywuzzy import fuzz
+
+    if not isinstance(df, pd.DataFrame): # Do we have a DataFrame?
+        print('Please enter a pandas DataFrame object.')
+        return
+    if not coltogroup in df.columns: # Does the column exist?
+        print('Column ' + coltogroup + ' is not in the DataFrame.')
+        return
+
+    newcol_lst = []  # Initialize list to be turned into new column
+    if not categorylist == []:
+        # Group according to categoryList entries
+        for currEntry in df[coltogroup]:
+            bestmatch = process.extractOne(currEntry, categorylist)[0]
+            newcol_lst.append(bestmatch)
+    else:
+        # NEED TO FIGURE OUT
+        print('hi')
+
+    newcol_name = coltogroup + '_GROUPED'
+    df[newcol_name] = newcol_lst
+
+    return df
+
+
 def cleanMQD():
     '''
     Script that cleans up raw Medicines Quality Database data for use in logistigate.
