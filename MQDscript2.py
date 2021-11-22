@@ -10,7 +10,7 @@ from logistigate.logistigate import methods
 from logistigate.logistigate import lg
 
 
-def assignlabels(df, coltogroup, categorylist=[], thresh=0.8 ):
+def assignlabels(df, coltogroup, categorylist=[], thresh=90):
     '''
     Function that takes a pandas dataframe, a column name, a score threshold, and an (optional) list of categories, and
     return a pandas object with an added column of 'columnNameCLUSTER' where each corresponding element of column name
@@ -29,20 +29,74 @@ def assignlabels(df, coltogroup, categorylist=[], thresh=0.8 ):
         return
 
     newcol_lst = []  # Initialize list to be turned into new column
+    newcol_name = coltogroup + '_GROUPED'
     if not categorylist == []:
         # Group according to categoryList entries
-        for currEntry in df[coltogroup]:
-            bestmatch = process.extractOne(currEntry, categorylist)[0]
-            newcol_lst.append(bestmatch)
-    else:
-        # NEED TO FIGURE OUT
-        print('hi')
+        for currEntry in df[coltogroup].astype('string'):
+            if pd.isnull(currEntry):
+                bestmatch = currEntry
+            else:
+                bestmatch = process.extractOne(currEntry, categorylist)[0]
 
-    newcol_name = coltogroup + '_GROUPED'
+            newcol_lst.append(bestmatch)
+
+    else:
+        # Loop through each item and check if any preceding item matches more than the threshold value
+        listtogroup = df[coltogroup].astype('string').tolist()
+        candmatch = [listtogroup[0],0.0]
+        for entryInd, currEntry in enumerate(listtogroup):
+            print(entryInd)
+            #if pd.isnull(currEntry):
+            #    newcol_lst.append(currEntry)
+                #df.iloc[entryInd][newcol_name] = df.iloc[entryInd][coltogroup]
+            #else:
+            if not pd.isnull(currEntry):
+                if entryInd > 0:
+                    candmatch = process.extractOne(currEntry, listtogroup[:entryInd])
+                if candmatch[1] > thresh:
+                    bestInd = listtogroup.index(candmatch[0], 0, entryInd)
+                    newcol_lst.append(newcol_lst[bestInd])
+                    #df.iloc[entryInd][newcol_name] = candmatch[0]
+                else:
+                    newcol_lst.append(currEntry)
+                    #df.iloc[entryInd][newcol_name] = df.iloc[entryInd][coltogroup]
+            else:
+                newcol_lst.append(currEntry)
+
     df[newcol_name] = newcol_lst
 
     return df
 
+
+listtogroup[482]
+MQD_df_CAM = assignlabels(MQD_df_CAM, 'Facility_Name')
+
+
+
+
+
+'''
+    Now check how the assignlabels() function did as compared with the done-by-hand process
+
+    correct = 0
+    wrong = 0
+    nulls = 0
+    for i in range(len(MQD_df_CAM['Facility_Location'])):
+        if not pd.isnull(MQD_df_CAM.iloc[i]['Facility_Location_EDIT']):
+            if MQD_df_CAM.iloc[i]['Facility_Location_EDIT'] ==  MQD_df_CAM.iloc[i]['Facility_Location_GROUPED']:
+                correct += 1
+            else:
+                wrong += 1
+                print(MQD_df_CAM.iloc[i]['Facility_Location_EDIT'], MQD_df_CAM.iloc[i]['Facility_Location_GROUPED'])
+        else:
+            nulls += 1
+
+    (WRONG)-(CORRECT)-(NULL)
+    CAMBODIA - FACILITY LOCATION: 158-880-1953 
+    CAMBODIA - FACILITY NAME
+    
+
+    '''
 
 def cleanMQD():
     '''
@@ -322,6 +376,7 @@ def cleanMQD():
     Kratie District
     Maung Russei District
     Memot District
+    Missing
     O Tavao District
     Oyadav District
     Pailin City
@@ -353,6 +408,67 @@ def cleanMQD():
     Trapeang Prasat District
     Van Sai District
     '''
+
+    distNames_CAM = ['Anlong Veng District',
+    'Bakan District',
+    'Banlung District',
+    'Battambang City',
+    'Borkeo District',
+    'Cham Knan District',
+    'Chamroeun District',
+    'Chbamon District',
+    'Chheb District',
+    'Chom Ksan District',
+    'Choran Ksan District',
+    'Dongtong Market',
+    'Kampong Bay District',
+    'Kampong Cham District',
+    'Kampong Siam District',
+    'Kampong Thmor Market',
+    'Kampong Thom Capital',
+    'Kampong Trach District',
+    'Keo Seima District',
+    'Koh Kong District',
+    'Kolen District',
+    'Krakor District',
+    'Kratie District',
+    'Maung Russei District',
+    'Memot District',
+    'Missing',
+    'O Tavao District',
+    'Oyadav District',
+    'Pailin City',
+    'Peamror District',
+    'Pearing District',
+    'Phnom Kravanh District',
+    'Phnom Preal District',
+    'Ponhea Krek District',
+    'Posat City',
+    'Preah Vihear Town',
+    'Prey Chhor District',
+    'Prey Veng District',
+    'Pursat City',
+    'Roveahek District',
+    'Rovieng District',
+    'Sala Krau District',
+    'Sampov Meas District',
+    'Samraong District',
+    'Sangkum Thmei District',
+    'Senmonorom City',
+    'Smach Mean Chey District',
+    'Sre Ambel District',
+    'Srey Santhor District',
+    'Suong City',
+    'Svay Antor District',
+    'Svay Chrom District',
+    'Svay Rieng District',
+    'Takeo Capital',
+    'Trapeang Prasat District',
+    'Van Sai District']
+    MQD_df_CAM = assignlabels(MQD_df_CAM, 'Facility_Location', categorylist=distNames_CAM)
+
+
+
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Anlong Veng District')
         | (MQD_df_CAM.Facility_Location == 'O Chugnean Village, Anglong Veng Commune, Anglong Veng District. Phone: 012 297 224')
@@ -362,11 +478,11 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == "O'Chungchean Village, Anlong Veng Commune, Anlong Veng District")
         | (MQD_df_CAM.Facility_Location == "O'Chungchean Village, Anlong Veng Commune, Anlong Veng District")
         | (MQD_df_CAM.Facility_Location == "O'Chungchean Village, Anlong Veng Commune, Anlong Veng District"),
-        'Facility_Location'] = 'Anlong Veng District'
+        'Facility_Location_EDIT'] = 'Anlong Veng District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Bakan District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Bakan District'
+        'Facility_Location_EDIT'] = 'Bakan District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Banlung District')
         | (MQD_df_CAM.Facility_Location == 'Banlung')
@@ -380,26 +496,26 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Street #78, Banlung City')
         | (MQD_df_CAM.Facility_Location == 'near Banlung Market')
         | (MQD_df_CAM.Facility_Location == 'Srok Ban lung'),
-        'Facility_Location'] = 'Banlung District'
+        'Facility_Location_EDIT'] = 'Banlung District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Battambang City')
         | (MQD_df_CAM.Facility_Location == 'Battambang city')
         | (MQD_df_CAM.Facility_Location == 'Maung Reussy Dist. Battambang province'),
-        'Facility_Location'] = 'Battambang City'
+        'Facility_Location_EDIT'] = 'Battambang City'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Borkeo District')
         | (MQD_df_CAM.Facility_Location == 'Borkeo district')
         | (MQD_df_CAM.Facility_Location == 'Cabinet-Keo Akara, near Borkeo Market')
         | (MQD_df_CAM.Facility_Location == 'Midwife- Saren, near Borkeo Market'),
-        'Facility_Location'] = 'Borkeo District'
+        'Facility_Location_EDIT'] = 'Borkeo District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Cham Knan District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Cham Knan District'
+        'Facility_Location_EDIT'] = 'Cham Knan District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Chamroeun District')
         | (MQD_df_CAM.Facility_Location == 'Cham Roeun District'),
-        'Facility_Location'] = 'Chamroeun District'
+        'Facility_Location_EDIT'] = 'Chamroeun District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'National Road No.4, Chbamon district')
         | (MQD_df_CAM.Facility_Location == 'Chbamon District')
@@ -407,25 +523,25 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Peanichkam village, Roka Thom commune, Chbamon District')
         | (MQD_df_CAM.Facility_Location == 'Roka Thom Commune, Chbamon District')
         | (MQD_df_CAM.Facility_Location == '#01D, Psar Kampong Speu, Chbamon district'),
-        'Facility_Location'] = 'Chbamon District'
+        'Facility_Location_EDIT'] = 'Chbamon District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Chheb District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Chheb District'
+        'Facility_Location_EDIT'] = 'Chheb District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Chom Ksan District')
         | (MQD_df_CAM.Facility_Location == 'O Chhounh Village, Chom Ksan district')
         | (MQD_df_CAM.Facility_Location == 'Sra Em village, Chom Ksan District'),
-        'Facility_Location'] = 'Chom Ksan District'
+        'Facility_Location_EDIT'] = 'Chom Ksan District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Choran Ksan District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Choran Ksan District'
+        'Facility_Location_EDIT'] = 'Choran Ksan District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Dongtong District')
         | (MQD_df_CAM.Facility_Location == 'Dongtong Market')
         | (MQD_df_CAM.Facility_Location == 'No. 50, South of Dongtong Market'),
-        'Facility_Location'] = 'Dongtong District'
+        'Facility_Location_EDIT'] = 'Dongtong District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kampong Bay District')
         | (MQD_df_CAM.Facility_Location == 'No. 93, St. 3, Kampong Bay district')
@@ -433,7 +549,7 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Kampong Bay district')
         | (MQD_df_CAM.Facility_Location == '#79, Kampong Bay district')
         | (MQD_df_CAM.Facility_Location == '#16, St. 7 Makara, Kandal village, Kampong Bay district'),
-        'Facility_Location'] = 'Kampong Bay District'
+        'Facility_Location_EDIT'] = 'Kampong Bay District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kampong Cham City')
         | (MQD_df_CAM.Facility_Location == 'Kampong Cham District')
@@ -441,17 +557,17 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Steung Market, Kampong Cham')
         | (MQD_df_CAM.Facility_Location == 'Street Preah Bath Ang Duong (East Phsar Thom), Kampong Cham')
         | (MQD_df_CAM.Facility_Location == 'Street Preah Bath Ang Duong (Near Kosona Bridge), Kampong Cham'),
-        'Facility_Location'] = 'Kampong Cham District'
+        'Facility_Location_EDIT'] = 'Kampong Cham District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kampong Siam District')
         | (MQD_df_CAM.Facility_Location == 'Kampong Siam district'),
-        'Facility_Location'] = 'Kampong Siam District'
+        'Facility_Location_EDIT'] = 'Kampong Siam District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kampong Thmor Market')
         | (MQD_df_CAM.Facility_Location == '#66, Tral village, Kompong Thmor market')
         | (MQD_df_CAM.Facility_Location == '66, Tral village, Kompong Thmor market')
         | (MQD_df_CAM.Facility_Location == 'No. 3, Rd 6A, Kampong Thmor'),
-        'Facility_Location'] = 'Kampong Thmor Market'
+        'Facility_Location_EDIT'] = 'Kampong Thmor Market'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kampong Thom Capital')
         | (MQD_df_CAM.Facility_Location == 'Kampong Thom Market, Kampong Thom capital')
@@ -459,54 +575,54 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'No. 43, Rd No. 6, Kampong Thom capital')
         | (MQD_df_CAM.Facility_Location == 'No. 9 Eo, Kampong Thom Market, Kampong Thom capital')
         | (MQD_df_CAM.Facility_Location == 'No.45, Rd No. 6, Kampong Thom capital'),
-        'Facility_Location'] = 'Kampong Thom Capital'
+        'Facility_Location_EDIT'] = 'Kampong Thom Capital'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kampong Trach District')
         | (MQD_df_CAM.Facility_Location == 'Kampong Trach Village, Kampong Trach district'),
-        'Facility_Location'] = 'Kampong Trach District'
+        'Facility_Location_EDIT'] = 'Kampong Trach District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Keo Seima District')
         | (MQD_df_CAM.Facility_Location == 'Keoseima District')
         | (MQD_df_CAM.Facility_Location == 'Keoseima district')
         | (MQD_df_CAM.Facility_Location == 'Keosema District')
         | (MQD_df_CAM.Facility_Location == "Khum Sre Kh'tob, Keo Seima district"),
-        'Facility_Location'] = 'Keo Seima District'
+        'Facility_Location_EDIT'] = 'Keo Seima District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Koh Kong District')
         | (MQD_df_CAM.Facility_Location == 'Koh Kong Province')
         | (MQD_df_CAM.Facility_Location == 'Kohk Kong Capital')
         | (MQD_df_CAM.Facility_Location == "Pum trorpeagh , Sre'ambel  ,  koh kong  province."),
-        'Facility_Location'] = 'Koh Kong District'
+        'Facility_Location_EDIT'] = 'Koh Kong District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kolen District')
         | (MQD_df_CAM.Facility_Location == 'Sro Yang Village, Sro Yang Commune, Kolen District'),
-        'Facility_Location'] = 'Kolen District'
+        'Facility_Location_EDIT'] = 'Kolen District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Krakor District')
         | (MQD_df_CAM.Facility_Location == 'Chheutom Commune, Krakor District'),
-        'Facility_Location'] = 'Krakor District'
+        'Facility_Location_EDIT'] = 'Krakor District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Kratie District')
         | (MQD_df_CAM.Facility_Location == 'Kratie commune, Kratie Distrist, Kratie'),
-        'Facility_Location'] = 'Kratie District'
+        'Facility_Location_EDIT'] = 'Kratie District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Maung Russei District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Maung Russei District'
+        'Facility_Location_EDIT'] = 'Maung Russei District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Memot District')
         | (MQD_df_CAM.Facility_Location == 'Khum Dar, Memot District')
         | (MQD_df_CAM.Facility_Location == 'OD Memut'),
-        'Facility_Location'] = 'Memot District'
+        'Facility_Location_EDIT'] = 'Memot District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'O Tavao District')
         | (MQD_df_CAM.Facility_Location == "Krachab, O'Tavao District")
         | (MQD_df_CAM.Facility_Location == "Krachab, O'Tavao, Pailin"),
-        'Facility_Location'] = 'O Tavao District'
+        'Facility_Location_EDIT'] = 'O Tavao District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Oyadav District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Oyadav District'
+        'Facility_Location_EDIT'] = 'Oyadav District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Pailin City')
         | (MQD_df_CAM.Facility_Location == 'O Ta Puk Leu')
@@ -522,22 +638,22 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Pahee market, Pailin, Tel: 089 579829')
         | (MQD_df_CAM.Facility_Location == 'Phsar Pahi, Pailin City')
         | (MQD_df_CAM.Facility_Location == 'Phsar Pahi, Pailin City'),
-        'Facility_Location'] = 'Pailin City'
+        'Facility_Location_EDIT'] = 'Pailin City'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Peamror District')
         | (MQD_df_CAM.Facility_Location == '#309, Prek Khsay commune, Peamror district')
         | (MQD_df_CAM.Facility_Location == 'National Road N0.1, Prek Khsay commune, Peamror district'),
-        'Facility_Location'] = 'Peamror District'
+        'Facility_Location_EDIT'] = 'Peamror District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Pearing District')
         | (MQD_df_CAM.Facility_Location == 'St. 8A. Roka commune, Pearing district'),
-        'Facility_Location'] = 'Pearing District'
+        'Facility_Location_EDIT'] = 'Pearing District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Phnom Kravanh District')
         | (MQD_df_CAM.Facility_Location == 'Leach village, Phnom Kravanh district')
         | (MQD_df_CAM.Facility_Location == 'Phnom Kravanh District')
         | (MQD_df_CAM.Facility_Location == 'Phnom Krovanh District'),
-        'Facility_Location'] = 'Phnom Kravanh District'
+        'Facility_Location_EDIT'] = 'Phnom Kravanh District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Phnom Preal District')
         | (MQD_df_CAM.Facility_Location == 'Kondamrey - Phnom Preal')
@@ -545,43 +661,43 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'O dontaleu Phnom Preal District')
         | (MQD_df_CAM.Facility_Location == 'Phnom Preal')
         | (MQD_df_CAM.Facility_Location == 'Phnom Preal District'),
-        'Facility_Location'] = 'Phnom Preal District'
+        'Facility_Location_EDIT'] = 'Phnom Preal District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Ponhea Krek District')
         | (MQD_df_CAM.Facility_Location == 'Ponhea Krek District'),
-        'Facility_Location'] = 'Ponhea Krek District'
+        'Facility_Location_EDIT'] = 'Ponhea Krek District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Posat City')
         | (MQD_df_CAM.Facility_Location == 'Peal Nhek 2, Posat City'),
-        'Facility_Location'] = 'Posat City'
+        'Facility_Location_EDIT'] = 'Posat City'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Preah Vihear Town')
         | (MQD_df_CAM.Facility_Location == 'Preah Vihear Province')
         | (MQD_df_CAM.Facility_Location == 'Preah Vihear Town')
         | (MQD_df_CAM.Facility_Location == 'Preah Vihear Town')
         | (MQD_df_CAM.Facility_Location == 'Preah Vihear Town'),
-        'Facility_Location'] = 'Preah Vihear Town'
+        'Facility_Location_EDIT'] = 'Preah Vihear Town'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Prey Chhor District')
         | (MQD_df_CAM.Facility_Location == 'OD Prey Chhor')
         | (MQD_df_CAM.Facility_Location == 'Phsar Prey Toteng, Prey Chhor District'),
-        'Facility_Location'] = 'Prey Chhor District'
+        'Facility_Location_EDIT'] = 'Prey Chhor District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Prey Veng District')
         | (MQD_df_CAM.Facility_Location == '#26A, St.15, Kampong Leav commune, Prey Veng district')
         | (MQD_df_CAM.Facility_Location == '#36, St. 15, Kampong Leav commune, Prey Veng district'),
-        'Facility_Location'] = 'Prey Veng District'
+        'Facility_Location_EDIT'] = 'Prey Veng District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Pursat City')
         | (MQD_df_CAM.Facility_Location == 'Peal Nhek 2, Pursat City')
         | (MQD_df_CAM.Facility_Location == 'Phum Piel Nhek, Pursat')
         | (MQD_df_CAM.Facility_Location == 'Village Peal Nhek 2, Pursat City'),
-        'Facility_Location'] = 'Pursat City'
+        'Facility_Location_EDIT'] = 'Pursat City'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Roveahek District')
         | (MQD_df_CAM.Facility_Location == 'Angkor Prosre commune, Roveahek district')
         | (MQD_df_CAM.Facility_Location == 'Kampong Trach commune, Roveahek district'),
-        'Facility_Location'] = 'Roveahek District'
+        'Facility_Location_EDIT'] = 'Roveahek District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Rovieng District')
         | (MQD_df_CAM.Facility_Location == 'Roveing District')
@@ -590,7 +706,7 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Ro Veing District')
         | (MQD_df_CAM.Facility_Location == 'Rovieng District')
         | (MQD_df_CAM.Facility_Location == 'Rovieng District'),
-        'Facility_Location'] = 'Rovieng District'
+        'Facility_Location_EDIT'] = 'Rovieng District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Salakrav District')
         | (MQD_df_CAM.Facility_Location == 'Salakrav, Pailin tel.:097 555653')
@@ -617,11 +733,11 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Phnom Koy Village, Salakrao')
         | (MQD_df_CAM.Facility_Location == 'Phnom Preal Village, Salakrao District,')
         | (MQD_df_CAM.Facility_Location == 'Phnom Preal village, Salakrao District'),
-        'Facility_Location'] = 'Sala Krau District'
+        'Facility_Location_EDIT'] = 'Sala Krau District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Sampov Meas District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Sampov Meas District'
+        'Facility_Location_EDIT'] = 'Sampov Meas District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City')
         | (MQD_df_CAM.Facility_Location == 'Chhouk Village, Samrong Commune, Samrong City')
@@ -640,28 +756,28 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Samrong Village, Samrong Commune, Samrong City')
         | (MQD_df_CAM.Facility_Location == 'Samrong Village, Samrong Commune, samrong City')
         | (MQD_df_CAM.Facility_Location == 'Phum Thmey, Roveang, Sam Rong district'),
-        'Facility_Location'] = 'Samraong District'
+        'Facility_Location_EDIT'] = 'Samraong District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Sangkum Thmei District')
         | (MQD_df_CAM.Facility_Location == 'Sangkomthmey District')
         | (MQD_df_CAM.Facility_Location == 'Sangkum Thmei District')
         | (MQD_df_CAM.Facility_Location == 'Sangkomthmey District, Tel: 011 56 99 26')
         | (MQD_df_CAM.Facility_Location == 'Sangkom Thmei District, Tel.: 011 56 99 26'),
-        'Facility_Location'] = 'Sangkum Thmei District'
+        'Facility_Location_EDIT'] = 'Sangkum Thmei District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Senmonorom City')
         | (MQD_df_CAM.Facility_Location == 'Sangkat Speanmeanchey, Senmonorom City')
         | (MQD_df_CAM.Facility_Location == 'Senmonorom District')
         | (MQD_df_CAM.Facility_Location == 'Senmonorom district'),
-        'Facility_Location'] = 'Senmonorom City'
+        'Facility_Location_EDIT'] = 'Senmonorom City'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Smach Mean Chey District')
         | (MQD_df_CAM.Facility_Location == ''),
-        'Facility_Location'] = 'Smach Mean Chey District'
+        'Facility_Location_EDIT'] = 'Smach Mean Chey District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Sre Ambel District')
         | (MQD_df_CAM.Facility_Location == 'Sre Ambel'),
-        'Facility_Location'] = 'Sre Ambel District'
+        'Facility_Location_EDIT'] = 'Sre Ambel District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Village Prek Por Krom, Prek Por Commune, Srey Santhor District')
         | (MQD_df_CAM.Facility_Location == 'Srey Santhor District, Kampong Cham')
@@ -669,7 +785,7 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Srey Santhor District')
         | (MQD_df_CAM.Facility_Location == 'Prek Por Commune, Srey Santhor District, ')
         | (MQD_df_CAM.Facility_Location == 'Rokar Village, Prek Por Commune, Srey Santhor District'),
-        'Facility_Location'] = 'Srey Santhor District'
+        'Facility_Location_EDIT'] = 'Srey Santhor District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Steung Treng Downtown, Tel: 092 251125')
         | (MQD_df_CAM.Facility_Location == 'Steung Treng Downtown, Tel: 092 958707')
@@ -679,20 +795,20 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Steung Treng downtown, Tel: 017 808287')
         | (MQD_df_CAM.Facility_Location == 'Steung Treng downtown, tel.: 099906174')
         | (MQD_df_CAM.Facility_Location == 'Steung Treng downtown,Tel: 097 90 43 071'),
-        'Facility_Location'] = 'Steung Treng Downtown'
+        'Facility_Location_EDIT'] = 'Steung Treng Downtown'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Suong City')
         | (MQD_df_CAM.Facility_Location == '#65, National Road 7, Soung Commune, Suong City'),
-        'Facility_Location'] = 'Suong City'
+        'Facility_Location_EDIT'] = 'Suong City'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Svay Antor District')
         | (MQD_df_CAM.Facility_Location == 'Pich Chenda commune,Svay Antor district')
         | (MQD_df_CAM.Facility_Location == 'Svay Antor commune, Svay Antor district'),
-        'Facility_Location'] = 'Svay Antor District'
+        'Facility_Location_EDIT'] = 'Svay Antor District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Svay Chrom District')
         | (MQD_df_CAM.Facility_Location == 'National Road No. 1, Crol Kor commune, Svay Chrom district'),
-        'Facility_Location'] = 'Svay Chrom District'
+        'Facility_Location_EDIT'] = 'Svay Chrom District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Svay Rieng District')
         | (MQD_df_CAM.Facility_Location == '# 111, Svay Rieng capital')
@@ -701,7 +817,7 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Svay Rieng Province')
         | (MQD_df_CAM.Facility_Location == 'Veal Yun market, Svay Rieng capital')
         | (MQD_df_CAM.Facility_Location == 'Svay Rieng District'),
-        'Facility_Location'] = 'Svay Rieng District'
+        'Facility_Location_EDIT'] = 'Svay Rieng District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Takeo Capital')
         | (MQD_df_CAM.Facility_Location == 'No. 01, Khum Rokaknong, St. 8, Takeo capital')
@@ -712,7 +828,7 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'No. 215, St. 28, Corner of market of Takeo capital')
         | (MQD_df_CAM.Facility_Location == 'No. 5, St. 2, Khum Rokaknong, Takeo capital')
         | (MQD_df_CAM.Facility_Location == 'Takeo capital market'),
-        'Facility_Location'] = 'Takeo Capital'
+        'Facility_Location_EDIT'] = 'Takeo Capital'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Trapaing Prasat District')
         | (MQD_df_CAM.Facility_Location == 'Trapaing Prasat Village, Trapaing Prasate Commune, Trapaing Prasate District')
@@ -725,11 +841,17 @@ def cleanMQD():
         | (MQD_df_CAM.Facility_Location == 'Tumnub Dach Village, Tumnub Dach Commune, Trapaing prasate District')
         | (MQD_df_CAM.Facility_Location == 'Tumnubdach Village, Tumnubdach Commune, Trapaing Prasate District')
         | (MQD_df_CAM.Facility_Location == 'Trapaing Prasate Village, Trapaing Prasate Commune, Trapaing Prasate District'),
-        'Facility_Location'] = 'Trapeang Prasat District'
+        'Facility_Location_EDIT'] = 'Trapeang Prasat District'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Van Sai District')
         | (MQD_df_CAM.Facility_Location == 'Srok Vern sai'),
-        'Facility_Location'] = 'Van Sai District'
+        'Facility_Location_EDIT'] = 'Van Sai District'
+
+    #piv = MQD_df_CAM.pivot_table(index=['Facility_Location'], columns=['Final_Test_Conclusion'], aggfunc='size',
+     #                            fill_value=0)
+    #piv.sort_values(['Pass'],ascending=False)
+
+
 
     # Facility_Name
     MQD_df_CAM.loc[
@@ -740,6 +862,9 @@ def cleanMQD():
 
 
 
+    '''
+    USEFUL FUNCTIONS
+    
     MQD_df_CAM.keys()
     MQD_df_CAM[MQD_df_CAM.Facility_Location == "Salakrao District, Pailin,"].count()
 
@@ -748,6 +873,8 @@ def cleanMQD():
     for item in sorted(a):
         print(item)
     piv = MQD_df_CAM.pivot_table(index=['Facility_Location'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+
+    '''
 
 
 
