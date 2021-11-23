@@ -42,10 +42,9 @@ def assignlabels(df, coltogroup, categorylist=[], thresh=90):
 
     else:
         # Loop through each item and check if any preceding item matches more than the threshold value
-        listtogroup = df[coltogroup].astype('string').tolist()
+        listtogroup = df[coltogroup].astype('string').fillna('NA VALUE').tolist()
         candmatch = [listtogroup[0],0.0]
         for entryInd, currEntry in enumerate(listtogroup):
-            print(entryInd)
             #if pd.isnull(currEntry):
             #    newcol_lst.append(currEntry)
                 #df.iloc[entryInd][newcol_name] = df.iloc[entryInd][coltogroup]
