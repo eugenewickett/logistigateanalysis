@@ -1018,6 +1018,10 @@ def cleanMQD():
         (MQD_df_ETH.Facility_Name_GROUPED == 'Adare General Hospital'),
         'Facility_Name_GROUPED'] = 'Adare General Hospital'
     MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Amanuel') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Amanuel Drug Store'),
+        'Facility_Name_GROUPED'] = 'Amanuel Drug Store'
+    MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Name_GROUPED == 'Arbamincji Gen.Hospital') |
         (MQD_df_ETH.Facility_Name_GROUPED == 'Arbaminch Gen Hos') |
         (MQD_df_ETH.Facility_Name_GROUPED == 'Arbaminch General Hospital'),
@@ -1026,6 +1030,48 @@ def cleanMQD():
         (MQD_df_ETH.Facility_Name_GROUPED == 'Assossa Hospital') |
         (MQD_df_ETH.Facility_Name_GROUPED == 'Assosa General Hospital'),
         'Facility_Name_GROUPED'] = 'Assosa General Hospital'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Eskinder') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Eskinder Pharmacy'),
+        'Facility_Name_GROUPED'] = 'Eskinder Pharmacy'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Jhon Abisinya') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Jhone Abysinia'),
+        'Facility_Name_GROUPED'] = 'Jhone Abysinia'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Karamara Hospital  Pharmacy') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Karamara hospital'),
+        'Facility_Name_GROUPED'] = 'Karamara hospital'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Logiya') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Logia  Health Center'),
+        'Facility_Name_GROUPED'] = 'Logia  Health Center'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Metema District Hospital') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Metema hospital'),
+        'Facility_Name_GROUPED'] = 'Metema hospital'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Ongazl Pharmacy') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Ougazi Pharmacy'),
+        'Facility_Name_GROUPED'] = 'Ougazi Pharmacy'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Rehobot Clinic') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Rohobot') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Rohbot clinic'),
+        'Facility_Name_GROUPED'] = 'Rohbot clinic'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Sahel Pharma') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Sahal Pharmacy'),
+        'Facility_Name_GROUPED'] = 'Sahal Pharmacy'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Tesfa') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Tesfa Drug Store'),
+        'Facility_Name_GROUPED'] = 'Tesfa Drug Store'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Walayta Sodo Uni Teaching &Reveral Hos') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Walayta Universcity Teaching And Reveral Hospital') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Walaytasodo Univercity Teaching Referal Hospital'),
+        'Facility_Name_GROUPED'] = 'Walayta Universcity Teaching And Reveral Hospital'
 
 
 
@@ -1036,6 +1082,13 @@ def cleanMQD():
     for item in sorted(a):
         print(item)
     MQD_df_ETH.pivot_table(index=['Province_Name'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+
+
+
+    #Manufacturer
+
+
+
 
 
 
