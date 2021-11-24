@@ -36,8 +36,11 @@ def assignlabels(df, coltogroup, categorylist=[], thresh=90):
             if pd.isnull(currEntry):
                 bestmatch = currEntry
             else:
-                bestmatch = process.extractOne(currEntry, categorylist)[0]
-
+                currmatch = process.extractOne(currEntry, categorylist)
+                if currmatch[1] < thresh: # Insufficient match; use filler entry
+                    bestmatch = 'MANUALLY_MODIFY'
+                else:
+                    bestmatch = currmatch[0]
             newcol_lst.append(bestmatch)
 
     else:
@@ -66,13 +69,19 @@ def assignlabels(df, coltogroup, categorylist=[], thresh=90):
 
     return df
 
+'''
+Some checks of the function's performance
 
 listtogroup[482]
 MQD_df_CAM = assignlabels(MQD_df_CAM, 'Facility_Name')
 
-
-
-
+# How many did we change?
+counter = 0
+for i in range(len(listtogroup)):
+    if not MQD_df_CAM.iloc[i]['Facility_Name'] == MQD_df_CAM.iloc[i]['Facility_Name_GROUPED']:
+        counter += 1
+print(counter)
+'''
 
 '''
     Now check how the assignlabels() function did as compared with the done-by-hand process
@@ -152,7 +161,7 @@ def cleanMQD():
 
     # Consolidate typos or seemingly identical entries in significant categories
 
-    # CAMBODIA
+    # CAMBODIA PROCESSING
     # Province_Name
     MQD_df_CAM.loc[
         (MQD_df_CAM.Province_Name == 'Ratanakiri') | (MQD_df_CAM.Province_Name == 'Rattanakiri'), 'Province_Name'] = 'Ratanakiri'
@@ -348,66 +357,7 @@ def cleanMQD():
         'Manufacturer'] = 'Zhangjiakou Dongfang Phamaceutical'
 
     # Facility_Location
-    # Designated Cambodia districts:
-    '''
-    Anlong Veng District
-    Bakan District
-    Banlung District
-    Battambang City
-    Borkeo District
-    Cham Knan District
-    Chamroeun District
-    Chbamon District
-    Chheb District
-    Chom Ksan District
-    Choran Ksan District
-    Dongtong Market
-    Kampong Bay District
-    Kampong Cham District
-    Kampong Siam District
-    Kampong Thmor Market
-    Kampong Thom Capital
-    Kampong Trach District
-    Keo Seima District
-    Koh Kong District
-    Kolen District
-    Krakor District
-    Kratie District
-    Maung Russei District
-    Memot District
-    Missing
-    O Tavao District
-    Oyadav District
-    Pailin City
-    Peamror District
-    Pearing District
-    Phnom Kravanh District
-    Phnom Preal District
-    Ponhea Krek District
-    Posat City
-    Preah Vihear Town
-    Prey Chhor District
-    Prey Veng District
-    Pursat City
-    Roveahek District
-    Rovieng District
-    Sala Krau District
-    Sampov Meas District
-    Samraong District
-    Sangkum Thmei District
-    Senmonorom City
-    Smach Mean Chey District
-    Sre Ambel District
-    Srey Santhor District
-    Suong City
-    Svay Antor District
-    Svay Chrom District
-    Svay Rieng District
-    Takeo Capital
-    Trapeang Prasat District
-    Van Sai District
-    '''
-
+    # Designated Cambodia districts for clustering:
     distNames_CAM = ['Anlong Veng District',
     'Bakan District',
     'Banlung District',
@@ -466,8 +416,7 @@ def cleanMQD():
     'Van Sai District']
     MQD_df_CAM = assignlabels(MQD_df_CAM, 'Facility_Location', categorylist=distNames_CAM)
 
-
-
+    # Manually changed entries
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Location == 'Anlong Veng District')
         | (MQD_df_CAM.Facility_Location == 'O Chugnean Village, Anglong Veng Commune, Anglong Veng District. Phone: 012 297 224')
@@ -850,15 +799,14 @@ def cleanMQD():
      #                            fill_value=0)
     #piv.sort_values(['Pass'],ascending=False)
 
-
-
     # Facility_Name
+    '''
     MQD_df_CAM.loc[
         (MQD_df_CAM.Facility_Name == '')
         | (MQD_df_CAM.Facility_Name == ''),
         'Facility_Name'] = ''
-
-
+    '''
+    MQD_df_CAM = assignlabels(MQD_df_CAM, 'Facility_Name')
 
 
     '''
@@ -886,7 +834,7 @@ def cleanMQD():
 
 
 
-    # Ethiopia
+    # ETHIOPIA PROCESSING
     # Province
     MQD_df_ETH.loc[
         (MQD_df_ETH.Province_Name == 'Alamata') | (MQD_df_ETH.Province_Name == 'Alamata-Site9')
@@ -1057,14 +1005,33 @@ def cleanMQD():
         'Facility_Location'] = 'West Showa'
 
     # Facility_Name
-    
+    MQD_df_ETH = assignlabels(MQD_df_ETH, 'Facility_Name')
 
+    '''
+    for i in range(len(MQD_df_ETH['Facility_Name'])):
+        if not MQD_df_ETH.iloc[i]['Facility_Name'] == MQD_df_ETH.iloc[i]['Facility_Name_GROUPED']:
+            print('|| '+ str(MQD_df_ETH.iloc[i]['Facility_Name']) +' || ' + str(MQD_df_ETH.iloc[i]['Facility_Name_GROUPED']) + ' ||')
+    '''
+    # Manual adjustments
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Adare Gen. Hos') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Adare General Hospital'),
+        'Facility_Name_GROUPED'] = 'Adare General Hospital'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Arbamincji Gen.Hospital') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Arbaminch Gen Hos') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Arbaminch General Hospital'),
+        'Facility_Name_GROUPED'] = 'Arbaminch General Hospital'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Assossa Hospital') |
+        (MQD_df_ETH.Facility_Name_GROUPED == 'Assosa General Hospital'),
+        'Facility_Name_GROUPED'] = 'Assosa General Hospital'
 
 
 
     MQD_df_ETH.loc[MQD_df_ETH.Facility_Location == 'nan']
     MQD_df_ETH['Facility_Location'].count()
-    a = MQD_df_ETH['Facility_Location'].astype('str').unique()
+    a = MQD_df_ETH['Facility_Name_GROUPED'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
