@@ -12,10 +12,11 @@ from logistigate.logistigate import lg
 
 def assignlabels(df, coltogroup, categorylist=[], thresh=90):
     '''
-    Function that takes a pandas dataframe, a column name, a score threshold, and an (optional) list of categories, and
-    return a pandas object with an added column of 'columnNameCLUSTER' where each corresponding element of column name
-    is set to the closest matching category, if a category list is provided, or to a representative element if a group
-    of elements have a matching fuzzywuzzy score above the score threshold
+    Function that takes a pandas dataframe, a column name, an (optional) list of categories, and a [optional] score
+    threshold, and return a pandas object with an added column of 'columnName_GROUPED' where each corresponding element
+    of column name is set to the closest matching category, if a category list is provided and the match value exceeds
+    the threshold, or to a representative element if a group of elements have a matching fuzzywuzzy score above the
+    score threshold.
     '''
     import pandas as pd
     from fuzzywuzzy import process
@@ -168,193 +169,194 @@ def cleanMQD():
     MQD_df_CAM.loc[
         (MQD_df_CAM.Province_Name == 'Steung Treng') | (MQD_df_CAM.Province_Name == 'Stung Treng'), 'Province_Name'] = 'Stung Treng'
 
-
+    templist = MQD_df_CAM['Manufacturer'].tolist()
+    MQD_df_CAM['Manufacturer_GROUPED'] = templist
     # Manufacturer
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'AMN Life Science') | (MQD_df_CAM.Manufacturer == 'AMN Life Science Pvt Ltd'),
-        'Manufacturer'] = 'AMN Life Science'
+        'Manufacturer_GROUPED'] = 'AMN Life Science'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Acdhon Co., Ltd') | (MQD_df_CAM.Manufacturer == 'Acdhon Company Ltd'),
-        'Manufacturer'] = 'Acdhon Co., Ltd'
+        'Manufacturer_GROUPED'] = 'Acdhon Co., Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Alembic Limited') | (MQD_df_CAM.Manufacturer == 'Alembic Pharmaceuticals Ltd'),
-        'Manufacturer'] = 'Alembic Limited'
+        'Manufacturer_GROUPED'] = 'Alembic Limited'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'ALICE PHARMA PVT LTD') | (MQD_df_CAM.Manufacturer == 'Alice Pharma Pvt.Ltd')
-        | (MQD_df_CAM.Manufacturer == 'Alice Pharmaceuticals'), 'Manufacturer'] = 'Alice Pharmaceuticals'
+        | (MQD_df_CAM.Manufacturer == 'Alice Pharmaceuticals'), 'Manufacturer_GROUPED'] = 'Alice Pharmaceuticals'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Atoz Pharmaceutical Pvt.Ltd') | (MQD_df_CAM.Manufacturer == 'Atoz Pharmaceuticals Ltd'),
-        'Manufacturer'] = 'Atoz Pharmaceuticals Ltd'
+        'Manufacturer_GROUPED'] = 'Atoz Pharmaceuticals Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Aurobindo Pharma LTD') | (MQD_df_CAM.Manufacturer == 'Aurobindo Pharma Ltd.')
-        | (MQD_df_CAM.Manufacturer == 'Aurobindo Pharmaceuticals Ltd'), 'Manufacturer'] = 'Aurobindo'
+        | (MQD_df_CAM.Manufacturer == 'Aurobindo Pharmaceuticals Ltd'), 'Manufacturer_GROUPED'] = 'Aurobindo'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Aventis') | (MQD_df_CAM.Manufacturer == 'Aventis Pharma Specialite'),
-        'Manufacturer'] = 'Aventis'
+        'Manufacturer_GROUPED'] = 'Aventis'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Bailly Creat') | (MQD_df_CAM.Manufacturer == 'Laboratoire BAILLY- CREAT'),
-        'Manufacturer'] = 'Bailly Creat'
+        'Manufacturer_GROUPED'] = 'Bailly Creat'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Bright Future Laboratories') | (MQD_df_CAM.Manufacturer == 'Bright Future Pharma'),
-        'Manufacturer'] = 'Bright Future Laboratories'
+        'Manufacturer_GROUPED'] = 'Bright Future Laboratories'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Burapha') | (MQD_df_CAM.Manufacturer == 'Burapha Dispensary Co, Ltd'),
-        'Manufacturer'] = 'Burapha'
+        'Manufacturer_GROUPED'] = 'Burapha'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'CHANKIT') | (MQD_df_CAM.Manufacturer == 'Chankit Trading Ltd')
         | (MQD_df_CAM.Manufacturer == 'Chankit trading Ltd, Part'),
-        'Manufacturer'] = 'Chankit Trading Ltd'
+        'Manufacturer_GROUPED'] = 'Chankit Trading Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Chea Chamnan Laboratoire Co., LTD') | (MQD_df_CAM.Manufacturer == 'Chea Chamnan Laboratories Co., Ltd')
         | (MQD_df_CAM.Manufacturer == 'Chea Chamnan Laboratory Company Ltd'),
-        'Manufacturer'] = 'Chea Chamnan Laboratory Company Ltd'
+        'Manufacturer_GROUPED'] = 'Chea Chamnan Laboratory Company Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Cipla Ltd.') | (MQD_df_CAM.Manufacturer == 'Cipla Ltd'),
-        'Manufacturer'] = 'Cipla Ltd'
+        'Manufacturer_GROUPED'] = 'Cipla Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'DOMESCO MEDICAL IMP EXP JOINT STOCK CORP')
         | (MQD_df_CAM.Manufacturer == 'DOMESCO MEDICAL IMP EXP JOINT_stock corp')
         | (MQD_df_CAM.Manufacturer == 'DOMESCO MEDICAL IMPORT EXPORT JOINT STOCK CORP')
         | (MQD_df_CAM.Manufacturer == 'Domesco'),
-        'Manufacturer'] = 'Domesco'
+        'Manufacturer_GROUPED'] = 'Domesco'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Emcure Pharmaceutical') | (MQD_df_CAM.Manufacturer == 'Emcure'),
-        'Manufacturer'] = 'Emcure'
+        'Manufacturer_GROUPED'] = 'Emcure'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Eurolife Healthcare Pvt Ltd') | (MQD_df_CAM.Manufacturer == 'Eurolife'),
-        'Manufacturer'] = 'Eurolife'
+        'Manufacturer_GROUPED'] = 'Eurolife'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Fabrique par Modo Plan')
         | (MQD_df_CAM.Manufacturer == 'Fabrique'),
-        'Manufacturer'] = 'Fabrique'
+        'Manufacturer_GROUPED'] = 'Fabrique'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Flamingo Pharmaceutical Limited') | (MQD_df_CAM.Manufacturer == 'Flamingo Pharmaceuticals Ltd'),
-        'Manufacturer'] = 'Flamingo Pharmaceuticals Ltd'
+        'Manufacturer_GROUPED'] = 'Flamingo Pharmaceuticals Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Glenmark Pharmaceuticals Ltd') |
         (MQD_df_CAM.Manufacturer == 'Glenmark Pharmaceuticals Ltd.'),
-        'Manufacturer'] = 'Glenmark Pharmaceuticals Ltd'
+        'Manufacturer_GROUPED'] = 'Glenmark Pharmaceuticals Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Global Pharma Health care PVT-LTD')
         | (MQD_df_CAM.Manufacturer == 'GlobalPharma Healthcare Pvt-Ltd')
         | (MQD_df_CAM.Manufacturer == 'Global Pharma'),
-        'Manufacturer'] = 'Global Pharma'
+        'Manufacturer_GROUPED'] = 'Global Pharma'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Gracure Pharmaceuticals Ltd.') | (MQD_df_CAM.Manufacturer == 'Gracure Pharmaceuticals'),
-        'Manufacturer'] = 'Gracure Pharmaceuticals'
+        'Manufacturer_GROUPED'] = 'Gracure Pharmaceuticals'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Il Dong Pharmaceutical Company Ltd') | (MQD_df_CAM.Manufacturer == 'Il Dong Pharmaceuticals Ltd'),
-        'Manufacturer'] = 'Il Dong Pharmaceuticals Ltd'
+        'Manufacturer_GROUPED'] = 'Il Dong Pharmaceuticals Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Khandelwal Laboratories Ltd')
         | (MQD_df_CAM.Manufacturer == 'Khandewal Lab')
         | (MQD_df_CAM.Manufacturer == 'Khandelwal'),
-        'Manufacturer'] = 'Khandelwal'
+        'Manufacturer_GROUPED'] = 'Khandelwal'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Laboratories EPHAC Co., Ltd')
         | (MQD_df_CAM.Manufacturer == 'EPHAC Laboratories Ltd'),
-        'Manufacturer'] = 'Laboratories EPHAC Co., Ltd'
+        'Manufacturer_GROUPED'] = 'Laboratories EPHAC Co., Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Lyka Laboratories Ltd')
         | (MQD_df_CAM.Manufacturer == 'Lyka Labs Limited.')
         | (MQD_df_CAM.Manufacturer == 'Lyka Labs'),
-        'Manufacturer'] = 'Lyka Labs'
+        'Manufacturer_GROUPED'] = 'Lyka Labs'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Marksans Pharmaceuticals Ltd') | (MQD_df_CAM.Manufacturer == 'Marksans Pharma Ltd.')
         | (MQD_df_CAM.Manufacturer == 'Marksans Pharma Ltd.,'),
-        'Manufacturer'] = 'Marksans Pharma Ltd.'
+        'Manufacturer_GROUPED'] = 'Marksans Pharma Ltd.'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'MASALAB') | (MQD_df_CAM.Manufacturer == 'Masa Lab Co., Ltd'),
-        'Manufacturer'] = 'Masa Lab Co., Ltd'
+        'Manufacturer_GROUPED'] = 'Masa Lab Co., Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Medical Supply Pharmaceutical Enterprise')
         | (MQD_df_CAM.Manufacturer == 'Medical Supply Pharmaceutical Enteprise'),
-        'Manufacturer'] = 'Medical Supply Pharmaceutical Enterprise'
+        'Manufacturer_GROUPED'] = 'Medical Supply Pharmaceutical Enterprise'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Medley Pharmaceutical') |
         (MQD_df_CAM.Manufacturer == 'Medley Pharmaceuticals') |
         (MQD_df_CAM.Manufacturer == 'Medley Pharmaceuticals Ltd'),
-        'Manufacturer'] = 'Medley Pharmaceuticals'
+        'Manufacturer_GROUPED'] = 'Medley Pharmaceuticals'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Medopharm Pvt. Ltd.')
         | (MQD_df_CAM.Manufacturer == 'Medopharm'),
-        'Manufacturer'] = 'Medopharm'
+        'Manufacturer_GROUPED'] = 'Medopharm'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Micro Laboratories Ltd') | (MQD_df_CAM.Manufacturer == 'MICRO LAB LIMITED')
         | (MQD_df_CAM.Manufacturer == 'Micro Labs Ltd') | (MQD_df_CAM.Manufacturer == 'Microlabs Limited'),
-        'Manufacturer'] = 'Microlabs'
+        'Manufacturer_GROUPED'] = 'Microlabs'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Millimed Co., Ltd Thailand')
         | (MQD_df_CAM.Manufacturer == 'Millimed'),
-        'Manufacturer'] = 'Millimed'
+        'Manufacturer_GROUPED'] = 'Millimed'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Orchid Health Care') | (MQD_df_CAM.Manufacturer == 'Orchid Health'),
-        'Manufacturer'] = 'Orchid Health'
+        'Manufacturer_GROUPED'] = 'Orchid Health'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Osoth Inter Laboratory Co., LTD') | (MQD_df_CAM.Manufacturer == 'Osoth Inter Laboratories'),
-        'Manufacturer'] = 'Osoth Inter Laboratories'
+        'Manufacturer_GROUPED'] = 'Osoth Inter Laboratories'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'PHARMASANT LABORATORIES Co.,LTD') | (MQD_df_CAM.Manufacturer == 'Pharmasant Laboratories Co., Ltd'),
-        'Manufacturer'] = 'Pharmasant Laboratories Co., Ltd'
+        'Manufacturer_GROUPED'] = 'Pharmasant Laboratories Co., Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Plethico Pharmaceuticals, Ltd')
         | (MQD_df_CAM.Manufacturer == 'Plethico Pharmaceuticals Ltd')
         | (MQD_df_CAM.Manufacturer == 'Plethico Pharmaceutical Ltd')
         | (MQD_df_CAM.Manufacturer == 'Plethico'),
-        'Manufacturer'] = 'Plethico'
+        'Manufacturer_GROUPED'] = 'Plethico'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'PPM Laboratory') | (MQD_df_CAM.Manufacturer == 'PPM')
         | (MQD_df_CAM.Manufacturer == 'Pharma Product Manufacturing'),
-        'Manufacturer'] = 'PPM'
+        'Manufacturer_GROUPED'] = 'PPM'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Laboratories Pvt. Ltd') |
         (MQD_df_CAM.Manufacturer == 'PVT Laboratories Ltd'),
-        'Manufacturer'] = 'PVT Laboratories Ltd'
+        'Manufacturer_GROUPED'] = 'PVT Laboratories Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Ranbaxy Laboratories Limited.')
         | (MQD_df_CAM.Manufacturer == 'Ranbaxy Pharmaceuticals'),
-        'Manufacturer'] = 'Ranbaxy Pharmaceuticals'
+        'Manufacturer_GROUPED'] = 'Ranbaxy Pharmaceuticals'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Shijiazhuang Pharma Group Zhongnuo Pharmaceutical [Shijiazhuang] Co.,LTD')
         | (MQD_df_CAM.Manufacturer == 'Shijiazhuang Pharmaceutical Group Ltd'),
-        'Manufacturer'] = 'Shijiazhuang Pharmaceutical Group Ltd'
+        'Manufacturer_GROUPED'] = 'Shijiazhuang Pharmaceutical Group Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Sanofi-Aventis Vietnam') | (MQD_df_CAM.Manufacturer == 'Sanofi Aventis'),
-        'Manufacturer'] = 'Sanofi Aventis'
+        'Manufacturer_GROUPED'] = 'Sanofi Aventis'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Stada Vietnam Joint Venture Co., Ltd.') | (MQD_df_CAM.Manufacturer == 'Stada Vietnam Joint Venture'),
-        'Manufacturer'] = 'Stada Vietnam Joint Venture'
+        'Manufacturer_GROUPED'] = 'Stada Vietnam Joint Venture'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Shandong Reyoung Pharmaceutical Co., Ltd') | (
                     MQD_df_CAM.Manufacturer == 'Shandong Reyoung Pharmaceuticals Ltd'),
-        'Manufacturer'] = 'Shandong Reyoung Pharmaceuticals Ltd'
+        'Manufacturer_GROUPED'] = 'Shandong Reyoung Pharmaceuticals Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'T Man Pharma Ltd. Part.')
         | (MQD_df_CAM.Manufacturer == 'T-MAN Pharma Ltd., Part')
         | (MQD_df_CAM.Manufacturer == 'T-Man Pharmaceuticals Ltd'),
-        'Manufacturer'] = 'T-Man Pharmaceuticals Ltd'
+        'Manufacturer_GROUPED'] = 'T-Man Pharmaceuticals Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Umedica Laboratories PVT. LTD.')
         | (MQD_df_CAM.Manufacturer == 'Umedica Laboratories PVT. Ltd')
         | (MQD_df_CAM.Manufacturer == 'Umedica Laboratories Pvt Ltd')
         | (MQD_df_CAM.Manufacturer == 'Umedica'),
-        'Manufacturer'] = 'Umedica'
+        'Manufacturer_GROUPED'] = 'Umedica'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Utopian Co,.LTD') | (MQD_df_CAM.Manufacturer == 'Utopian Co., Ltd')
         | (MQD_df_CAM.Manufacturer == 'Utopian Company Ltd'),
-        'Manufacturer'] = 'Utopian Company Ltd'
+        'Manufacturer_GROUPED'] = 'Utopian Company Ltd'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Vesco Pharmaceutical Ltd.,Part')
         | (MQD_df_CAM.Manufacturer == 'Vesco Pharmaceutical Ltd Part'),
-        'Manufacturer'] = 'Vesco Pharmaceutical Ltd Part'
+        'Manufacturer_GROUPED'] = 'Vesco Pharmaceutical Ltd Part'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Yanzhou Xier Kangtai Pharmaceutical Co., Ltd')
         | (MQD_df_CAM.Manufacturer == 'Yanzhou Xier Kangtai Pharm'),
-        'Manufacturer'] = 'Yanzhou Xier Kangtai Pharm'
+        'Manufacturer_GROUPED'] = 'Yanzhou Xier Kangtai Pharm'
     MQD_df_CAM.loc[
         (MQD_df_CAM.Manufacturer == 'Zhangjiakou DongFang pharmaceutical Co., Ltd')
         | (MQD_df_CAM.Manufacturer == 'Zhangjiakou Dongfang Phamaceutical'),
-        'Manufacturer'] = 'Zhangjiakou Dongfang Phamaceutical'
+        'Manufacturer_GROUPED'] = 'Zhangjiakou Dongfang Phamaceutical'
 
     # Facility_Location
     # Designated Cambodia districts for clustering:
@@ -809,6 +811,7 @@ def cleanMQD():
     MQD_df_CAM = assignlabels(MQD_df_CAM, 'Facility_Name')
 
 
+
     '''
     USEFUL FUNCTIONS
     
@@ -823,19 +826,10 @@ def cleanMQD():
 
     '''
 
-
-
-
-
-
-
-
-
-
-
-
     # ETHIOPIA PROCESSING
     # Province
+    templist = MQD_df_ETH['Province_Name'].tolist()
+    MQD_df_ETH['Province_Name_GROUPED'] = templist
     MQD_df_ETH.loc[
         (MQD_df_ETH.Province_Name == 'Alamata') | (MQD_df_ETH.Province_Name == 'Alamata-Site9')
         | (MQD_df_ETH.Province_Name == 'Alamata-site9')
@@ -861,7 +855,7 @@ def cleanMQD():
         | (MQD_df_ETH.Province_Name == 'Alamata-Site42') | (MQD_df_ETH.Province_Name == 'Alamata-Site43')
         | (MQD_df_ETH.Province_Name == 'Alamata-Site44') | (MQD_df_ETH.Province_Name == 'Alamata-Site45')
         | (MQD_df_ETH.Province_Name == 'Alamata-Site46'),
-        'Province_Name'] = 'Alamata'
+        'Province_Name_GROUPED'] = 'Alamata'
 
     # Facility_Location
     '''
@@ -1073,11 +1067,50 @@ def cleanMQD():
         (MQD_df_ETH.Facility_Name_GROUPED == 'Walaytasodo Univercity Teaching Referal Hospital'),
         'Facility_Name_GROUPED'] = 'Walayta Universcity Teaching And Reveral Hospital'
 
+    # Manufacturer
+    MQD_df_ETH = assignlabels(MQD_df_ETH, 'Manufacturer',thresh=90)
+
+    # Manual adjustments
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Addis Pharmaceutical Factory')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Addis Pharmaceutical Plc')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Addis Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Addis Pharmaceuticals'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Astra Life Care Pvt.Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Astralife Care'),
+        'Manufacturer_GROUPED'] = 'Astralife Care'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Cadila')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cadila Healthcare')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cadila Pharm.Plc')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cadila Pharmaceuticals')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cadila,Health.Ltd'),
+        'Manufacturer_GROUPED'] = 'Cadila'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Cipla')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cipla Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cipla,Ltd.Plot10')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cipla,Midlkumba')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Cipla,Pithmpur'),
+        'Manufacturer_GROUPED'] = 'Cipla'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'East African Pharmaceuticals')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'East Africa Plc')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'East African Pharmaceutical Factory'),
+        'Manufacturer_GROUPED'] = 'East African Pharmaceuticals'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Emcure')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Emcure Pharmaceuticals')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Emcurepharmaceuticals,Pune')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Emucure Pharmaceutical Ltd'),
+        'Manufacturer_GROUPED'] = 'Emcure'
 
 
-    MQD_df_ETH.loc[MQD_df_ETH.Facility_Location == 'nan']
-    MQD_df_ETH['Facility_Location'].count()
-    a = MQD_df_ETH['Facility_Name_GROUPED'].astype('str').unique()
+
+    MQD_df_ETH.loc[MQD_df_ETH.Manufacturer == 'nan']
+    MQD_df_ETH[(MQD_df_ETH.Manufacturer_GROUPED == 'Epharm/Emucure' )].count()
+    a = MQD_df_ETH['Manufacturer_GROUPED'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
@@ -1085,7 +1118,7 @@ def cleanMQD():
 
 
 
-    #Manufacturer
+
 
 
 
