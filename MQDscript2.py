@@ -47,7 +47,7 @@ def assignlabels(df, coltogroup, categorylist=[], thresh=90):
     else:
         # Loop through each item and check if any preceding item matches more than the threshold value
         listtogroup = df[coltogroup].astype('string').fillna('NA VALUE').tolist()
-        candmatch = [listtogroup[0],0.0]
+        candmatch = [listtogroup[0],0.0] # Needed initialization
         for entryInd, currEntry in enumerate(listtogroup):
             #if pd.isnull(currEntry):
             #    newcol_lst.append(currEntry)
@@ -55,10 +55,10 @@ def assignlabels(df, coltogroup, categorylist=[], thresh=90):
             #else:
             if not pd.isnull(currEntry):
                 if entryInd > 0:
-                    candmatch = process.extractOne(currEntry, listtogroup[:entryInd])
+                    candmatch = process.extractOne(currEntry, listtogroup[:entryInd]) # Check previous entries
                 if candmatch[1] > thresh:
                     bestInd = listtogroup.index(candmatch[0], 0, entryInd)
-                    newcol_lst.append(newcol_lst[bestInd])
+                    newcol_lst.append(newcol_lst[bestInd]) # Use whatever value the best match had
                     #df.iloc[entryInd][newcol_name] = candmatch[0]
                 else:
                     newcol_lst.append(currEntry)
@@ -164,10 +164,14 @@ def cleanMQD():
 
     # CAMBODIA PROCESSING
     # Province_Name
+    templist = MQD_df_CAM['Province_Name'].tolist()
+    MQD_df_CAM['Province_Name_GROUPED'] = templist
     MQD_df_CAM.loc[
-        (MQD_df_CAM.Province_Name == 'Ratanakiri') | (MQD_df_CAM.Province_Name == 'Rattanakiri'), 'Province_Name'] = 'Ratanakiri'
+        (MQD_df_CAM.Province_Name == 'Ratanakiri')
+        | (MQD_df_CAM.Province_Name == 'Rattanakiri'), 'Province_Name_GROUPED'] = 'Ratanakiri'
     MQD_df_CAM.loc[
-        (MQD_df_CAM.Province_Name == 'Steung Treng') | (MQD_df_CAM.Province_Name == 'Stung Treng'), 'Province_Name'] = 'Stung Treng'
+        (MQD_df_CAM.Province_Name == 'Steung Treng')
+        | (MQD_df_CAM.Province_Name == 'Stung Treng'), 'Province_Name_GROUPED'] = 'Stung Treng'
 
     templist = MQD_df_CAM['Manufacturer'].tolist()
     MQD_df_CAM['Manufacturer_GROUPED'] = templist
@@ -809,6 +813,7 @@ def cleanMQD():
         'Facility_Name'] = ''
     '''
     MQD_df_CAM = assignlabels(MQD_df_CAM, 'Facility_Name')
+    #todo: MANUAL ADJUSTMENTS TO FACILITY_NAME FOR CAMBODIA LIKELY NEEDED
 
 
 
@@ -858,6 +863,8 @@ def cleanMQD():
         'Province_Name_GROUPED'] = 'Alamata'
 
     # Facility_Location
+    templist = MQD_df_ETH['Facility_Location'].tolist()
+    MQD_df_ETH['Facility_Location_GROUPED'] = templist
     '''
     A/K S/C
     Abobo
@@ -924,79 +931,79 @@ def cleanMQD():
     '''
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Arbamichi') | (MQD_df_ETH.Facility_Location == 'Arbaminchi'),
-        'Facility_Location'] = 'Arbaminchi'
+        'Facility_Location_GROUPED'] = 'Arbaminchi'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Bahirdar') | (MQD_df_ETH.Facility_Location == 'Bahir Dar'),
-        'Facility_Location'] = 'Bahir Dar'
+        'Facility_Location_GROUPED'] = 'Bahir Dar'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Borena') | (MQD_df_ETH.Facility_Location == 'Borena Zone'),
-        'Facility_Location'] = 'Borena'
+        'Facility_Location_GROUPED'] = 'Borena'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Centeral') | (MQD_df_ETH.Facility_Location == 'Central'),
-        'Facility_Location'] = 'Central'
+        'Facility_Location_GROUPED'] = 'Central'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Diredawa') | (MQD_df_ETH.Facility_Location == 'Dirredawa'),
-        'Facility_Location'] = 'Diredawa'
+        'Facility_Location_GROUPED'] = 'Diredawa'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'East') | (MQD_df_ETH.Facility_Location == 'East Ethiopia'),
-        'Facility_Location'] = 'East Ethiopia'
+        'Facility_Location_GROUPED'] = 'East Ethiopia'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Gambela') | (MQD_df_ETH.Facility_Location == 'Gambela Tawn')
         | (MQD_df_ETH.Facility_Location == 'Gambela Town') | (MQD_df_ETH.Facility_Location == 'Gambella'),
-        'Facility_Location'] = 'Gambela'
+        'Facility_Location_GROUPED'] = 'Gambela'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Gedio') | (MQD_df_ETH.Facility_Location == 'Gedio Zone'),
-        'Facility_Location'] = 'Gedio'
+        'Facility_Location_GROUPED'] = 'Gedio'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Gulele') | (MQD_df_ETH.Facility_Location == 'Guilele Sc'),
-        'Facility_Location'] = 'Gulele'
+        'Facility_Location_GROUPED'] = 'Gulele'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Harar') | (MQD_df_ETH.Facility_Location == 'Harer'),
-        'Facility_Location'] = 'Harar'
+        'Facility_Location_GROUPED'] = 'Harar'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Hartishek') | (MQD_df_ETH.Facility_Location == 'Hatshek'),
-        'Facility_Location'] = 'Hartishek'
+        'Facility_Location_GROUPED'] = 'Hartishek'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Jimma') | (MQD_df_ETH.Facility_Location == 'Jimma  Tawn'),
-        'Facility_Location'] = 'Jimma'
+        'Facility_Location_GROUPED'] = 'Jimma'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Metu') | (MQD_df_ETH.Facility_Location == 'Metu Tawn')
         | (MQD_df_ETH.Facility_Location == 'Metu Town'),
-        'Facility_Location'] = 'Metu'
+        'Facility_Location_GROUPED'] = 'Metu'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Nekemete') | (MQD_df_ETH.Facility_Location == 'Nkemete')
         | (MQD_df_ETH.Facility_Location == 'Nekemte'),
-        'Facility_Location'] = 'Nekemte'
+        'Facility_Location_GROUPED'] = 'Nekemte'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'North Shoa') | (MQD_df_ETH.Facility_Location == 'North Showa'),
-        'Facility_Location'] = 'North Showa'
+        'Facility_Location_GROUPED'] = 'North Showa'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'North West Ethiopia')
         | (MQD_df_ETH.Facility_Location == 'North west Ethiopia')
         | (MQD_df_ETH.Facility_Location == 'Nothr west Ethiopia')
         | (MQD_df_ETH.Facility_Location == 'North westEthiopia'),
-        'Facility_Location'] = 'Northwest Ethiopia'
+        'Facility_Location_GROUPED'] = 'Northwest Ethiopia'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'North east Ethiopia'),
-        'Facility_Location'] = 'Northeast Ethiopia'
+        'Facility_Location_GROUPED'] = 'Northeast Ethiopia'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'South') | (MQD_df_ETH.Facility_Location == 'South Ethiopia'),
-        'Facility_Location'] = 'South Ethiopia'
+        'Facility_Location_GROUPED'] = 'South Ethiopia'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'South West Shoa'),
-        'Facility_Location'] = 'Southwest Showa'
+        'Facility_Location_GROUPED'] = 'Southwest Showa'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'South west Ethiopia'),
-        'Facility_Location'] = 'Southwest Ethiopia'
+        'Facility_Location_GROUPED'] = 'Southwest Ethiopia'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'Walayta Sodo') | (MQD_df_ETH.Facility_Location == 'Walaytasodo'),
-        'Facility_Location'] = 'Walayta Sodo'
+        'Facility_Location_GROUPED'] = 'Walayta Sodo'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'West'),
-        'Facility_Location'] = 'West Ethiopia'
+        'Facility_Location_GROUPED'] = 'West Ethiopia'
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'West Shoa') | (MQD_df_ETH.Facility_Location == 'West Showa'),
-        'Facility_Location'] = 'West Showa'
+        'Facility_Location_GROUPED'] = 'West Showa'
 
     # Facility_Name
     MQD_df_ETH = assignlabels(MQD_df_ETH, 'Facility_Name')
@@ -1105,16 +1112,142 @@ def cleanMQD():
         | (MQD_df_ETH.Manufacturer_GROUPED == 'Emcurepharmaceuticals,Pune')
         | (MQD_df_ETH.Manufacturer_GROUPED == 'Emucure Pharmaceutical Ltd'),
         'Manufacturer_GROUPED'] = 'Emcure'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Ethiopian Pharmaceutical Manufacturing')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Ethiopian Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Ethiopian Pharmaceuticals'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Fawes Pharmaceuticals')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Fewes Pharmaceuticals Factory'),
+        'Manufacturer_GROUPED'] = 'Fawes Pharmaceuticals'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Flamingo')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Flamingo Pharmaceuticaks.Ltd Taloga,4102208')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Flamingo Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Flamingo'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Gulin Pharma')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Guilin Pharmaceuticals.Co.Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Gulin Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Gulin Pharma'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Houns Co., Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Huons Co.Ltd'),
+        'Manufacturer_GROUPED'] = 'Houns Co., Ltd'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'IPCA')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Ipca Laboratories Ltd'),
+        'Manufacturer_GROUPED'] = 'IPCA'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Jeil  Pharm. Co.Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Jiel Pharma Co.Ltd'),
+        'Manufacturer_GROUPED'] = 'Jiel Pharma Co.Ltd'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Julphar')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Julphar  Pharma Plc')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Julphar Pharmaceutical Plc')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Julphar Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Julphar'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Lab,Renaudin')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Laboratorie Renaudin'),
+        'Manufacturer_GROUPED'] = 'Laboratorie Renaudin'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Leben Laboratories')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Leben  Laboratories.Pvt.Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Leben Laboratories,Trinity Street')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Leben Laboratory Pvt.Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Lebonlaboratories Pvt.Ltd.Mumbi'),
+        'Manufacturer_GROUPED'] = 'Leben Laboratories'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Laboratorie Pharmaceutical Rodael')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Lp Rodael'),
+        'Manufacturer_GROUPED'] = 'Laboratorie Pharmaceutical Rodael'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Macleodes Harmaceuticals')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Macleods'),
+        'Manufacturer_GROUPED'] = 'Macleods'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Medicamen Biotech Laboratories')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Medicamen Biotech'),
+        'Manufacturer_GROUPED'] = 'Medicamen Biotech'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Mepha Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Mepha'),
+        'Manufacturer_GROUPED'] = 'Mepha'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'NA VALUE')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'No information'),
+        'Manufacturer_GROUPED'] = 'NA VALUE'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Novartis, Basel')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Novartis Saqlik')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Novartis Pharmaag')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Novartis'),
+        'Manufacturer_GROUPED'] = 'Novartis'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Nutriset Laboratories Rode(France)')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Nutiset Sas Laboratories'),
+        'Manufacturer_GROUPED'] = 'Nutiset Sas Laboratories'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Remedica Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'REMEDICA'),
+        'Manufacturer_GROUPED'] = 'REMEDICA'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Sandoz GmbH')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Sandoz'),
+        'Manufacturer_GROUPED'] = 'Sandoz'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Sk+F Eskayef Bangladish Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Sktf,Eskayef Ban Gladeshltd.')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Skf,Eskaef'),
+        'Manufacturer_GROUPED'] = 'Skf,Eskaef'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Uniquepharmaceutical Laboratories')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Unique Pharmaceuticals')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Unsque Pharmaceutical Lab'),
+        'Manufacturer_GROUPED'] = 'Unique Pharmaceuticals'
+    MQD_df_ETH.loc[
+        (MQD_df_ETH.Manufacturer_GROUPED == 'Universal Corporation Ltd')
+        | (MQD_df_ETH.Manufacturer_GROUPED == 'Universal Co.Ltd'),
+        'Manufacturer_GROUPED'] = 'Universal Co.Ltd'
+
+
+    # GHANA
+    # Province_Name
+    MQD_df_GHA = assignlabels(MQD_df_GHA, 'Province_Name', thresh=90)
+    # Manual adjustments
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Province_Name_GROUPED == 'Northern Region')
+        | (MQD_df_GHA.Province_Name_GROUPED == 'Northern'),
+        'Province_Name_GROUPED'] = 'Northern'
+
+    # Facility_Location
+    MQD_df_GHA = assignlabels(MQD_df_GHA, 'Facility_Location', thresh=90)
+    # Manual adjustments
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Facility_Location_GROUPED == 'Missing')
+        | (MQD_df_GHA.Facility_Location_GROUPED == 'NA VALUE'),
+        'Facility_Location_GROUPED'] = 'NA VALUE'
+
+    # Facility_Name
+    MQD_df_GHA = assignlabels(MQD_df_GHA, 'Facility_Name', thresh=90)
+    # Manual adjustments
+    # todo: MANUAL ADJUSTMENTS REQUIRED
+
+    # Manufacturer_Name
 
 
 
-    MQD_df_ETH.loc[MQD_df_ETH.Manufacturer == 'nan']
-    MQD_df_ETH[(MQD_df_ETH.Manufacturer_GROUPED == 'Epharm/Emucure' )].count()
-    a = MQD_df_ETH['Manufacturer_GROUPED'].astype('str').unique()
+
+
+    MQD_df_GHA.loc[MQD_df_GHA.Manufacturer == 'nan']
+    MQD_df_GHA[(MQD_df_GHA.Manufacturer_GROUPED == 'Epharm/Emucure' )].count()
+    a = MQD_df_GHA['Facility_Name_GROUPED'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
-    MQD_df_ETH.pivot_table(index=['Province_Name'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+    MQD_df_GHA.pivot_table(index=['Province_Name_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
 
 
 
