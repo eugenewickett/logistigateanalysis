@@ -1235,19 +1235,109 @@ def cleanMQD():
     # Manual adjustments
     # todo: MANUAL ADJUSTMENTS REQUIRED
 
-    # Manufacturer_Name
+    # Manufacturer
+    MQD_df_GHA = assignlabels(MQD_df_GHA, 'Manufacturer', thresh=90)
+    # Manual adjustments
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Manufacturer_GROUPED == 'Bliss GVS Pharma Ltd')
+        | (MQD_df_GHA.Manufacturer_GROUPED == 'Bliss GVS Pharmaceuticals Ltd.'),
+        'Manufacturer_GROUPED'] = 'Bliss GVS Pharma Ltd'
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Manufacturer_GROUPED == 'Cipla Ltd. India')
+        | (MQD_df_GHA.Manufacturer_GROUPED == 'Cipla Ltd'),
+        'Manufacturer_GROUPED'] = 'Cipla Ltd'
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Manufacturer_GROUPED == 'Guilin Pharmaceutical Co. Ltd')
+        | (MQD_df_GHA.Manufacturer_GROUPED == 'Guilin Pharmaceutical Company Ltd.'),
+        'Manufacturer_GROUPED'] = 'Guilin Pharmaceutical Co. Ltd'
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Manufacturer_GROUPED == 'Kinapharma Limited')
+        | (MQD_df_GHA.Manufacturer_GROUPED == 'Kinapharma Ltd'),
+        'Manufacturer_GROUPED'] = 'Kinapharma Ltd'
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Manufacturer_GROUPED == 'Maphar')
+        | (MQD_df_GHA.Manufacturer_GROUPED == 'Maphar Laboratories'),
+        'Manufacturer_GROUPED'] = 'Maphar'
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Manufacturer_GROUPED == 'Pharmanova Limited')
+        | (MQD_df_GHA.Manufacturer_GROUPED == 'Pharmanova Ltd'),
+        'Manufacturer_GROUPED'] = 'Pharmanova Ltd'
+
+
+    # KENYA
+    # Province_Name
+    MQD_df_KEN = assignlabels(MQD_df_KEN, 'Province_Name', thresh=90)
+
+    # Facility_Location
+    facilityLocationList = [
+        'AHERO',
+        'AMAGORO',
+        'ATHI RIVER',
+        'BUNGOMA',
+        'BUSIA TOWN',
+        'CHEPKOILEL JUNCTION',
+        'DAGORETI',
+        'ELDORET',
+        'HURLINGHAM',
+        'HURUMA',
+        'ISINYA',
+        'KAJIADO',
+        'KAKAMEGA',
+        'KAREN',
+        'KENYATTA MARKET',
+        'KHAYEGA',
+        'KILIFI',
+        'KIKONO',
+        'KINANGO',
+        'KISII',
+        'KISUMU',
+        'KITALE',
+        'KITENGELA',
+        'KWALE',
+        'LIKONI',
+        'MALABA',
+        'MARAGOLI',
+        'MASENO',
+        'MBALE TOWN',
+        'MIKIDANI',
+        'MLOLONGO',
+        'MOMBASA',
+        'MSABWENI',
+        'MTWAPA',
+        'MUMIAS',
+        'NA VALUE',
+        'NAMBALE',
+        'NAIROBI',
+        'NGONG',
+        'PRESTIGE',
+        'RABOUR',
+        'RUIRU',
+        'SIAYA',
+        'SONDU',
+        'THIKA',
+        'UKUNDA',
+        'WEBUYE',
+        'WESTLAND'
+    ]
+    MQD_df_KEN = assignlabels(MQD_df_KEN, 'Facility_Location', facilityLocationList, thresh=90)
+    # Manual adjustments
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'Pharmanova Limited')
+        | (MQD_df_KEN.Facility_Location == 'Pharmanova Ltd'),
+        'Facility_Location_GROUPED'] = 'Pharmanova Ltd'
 
 
 
 
 
-    MQD_df_GHA.loc[MQD_df_GHA.Manufacturer == 'nan']
-    MQD_df_GHA[(MQD_df_GHA.Manufacturer_GROUPED == 'Epharm/Emucure' )].count()
-    a = MQD_df_GHA['Facility_Name_GROUPED'].astype('str').unique()
+
+    MQD_df_KEN.loc[MQD_df_KEN.Manufacturer == 'nan']
+    MQD_df_KEN[(MQD_df_KEN.Manufacturer_GROUPED == 'Epharm/Emucure' )].count()
+    a = MQD_df_KEN['Facility_Location_GROUPED'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
-    MQD_df_GHA.pivot_table(index=['Province_Name_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+    MQD_df_KEN.pivot_table(index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
 
 
 
