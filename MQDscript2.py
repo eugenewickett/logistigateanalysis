@@ -1268,7 +1268,7 @@ def cleanMQD():
     # Province_Name
     MQD_df_KEN = assignlabels(MQD_df_KEN, 'Province_Name', thresh=90)
 
-    # Facility_Location
+    # Facility_Location ('County' for Kenya)
     facilityLocationList = [
         'AHERO',
         'AMAGORO',
@@ -1315,6 +1315,7 @@ def cleanMQD():
         'SIAYA',
         'SONDU',
         'THIKA',
+        'UASIN GISHU',
         'UKUNDA',
         'WEBUYE',
         'WESTLAND'
@@ -1322,9 +1323,80 @@ def cleanMQD():
     MQD_df_KEN = assignlabels(MQD_df_KEN, 'Facility_Location', facilityLocationList, thresh=90)
     # Manual adjustments
     MQD_df_KEN.loc[
-        (MQD_df_KEN.Facility_Location == 'Pharmanova Limited')
-        | (MQD_df_KEN.Facility_Location == 'Pharmanova Ltd'),
-        'Facility_Location_GROUPED'] = 'Pharmanova Ltd'
+        (MQD_df_KEN.Facility_Location == 'NAIROBI')
+        | (MQD_df_KEN.Facility_Location == 'ALONG FITINA ROAD, OFF')
+        | (MQD_df_KEN.Facility_Location == 'ALONG KENYATTA AVENUE,')
+        | (MQD_df_KEN.Facility_Location == 'ALONG KENYATTA AVENUE, OPP.')
+        | (MQD_df_KEN.Facility_Location == 'CITY CENTRE')
+        | (MQD_df_KEN.Facility_Location == 'GITHURAI KIMBO ROAD')
+        | (MQD_df_KEN.Facility_Location == 'JUJA, NEAR KENYATTA ROAD')
+        | (MQD_df_KEN.Facility_Location == 'LENANA ROAD')
+        | (MQD_df_KEN.Facility_Location == 'LIFESTYLE NAKUMATT')
+        | (MQD_df_KEN.Facility_Location == 'MBAGATHI ROAD')
+        | (MQD_df_KEN.Facility_Location == 'MBAGATHI WAY')
+        | (MQD_df_KEN.Facility_Location == 'MBAGATHI WAY FLATS')
+        | (MQD_df_KEN.Facility_Location == 'OFF. OTIENDE ROAD')
+        | (MQD_df_KEN.Facility_Location == 'P.O Box 1022, 00606 Sarit Centre')
+        | (MQD_df_KEN.Facility_Location == 'P.O. BOX 1022, NORTH AIRPORT ROAD')
+        | (MQD_df_KEN.Facility_Location == 'Petro Station, Uganda Road')
+        | (MQD_df_KEN.Facility_Location == 'RONALD NGARA STREET')
+        | (MQD_df_KEN.Facility_Location == 'Uganda Road, P O Box 40 Turbo'),
+        'Facility_Location_GROUPED'] = 'NAIROBI'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'ATHI RIVER')
+        | (MQD_df_KEN.Facility_Location == 'EPZ ROAD'),
+        'Facility_Location_GROUPED'] = 'ATHI RIVER'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'BUNGOMA')
+        | (MQD_df_KEN.Facility_Location == 'CANON AWORI STREET'),
+        'Facility_Location_GROUPED'] = 'BUNGOMA'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'BUSIA TOWN')
+        | (MQD_df_KEN.Facility_Location == 'BUSIA')
+        | (MQD_df_KEN.Facility_Location == 'HOSPITAL ROAD, BUSIA')
+        | (MQD_df_KEN.Facility_Location == 'P O BOX 420 BUSIA (K)')
+        | (MQD_df_KEN.Facility_Location == 'P O BOX 485 BUSIA (K)')
+        | (MQD_df_KEN.Facility_Location == 'P O BOX 87 BUSIA (K)'),
+        'Facility_Location_GROUPED'] = 'BUSIA'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'KISII')
+        | (MQD_df_KEN.Facility_Location == 'HOSPITAL ROAD, OPP. SHABANA HARDWARE, KISII'),
+        'Facility_Location_GROUPED'] = 'KISII'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'KISUMU')
+        | (MQD_df_KEN.Facility_Location == 'KISUMU USENGE RD, NEXT TO BONDO TOWNSHIP PRI. SCH.')
+        | (MQD_df_KEN.Facility_Location == 'OPPOSITE MAGHARIBI PETROL'),
+        'Facility_Location_GROUPED'] = 'KISUMU'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'MOMBASA')
+        | (MQD_df_KEN.Facility_Location == 'LIKONO'),
+        'Facility_Location_GROUPED'] = 'MOMBASA'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'NA VALUE')
+        | (MQD_df_KEN.Facility_Location == 'Missing')
+        | (MQD_df_KEN.Facility_Location == 'Relax In Building'),
+        'Facility_Location_GROUPED'] = 'NA VALUE'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Facility_Location == 'UASIN GISHU')
+        | (MQD_df_KEN.Facility_Location == 'Turbo Town Centre'),
+        'Facility_Location_GROUPED'] = 'UASIN GISHU'
+
+    # Facility_Name
+    MQD_df_KEN = assignlabels(MQD_df_KEN, 'Facility_Name', thresh=90)
+    # todo: Manual adjustments required
+
+    # Manufacturer
+    templist = MQD_df_KEN['Manufacturer'].tolist()
+    MQD_df_KEN['Manufacturer_GROUPED'] = templist
+
+    ### RESUME HERE ###
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == '')
+        | (MQD_df_KEN.Manufacturer == ''),
+        'Manufacturer_GROUPED'] = ''
+
+
+
 
 
 
@@ -1333,12 +1405,13 @@ def cleanMQD():
 
     MQD_df_KEN.loc[MQD_df_KEN.Manufacturer == 'nan']
     MQD_df_KEN[(MQD_df_KEN.Manufacturer_GROUPED == 'Epharm/Emucure' )].count()
-    a = MQD_df_KEN['Facility_Location_GROUPED'].astype('str').unique()
+    a = MQD_df_KEN['Manufacturer'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
     MQD_df_KEN.pivot_table(index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
-
+    MQD_df_KEN[(MQD_df_KEN.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
+        index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
 
 
 
@@ -1565,6 +1638,8 @@ def MQDdataScript():
     import scipy.special as sps
     import numpy as np
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    import sys
+    import os
     sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate', 'exmples','data')))
 
     # Grab processed data tables
