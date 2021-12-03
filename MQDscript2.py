@@ -1391,26 +1391,182 @@ def cleanMQD():
 
     ### RESUME HERE ###
     MQD_df_KEN.loc[
-        (MQD_df_KEN.Manufacturer == '')
-        | (MQD_df_KEN.Manufacturer == ''),
-        'Manufacturer_GROUPED'] = ''
+        (MQD_df_KEN.Manufacturer == 'Ajanta Pharma Limited')
+        | (MQD_df_KEN.Manufacturer == 'Ajanta'),
+        'Manufacturer_GROUPED'] = 'Ajanta'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Biodeal Laboratories Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Biodeal'),
+        'Manufacturer_GROUPED'] = 'Biodeal'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Bliss Gvis Pharma Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Bliss Gvs'),
+        'Manufacturer_GROUPED'] = 'Bliss Gvs'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Cipla Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Cipla'),
+        'Manufacturer_GROUPED'] = 'Cipla'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Cosmos Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Cosmos'),
+        'Manufacturer_GROUPED'] = 'Cosmos'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Dawa Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Dawa'),
+        'Manufacturer_GROUPED'] = 'Dawa'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Elys Chemical Industrial Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Elys Chemical Industries'),
+        'Manufacturer_GROUPED'] = 'Elys Chemical Industries'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'FARMACEUTICUS LAKECITY S.A DF')
+        | (MQD_df_KEN.Manufacturer == 'Farmaceuticos L. Sadecv'),
+        'Manufacturer_GROUPED'] = 'Farmaceuticos L. Sadecv'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Flamingo Pharmaceuticals Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Flamingo'),
+        'Manufacturer_GROUPED'] = 'Flamingo'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Guilin Pharmaceutical Co., Ltd.')
+        | (MQD_df_KEN.Manufacturer == 'Guilin'),
+        'Manufacturer_GROUPED'] = 'Guilin'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Indus Pharma (Pvt) Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Indus'),
+        'Manufacturer_GROUPED'] = 'Indus'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'IPCA')
+        | (MQD_df_KEN.Manufacturer == 'Ipca Laboratories'),
+        'Manufacturer_GROUPED'] = 'Ipca Laboratories'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Laboratory and Allied')
+        | (MQD_df_KEN.Manufacturer == 'Laboratory & Allied Ltd'),
+        'Manufacturer_GROUPED'] = 'Laboratory & Allied Ltd'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Roche Products (PTY) Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Roche Products')
+        | (MQD_df_KEN.Manufacturer == 'Roche'),
+        'Manufacturer_GROUPED'] = 'Roche'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Shanghai pharmaceutical industrial corporation')
+        | (MQD_df_KEN.Manufacturer == 'Shanghai Pharmateq Ltd'),
+        'Manufacturer_GROUPED'] = 'Shanghai Pharmateq Ltd'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Troikaa Pharmaceuticals Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Troikaa'),
+        'Manufacturer_GROUPED'] = 'Troikaa'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Umedica Laboratories PVT. Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Umedica Laboratories Pvt Ltd'),
+        'Manufacturer_GROUPED'] = 'Umedica Laboratories Pvt Ltd'
+    MQD_df_KEN.loc[
+        (MQD_df_KEN.Manufacturer == 'Universal Corporation Ltd')
+        | (MQD_df_KEN.Manufacturer == 'Universal'),
+        'Manufacturer_GROUPED'] = 'Universal'
+
+
+    # LAOS
+    # Province_Name
+    templist = MQD_df_LAO['Province_Name'].tolist()
+    MQD_df_LAO['Province_Name_GROUPED'] = templist
+    #Manual adjustments
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Province_Name == 'Saiyabouly')
+        | (MQD_df_LAO.Province_Name == 'Sayabuly'),
+        'Province_Name_GROUPED'] = 'Sayabuly'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Province_Name == 'Xiengkhouang')
+        | (MQD_df_LAO.Province_Name == 'Xiengkhuang'),
+        'Province_Name_GROUPED'] = 'Xiengkhuang'
+
+    # Facility_Location: 'Districts' in Laos
+    MQD_df_LAO = assignlabels(MQD_df_LAO, 'Facility_Location', thresh=90)
+    # Remove extra spaces
+    tempList = []
+    for elem in MQD_df_LAO['Facility_Location_GROUPED']:
+        tempList.append(" ".join(elem.split()))
+    MQD_df_LAO['Facility_Location_GROUPED'] = tempList
+
+    # Manual adjustments
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Facility_Location_GROUPED == 'Luangprabang District')
+        | (MQD_df_LAO.Facility_Location_GROUPED == 'Luaprabang District'),
+        'Facility_Location_GROUPED'] = 'Luangprabang District'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Facility_Location_GROUPED == 'Pakse District')
+        | (MQD_df_LAO.Facility_Location_GROUPED == 'Parkse District'),
+        'Facility_Location_GROUPED'] = 'Pakse District'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Facility_Location_GROUPED == 'Pek District')
+        | (MQD_df_LAO.Facility_Location_GROUPED == 'Perk District'),
+        'Facility_Location_GROUPED'] = 'Pek District'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Facility_Location_GROUPED == 'Pheing District')
+        | (MQD_df_LAO.Facility_Location_GROUPED == 'Phieng District'),
+        'Facility_Location_GROUPED'] = 'Phieng District'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Facility_Location_GROUPED == 'Viengxai District')
+        | (MQD_df_LAO.Facility_Location_GROUPED == 'Viengsay District'),
+        'Facility_Location_GROUPED'] = 'Viengxai District'
+
+    # Facility_Name
+    # Remove all the weird spacing
+    tempList = []
+    for elem in MQD_df_LAO['Facility_Name']:
+        tempList.append(" ".join(elem.split()))
+    MQD_df_LAO['Facility_Name'] = tempList
+
+    MQD_df_LAO = assignlabels(MQD_df_LAO, 'Facility_Name', thresh=90)
+    #todo: Manually adjust
+
+    # Manufacturer
+    MQD_df_LAO = assignlabels(MQD_df_LAO, 'Manufacturer', thresh=90)
+    # Manual adjustments
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Manufacturer_GROUPED == 'Asian Union Laboratories Co., Ltd')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Asian Union'),
+        'Manufacturer_GROUPED'] = 'Asian Union'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Manufacturer_GROUPED == 'Bangkok')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Bangkok Lab')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Bankok Lab & Cosmetic Co. LTD')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Bangkok Drug Co.'),
+        'Manufacturer_GROUPED'] = 'Bangkok Drug Co.'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Manufacturer_GROUPED == 'Central Pharmaceutical Technical Development Company')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Central'),
+        'Manufacturer_GROUPED'] = 'Central Pharmaceutical Technical Development Company'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Manufacturer_GROUPED == 'Conety dophaduoc phamtrung')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Congty'),
+        'Manufacturer_GROUPED'] = 'Conety dophaduoc phamtrung'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Manufacturer_GROUPED == 'Mekophar Chemical Pharmaceutical Joint-Stock Co.')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Mekophar'),
+        'Manufacturer_GROUPED'] = 'Mekophar'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Manufacturer_GROUPED == 'Phammin Den')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Pham Minh Dan'),
+        'Manufacturer_GROUPED'] = 'Pham Minh Dan'
+    MQD_df_LAO.loc[
+        (MQD_df_LAO.Manufacturer_GROUPED == 'Thailand')
+        | (MQD_df_LAO.Manufacturer_GROUPED == 'Thai'),
+        'Manufacturer_GROUPED'] = 'Thailand'
+
+    # MQD_df_MOZ
+    
 
 
 
 
-
-
-
-
-
-    MQD_df_KEN.loc[MQD_df_KEN.Manufacturer == 'nan']
-    MQD_df_KEN[(MQD_df_KEN.Manufacturer_GROUPED == 'Epharm/Emucure' )].count()
-    a = MQD_df_KEN['Manufacturer'].astype('str').unique()
+    MQD_df_LAO.loc[MQD_df_LAO.Manufacturer == 'nan']
+    MQD_df_LAO[(MQD_df_LAO.Manufacturer_GROUPED == 'Phammin Den' )].count()
+    a = MQD_df_LAO['Manufacturer_GROUPED'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
-    MQD_df_KEN.pivot_table(index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
-    MQD_df_KEN[(MQD_df_KEN.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
+    MQD_df_LAO.pivot_table(index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+    MQD_df_LAO[(MQD_df_LAO.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
         index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
 
 
@@ -1422,60 +1578,9 @@ def cleanMQD():
 
 
 
-    # Ghana
-    # Province
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Province == 'Northern') | (MQD_df_GHA.Province == 'Northern Region')
-        | (MQD_df_GHA.Province == 'Northern Region, Northern Region'),
-        'Province'] = 'Northern'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Province == 'Western (Ghana)'),
-        'Province'] = 'Western'
-    # Manufacturer
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Ajanta Pharma Ltd') | (MQD_df_GHA.Manufacturer == 'Ajanta Pharma Ltd.'),
-        'Manufacturer'] = 'Ajanta Pharma Ltd.'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Ally Pharma Options Pvt Ltd.') | (MQD_df_GHA.Manufacturer == 'Ally Pharma Options Pvt. Ltd'),
-        'Manufacturer'] = 'Ally Pharma Options Pvt. Ltd'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Bliss GVS Pharma Ltd') | (MQD_df_GHA.Manufacturer == 'Bliss GVS Pharmaceuticals Ltd.'),
-        'Manufacturer'] = 'Bliss GVS Pharma Ltd'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Cipla Ltd. India') | (MQD_df_GHA.Manufacturer == 'Cipla Ltd'),
-        'Manufacturer'] = 'Cipla Ltd'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Danadams Pharmaceutical Industry Limited')
-        | (MQD_df_GHA.Manufacturer == 'Danadams Pharmaceutical Industry, Ltd.')
-        | (MQD_df_GHA.Manufacturer == 'Danadams Pharmaceuticals Industry Limited'),
-        'Manufacturer'] = 'Danadams'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Guilin Pharmaceutical Company Ltd.')
-        | (MQD_df_GHA.Manufacturer == 'Guilin Pharmaceutical Co. Ltd')
-        | (MQD_df_GHA.Manufacturer == 'Guilin  Pharmaceutical Co., Ltd'),
-        'Manufacturer'] = 'Guilin'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Kinapharma Limited') | (MQD_df_GHA.Manufacturer == 'Kinapharma Ltd'),
-        'Manufacturer'] = 'Kinapharma'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Maphar Laboratories') | (MQD_df_GHA.Manufacturer == 'Maphar'),
-        'Manufacturer'] = 'Maphar'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Novartis Pharmaceutical Corporation')
-        | (MQD_df_GHA.Manufacturer == 'Novartis Pharmaceuticals Corporation'),
-        'Manufacturer'] = 'Novartis'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Pharmanova Limited')
-        | (MQD_df_GHA.Manufacturer == 'Pharmanova Ltd'),
-        'Manufacturer'] = 'Pharmanova'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Phyto-Riker (Gihoc) Pharmaceuticals Ltd')
-        | (MQD_df_GHA.Manufacturer == 'Phyto-Riker (Gihoc) Pharmaceuticals, Ltd.'),
-        'Manufacturer'] = 'Phyto-Riker'
-    MQD_df_GHA.loc[
-        (MQD_df_GHA.Manufacturer == 'Ronak Exim PVT. Ltd')
-        | (MQD_df_GHA.Manufacturer == 'Ronak Exim Pvt Ltd'),
-        'Manufacturer'] = 'Ronak Exim'
+
+
+
 
     # Philippines
     # Province
