@@ -1554,14 +1554,119 @@ def cleanMQD():
         'Manufacturer_GROUPED'] = 'Thailand'
 
     # MQD_df_MOZ
-    
+    # Province_Name
+    templist = MQD_df_MOZ['Province_Name'].tolist()
+    MQD_df_MOZ['Province_Name_GROUPED'] = templist
+    # Manual adjustments
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Province_Name_GROUPED == 'Maputo'),
+        'Province_Name_GROUPED'] = 'Maputo City'
 
+    # Facility_Location; 'Districts' in Mozambique
+    facilityLocationList = [
+        'Ancuabe',
+        'Balama',
+        'Chiúre',
+        'Ibo',
+        'Macomia' ,
+        'Mecúfi' ,
+        'Meluco'  ,
+        'Metuge',
+        'Mocímboa da Praia',
+        'Montepuez',
+        'Mueda' ,
+        'Muidumbe' ,
+        'Namuno' ,
+        'Nangade' ,
+        'Palma',
+        'Pemba',
+        'Quissanga',
+        'Bilene',
+        'Chibuto',
+        'Chicualacuala',
+        'Chigubo' ,
+        'Chokwè' ,
+        'Chongoene',
+        'Guija',
+        'Limpopo',
+        'Mabalane',
+        'Mandlakaze',
+        'Mapai',
+        'Massangena',
+        'Massingir',
+        'Xai-Xai',
+        'Funhalouro',
+        'Govuro' ,
+        'Homoine',
+        'Inhambane' ,
+        'Inharrime',
+        'Inhassoro',
+        'Jangamo' ,
+        'Mabote',
+        'Massinga',
+        'Maxixe City',
+        'Morrumbene',
+        'Panda',
+        'Vilankulo',
+        'Zavala',
+        'Barue',
+        'Chimoio',
+        'Gondola',
+        'Guro',
+        'Macate',
+        'Machaze',
+        'Macossa',
+        'Manica',
+        'Mossurize',
+        'Sussundenga',
+        'Tambara',
+        'Vanduzi',
+        'Boane',
+        'Magude' ,
+        'Manhiça',
+        'Marracuene',
+        'Matola City',
+        'Matutuíne',
+        'Moamba',
+        'Namaacha',
+        'KaMavota',
+        'KaMaxakeni',
+        'KaMphumu',
+        'KaMubukwana',
+        'KaNyaka',
+        'KaTembe',
+        'Nlhamankulu',
+        'Angoche',
+        'Erati',
+        'Ilha de Mocambique',
+        'Lalaua',
+        'Larde',
+        'Liupo',
+        'Malema',
+        'Meconta',
+        'Mecubúri',
+        'Memba',
+        'Mogincual',
+        'Mogovolas',
+        'Moma',
+        'Monapo',
+        'Mossuril',
+        'Muecate',
+        'Murrupula',
+        'Nacala',
+        'Nacala-a-Velha',
+        'Nacaroa',
+        'Nampula City',
+        'Rapale',
+        'Ribaue',
 
+    ]
+    MQD_df_MOZ = assignlabels(MQD_df_MOZ, 'Facility_Location', facilityLocationList, thresh=90)
 
 
     MQD_df_LAO.loc[MQD_df_LAO.Manufacturer == 'nan']
     MQD_df_LAO[(MQD_df_LAO.Manufacturer_GROUPED == 'Phammin Den' )].count()
-    a = MQD_df_LAO['Manufacturer_GROUPED'].astype('str').unique()
+    a = MQD_df_MOZ['Facility_Location'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
