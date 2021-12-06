@@ -2214,19 +2214,263 @@ def cleanMQD():
 
     # VIETNAM
     # Province_Name
+    templist = MQD_df_VIE['Province_Name'].tolist()
+    MQD_df_VIE['Province_Name_GROUPED'] = templist
 
+    # Facility_Location; 'Districts' or 'Communes' in Vietnam
+    facilityLocationList = [
+        'An Nhon district',
+        'An Thoi Dong District',
+        'Ba Thuoc District',
+        'Bac Quang District',
+        'Bim Son Town',
+        'Binh Chanh District',
+        'Binh Long District',
+        'Bo Trach District',
+        'Bom Bo District',
+        'Bu Dang District',
+        'Bu Dop District',
+        'Bu Gia Map District',
+        'Buon Don District',
+        'Buon Me Thuot City',
+        'Cam Lo District',
+        'Cam Thuy District',
+        'Can Gio District',
+        'Can Loc District',
+        'Chon Thanh District',
+        'Chuong Duong Str',
+        'Cu Chi District',
+        'Cumgar District',
+        'Da Krong District',
+        'Dai Loc District',
+        'Dak Glei District',
+        'Dak Ha District',
+        'Dak Lak',
+        'Dak To District',
+        'Dako District',
+        'Dakrong District',
+        'Dien Bien District',
+        'Dien Bien Dong District',
+        'Dien Bien Phu City',
+        'District No. 5',
+        'District No. 6',
+        'Dong Ha Market',
+        'Dong Ha Town',
+        'Dong Phu District',
+        'Dong Van District',
+        'Dong Xoai District',
+        'Du Dang District',
+        'Duy Xuyen District',
+        'Eahleo District',
+        'Eakar District',
+        'Easup District',
+        'Gia Lai Town',
+        'Gia Map District',
+        'Gio Linh District',
+        'Ha Giang City',
+        'Ha Tinh City',
+        'Hau Loc District',
+        'Hoai An District',
+        'Hoai Nhon District',
+        'Hooc Mon District',
+        'Huong Hoa District',
+        'Huong Khe District',
+        'IAPA D',
+        'Khe Sanh Town',
+        'Kon Plong District',
+        'Kon Tum Town',
+        'Konp Long District',
+        'Konplong Town',
+        'Kron Plong District',
+        'Krong Ana District',
+        'Krong Bong District',
+        'Krong Buk District',
+        'Krong Jing Town',
+        'Krong Klang Town',
+        'Krong Long District',
+        'Krong Na District',
+        'Krong Pac District',
+        'Krongchro District',
+        'Kronp Ray District',
+        'Ky Son District',
+        'Lang Chanh District',
+        'Lao Bao District',
+        'Le Thuy District',
+        'Lien Son District',
+        'Loc Hung Commune',
+        'Loc Ninh District',
+        'Ma Dak District',
+        'Madrak District',
+        'Mdrak District',
+        'Meo Vac District',
+        'Missing',
+        'Muong Ang district',
+        'Muong Cha district',
+        'Muong La district',
+        'Muong Lat District',
+        'Muong Lay District',
+        'Muong Nhe District',
+        'Muong Te District',
+        'Muong Tra District',
+        'Nga Son district',
+        'Ngoc Hoi District',
+        'Ngoc Lac District',
+        'Nguyen Hue Str',
+        'Nha Be District',
+        'Nha Bich Commune',
+        'Phouc Long District',
+        'Phu My District',
+        'Phuoc Long District',
+        'Pleiku City',
+        'Quan Ba district',
+        'Quan Hoa District',
+        'Quang Ba District',
+        'Quang Binh City',
+        'Quang Tri City',
+        'Quang Tri District',
+        'Quang Trung District',
+        'Quy Nhon City',
+        'Son La City',
+        'Song Ma district',
+        'Tam Ky City',
+        'Tan Bien District',
+        'Tan Binh Precinct',
+        'Tan Chau District',
+        'Tay Ninh District',
+        'Tay Ninh Town',
+        'Tay Son District',
+        'Thanh Hoa City',
+        'Thanh Luong Commune',
+        'Tho Xuan District',
+        'Thuan Phu Commune',
+        'Trung Ha District',
+        'Trung Thanh District',
+        'Tua Chua District',
+        'Tuan Giao District',
+        'Tuong Duong District',
+        'Tuy Phuoc district',
+        'Unknown',
+        'Van Canh district',
+        'Vi Xuyen district',
+        'Vinh City',
+        'Vinh Linh District',
+        'Vinh Loc district',
+        'Vinh Market',
+        'Yen Minh district'
+    ]
+    MQD_df_VIE = assignlabels(MQD_df_VIE, 'Facility_Location', facilityLocationList, thresh=90)
+    # Manual adjustments
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location_GROUPED == 'Missing')
+                   | (MQD_df_VIE.Facility_Location_GROUPED == 'NA VALUE')
+                   | (MQD_df_VIE.Facility_Location_GROUPED == 'Unknown')
+                   | (MQD_df_VIE.Facility_Location == 'T'),
+                   'Facility_Location_GROUPED'] = 'NA VALUE'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Buon Ma Thout Town')
+                   | (MQD_df_VIE.Facility_Location == 'Buon Me Thuot City'),
+                   'Facility_Location_GROUPED'] = 'Buon Me Thuot City'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Dak Ha Town')
+                   | (MQD_df_VIE.Facility_Location == 'Dak Ha District'),
+                   'Facility_Location_GROUPED'] = 'Dak Ha District'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Dakrong Commune')
+                   | (MQD_df_VIE.Facility_Location == 'Dakrong District'),
+                   'Facility_Location_GROUPED'] = 'Dakrong District'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Dien Bien Phu Town')
+                   | (MQD_df_VIE.Facility_Location == 'Dien Bien Phu City'),
+                   'Facility_Location_GROUPED'] = 'Dien Bien Phu City'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Dong Xoai Town')
+                   | (MQD_df_VIE.Facility_Location == 'Dong Xoai District'),
+                   'Facility_Location_GROUPED'] = 'Dong Xoai District'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Ha Giang Town')
+                   | (MQD_df_VIE.Facility_Location == 'Ha Giang City'),
+                   'Facility_Location_GROUPED'] = 'Ha Giang City'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Khe Sanh Market')
+                   | (MQD_df_VIE.Facility_Location == 'Khe Sanh Str.')
+                   | (MQD_df_VIE.Facility_Location == 'Khe Sanh Town'),
+                   'Facility_Location_GROUPED'] = 'Khe Sanh Town'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Quang Trung Str')
+                   | (MQD_df_VIE.Facility_Location == 'Quang Trung Town')
+                   | (MQD_df_VIE.Facility_Location == 'Quang Trung District'),
+                   'Facility_Location_GROUPED'] = 'Quang Trung District'
+    MQD_df_VIE.loc[(MQD_df_VIE.Facility_Location == 'Qui Nhon Town')
+                   | (MQD_df_VIE.Facility_Location == 'Quy Nhon City'),
+                   'Facility_Location_GROUPED'] = 'Quy Nhon City'
+
+    # Facility_Name
+    MQD_df_VIE = assignlabels(MQD_df_VIE, 'Facility_Name', thresh=90)
+    #todo: Manual adjustments
+
+    # Manufacturer
+    MQD_df_VIE = assignlabels(MQD_df_VIE, 'Manufacturer', thresh=90)
+    # Manual adjustments; consider setting back the manufacturers with different numbers
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Bin Thuan Medical Materials Pharmaceutical Joint Stock Company')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Binh Thuan Pharmaceutical & Material JSC'),
+                   'Manufacturer_GROUPED'] = 'Binh Thuan Pharmaceutical & Material JSC'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Brawn Laboratories Limited')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Brawn lab Ltd'),
+                   'Manufacturer_GROUPED'] = 'Brawn Laboratories Limited'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Cuu Long Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Cuu Long Pharmaceutical Joint-Stock Co.'),
+                   'Manufacturer_GROUPED'] = 'Cuu Long Pharmaceutical JSC'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Danapha Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Danapha'),
+                   'Manufacturer_GROUPED'] = 'Danapha'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'H6 Pharm')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'HG Pharm')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Hau Giang Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Hau Giang Pharmaceutical Joint-Stock Co.'),
+                   'Manufacturer_GROUPED'] = 'HG Pharm'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'ICA Biotechnological Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'ICA Pharmaceutical JSC'),
+                   'Manufacturer_GROUPED'] = 'ICA Pharmaceutical JSC'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Medipharco')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Medipharco Tenamyd')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Mebiphar')    ,
+                   'Manufacturer_GROUPED'] = 'Medipharco'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Mekopha Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Mekophar Chemical Pharmaceutical Joint-Stock Co.'),
+                   'Manufacturer_GROUPED'] = 'Mekopha Pharmaceutical JSC'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Micro Labs Ltd')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Micro labslemited'),
+                   'Manufacturer_GROUPED'] = 'Micro Labs Ltd'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Minh Dan Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Minh Dan Pharmaceutical Joint-Stock Co.'),
+                   'Manufacturer_GROUPED'] = 'Minh Dan Pharmaceutical JSC'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Nam Ha Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Nam Ha Pharmaceutical Joint-Stock Co.'),
+                   'Manufacturer_GROUPED'] = 'Nam Ha Pharmaceutical JSC'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'National Pharmaceutical Joint-Stock No 3')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'National Pharmaceutical company No 3')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'No. 3 National Pharmaceutical JSC'),
+                   'Manufacturer_GROUPED'] = 'National Pharmaceutical Joint-Stock No 3'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Pune Pharmaceuticals Ltd')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Pure Pharma Limited'),
+                   'Manufacturer_GROUPED'] = 'Pure Pharma Limited'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Quang Binh Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Quang Binh Pharmaceutical Joint-Stock Co.'),
+                   'Manufacturer_GROUPED'] = 'Quang Binh Pharmaceutical JSC'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Standa')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Stada Ltd, Co.'),
+                   'Manufacturer_GROUPED'] = 'Stada Ltd, Co.'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Missing')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Unknown')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'NA VALUE'),
+                   'Manufacturer_GROUPED'] = 'NA VALUE'
+    MQD_df_VIE.loc[(MQD_df_VIE.Manufacturer_GROUPED == 'Vidipha  National Pharmaceutical JSC')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Vidipha Pharmaceutical Joint-Stock Co.')
+                   | (MQD_df_VIE.Manufacturer_GROUPED == 'Vidiphar Pharmaceutical JSC'),
+                   'Manufacturer_GROUPED'] = 'Vidiphar Pharmaceutical JSC'
 
 
 
 
     MQD_df_SEN.loc[MQD_df_SEN.Manufacturer == 'nan']
-    MQD_df_THA[(MQD_df_THA.Manufacturer_GROUPED == 'Wesgo Pharmacutical Co., Ltd' )].count()
-    a = MQD_df_THA['Manufacturer_GROUPED'].astype('str').unique()
+    MQD_df_VIE[(MQD_df_VIE.Manufacturer_GROUPED == 'Standa' )].count()
+    a = MQD_df_VIE['Manufacturer_GROUPED'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
     MQD_df_THA.pivot_table(index=['Facility_Name'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
-    MQD_df_SEN[(MQD_df_SEN.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
+    MQD_df_VIE[(MQD_df_VIE.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
         index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
 
 
