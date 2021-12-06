@@ -119,7 +119,7 @@ def cleanMQD():
     import pandas as pd
     SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
     filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
-    MQD_df = pd.read_csv(os.path.join(filesPath,'MQDB_Master_Expanded.csv'),low_memory=False) # Main raw database file
+    MQD_df = pd.read_csv(os.path.join(filesPath,'MQDB_Master_Expanded2.csv'),low_memory=False) # Main raw database file
 
     #Change 'pass' to 'Pass'
     MQD_df.loc[MQD_df.Final_Test_Conclusion=='pass','Final_Test_Conclusion'] = 'Pass'
@@ -2461,8 +2461,7 @@ def cleanMQD():
                    'Manufacturer_GROUPED'] = 'Vidiphar Pharmaceutical JSC'
 
 
-
-
+    '''
     MQD_df_SEN.loc[MQD_df_SEN.Manufacturer == 'nan']
     MQD_df_VIE[(MQD_df_VIE.Manufacturer_GROUPED == 'Standa' )].count()
     a = MQD_df_VIE['Manufacturer_GROUPED'].astype('str').unique()
@@ -2472,7 +2471,7 @@ def cleanMQD():
     MQD_df_THA.pivot_table(index=['Facility_Name'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
     MQD_df_VIE[(MQD_df_VIE.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
         index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
-
+    '''
 
 
 
