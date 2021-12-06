@@ -1553,7 +1553,7 @@ def cleanMQD():
         | (MQD_df_LAO.Manufacturer_GROUPED == 'Thai'),
         'Manufacturer_GROUPED'] = 'Thailand'
 
-    # MQD_df_MOZ
+    # MOZAMBIQUE
     # Province_Name
     templist = MQD_df_MOZ['Province_Name'].tolist()
     MQD_df_MOZ['Province_Name_GROUPED'] = templist
@@ -1659,19 +1659,574 @@ def cleanMQD():
         'Nampula City',
         'Rapale',
         'Ribaue',
-
+        'Chimbonila',
+        'Cuamba',
+        'Lago',
+        'Lichinga',
+        'Majune',
+        'Mandimba',
+        'Marrupa',
+        'Maua',
+        'Mavago',
+        'Mecanhelas',
+        'Mecula',
+        'Metarica',
+        'Muembe',
+        'Ngauma',
+        'Sanga',
+        'Beira',
+        'Buzi',
+        'Caia',
+        'Chemba',
+        'Cheringoma',
+        'Chibabava',
+        'Dondo',
+        'Gorongosa',
+        'Machanga',
+        'Maringue',
+        'Marromeu',
+        'Muanza',
+        'Nhamatanda',
+        'Angonia',
+        'Cahora-Bassa',
+        'Changara',
+        'Chifunde',
+        'Chiuta',
+        'Doa',
+        'Macanga',
+        'Magoe',
+        'Marara',
+        'Maravia',
+        'Moatize',
+        'Mutarara',
+        'Tete',
+        'Tsangano',
+        'Zumbo',
+        'Alto Molocue',
+        'Chinde',
+        'Derre',
+        'Gile',
+        'Gurue',
+        'Ile',
+        'Inhassunge',
+        'Luabo',
+        'Lugela',
+        'Maganja da Costa',
+        'Milange',
+        'Mocuba',
+        'Mocubela',
+        'Molumbo',
+        'Mopeia',
+        'Morrumbala',
+        'Mulevala',
+        'Namacurra',
+        'Namarroi',
+        'Nicoadala',
+        'Pebane',
+        'Quelimane',
+        'Bairro Cimento',
+        'Bairro Ingomane',
+        'Bairro Natite',
     ]
     MQD_df_MOZ = assignlabels(MQD_df_MOZ, 'Facility_Location', facilityLocationList, thresh=90)
+    # Manual adjustments
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Gorongoza')
+        | (MQD_df_MOZ.Facility_Location == 'Gorongosa'),
+        'Facility_Location_GROUPED'] = 'Gorongosa'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Machava')
+        | (MQD_df_MOZ.Facility_Location == 'Machava II'),
+        'Facility_Location_GROUPED'] = 'Machava'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Matola')
+        | (MQD_df_MOZ.Facility_Location == 'Matola I'),
+        'Facility_Location_GROUPED'] = 'Matola'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Maputo (province)')
+        | (MQD_df_MOZ.Facility_Location == 'Maputp provincia')
+        | (MQD_df_MOZ.Facility_Location == 'Mamputo Provincia'),
+        'Facility_Location_GROUPED'] = 'Maputo (province)'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Bairro Cimento'),
+        'Facility_Location_GROUPED'] = 'Bairro Cimento'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Bairro Ingomane'),
+        'Facility_Location_GROUPED'] = 'Bairro Ingomane'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Bairro Natite'),
+        'Facility_Location_GROUPED'] = 'Bairro Natite'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Liberdade'),
+        'Facility_Location_GROUPED'] = 'Liberdade'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Maputo (city)'),
+        'Facility_Location_GROUPED'] = 'Maputo (city)'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Songo')
+        | (MQD_df_MOZ.Facility_Location == 'Cahora-Bassa'),
+        'Facility_Location_GROUPED'] = 'Cahora-Bassa'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Ndlavela'),
+        'Facility_Location_GROUPED'] = 'Ndlavela'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'T3'),
+        'Facility_Location_GROUPED'] = 'T3'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Facility_Location == 'Unidade A'),
+        'Facility_Location_GROUPED'] = 'Unidade A'
+
+    # Facility_Name
+    MQD_df_MOZ = assignlabels(MQD_df_MOZ, 'Facility_Name', thresh=90)
+    #todo: Manual checks needed
+
+    # Manufacturer
+    MQD_df_MOZ = assignlabels(MQD_df_MOZ, 'Manufacturer', thresh=90)
+    # Manual adjustments
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Alicom')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Alicon'),
+        'Manufacturer_GROUPED'] = 'Alicon'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Apex')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Apex Drug House'),
+        'Manufacturer_GROUPED'] = 'Apex'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Aurobindo')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Aurobindo-Pharma'),
+        'Manufacturer_GROUPED'] = 'Aurobindo'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'BDH Industries')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'BDh'),
+        'Manufacturer_GROUPED'] = 'BDH Industries'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Bal Pharma')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Bal Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Bal Pharmaceuticals'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Bharat')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Bharat - Gujarate')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Bharat Paenterals'),
+        'Manufacturer_GROUPED'] = 'Bharat'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'CSPC')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'CSPC Oui Pharmaceutical Ltd')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'CSPC Ouyi')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'CSPC Zhongnuo')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'CSPS'),
+        'Manufacturer_GROUPED'] = 'CSPC'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Cadila')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Cadila Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Cadila'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Cipla')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Cipla Ltd'),
+        'Manufacturer_GROUPED'] = 'Cipla'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Fourrts')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Fourrts Lab. PVT LTD')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Fourtes')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Fourtts'),
+        'Manufacturer_GROUPED'] = 'Fourrts'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Fredun')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Fredupharma'),
+        'Manufacturer_GROUPED'] = 'Fredun'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Fosun Pharm')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Fuson Pharma'),
+        'Manufacturer_GROUPED'] = 'Fosun Pharm'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Global Pharma')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Global Pharma Healthcare'),
+        'Manufacturer_GROUPED'] = 'Global Pharma'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Gracura')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Gracure'),
+        'Manufacturer_GROUPED'] = 'Gracura'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Guilin Pharmaceutical')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Guilinn'),
+        'Manufacturer_GROUPED'] = 'Guilin Pharmaceutical'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Hebei Jiheng (group)')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Hebei jiheng')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Hebeijinh')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Hebel Jihang'),
+        'Manufacturer_GROUPED'] = 'Hebei jiheng'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Hetero Drugs')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Hetero Labs'),
+        'Manufacturer_GROUPED'] = 'Hetero Drugs'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'IPCA')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Ipca Laboratories'),
+        'Manufacturer_GROUPED'] = 'IPCA'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Jiangsu')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Jiangsu Pengyao'),
+        'Manufacturer_GROUPED'] = 'Jiangsu Pengyao'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Jiangxi')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Jiaxing Xien')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Jiungxl'),
+        'Manufacturer_GROUPED'] = 'Jiangxi'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Kern')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Kern Pharma'),
+        'Manufacturer_GROUPED'] = 'Kern'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Kaprin')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Kopran'),
+        'Manufacturer_GROUPED'] = 'Kopran'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Lupin')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Kupin')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Lupin Ltd'),
+        'Manufacturer_GROUPED'] = 'Lupin'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Lupin')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Kupin')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Lupin Ltd')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Luporn'),
+        'Manufacturer_GROUPED'] = 'Lupin'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Macleodos')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Macleods Pharmaceutical'),
+        'Manufacturer_GROUPED'] = 'Macleods Pharmaceutical'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Made by Generics, Ltd')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Made for Generics, Ltd')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Generics, Ltd'),
+        'Manufacturer_GROUPED'] = 'Generics, Ltd'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Maxhael')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Maxheal'),
+        'Manufacturer_GROUPED'] = 'Maxheal'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Medicamen')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Medicamen Biotech'),
+        'Manufacturer_GROUPED'] = 'Medicamen'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Mercury')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Mercury Labs'),
+        'Manufacturer_GROUPED'] = 'Mercury'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Milan')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Milan Laboratories')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Mylan'),
+        'Manufacturer_GROUPED'] = 'Milan'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Missing')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Missing on blister')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'NA VALUE')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Not Available'),
+        'Manufacturer_GROUPED'] = 'NA VALUE'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Naging')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Nanjing')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Nanjing Baijingyu')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Nanjingsaijingyn')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Nanying')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Nenjing'),
+        'Manufacturer_GROUPED'] = 'Nanjing'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Neomed')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Neomedic'),
+        'Manufacturer_GROUPED'] = 'Neomedic'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Novartis')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Novartis P.C.- USA for Novartis Pharma AG-Switzerland')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Novartis USA'),
+        'Manufacturer_GROUPED'] = 'Novartis'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Rambaxy')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Ranbaxy')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Ranbaxy Laboratories'),
+        'Manufacturer_GROUPED'] = 'Ranbaxy'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Reyound')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Reyoung')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Reyoung Pharmeceutical'),
+        'Manufacturer_GROUPED'] = 'Reyoung'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Riemser')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Riemser Arzneimittel')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Riemser Pharma'),
+        'Manufacturer_GROUPED'] = 'Riemser'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Sinochem')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Sinochem Ningbo'),
+        'Manufacturer_GROUPED'] = 'Sinochem'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Stallion')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Stallion Laboratories Pvt')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Stallion Labs. PVT'),
+        'Manufacturer_GROUPED'] = 'Stallion'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Strides')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Strides Arcolab'),
+        'Manufacturer_GROUPED'] = 'Strides'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Svizera')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Svizera Labs')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Svuzera'),
+        'Manufacturer_GROUPED'] = 'Svizera'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Torrent')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Torrent Pharmaceuticals'),
+        'Manufacturer_GROUPED'] = 'Torrent'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Umedica')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Umedica lab. PVT'),
+        'Manufacturer_GROUPED'] = 'Umedica'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Unique')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Unique Pharmaceutical'),
+        'Manufacturer_GROUPED'] = 'Unique'
+    MQD_df_MOZ.loc[
+        (MQD_df_MOZ.Manufacturer_GROUPED == 'Yanzhon')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Yanzhon xier')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Yanzhou')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Yanzhouxier')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Yanzhow')
+        | (MQD_df_MOZ.Manufacturer_GROUPED == 'Yanzhowxierkangtal'),
+        'Manufacturer_GROUPED'] = 'Yanzhouxier'
+
+    # PERU
+    # Province_Name; 'Regions' in Peru
+    templist = MQD_df_PER['Province_Name'].tolist()
+    MQD_df_PER['Province_Name_GROUPED'] = templist
+
+    # Facility_Location; 'Provinces' in Peru are the next political sub-division, but the data seem to
+    #   reflect instead the streets where the outlets are located
+    MQD_df_PER = assignlabels(MQD_df_PER, 'Facility_Location', thresh=90)
+    #todo: Manual adjustments
+
+    # Facility_Name
+    MQD_df_PER = assignlabels(MQD_df_PER, 'Facility_Name', thresh=90)
+
+    # Manufacturer
+    MQD_df_PER = assignlabels(MQD_df_PER, 'Manufacturer', thresh=90)
+    # Manual adjustments
+    MQD_df_PER.loc[
+        (MQD_df_PER.Manufacturer_GROUPED == 'Hersil S.A.')
+        | (MQD_df_PER.Manufacturer_GROUPED == 'Hersil S.A. Laboratorios Industriales Farmaceuticos'),
+        'Manufacturer_GROUPED'] = 'Hersil S.A.'
+    MQD_df_PER.loc[
+        (MQD_df_PER.Manufacturer_GROUPED == 'Genfar S.A.')
+        | (MQD_df_PER.Manufacturer_GROUPED == 'Genfar Peru S.A.')
+        | (MQD_df_PER.Manufacturer_GROUPED == 'Imported for: Gen Far Peru S.A.'),
+        'Manufacturer_GROUPED'] = 'Genfar S.A.'
+    MQD_df_PER.loc[
+        (MQD_df_PER.Manufacturer_GROUPED == 'Cipa S.A.')
+        | (MQD_df_PER.Manufacturer_GROUPED == 'Manufactured for: Cipa S.A.'),
+        'Manufacturer_GROUPED'] = 'Cipa S.A.'
+    MQD_df_PER.loc[
+        (MQD_df_PER.Manufacturer_GROUPED == 'Corporacion Infarmasa S.A.')
+        | (MQD_df_PER.Manufacturer_GROUPED == 'Manufactured for: Corporacion Infarmasa S.A.'),
+        'Manufacturer_GROUPED'] = 'Corporacion Infarmasa S.A.'
+
+    # PHILIPPINES
+    # Province_Name; 'Provinces' in the Philippines
+    templist = MQD_df_PHI['Province_Name'].tolist()
+    MQD_df_PHI['Province_Name_GROUPED'] = templist
+    MQD_df_PHI.loc[(MQD_df_PHI.Province_Name_GROUPED == 'CALABARZON'),
+                   'Province_Name_GROUPED'] = 'Calabarzon'
+    MQD_df_PHI.loc[(MQD_df_PHI.Province_Name_GROUPED == 'region 1 '),
+                   'Province_Name_GROUPED'] = 'Region 1'
+    MQD_df_PHI.loc[(MQD_df_PHI.Province_Name_GROUPED == 'region7'),
+                   'Province_Name_GROUPED'] = 'Region 7'
+    MQD_df_PHI.loc[(MQD_df_PHI.Province_Name_GROUPED == 'region9'),
+                   'Province_Name_GROUPED'] = 'Region 9'
+
+    # Facility_Location; these appear to mostly be street addresses for the Philippines
+    MQD_df_PHI = assignlabels(MQD_df_PHI, 'Facility_Location', thresh=90)
+    #todo: Manual adjustments
+
+    # Facility_Name
+    MQD_df_PHI = assignlabels(MQD_df_PHI, 'Facility_Name', thresh=90)
+    #todo: Manual adjustments
+
+    # Manufacturer
+    MQD_df_PHI = assignlabels(MQD_df_PHI, 'Manufacturer', thresh=90)
+    # Manual adjustments
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'AM-Europharma')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Am-Euro Pharma Corporation'),
+                   'Manufacturer_GROUPED'] = 'AM-Europharma'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Biotech Research Lab Inc.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'BRLI'),
+                   'Manufacturer_GROUPED'] = 'BRLI'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Compact Pharmaceutical Corp.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Compact Pharmaceutical Corporation'),
+                   'Manufacturer_GROUPED'] = 'Compact'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Drugmakers Biotech Research Laboratories, Inc.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Drugmakers Laboratories, Inc.'),
+                   'Manufacturer_GROUPED'] = 'Drugmakers Laboratories, Inc.'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'J.M. Tolman Laboratories, Inc.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'J.M. Tolmann Lab. Inc.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Tolmann'),
+                   'Manufacturer_GROUPED'] = 'J.M. Tolmann Lab. Inc.'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Lumar Pharmaceutical Lab')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Lumar Pharmaceutical Laboratory'),
+                   'Manufacturer_GROUPED'] = 'Lumar Pharmaceutical Lab'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Lupin Limited')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Lupin Ltd.'),
+                   'Manufacturer_GROUPED'] = 'Lupin Ltd.'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Missing')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'No Information Available')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'No information')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'NA VALUE'),
+                   'Manufacturer_GROUPED'] = 'NA VALUE'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'New Myrex Lab., Inc.')
+                    | (MQD_df_PHI.Manufacturer_GROUPED == 'New Myrex Laboratories, Inc.'),
+                    'Manufacturer_GROUPED'] = 'New Myrex Lab., Inc.'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Novartis (Bangladesh)')
+                    | (MQD_df_PHI.Manufacturer_GROUPED == 'Novartis'),
+                    'Manufacturer_GROUPED'] = 'Novartis'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Pascual Lab. Inc.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Pascual Laboratories, Inc.'),
+                   'Manufacturer_GROUPED'] = 'Pascual Lab. Inc.'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Pharex Health Corp.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Pharex'),
+                   'Manufacturer_GROUPED'] = 'Pharex'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'San Marino Lab., Corp.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'San Marino Laboratories Corp'),
+                   'Manufacturer_GROUPED'] = 'San Marino Laboratories Corp'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Sandoz South Africa Ltd.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Sandoz Private Ltd.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Sandoz Philippines Corp.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Sandoz GmbH')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Sandoz'),
+                   'Manufacturer_GROUPED'] = 'Sandoz'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'The Generics Pharmacy Inc.')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'TGP'),
+                   'Manufacturer_GROUPED'] = 'TGP'
+    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer_GROUPED == 'Wyeth Pakistan Limited')
+                   | (MQD_df_PHI.Manufacturer_GROUPED == 'Wyeth Pakistan Ltd.'),
+                   'Manufacturer_GROUPED'] = 'Wyeth Pakistan Ltd.'
+
+    # SENEGAL
+    # Province_Name
+    templist = MQD_df_SEN['Province_Name'].tolist()
+    MQD_df_SEN['Province_Name_GROUPED'] = templist
+
+    # Facility_Location
+    MQD_df_SEN = assignlabels(MQD_df_SEN, 'Facility_Location', thresh=90)
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Centre de Santé Mbacké')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'Centre de Santé Mbacké  tel 33976-49-82'),
+                   'Facility_Location_GROUPED'] = 'Centre de Santé Mbacké'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Centre de Santé Diourbel')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'Centre de Santé de Diourbel tel : 33971-28-64'),
+                   'Facility_Location_GROUPED'] = 'Centre de Santé Diourbel'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Guediawaye')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'GuÃƒÂ©diawaye'),
+                   'Facility_Location_GROUPED'] = 'Guediawaye'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Hopital Diourbel')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'HÃ´pital Diourbel tel : 33971-15-35'),
+                   'Facility_Location_GROUPED'] = 'Hopital Diourbel'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Kanel')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'kanel')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'kanel, B.P.11. tel 33.966.70.70'),
+                   'Facility_Location_GROUPED'] = 'Kanel'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'KOLDA')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'Kolda')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'kolda Tel : 33 996 86 05'),
+                   'Facility_Location_GROUPED'] = 'Kolda'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Matam')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'matam')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'Matam, B.P.02. tel:33.966.62.79'),
+                   'Facility_Location_GROUPED'] = 'Matam'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Ouro-Sogui')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'Ouro-Sogui, Matam, B.P.49. tel:33.966.10.50')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'Ouro-Sogui, Matam, tel:33.966.11.22')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'ouro-Sogui, Matam, B.P.120. tel:33.966.12.78'),
+                   'Facility_Location_GROUPED'] = 'Ouro-Sogui'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'PRA Diourbel')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'PRA Diourbel tel : 33971-23-92'),
+                   'Facility_Location_GROUPED'] = 'PRA Diourbel'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Sor Saint Louis')
+                   | (MQD_df_SEN.Facility_Location_GROUPED == 'Sor Saint Louis SAINT LOUIS'),
+                   'Facility_Location_GROUPED'] = 'Sor Saint Louis'
+
+    # Facility_Name
+    MQD_df_SEN = assignlabels(MQD_df_SEN, 'Facility_Name', thresh=90)
+
+    # Manufacturer
+    templist = MQD_df_SEN['Manufacturer'].tolist()
+    MQD_df_SEN['Manufacturer_GROUPED'] = templist
+
+    # THAILAND
+    # Province_Name: 'Provinces' of Thailand
+    templist = MQD_df_THA['Province_Name'].tolist()
+    MQD_df_THA['Province_Name_GROUPED'] = templist
+
+    # Facility_Location: Largely missing for Thailand
+
+    # Facility_Name; need to remove unknown characters first before running assignlabels()
+    MQD_df_THA.loc[(MQD_df_THA.Facility_Name == '*?????????????????')
+                   | (MQD_df_THA.Facility_Name == '?.???????')
+                   | (MQD_df_THA.Facility_Name == '?.????????')
+                   | (MQD_df_THA.Facility_Name == '??. ?????')
+                   | (MQD_df_THA.Facility_Name == '??. ???????')
+                   | (MQD_df_THA.Facility_Name == '??.????')
+                   | (MQD_df_THA.Facility_Name == '??.???????')
+                   | (MQD_df_THA.Facility_Name == '??.????????')
+                   | (MQD_df_THA.Facility_Name == '??.??????????????????')
+                   | (MQD_df_THA.Facility_Name == '???.4.1 ?????')
+                   | (MQD_df_THA.Facility_Name == '???.4.1 ???????')
+                   | (MQD_df_THA.Facility_Name == '???.4.1.2')
+                   | (MQD_df_THA.Facility_Name == '????')
+                   | (MQD_df_THA.Facility_Name == '?????')
+                   | (MQD_df_THA.Facility_Name == '?????????????????')
+                   | (MQD_df_THA.Facility_Name == '????????????????')
+                   | (MQD_df_THA.Facility_Name == '???????????????')
+                   | (MQD_df_THA.Facility_Name == '??????????????')
+                   | (MQD_df_THA.Facility_Name == '?????????????')
+                   | (MQD_df_THA.Facility_Name == '??????')
+                   | (MQD_df_THA.Facility_Name == '????????????')
+                   | (MQD_df_THA.Facility_Name == '???????????')
+                   | (MQD_df_THA.Facility_Name == '?????????2')
+                   | (MQD_df_THA.Facility_Name == '??????????')
+                   | (MQD_df_THA.Facility_Name == '?????????')
+                   | (MQD_df_THA.Facility_Name == '??????? ?????????')
+                   | (MQD_df_THA.Facility_Name == '???????')
+                   | (MQD_df_THA.Facility_Name == '??.??????'),
+                   'Facility_Name'] = 'NA VALUE'
+
+    MQD_df_THA = assignlabels(MQD_df_THA, 'Facility_Name', thresh=90)
+    #todo: Manual adjustments
+
+    # Manufacturer
+    MQD_df_THA = assignlabels(MQD_df_THA, 'Manufacturer', thresh=90)
+    # Manual adjustments
+    MQD_df_THA.loc[(MQD_df_THA.Manufacturer_GROUPED == 'Guilin Pharmaceutical Co., Ltd./Atlantic Laboratories Co., Ltd')
+                   | (MQD_df_THA.Manufacturer_GROUPED == 'Guilin Pharmaceutical Co., Ltd'),
+                   'Manufacturer_GROUPED'] = 'Guilin Pharmaceutical Co., Ltd'
+    MQD_df_THA.loc[(MQD_df_THA.Manufacturer_GROUPED == 'Ubison')
+                   | (MQD_df_THA.Manufacturer_GROUPED == 'Unison Laboratories Co., Ltd'),
+                   'Manufacturer_GROUPED'] = 'Unison Laboratories Co., Ltd'
+    MQD_df_THA.loc[(MQD_df_THA.Manufacturer_GROUPED == 'Weatsgo Pharma')
+                   | (MQD_df_THA.Manufacturer_GROUPED == 'Wellgo Pharmaceutical')
+                   | (MQD_df_THA.Manufacturer_GROUPED == 'Wesgo Pharmacutical Co., Ltd'),
+                   'Manufacturer_GROUPED'] = 'Wellgo Pharmaceutical'
+
+    # VIETNAM
+    # Province_Name
 
 
-    MQD_df_LAO.loc[MQD_df_LAO.Manufacturer == 'nan']
-    MQD_df_LAO[(MQD_df_LAO.Manufacturer_GROUPED == 'Phammin Den' )].count()
-    a = MQD_df_MOZ['Facility_Location'].astype('str').unique()
+
+
+
+    MQD_df_SEN.loc[MQD_df_SEN.Manufacturer == 'nan']
+    MQD_df_THA[(MQD_df_THA.Manufacturer_GROUPED == 'Wesgo Pharmacutical Co., Ltd' )].count()
+    a = MQD_df_THA['Manufacturer_GROUPED'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
-    MQD_df_LAO.pivot_table(index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
-    MQD_df_LAO[(MQD_df_LAO.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
+    MQD_df_THA.pivot_table(index=['Facility_Name'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+    MQD_df_SEN[(MQD_df_SEN.Facility_Location_GROUPED == 'MANUALLY_MODIFY')].pivot_table(
         index=['Facility_Location'], columns=['Facility_Location_GROUPED'], aggfunc='size', fill_value=0)
 
 
@@ -1687,108 +2242,6 @@ def cleanMQD():
 
 
 
-    # Philippines
-    # Province
-    MQD_df_PHI.loc[(MQD_df_PHI.Province == 'CALABARZON'), 'Province'] = 'Calabarzon'
-    MQD_df_PHI.loc[(MQD_df_PHI.Province == 'region 1 '), 'Province'] = 'Region 1'
-    MQD_df_PHI.loc[(MQD_df_PHI.Province == 'region7'), 'Province'] = 'Region 7'
-    MQD_df_PHI.loc[(MQD_df_PHI.Province == 'region9'), 'Province'] = 'Region 9'
-    # Manufacturer
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'AM-Europharma')
-                   | (MQD_df_PHI.Manufacturer == 'Am-Euro Pharma Corporation'),
-                   'Manufacturer'] = 'AM-Europharma'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Amherst Laboratories Inc')
-                   | (MQD_df_PHI.Manufacturer == 'Amherst Laboratories Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Amherst Laboratories, Inc.'),
-                   'Manufacturer'] = 'Amherst'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Biotech Research Lab Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'BRLI'),
-                   'Manufacturer'] = 'BRLI'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Compact Pharmaceutical Corp')
-                   | (MQD_df_PHI.Manufacturer == 'Compact Pharmaceutical Corp.')
-                   | (MQD_df_PHI.Manufacturer == 'Compact Pharmaceutical Corporation'),
-                   'Manufacturer'] = 'Compact'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Diamond Laboratorie, Inc. ')
-                   | (MQD_df_PHI.Manufacturer == 'Diamond Laboratories, Inc.'),
-                   'Manufacturer'] = 'Diamond'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Drugmakers Biotech Research Laboratories, Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Drugmakers Laboratories Inc')
-                   | (MQD_df_PHI.Manufacturer == 'Drugmakers Laboratories Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Drugmakers Laboratories, Inc.'),
-                   'Manufacturer'] = 'Drugmakers'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Flamingo Pharmaceuticals Ltd')
-                   | (MQD_df_PHI.Manufacturer == 'Flamingo Pharmaceuticals Ltd.')
-                   | (MQD_df_PHI.Manufacturer == 'Flamingo Pharmaceuticals, Ltd.'),
-                   'Manufacturer'] = 'Flamingo'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Interphil Laboratories')
-                   | (MQD_df_PHI.Manufacturer == 'Interphil Laboratories, Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Interphil Laboratories,Inc'),
-                   'Manufacturer'] = 'Interphil'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'J.M. Tolman Laboratories, Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'J.M. Tolmann Lab. Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'J.M. Tolmann Laboratories, Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'J.M.Tollman Laboratories Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'J.M.Tolmann Laboratories Inc')
-                   | (MQD_df_PHI.Manufacturer == 'J.M.Tolmann Laboratories Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Tolmann'),
-                   'Manufacturer'] = 'J.M. Tolmann'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Lloyd Laboratories Inc')
-                   | (MQD_df_PHI.Manufacturer == 'Lloyd Laboratories Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Lloyd Laboratories, Inc.'),
-                   'Manufacturer'] = 'Lloyd'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Lumar Pharmaceutical Lab')
-                   | (MQD_df_PHI.Manufacturer == 'Lumar Pharmaceutical Lab. ')
-                   | (MQD_df_PHI.Manufacturer == 'Lumar Pharmaceutical Laboratory'),
-                   'Manufacturer'] = 'Lumar'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Lupin Limited') | (MQD_df_PHI.Manufacturer == 'Lupin Ltd')
-                   | (MQD_df_PHI.Manufacturer == 'Lupin Ltd.'),
-                   'Manufacturer'] = 'Lupin'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Missing') | (MQD_df_PHI.Manufacturer == 'No Information Available')
-                   | (MQD_df_PHI.Manufacturer == 'No information'),
-                   'Manufacturer'] = 'Unknown'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Natrapharm') | (MQD_df_PHI.Manufacturer == 'Natrapharm Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Natrapharm, Inc.'),
-                   'Manufacturer'] = 'Natrapharm'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'New Myrex Lab., Inc.') | (MQD_df_PHI.Manufacturer == 'New Myrex Laboratories Inc')
-                   | (MQD_df_PHI.Manufacturer == 'New Myrex Laboratories Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'New Myrex Laboratories, Inc.'),
-                   'Manufacturer'] = 'New Myrex'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Novartis (Bangladesh)') | (MQD_df_PHI.Manufacturer == 'Novartis (Bangladesh) Ltd.')
-                   | (MQD_df_PHI.Manufacturer == 'Novartis Bangladesh Ltd')
-                   | (MQD_df_PHI.Manufacturer == 'Novartis Bangladesh Ltd.')
-                   | (MQD_df_PHI.Manufacturer == 'Novartis'),
-                   'Manufacturer'] = 'Novartis'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Pascual Lab. Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Pascual Laboratories, Inc.'),
-                   'Manufacturer'] = 'Pascual'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Pharex Health Corp.')
-                   | (MQD_df_PHI.Manufacturer == 'Pharex'),
-                   'Manufacturer'] = 'Pharex'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Plethico Pharmaceutical Ltd.')
-                   | (MQD_df_PHI.Manufacturer == 'Plethico Pharmaceuticals, Ltd.'),
-                   'Manufacturer'] = 'Plethico'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'San Marino Lab., Corp.')
-                   | (MQD_df_PHI.Manufacturer == 'San Marino Laboratories Corp'),
-                   'Manufacturer'] = 'San Marino'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Sandoz South Africa Ltd.')
-                   | (MQD_df_PHI.Manufacturer == 'Sandoz Private Ltd.')
-                   | (MQD_df_PHI.Manufacturer == 'Sandoz Philippines Corp.')
-                   | (MQD_df_PHI.Manufacturer == 'Sandoz GmbH')
-                   | (MQD_df_PHI.Manufacturer == 'Sandoz'),
-                   'Manufacturer'] = 'Sandoz'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Scheele Laboratories Phil., Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Scheele Laboratories Phils, Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Scheele Laboratories Phis., Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'Scheele Laboratories Phils, Inc.'),
-                   'Manufacturer'] = 'Scheele'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'The Generics Pharmacy')
-                   | (MQD_df_PHI.Manufacturer == 'The Generics Pharmacy Inc.')
-                   | (MQD_df_PHI.Manufacturer == 'TGP'),
-                   'Manufacturer'] = 'TGP'
-    MQD_df_PHI.loc[(MQD_df_PHI.Manufacturer == 'Wyeth Pakistan Limited')
-                   | (MQD_df_PHI.Manufacturer == 'Wyeth Pakistan Ltd')
-                   | (MQD_df_PHI.Manufacturer == 'Wyeth Pakistan Ltd.'),
-                   'Manufacturer'] = 'Wyeth'
 
     # Make smaller data frames filtered for facility type and therapeutic indication
     # Filter for facility type
