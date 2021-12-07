@@ -1267,6 +1267,10 @@ def cleanMQD():
         (MQD_df_GHA.Facility_Location_GROUPED == 'Missing')
         | (MQD_df_GHA.Facility_Location_GROUPED == 'NA VALUE'),
         'Facility_Location_GROUPED'] = 'NA VALUE'
+    MQD_df_GHA.loc[
+        (MQD_df_GHA.Facility_Location_GROUPED == 'Tamale')
+        | (MQD_df_GHA.Facility_Location_GROUPED == 'Kukuo, Tamale'),
+        'Facility_Location_GROUPED'] = 'Tamale'
 
     # Facility_Name
     MQD_df_GHA = assignlabels(MQD_df_GHA, 'Facility_Name', thresh=90)
@@ -2517,13 +2521,13 @@ def cleanMQD():
     SUMMARY OF THERAPEUTIC INDICATIONS AND FACILITY TYPES FOR EACH COUNTRY:
         CAMBODIA, 2990 TOTAL OBSVNS:
             THERAPEUTIC INDICATIONS:
-                1319 Antibiotic
-                556 Antimalarial
+                1328 Antibiotic
+                557 Antimalarial
             OUTLET-TYPE FACILITIES: 1603
         ETHIOPIA, 663 TOTAL OBSVNS:
             THERAPEUTIC INDICATIONS:
-                162 Antibiotic
-                272 Antimalarial
+                163 Antibiotic
+                281 Antimalarial
             OUTLET-TYPE FACILITIES: 622
         GHANA, 562 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
@@ -2598,7 +2602,7 @@ def cleanMQD():
         ['General Clinic', 'Health Clinic', 'Hospital', 'Medical centre', 'Medical station', 'Pharmacy'])].copy()
 
     # For each desired data set, generate lists suitable for use with logistigate
-    # Overall data
+    # Overall data, #nofilter
     dataTbl_CAM_GEO1 = MQD_df_CAM[
         ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
     dataTbl_CAM_GEO1 = [[i[0],i[1],1] if i[2]=='Fail' else [i[0],i[1],0] for i in dataTbl_CAM_GEO1]
@@ -2699,41 +2703,624 @@ def cleanMQD():
         ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
     dataTbl_VIE_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_VIE_GEO3]
 
+    # Facility-filtered data
+    dataTbl_CAM_GEO1_ff = MQD_df_CAM_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO1_ff]
+    dataTbl_CAM_GEO2_ff = MQD_df_CAM_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO2_ff]
+    dataTbl_CAM_GEO3_ff = MQD_df_CAM_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO3_ff]
+    dataTbl_ETH_GEO1_ff = MQD_df_ETH_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_ETH_GEO1_ff]
+    dataTbl_ETH_GEO2_ff = MQD_df_ETH_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_ETH_GEO2_ff]
+    dataTbl_ETH_GEO3_ff = MQD_df_ETH_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_ETH_GEO3_ff]
+    dataTbl_GHA_GEO1_ff = MQD_df_GHA_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_GEO1_ff]
+    dataTbl_GHA_GEO2_ff = MQD_df_GHA_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_GEO2_ff]
+    dataTbl_GHA_GEO3_ff = MQD_df_GHA_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_GEO3_ff]
+    dataTbl_KEN_GEO1_ff = MQD_df_KEN_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_KEN_GEO1_ff]
+    dataTbl_KEN_GEO2_ff = MQD_df_KEN_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_KEN_GEO2_ff]
+    dataTbl_KEN_GEO3_ff = MQD_df_KEN_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_KEN_GEO3_ff]
+    dataTbl_LAO_GEO1_ff = MQD_df_LAO_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_LAO_GEO1_ff]
+    dataTbl_LAO_GEO2_ff = MQD_df_LAO_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_LAO_GEO2_ff]
+    dataTbl_LAO_GEO3_ff = MQD_df_LAO_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_LAO_GEO3_ff]
+    dataTbl_MOZ_GEO1_ff = MQD_df_MOZ_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_MOZ_GEO1_ff]
+    dataTbl_MOZ_GEO2_ff = MQD_df_MOZ_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_MOZ_GEO2_ff]
+    dataTbl_MOZ_GEO3_ff = MQD_df_MOZ_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_MOZ_GEO3_ff]
+    dataTbl_PER_GEO1_ff = MQD_df_PER_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PER_GEO1_ff]
+    dataTbl_PER_GEO2_ff = MQD_df_PER_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PER_GEO2_ff]
+    dataTbl_PER_GEO3_ff = MQD_df_PER_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PER_GEO3_ff]
+    dataTbl_PHI_GEO1_ff = MQD_df_PHI_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_GEO1_ff]
+    dataTbl_PHI_GEO2_ff = MQD_df_PHI_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_GEO2_ff]
+    dataTbl_PHI_GEO3_ff = MQD_df_PHI_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_GEO3_ff]
+    dataTbl_SEN_GEO1_ff = MQD_df_SEN_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_SEN_GEO1_ff]
+    dataTbl_SEN_GEO2_ff = MQD_df_SEN_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_SEN_GEO2_ff]
+    dataTbl_SEN_GEO3_ff = MQD_df_SEN_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_SEN_GEO3_ff]
+    dataTbl_THA_GEO1_ff = MQD_df_THA_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_THA_GEO1_ff]
+    dataTbl_THA_GEO2_ff = MQD_df_THA_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_THA_GEO2_ff]
+    dataTbl_THA_GEO3_ff = MQD_df_THA_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_THA_GEO3_ff]
+    dataTbl_VIE_GEO1_ff = MQD_df_VIE_facilityfilter[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO1_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_VIE_GEO1_ff]
+    dataTbl_VIE_GEO2_ff = MQD_df_VIE_facilityfilter[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO2_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_VIE_GEO2_ff]
+    dataTbl_VIE_GEO3_ff = MQD_df_VIE_facilityfilter[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO3_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_VIE_GEO3_ff]
+
+    # Therapeutic indication filter
+    dataTbl_CAM_GEO1_antibiotic = MQD_df_CAM[MQD_df_CAM['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO1_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO1_antibiotic]
+    dataTbl_CAM_GEO2_antibiotic = MQD_df_CAM[MQD_df_CAM['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO2_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO2_antibiotic]
+    dataTbl_CAM_GEO3_antibiotic = MQD_df_CAM[MQD_df_CAM['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO3_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO3_antibiotic]
+    dataTbl_CAM_GEO1_antimalarial = MQD_df_CAM[MQD_df_CAM['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_CAM_GEO1_antimalarial]
+    dataTbl_CAM_GEO2_antimalarial = MQD_df_CAM[MQD_df_CAM['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_CAM_GEO2_antimalarial]
+    dataTbl_CAM_GEO3_antimalarial = MQD_df_CAM[MQD_df_CAM['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_CAM_GEO3_antimalarial]
+    dataTbl_ETH_GEO1_antibiotic = MQD_df_ETH[MQD_df_ETH['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO1_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_ETH_GEO1_antibiotic]
+    dataTbl_ETH_GEO2_antibiotic = MQD_df_ETH[MQD_df_ETH['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO2_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_ETH_GEO2_antibiotic]
+    dataTbl_ETH_GEO3_antibiotic = MQD_df_ETH[MQD_df_ETH['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO3_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_ETH_GEO3_antibiotic]
+    dataTbl_ETH_GEO1_antimalarial = MQD_df_ETH[MQD_df_ETH['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_ETH_GEO1_antimalarial]
+    dataTbl_ETH_GEO2_antimalarial = MQD_df_ETH[MQD_df_ETH['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_ETH_GEO2_antimalarial]
+    dataTbl_ETH_GEO3_antimalarial = MQD_df_ETH[MQD_df_ETH['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_ETH_GEO3_antimalarial]
+    dataTbl_GHA_GEO1_antimalarial = MQD_df_GHA[MQD_df_GHA['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_GHA_GEO1_antimalarial]
+    dataTbl_GHA_GEO2_antimalarial = MQD_df_GHA[MQD_df_GHA['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_GHA_GEO2_antimalarial]
+    dataTbl_GHA_GEO3_antimalarial = MQD_df_GHA[MQD_df_GHA['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_GHA_GEO3_antimalarial]
+    dataTbl_KEN_GEO1_antimalarial = MQD_df_KEN[MQD_df_KEN['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_KEN_GEO1_antimalarial]
+    dataTbl_KEN_GEO2_antimalarial = MQD_df_KEN[MQD_df_KEN['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_KEN_GEO2_antimalarial]
+    dataTbl_KEN_GEO3_antimalarial = MQD_df_KEN[MQD_df_KEN['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_KEN_GEO3_antimalarial]
+    dataTbl_LAO_GEO1_antibiotic = MQD_df_LAO[MQD_df_LAO['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO1_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO1_antibiotic]
+    dataTbl_LAO_GEO2_antibiotic = MQD_df_LAO[MQD_df_LAO['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO2_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO2_antibiotic]
+    dataTbl_LAO_GEO3_antibiotic = MQD_df_LAO[MQD_df_LAO['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO3_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO3_antibiotic]
+    dataTbl_LAO_GEO1_antimalarial = MQD_df_LAO[MQD_df_LAO['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO1_antimalarial]
+    dataTbl_LAO_GEO2_antimalarial = MQD_df_LAO[MQD_df_LAO['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO2_antimalarial]
+    dataTbl_LAO_GEO3_antimalarial = MQD_df_LAO[MQD_df_LAO['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO3_antimalarial]
+    dataTbl_MOZ_GEO1_antibiotic = MQD_df_MOZ[MQD_df_MOZ['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO1_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_MOZ_GEO1_antibiotic]
+    dataTbl_MOZ_GEO2_antibiotic = MQD_df_MOZ[MQD_df_MOZ['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO2_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_MOZ_GEO2_antibiotic]
+    dataTbl_MOZ_GEO3_antibiotic = MQD_df_MOZ[MQD_df_MOZ['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO3_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_MOZ_GEO3_antibiotic]
+    dataTbl_MOZ_GEO1_antimalarial = MQD_df_MOZ[MQD_df_MOZ['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_MOZ_GEO1_antimalarial]
+    dataTbl_MOZ_GEO2_antimalarial = MQD_df_MOZ[MQD_df_MOZ['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_MOZ_GEO2_antimalarial]
+    dataTbl_MOZ_GEO3_antimalarial = MQD_df_MOZ[MQD_df_MOZ['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_MOZ_GEO3_antimalarial]
+    dataTbl_PER_GEO1_antibiotic = MQD_df_PER[MQD_df_PER['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO1_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PER_GEO1_antibiotic]
+    dataTbl_PER_GEO2_antibiotic = MQD_df_PER[MQD_df_PER['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO2_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PER_GEO2_antibiotic]
+    dataTbl_PER_GEO3_antibiotic = MQD_df_PER[MQD_df_PER['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO3_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PER_GEO3_antibiotic]
+    dataTbl_PHI_GEO1_antituberculosis = MQD_df_PHI[MQD_df_PHI['Indication_GROUPED'].isin(['Antituberculosis'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO1_antituberculosis = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PHI_GEO1_antituberculosis]
+    dataTbl_PHI_GEO2_antituberculosis = MQD_df_PHI[MQD_df_PHI['Indication_GROUPED'].isin(['Antituberculosis'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO2_antituberculosis = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PHI_GEO2_antituberculosis]
+    dataTbl_PHI_GEO3_antituberculosis = MQD_df_PHI[MQD_df_PHI['Indication_GROUPED'].isin(['Antituberculosis'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO3_antituberculosis = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PHI_GEO3_antituberculosis]
+    dataTbl_SEN_GEO1_antimalarial = MQD_df_SEN[MQD_df_SEN['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO1_antimalarial]
+    dataTbl_SEN_GEO2_antimalarial = MQD_df_SEN[MQD_df_SEN['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO2_antimalarial]
+    dataTbl_SEN_GEO3_antimalarial = MQD_df_SEN[MQD_df_SEN['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO3_antimalarial]
+    dataTbl_SEN_GEO1_antiretroviral = MQD_df_SEN[MQD_df_SEN['Indication_GROUPED'].isin(['Antiretroviral'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO1_antiretroviral = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO1_antiretroviral]
+    dataTbl_SEN_GEO2_antiretroviral = MQD_df_SEN[MQD_df_SEN['Indication_GROUPED'].isin(['Antiretroviral'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO2_antiretroviral = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO2_antiretroviral]
+    dataTbl_SEN_GEO3_antiretroviral = MQD_df_SEN[MQD_df_SEN['Indication_GROUPED'].isin(['Antiretroviral'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO3_antiretroviral = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO3_antiretroviral]
+    dataTbl_THA_GEO1_antibiotic = MQD_df_THA[MQD_df_THA['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO1_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_THA_GEO1_antibiotic]
+    dataTbl_THA_GEO2_antibiotic = MQD_df_THA[MQD_df_THA['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO2_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_THA_GEO2_antibiotic]
+    dataTbl_THA_GEO3_antibiotic = MQD_df_THA[MQD_df_THA['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO3_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_THA_GEO3_antibiotic]
+    dataTbl_THA_GEO1_antimalarial = MQD_df_THA[MQD_df_THA['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_THA_GEO1_antimalarial]
+    dataTbl_THA_GEO2_antimalarial = MQD_df_THA[MQD_df_THA['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_THA_GEO2_antimalarial]
+    dataTbl_THA_GEO3_antimalarial = MQD_df_THA[MQD_df_THA['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_THA_GEO3_antimalarial]
+    dataTbl_VIE_GEO1_antibiotic = MQD_df_VIE[MQD_df_VIE['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO1_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_VIE_GEO1_antibiotic]
+    dataTbl_VIE_GEO2_antibiotic = MQD_df_VIE[MQD_df_VIE['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO2_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_VIE_GEO2_antibiotic]
+    dataTbl_VIE_GEO3_antibiotic = MQD_df_VIE[MQD_df_VIE['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO3_antibiotic = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_VIE_GEO3_antibiotic]
+    dataTbl_VIE_GEO1_antimalarial = MQD_df_VIE[MQD_df_VIE['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO1_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_VIE_GEO1_antimalarial]
+    dataTbl_VIE_GEO2_antimalarial = MQD_df_VIE[MQD_df_VIE['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO2_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_VIE_GEO2_antimalarial]
+    dataTbl_VIE_GEO3_antimalarial = MQD_df_VIE[MQD_df_VIE['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO3_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_VIE_GEO3_antimalarial]
+
+    # Therapeutic indication filter, with outlet-type facility filter
+    dataTbl_CAM_GEO1_antibiotic_ff = MQD_df_CAM_facilityfilter[MQD_df_CAM_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO1_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_CAM_GEO1_antibiotic_ff]
+    dataTbl_CAM_GEO2_antibiotic_ff = MQD_df_CAM_facilityfilter[MQD_df_CAM_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO2_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_CAM_GEO2_antibiotic_ff]
+    dataTbl_CAM_GEO3_antibiotic_ff = MQD_df_CAM_facilityfilter[MQD_df_CAM_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO3_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_CAM_GEO3_antibiotic_ff]
+    dataTbl_CAM_GEO1_antimalarial_ff = MQD_df_CAM_facilityfilter[MQD_df_CAM_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_CAM_GEO1_antimalarial_ff]
+    dataTbl_CAM_GEO2_antimalarial_ff = MQD_df_CAM_facilityfilter[MQD_df_CAM_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_CAM_GEO2_antimalarial_ff]
+    dataTbl_CAM_GEO3_antimalarial_ff = MQD_df_CAM_facilityfilter[MQD_df_CAM_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_CAM_GEO3_antimalarial_ff]
+    dataTbl_ETH_GEO1_antibiotic_ff = MQD_df_ETH_facilityfilter[MQD_df_ETH_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO1_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_ETH_GEO1_antibiotic_ff]
+    dataTbl_ETH_GEO2_antibiotic_ff = MQD_df_ETH_facilityfilter[MQD_df_ETH_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO2_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_ETH_GEO2_antibiotic_ff]
+    dataTbl_ETH_GEO3_antibiotic_ff = MQD_df_ETH_facilityfilter[MQD_df_ETH_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO3_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_ETH_GEO3_antibiotic_ff]
+    dataTbl_ETH_GEO1_antimalarial_ff = MQD_df_ETH_facilityfilter[MQD_df_ETH_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_ETH_GEO1_antimalarial_ff]
+    dataTbl_ETH_GEO2_antimalarial_ff = MQD_df_ETH_facilityfilter[MQD_df_ETH_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_ETH_GEO2_antimalarial_ff]
+    dataTbl_ETH_GEO3_antimalarial_ff = MQD_df_ETH_facilityfilter[MQD_df_ETH_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_ETH_GEO3_antimalarial_ff]
+    dataTbl_GHA_GEO1_antimalarial_ff = MQD_df_GHA_facilityfilter[MQD_df_GHA_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_GHA_GEO1_antimalarial_ff]
+    dataTbl_GHA_GEO2_antimalarial_ff = MQD_df_GHA_facilityfilter[MQD_df_GHA_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_GHA_GEO2_antimalarial_ff]
+    dataTbl_GHA_GEO3_antimalarial_ff = MQD_df_GHA_facilityfilter[MQD_df_GHA_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_GHA_GEO3_antimalarial_ff]
+    dataTbl_KEN_GEO1_antimalarial_ff = MQD_df_KEN_facilityfilter[MQD_df_KEN_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_KEN_GEO1_antimalarial_ff]
+    dataTbl_KEN_GEO2_antimalarial_ff = MQD_df_KEN_facilityfilter[MQD_df_KEN_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_KEN_GEO2_antimalarial_ff]
+    dataTbl_KEN_GEO3_antimalarial_ff = MQD_df_KEN_facilityfilter[MQD_df_KEN_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_KEN_GEO3_antimalarial_ff]
+    dataTbl_LAO_GEO1_antibiotic_ff = MQD_df_LAO_facilityfilter[MQD_df_LAO_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO1_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_LAO_GEO1_antibiotic_ff]
+    dataTbl_LAO_GEO2_antibiotic_ff = MQD_df_LAO_facilityfilter[MQD_df_LAO_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO2_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_LAO_GEO2_antibiotic_ff]
+    dataTbl_LAO_GEO3_antibiotic_ff = MQD_df_LAO_facilityfilter[MQD_df_LAO_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO3_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_LAO_GEO3_antibiotic_ff]
+    dataTbl_LAO_GEO1_antimalarial_ff = MQD_df_LAO_facilityfilter[MQD_df_LAO_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO1_antimalarial_ff]
+    dataTbl_LAO_GEO2_antimalarial_ff = MQD_df_LAO_facilityfilter[MQD_df_LAO_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO2_antimalarial_ff]
+    dataTbl_LAO_GEO3_antimalarial_ff = MQD_df_LAO_facilityfilter[MQD_df_LAO_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_LAO_GEO3_antimalarial_ff]
+    dataTbl_MOZ_GEO1_antibiotic_ff = MQD_df_MOZ_facilityfilter[MQD_df_MOZ_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO1_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_MOZ_GEO1_antibiotic_ff]
+    dataTbl_MOZ_GEO2_antibiotic_ff = MQD_df_MOZ_facilityfilter[MQD_df_MOZ_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO2_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_MOZ_GEO2_antibiotic_ff]
+    dataTbl_MOZ_GEO3_antibiotic_ff = MQD_df_MOZ_facilityfilter[MQD_df_MOZ_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO3_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_MOZ_GEO3_antibiotic_ff]
+    dataTbl_MOZ_GEO1_antimalarial_ff = MQD_df_MOZ_facilityfilter[MQD_df_MOZ_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_MOZ_GEO1_antimalarial_ff]
+    dataTbl_MOZ_GEO2_antimalarial_ff = MQD_df_MOZ_facilityfilter[MQD_df_MOZ_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_MOZ_GEO2_antimalarial_ff]
+    dataTbl_MOZ_GEO3_antimalarial_ff = MQD_df_MOZ_facilityfilter[MQD_df_MOZ_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_MOZ_GEO3_antimalarial_ff]
+    dataTbl_PER_GEO1_antibiotic_ff = MQD_df_PER_facilityfilter[MQD_df_PER_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO1_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PER_GEO1_antibiotic_ff]
+    dataTbl_PER_GEO2_antibiotic_ff = MQD_df_PER_facilityfilter[MQD_df_PER_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO2_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PER_GEO2_antibiotic_ff]
+    dataTbl_PER_GEO3_antibiotic_ff = MQD_df_PER_facilityfilter[MQD_df_PER_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO3_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_PER_GEO3_antibiotic_ff]
+    dataTbl_PHI_GEO1_antituberculosis_ff = MQD_df_PHI_facilityfilter[MQD_df_PHI_facilityfilter['Indication_GROUPED'].isin(['Antituberculosis'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO1_antituberculosis_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                         dataTbl_PHI_GEO1_antituberculosis_ff]
+    dataTbl_PHI_GEO2_antituberculosis_ff = MQD_df_PHI_facilityfilter[MQD_df_PHI_facilityfilter['Indication_GROUPED'].isin(['Antituberculosis'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO2_antituberculosis_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                         dataTbl_PHI_GEO2_antituberculosis_ff]
+    dataTbl_PHI_GEO3_antituberculosis_ff = MQD_df_PHI_facilityfilter[MQD_df_PHI_facilityfilter['Indication_GROUPED'].isin(['Antituberculosis'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO3_antituberculosis_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                         dataTbl_PHI_GEO3_antituberculosis_ff]
+    dataTbl_SEN_GEO1_antimalarial_ff = MQD_df_SEN_facilityfilter[MQD_df_SEN_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO1_antimalarial_ff]
+    dataTbl_SEN_GEO2_antimalarial_ff = MQD_df_SEN_facilityfilter[MQD_df_SEN_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO2_antimalarial_ff]
+    dataTbl_SEN_GEO3_antimalarial_ff = MQD_df_SEN_facilityfilter[MQD_df_SEN_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_SEN_GEO3_antimalarial_ff]
+    dataTbl_SEN_GEO1_antiretroviral_ff = MQD_df_SEN_facilityfilter[MQD_df_SEN_facilityfilter['Indication_GROUPED'].isin(['Antiretroviral'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO1_antiretroviral_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                       dataTbl_SEN_GEO1_antiretroviral_ff]
+    dataTbl_SEN_GEO2_antiretroviral_ff = MQD_df_SEN_facilityfilter[MQD_df_SEN_facilityfilter['Indication_GROUPED'].isin(['Antiretroviral'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO2_antiretroviral_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                       dataTbl_SEN_GEO2_antiretroviral_ff]
+    dataTbl_SEN_GEO3_antiretroviral_ff = MQD_df_SEN_facilityfilter[MQD_df_SEN_facilityfilter['Indication_GROUPED'].isin(['Antiretroviral'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO3_antiretroviral_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                       dataTbl_SEN_GEO3_antiretroviral_ff]
+    dataTbl_THA_GEO1_antibiotic_ff = MQD_df_THA_facilityfilter[MQD_df_THA_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO1_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_THA_GEO1_antibiotic_ff]
+    dataTbl_THA_GEO2_antibiotic_ff = MQD_df_THA_facilityfilter[MQD_df_THA_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO2_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_THA_GEO2_antibiotic_ff]
+    dataTbl_THA_GEO3_antibiotic_ff = MQD_df_THA_facilityfilter[MQD_df_THA_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO3_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_THA_GEO3_antibiotic_ff]
+    dataTbl_THA_GEO1_antimalarial_ff = MQD_df_THA_facilityfilter[MQD_df_THA_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_THA_GEO1_antimalarial_ff]
+    dataTbl_THA_GEO2_antimalarial_ff = MQD_df_THA_facilityfilter[MQD_df_THA_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_THA_GEO2_antimalarial_ff]
+    dataTbl_THA_GEO3_antimalarial_ff = MQD_df_THA_facilityfilter[MQD_df_THA_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_THA_GEO3_antimalarial_ff]
+    dataTbl_VIE_GEO1_antibiotic_ff = MQD_df_VIE_facilityfilter[MQD_df_VIE_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO1_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_VIE_GEO1_antibiotic_ff]
+    dataTbl_VIE_GEO2_antibiotic_ff = MQD_df_VIE_facilityfilter[MQD_df_VIE_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO2_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_VIE_GEO2_antibiotic_ff]
+    dataTbl_VIE_GEO3_antibiotic_ff = MQD_df_VIE_facilityfilter[MQD_df_VIE_facilityfilter['Indication_GROUPED'].isin(['Antibiotic'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO3_antibiotic_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                   dataTbl_VIE_GEO3_antibiotic_ff]
+    dataTbl_VIE_GEO1_antimalarial_ff = MQD_df_VIE_facilityfilter[MQD_df_VIE_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO1_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_VIE_GEO1_antimalarial_ff]
+    dataTbl_VIE_GEO2_antimalarial_ff = MQD_df_VIE_facilityfilter[MQD_df_VIE_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO2_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_VIE_GEO2_antimalarial_ff]
+    dataTbl_VIE_GEO3_antimalarial_ff = MQD_df_VIE_facilityfilter[MQD_df_VIE_facilityfilter['Indication_GROUPED'].isin(['Antimalarial'])][
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO3_antimalarial_ff = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in
+                                     dataTbl_VIE_GEO3_antimalarial_ff]
 
 
 
 
-    # Filtered data
-    dataTbl_CAM_filt = MQD_df_CAM_filt[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_CAM_filt = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_filt]
-    dataTbl_GHA_filt = MQD_df_GHA_filt[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_GHA_filt = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_filt]
-    dataTbl_PHI_filt = MQD_df_PHI_filt[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_PHI_filt = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_filt]
-    # Therapeutics data
-    dataTbl_CAM_antimalarial = MQD_df_CAM_antimalarial[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_CAM_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_antimalarial]
-    dataTbl_GHA_antimalarial = MQD_df_GHA_antimalarial[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_GHA_antimalarial = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_antimalarial]
-    dataTbl_PHI_antituberculosis = MQD_df_PHI_antituberculosis[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_PHI_antituberculosis = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_antituberculosis]
+
     # Put the databases and lists into a dictionary
     outputDict = {}
-    outputDict.update({'df_ALL':MQD_df,
-                       'df_CAM':MQD_df_CAM, 'df_GHA':MQD_df_GHA, 'df_PHI':MQD_df_PHI,
-                       'df_CAM_filt':MQD_df_CAM_filt, 'df_GHA_filt':MQD_df_GHA_filt, 'df_PHI_filt':MQD_df_PHI_filt,
-                       'df_CAM_antimalarial':MQD_df_CAM_antimalarial, 'df_GHA_antimalarial':MQD_df_GHA_antimalarial,
-                       'df_PHI_antituberculosis':MQD_df_PHI_antituberculosis,
-                       'dataTbl_CAM':dataTbl_CAM, 'dataTbl_GHA':dataTbl_GHA, 'dataTbl_PHI':dataTbl_PHI,
-                       'dataTbl_CAM_filt':dataTbl_CAM_filt, 'dataTbl_GHA_filt':dataTbl_GHA_filt,
-                       'dataTbl_PHI_filt':dataTbl_PHI_filt, 'dataTbl_CAM_antimalarial':dataTbl_CAM_antimalarial,
-                       'dataTbl_GHA_antimalarial':dataTbl_GHA_antimalarial,
-                       'dataTbl_PHI_antituberculosis':dataTbl_PHI_antituberculosis})
+    outputDict.update({# all raw pandas dataframes
+       'df_ALL':MQD_df, 'df_CAM':MQD_df_CAM, 'df_ETH':MQD_df_ETH, 'df_GHA':MQD_df_GHA,
+       'df_KEN':MQD_df_KEN, 'df_LAO':MQD_df_LAO, 'df_MOZ':MQD_df_MOZ, 'df_PER':MQD_df_PER,
+       'df_PHI':MQD_df_PHI, 'df_SEN':MQD_df_SEN, 'df_THA':MQD_df_THA, 'df_VIE':MQD_df_VIE,
+       'df_CAM_ff':MQD_df_CAM_facilityfilter, 'df_ETH_ff':MQD_df_ETH_facilityfilter,
+       'df_GHA_ff':MQD_df_GHA_facilityfilter, 'df_KEN_ff':MQD_df_KEN_facilityfilter,
+       'df_LAO_ff':MQD_df_LAO_facilityfilter, 'df_MOZ_ff':MQD_df_MOZ_facilityfilter,
+       'df_PER_ff':MQD_df_PER_facilityfilter, 'df_PHI_ff':MQD_df_PHI_facilityfilter,
+       'df_SEN_ff':MQD_df_SEN_facilityfilter, 'df_THA_ff':MQD_df_THA_facilityfilter,
+       'df_VIE_ff':MQD_df_VIE_facilityfilter,
+       # raw data tables for use with Logistigate
+       'tbl_CAM_G1': dataTbl_CAM_GEO1, 'tbl_CAM_G2': dataTbl_CAM_GEO2, 'tbl_CAM_G3': dataTbl_CAM_GEO3,
+       'tbl_ETH_G1': dataTbl_ETH_GEO1, 'tbl_ETH_G2': dataTbl_ETH_GEO2, 'tbl_ETH_G3': dataTbl_ETH_GEO3,
+       'tbl_GHA_G1': dataTbl_GHA_GEO1, 'tbl_GHA_G2': dataTbl_GHA_GEO2, 'tbl_GHA_G3': dataTbl_GHA_GEO3,
+       'tbl_KEN_G1': dataTbl_KEN_GEO1, 'tbl_KEN_G2': dataTbl_KEN_GEO2, 'tbl_KEN_G3': dataTbl_KEN_GEO3,
+       'tbl_LAO_G1': dataTbl_LAO_GEO1, 'tbl_LAO_G2': dataTbl_LAO_GEO2, 'tbl_LAO_G3': dataTbl_LAO_GEO3,
+       'tbl_MOZ_G1': dataTbl_MOZ_GEO1, 'tbl_MOZ_G2': dataTbl_MOZ_GEO2, 'tbl_MOZ_G3': dataTbl_MOZ_GEO3,
+       'tbl_PER_G1': dataTbl_PER_GEO1, 'tbl_PER_G2': dataTbl_PER_GEO2, 'tbl_PER_G3': dataTbl_PER_GEO3,
+       'tbl_PHI_G1': dataTbl_PHI_GEO1, 'tbl_PHI_G2': dataTbl_PHI_GEO2, 'tbl_PHI_G3': dataTbl_PHI_GEO3,
+       'tbl_SEN_G1': dataTbl_SEN_GEO1, 'tbl_SEN_G2': dataTbl_SEN_GEO2, 'tbl_SEN_G3': dataTbl_SEN_GEO3,
+       'tbl_THA_G1': dataTbl_THA_GEO1, 'tbl_THA_G2': dataTbl_THA_GEO2, 'tbl_THA_G3': dataTbl_THA_GEO3,
+       'tbl_VIE_G1': dataTbl_VIE_GEO1, 'tbl_VIE_G2': dataTbl_VIE_GEO2, 'tbl_VIE_G3': dataTbl_VIE_GEO3,
+       # data tables with outlet-type facility filter
+       'tbl_CAM_G1_ff': dataTbl_CAM_GEO1_ff, 'tbl_CAM_G2_ff': dataTbl_CAM_GEO2_ff, 'tbl_CAM_G3_ff': dataTbl_CAM_GEO3_ff,
+       'tbl_ETH_G1_ff': dataTbl_ETH_GEO1_ff, 'tbl_ETH_G2_ff': dataTbl_ETH_GEO2_ff, 'tbl_ETH_G3_ff': dataTbl_ETH_GEO3_ff,
+       'tbl_GHA_G1_ff': dataTbl_GHA_GEO1_ff, 'tbl_GHA_G2_ff': dataTbl_GHA_GEO2_ff, 'tbl_GHA_G3_ff': dataTbl_GHA_GEO3_ff,
+       'tbl_KEN_G1_ff': dataTbl_KEN_GEO1_ff, 'tbl_KEN_G2_ff': dataTbl_KEN_GEO2_ff, 'tbl_KEN_G3_ff': dataTbl_KEN_GEO3_ff,
+       'tbl_LAO_G1_ff': dataTbl_LAO_GEO1_ff, 'tbl_LAO_G2_ff': dataTbl_LAO_GEO2_ff, 'tbl_LAO_G3_ff': dataTbl_LAO_GEO3_ff,
+       'tbl_MOZ_G1_ff': dataTbl_MOZ_GEO1_ff, 'tbl_MOZ_G2_ff': dataTbl_MOZ_GEO2_ff, 'tbl_MOZ_G3_ff': dataTbl_MOZ_GEO3_ff,
+       'tbl_PER_G1_ff': dataTbl_PER_GEO1_ff, 'tbl_PER_G2_ff': dataTbl_PER_GEO2_ff, 'tbl_PER_G3_ff': dataTbl_PER_GEO3_ff,
+       'tbl_PHI_G1_ff': dataTbl_PHI_GEO1_ff, 'tbl_PHI_G2_ff': dataTbl_PHI_GEO2_ff, 'tbl_PHI_G3_ff': dataTbl_PHI_GEO3_ff,
+       'tbl_SEN_G1_ff': dataTbl_SEN_GEO1_ff, 'tbl_SEN_G2_ff': dataTbl_SEN_GEO2_ff, 'tbl_SEN_G3_ff': dataTbl_SEN_GEO3_ff,
+       'tbl_THA_G1_ff': dataTbl_THA_GEO1_ff, 'tbl_THA_G2_ff': dataTbl_THA_GEO2_ff, 'tbl_THA_G3_ff': dataTbl_THA_GEO3_ff,
+       'tbl_VIE_G1_ff': dataTbl_VIE_GEO1_ff, 'tbl_VIE_G2_ff': dataTbl_VIE_GEO2_ff, 'tbl_VIE_G3_ff': dataTbl_VIE_GEO3_ff,
+       # data tables for different therapeutic indications
+       'tbl_CAM_G1_antibiotic': dataTbl_CAM_GEO1_antibiotic, 'tbl_CAM_G2_antibiotic': dataTbl_CAM_GEO2_antibiotic, 'tbl_CAM_G3_antibiotic': dataTbl_CAM_GEO3_antibiotic,
+       'tbl_CAM_G1_antimalarial': dataTbl_CAM_GEO1_antimalarial, 'tbl_CAM_G2_antimalarial': dataTbl_CAM_GEO2_antimalarial, 'tbl_CAM_G3_antimalarial': dataTbl_CAM_GEO3_antimalarial,
+       'tbl_ETH_G1_antibiotic': dataTbl_ETH_GEO1_antibiotic, 'tbl_ETH_G2_antibiotic': dataTbl_ETH_GEO2_antibiotic, 'tbl_ETH_G3_antibiotic': dataTbl_ETH_GEO3_antibiotic,
+       'tbl_ETH_G1_antimalarial': dataTbl_ETH_GEO1_antimalarial, 'tbl_ETH_G2_antimalarial': dataTbl_ETH_GEO2_antimalarial, 'tbl_ETH_G3_antimalarial': dataTbl_ETH_GEO3_antimalarial,
+       'tbl_GHA_G1_antimalarial': dataTbl_GHA_GEO1_antimalarial, 'tbl_GHA_G2_antimalarial': dataTbl_GHA_GEO2_antimalarial, 'tbl_GHA_G3_antimalarial': dataTbl_GHA_GEO3_antimalarial,
+       'tbl_KEN_G1_antimalarial': dataTbl_KEN_GEO1_antimalarial, 'tbl_KEN_G2_antimalarial': dataTbl_KEN_GEO2_antimalarial, 'tbl_KEN_G3_antimalarial': dataTbl_KEN_GEO3_antimalarial,
+       'tbl_LAO_G1_antibiotic': dataTbl_LAO_GEO1_antibiotic, 'tbl_LAO_G2_antibiotic': dataTbl_LAO_GEO2_antibiotic, 'tbl_LAO_G3_antibiotic': dataTbl_LAO_GEO3_antibiotic,
+       'tbl_LAO_G1_antimalarial': dataTbl_LAO_GEO1_antimalarial, 'tbl_LAO_G2_antimalarial': dataTbl_LAO_GEO2_antimalarial, 'tbl_LAO_G3_antimalarial': dataTbl_LAO_GEO3_antimalarial,
+       'tbl_MOZ_G1_antibiotic': dataTbl_MOZ_GEO1_antibiotic, 'tbl_MOZ_G2_antibiotic': dataTbl_MOZ_GEO2_antibiotic, 'tbl_MOZ_G3_antibiotic': dataTbl_MOZ_GEO3_antibiotic,
+       'tbl_MOZ_G1_antimalarial': dataTbl_MOZ_GEO1_antimalarial, 'tbl_MOZ_G2_antimalarial': dataTbl_MOZ_GEO2_antimalarial, 'tbl_MOZ_G3_antimalarial': dataTbl_MOZ_GEO3_antimalarial,
+       'tbl_PER_G1_antibiotic': dataTbl_PER_GEO1_antibiotic, 'tbl_PER_G2_antibiotic': dataTbl_PER_GEO2_antibiotic, 'tbl_PER_G3_antibiotic': dataTbl_PER_GEO3_antibiotic,
+       'tbl_PHI_G1_antituberculosis': dataTbl_PHI_GEO1_antituberculosis, 'tbl_PHI_G2_antituberculosis': dataTbl_PHI_GEO2_antituberculosis, 'tbl_PHI_G3_antituberculosis': dataTbl_PHI_GEO3_antituberculosis,
+       'tbl_SEN_G1_antimalarial': dataTbl_SEN_GEO1_antimalarial, 'tbl_SEN_G2_antimalarial': dataTbl_SEN_GEO2_antimalarial, 'tbl_SEN_G3_antimalarial': dataTbl_SEN_GEO3_antimalarial,
+       'tbl_SEN_G1_antiretroviral': dataTbl_SEN_GEO1_antiretroviral, 'tbl_SEN_G2_antiretroviral': dataTbl_SEN_GEO2_antiretroviral, 'tbl_SEN_G3_antiretroviral': dataTbl_SEN_GEO3_antiretroviral,
+       'tbl_THA_G1_antibiotic': dataTbl_THA_GEO1_antibiotic, 'tbl_THA_G2_antibiotic': dataTbl_THA_GEO2_antibiotic, 'tbl_THA_G3_antibiotic': dataTbl_THA_GEO3_antibiotic,
+       'tbl_THA_G1_antimalarial': dataTbl_THA_GEO1_antimalarial, 'tbl_THA_G2_antimalarial': dataTbl_THA_GEO2_antimalarial, 'tbl_THA_G3_antimalarial': dataTbl_THA_GEO3_antimalarial,
+       'tbl_VIE_G1_antibiotic': dataTbl_VIE_GEO1_antibiotic, 'tbl_VIE_G2_antibiotic': dataTbl_VIE_GEO2_antibiotic, 'tbl_VIE_G3_antibiotic': dataTbl_VIE_GEO3_antibiotic,
+       'tbl_VIE_G1_antimalarial': dataTbl_VIE_GEO1_antimalarial, 'tbl_VIE_G2_antimalarial': dataTbl_VIE_GEO2_antimalarial, 'tbl_VIE_G3_antimalarial': dataTbl_VIE_GEO3_antimalarial,
+       # data tables for therapeutic indications, with outlet-type facility filter
+      'tbl_CAM_G1_antibiotic_ff': dataTbl_CAM_GEO1_antibiotic_ff, 'tbl_CAM_G2_antibiotic_ff': dataTbl_CAM_GEO2_antibiotic_ff, 'tbl_CAM_G3_antibiotic_ff': dataTbl_CAM_GEO3_antibiotic_ff,
+      'tbl_CAM_G1_antimalarial_ff': dataTbl_CAM_GEO1_antimalarial_ff, 'tbl_CAM_G2_antimalarial_ff': dataTbl_CAM_GEO2_antimalarial_ff, 'tbl_CAM_G3_antimalarial_ff': dataTbl_CAM_GEO3_antimalarial_ff,
+      'tbl_ETH_G1_antibiotic_ff': dataTbl_ETH_GEO1_antibiotic_ff, 'tbl_ETH_G2_antibiotic_ff': dataTbl_ETH_GEO2_antibiotic_ff, 'tbl_ETH_G3_antibiotic_ff': dataTbl_ETH_GEO3_antibiotic_ff,
+      'tbl_ETH_G1_antimalarial_ff': dataTbl_ETH_GEO1_antimalarial_ff, 'tbl_ETH_G2_antimalarial_ff': dataTbl_ETH_GEO2_antimalarial_ff, 'tbl_ETH_G3_antimalarial_ff': dataTbl_ETH_GEO3_antimalarial_ff,
+      'tbl_GHA_G1_antimalarial_ff': dataTbl_GHA_GEO1_antimalarial_ff, 'tbl_GHA_G2_antimalarial_ff': dataTbl_GHA_GEO2_antimalarial_ff, 'tbl_GHA_G3_antimalarial_ff': dataTbl_GHA_GEO3_antimalarial_ff,
+      'tbl_KEN_G1_antimalarial_ff': dataTbl_KEN_GEO1_antimalarial_ff, 'tbl_KEN_G2_antimalarial_ff': dataTbl_KEN_GEO2_antimalarial_ff, 'tbl_KEN_G3_antimalarial_ff': dataTbl_KEN_GEO3_antimalarial_ff,
+      'tbl_LAO_G1_antibiotic_ff': dataTbl_LAO_GEO1_antibiotic_ff, 'tbl_LAO_G2_antibiotic_ff': dataTbl_LAO_GEO2_antibiotic_ff, 'tbl_LAO_G3_antibiotic_ff': dataTbl_LAO_GEO3_antibiotic_ff,
+      'tbl_LAO_G1_antimalarial_ff': dataTbl_LAO_GEO1_antimalarial_ff, 'tbl_LAO_G2_antimalarial_ff': dataTbl_LAO_GEO2_antimalarial_ff, 'tbl_LAO_G3_antimalarial_ff': dataTbl_LAO_GEO3_antimalarial_ff,
+      'tbl_MOZ_G1_antibiotic_ff': dataTbl_MOZ_GEO1_antibiotic_ff, 'tbl_MOZ_G2_antibiotic_ff': dataTbl_MOZ_GEO2_antibiotic_ff, 'tbl_MOZ_G3_antibiotic_ff': dataTbl_MOZ_GEO3_antibiotic_ff,
+      'tbl_MOZ_G1_antimalarial_ff': dataTbl_MOZ_GEO1_antimalarial_ff, 'tbl_MOZ_G2_antimalarial_ff': dataTbl_MOZ_GEO2_antimalarial_ff, 'tbl_MOZ_G3_antimalarial_ff': dataTbl_MOZ_GEO3_antimalarial_ff,
+      'tbl_PER_G1_antibiotic_ff': dataTbl_PER_GEO1_antibiotic_ff, 'tbl_PER_G2_antibiotic_ff': dataTbl_PER_GEO2_antibiotic_ff, 'tbl_PER_G3_antibiotic_ff': dataTbl_PER_GEO3_antibiotic_ff,
+      'tbl_PHI_G1_antituberculosis_ff': dataTbl_PHI_GEO1_antituberculosis_ff, 'tbl_PHI_G2_antituberculosis_ff': dataTbl_PHI_GEO2_antituberculosis_ff, 'tbl_PHI_G3_antituberculosis_ff': dataTbl_PHI_GEO3_antituberculosis_ff,
+      'tbl_SEN_G1_antimalarial_ff': dataTbl_SEN_GEO1_antimalarial_ff, 'tbl_SEN_G2_antimalarial_ff': dataTbl_SEN_GEO2_antimalarial_ff, 'tbl_SEN_G3_antimalarial_ff': dataTbl_SEN_GEO3_antimalarial_ff,
+      'tbl_SEN_G1_antiretroviral_ff': dataTbl_SEN_GEO1_antiretroviral_ff, 'tbl_SEN_G2_antiretroviral_ff': dataTbl_SEN_GEO2_antiretroviral_ff, 'tbl_SEN_G3_antiretroviral_ff': dataTbl_SEN_GEO3_antiretroviral_ff,
+      'tbl_THA_G1_antibiotic_ff': dataTbl_THA_GEO1_antibiotic_ff, 'tbl_THA_G2_antibiotic_ff': dataTbl_THA_GEO2_antibiotic_ff, 'tbl_THA_G3_antibiotic_ff': dataTbl_THA_GEO3_antibiotic_ff,
+      'tbl_THA_G1_antimalarial_ff': dataTbl_THA_GEO1_antimalarial_ff, 'tbl_THA_G2_antimalarial_ff': dataTbl_THA_GEO2_antimalarial_ff, 'tbl_THA_G3_antimalarial_ff': dataTbl_THA_GEO3_antimalarial_ff,
+      'tbl_VIE_G1_antibiotic_ff': dataTbl_VIE_GEO1_antibiotic_ff, 'tbl_VIE_G2_antibiotic_ff': dataTbl_VIE_GEO2_antibiotic_ff, 'tbl_VIE_G3_antibiotic_ff': dataTbl_VIE_GEO3_antibiotic_ff,
+      'tbl_VIE_G1_antimalarial_ff': dataTbl_VIE_GEO1_antimalarial_ff, 'tbl_VIE_G2_antimalarial_ff': dataTbl_VIE_GEO2_antimalarial_ff, 'tbl_VIE_G3_antimalarial_ff': dataTbl_VIE_GEO3_antimalarial_ff
+    })
 
     return outputDict
 
 '''
-FOR STORING THE OUTPUT DICTIONARY AS A SAVED OBJECT SO WE DON'T HAVE TO RUN THE PROCESSOR EVERY TIME
+FOR STORING THE OUTPUT DICTIONARY AS A SAVED OBJECT SO WE DON'T HAVE TO RUN THE PROCESSOR EVERY TIME; ABOUT 28 MB
 
 import pickle
 import os
@@ -2741,9 +3328,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.
 filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
 outputFileName = os.path.join(filesPath, 'pickleOutput')
 pickle.dump(outputDict, open(outputFileName,'wb'))
-
 '''
-
 
 def MQDdataScript():
     '''Script looking at the MQD data'''
