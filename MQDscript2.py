@@ -2201,6 +2201,8 @@ def cleanMQD():
     MQD_df_THA['Province_Name_GROUPED'] = templist
 
     # Facility_Location: Largely missing for Thailand
+    templist = MQD_df_THA['Facility_Location'].tolist()
+    MQD_df_THA['Facility_Location_GROUPED'] = templist
 
     # Facility_Name; need to remove unknown characters first before running assignlabels()
     MQD_df_THA.loc[(MQD_df_THA.Facility_Name == '*?????????????????')
@@ -2517,47 +2519,53 @@ def cleanMQD():
             THERAPEUTIC INDICATIONS:
                 1319 Antibiotic
                 556 Antimalarial
-            OUTLET-TYPE FACILITIES
-                1603
+            OUTLET-TYPE FACILITIES: 1603
         ETHIOPIA, 663 TOTAL OBSVNS:
             THERAPEUTIC INDICATIONS:
                 162 Antibiotic
                 272 Antimalarial
-            OUTLET-TYPE FACILITIES:
-                622
+            OUTLET-TYPE FACILITIES: 622
         GHANA, 562 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
                 304 Antimalarial
-            OUTLET-TYPE FACILITIES:
-                525
-        KENYA, XXX TOTAL OBSVNS
+            OUTLET-TYPE FACILITIES: 525
+        KENYA, 904 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
+                707 Antimalarial
+            OUTLET-TYPE FACILITIES: 847
+        LAOS, 1784 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
+                901 Antibiotic
+                263 Antimalarial
+            OUTLET-TYPE FACILITIES: 1565
+        MOZAMBIQUE, 1536 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
+                520 Antibiotic
+                175 Antimalarial
+            OUTLET-TYPE FACILITIES: 1240
+        PERU, 462 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
+                271 Antibiotic
+            OUTLET-TYPE FACILITIES: 382
+        PHILIPPINES, 1870 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
+                1863 Antituberculosis
+            OUTLET-TYPE FACILITIES: 1778
+        SENEGAL, 623 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
+                155 Antimalarial
+                110 Antiretroviral
+            OUTLET-TYPE FACILITIES: 557
+        THAILAND, 2287 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
+                220 Antibiotic
+                263 Antimalarial
+            OUTLET-TYPE FACILITIES: 2196
+        VIETNAM, 2683 TOTAL OBSVNS
             THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-        GHANA, 562 TOTAL OBSVNS
-            THERAPEUTIC INDICATIONS:
-            OUTLET-TYPE FACILITIES:
-                
+                666 Antibiotic
+                532 Antimalarial
+            OUTLET-TYPE FACILITIES: 2161                
     '''
     # Facility-filtered for outlet-type facilities
     MQD_df_CAM_facilityfilter = MQD_df_CAM[MQD_df_CAM['Facility_Type_Name'].isin(
@@ -2569,42 +2577,132 @@ def cleanMQD():
          'Pharmacy', 'Retail Shop', 'drug shop', 'health office',])].copy()
     MQD_df_GHA_facilityfilter = MQD_df_GHA[MQD_df_GHA['Facility_Type_Name'].isin(
         ['Health Clinic', 'Hospital', 'Pharmacy', 'Retail Shop', 'Retail-drug Outlet'])].copy()
-
-
-
-
-
-
-
-
-    gha, ken
-
-    MQD_df_GHA_facilityfilter.count()
-    MQD_df_GHA.pivot_table(index=['Indication_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
-
-
-
-
-
-    MQD_df_GHA_filt = MQD_df_GHA[MQD_df_GHA['Facility Type'].isin(
-        ['Health Clinic', 'Hospital', 'Pharmacy', 'Retail Shop', 'Retail-drug Outlet'])].copy()
-    MQD_df_PHI_filt = MQD_df_PHI[MQD_df_PHI['Facility Type'].isin(
+    MQD_df_KEN_facilityfilter = MQD_df_KEN[MQD_df_KEN['Facility_Type_Name'].isin(
+        ['Clinic', 'Dispensary', 'Health Centre', 'Health Clinic', 'Hospital', 'Mission Hospital', 'Pharmacy',
+         'RETAIL CHEMIST', 'Retail Shop', 'Retailer'])].copy()
+    MQD_df_LAO_facilityfilter = MQD_df_LAO[MQD_df_LAO['Facility_Type_Name'].isin(
+        ['Clinic', 'Health Clinic', 'Hospital', 'Pharmacy'])].copy()
+    MQD_df_MOZ_facilityfilter = MQD_df_MOZ[MQD_df_MOZ['Facility_Type_Name'].isin(
+        ['Depot', 'Health Cabinet', 'Health Center', 'Health Center Depot', 'Health Clinic',
+         'Health Post Depot', 'Hospital', 'Hospital Depot', 'Pharmacy'])].copy()
+    MQD_df_PER_facilityfilter = MQD_df_PER[MQD_df_PER['Facility_Type_Name'].isin(
+        ['Hospital', 'Pharmacy', 'Pharmacy ESSALUD'])].copy()
+    MQD_df_PHI_facilityfilter = MQD_df_PHI[MQD_df_PHI['Facility_Type_Name'].isin(
         ['Health Center', 'Health Clinic', 'Hospital', 'Hospital Pharmacy', 'Pharmacy',
          'Retail-drug Outlet', 'health office'])].copy()
-    # Now filter by chosen drug types
-    MQD_df_CAM_antimalarial = MQD_df_CAM_filt[MQD_df_CAM_filt['Therapeutic Indications'].isin(['Antimalarial'])].copy()
-    MQD_df_GHA_antimalarial = MQD_df_GHA_filt[MQD_df_GHA_filt['Therapeutic Indications'].isin(['Antimalarial',
-                                                                                               'Antimalarials'])].copy()
-    MQD_df_PHI_antituberculosis = MQD_df_PHI_filt[MQD_df_PHI_filt['Therapeutic Indications'].isin(['Anti-tuberculosis',
-                                                                                               'Antituberculosis'])].copy()
+    MQD_df_SEN_facilityfilter = MQD_df_SEN[MQD_df_SEN['Facility_Type_Name'].isin(
+        ['Health Clinic', 'Hospital', 'Pharmacy'])].copy()
+    MQD_df_THA_facilityfilter = MQD_df_THA[MQD_df_THA['Facility_Type_Name'].isin(
+        ['Health Clinic', 'Hospital', 'Pharmacy', 'Retail-drug Outlet'])].copy()
+    MQD_df_VIE_facilityfilter = MQD_df_VIE[MQD_df_VIE['Facility_Type_Name'].isin(
+        ['General Clinic', 'Health Clinic', 'Hospital', 'Medical centre', 'Medical station', 'Pharmacy'])].copy()
+
     # For each desired data set, generate lists suitable for use with logistigate
     # Overall data
-    dataTbl_CAM = MQD_df_CAM[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_CAM = [[i[0],i[1],1] if i[2]=='Fail' else [i[0],i[1],0] for i in dataTbl_CAM]
-    dataTbl_GHA = MQD_df_GHA[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_GHA = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA]
-    dataTbl_PHI = MQD_df_PHI[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
-    dataTbl_PHI = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI]
+    dataTbl_CAM_GEO1 = MQD_df_CAM[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO1 = [[i[0],i[1],1] if i[2]=='Fail' else [i[0],i[1],0] for i in dataTbl_CAM_GEO1]
+    dataTbl_CAM_GEO2 = MQD_df_CAM[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO2]
+    dataTbl_CAM_GEO3 = MQD_df_CAM[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_CAM_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_GEO3]
+    dataTbl_ETH_GEO1 = MQD_df_ETH[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_ETH_GEO1]
+    dataTbl_ETH_GEO2 = MQD_df_ETH[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_ETH_GEO2]
+    dataTbl_ETH_GEO3 = MQD_df_ETH[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_ETH_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_ETH_GEO3]
+    dataTbl_GHA_GEO1 = MQD_df_GHA[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_GEO1]
+    dataTbl_GHA_GEO2 = MQD_df_GHA[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_GEO2]
+    dataTbl_GHA_GEO3 = MQD_df_GHA[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_GHA_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_GHA_GEO3]
+    dataTbl_KEN_GEO1 = MQD_df_KEN[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_KEN_GEO1]
+    dataTbl_KEN_GEO2 = MQD_df_KEN[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_KEN_GEO2]
+    dataTbl_KEN_GEO3 = MQD_df_KEN[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_KEN_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_KEN_GEO3]
+    dataTbl_LAO_GEO1 = MQD_df_LAO[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_LAO_GEO1]
+    dataTbl_LAO_GEO2 = MQD_df_LAO[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_LAO_GEO2]
+    dataTbl_LAO_GEO3 = MQD_df_LAO[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_LAO_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_LAO_GEO3]
+    dataTbl_MOZ_GEO1 = MQD_df_MOZ[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_MOZ_GEO1]
+    dataTbl_MOZ_GEO2 = MQD_df_MOZ[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_MOZ_GEO2]
+    dataTbl_MOZ_GEO3 = MQD_df_MOZ[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_MOZ_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_MOZ_GEO3]
+    dataTbl_PER_GEO1 = MQD_df_PER[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PER_GEO1]
+    dataTbl_PER_GEO2 = MQD_df_PER[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PER_GEO2]
+    dataTbl_PER_GEO3 = MQD_df_PER[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PER_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PER_GEO3]
+    dataTbl_PHI_GEO1 = MQD_df_PHI[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_GEO1]
+    dataTbl_PHI_GEO2 = MQD_df_PHI[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_GEO2]
+    dataTbl_PHI_GEO3 = MQD_df_PHI[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_PHI_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_PHI_GEO3]
+    dataTbl_SEN_GEO1 = MQD_df_SEN[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_SEN_GEO1]
+    dataTbl_SEN_GEO2 = MQD_df_SEN[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_SEN_GEO2]
+    dataTbl_SEN_GEO3 = MQD_df_SEN[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_SEN_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_SEN_GEO3]
+    dataTbl_THA_GEO1 = MQD_df_THA[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_THA_GEO1]
+    dataTbl_THA_GEO2 = MQD_df_THA[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_THA_GEO2]
+    dataTbl_THA_GEO3 = MQD_df_THA[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_THA_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_THA_GEO3]
+    dataTbl_VIE_GEO1 = MQD_df_VIE[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO1 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_VIE_GEO1]
+    dataTbl_VIE_GEO2 = MQD_df_VIE[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO2 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_VIE_GEO2]
+    dataTbl_VIE_GEO3 = MQD_df_VIE[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    dataTbl_VIE_GEO3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_VIE_GEO3]
+
+
+
+
+
     # Filtered data
     dataTbl_CAM_filt = MQD_df_CAM_filt[['Province', 'Manufacturer', 'Final Test Result']].values.tolist()
     dataTbl_CAM_filt = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in dataTbl_CAM_filt]
