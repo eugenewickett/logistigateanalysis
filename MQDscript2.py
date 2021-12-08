@@ -835,9 +835,11 @@ def cleanMQD():
         (MQD_df_CAM.Facility_Location == 'Van Sai District')
         | (MQD_df_CAM.Facility_Location == 'Srok Vern sai'),
         'Facility_Location_GROUPED'] = 'Van Sai District'
-    MQD_df_CAM.loc[
-        (MQD_df_CAM.Facility_Location_GROUPED == 'MANUALLY_MODIFY'),
+    MQD_df_CAM.loc[ (MQD_df_CAM.Facility_Location_GROUPED == 'Missing')
+        | (MQD_df_CAM.Facility_Location_GROUPED == 'MANUALLY_MODIFY')
+        | (MQD_df_CAM.Facility_Location_GROUPED == 'NA VALUE')    ,
         'Facility_Location_GROUPED'] = 'NA VALUE'
+    MQD_df_CAM.loc[MQD_df_CAM['Facility_Location_GROUPED'].isnull(), 'Facility_Location_GROUPED'] = 'NA VALUE'
 
     #piv = MQD_df_CAM.pivot_table(index=['Facility_Location'], columns=['Final_Test_Conclusion'], aggfunc='size',
      #                            fill_value=0)
@@ -1042,6 +1044,7 @@ def cleanMQD():
     MQD_df_ETH.loc[
         (MQD_df_ETH.Facility_Location == 'West Shoa') | (MQD_df_ETH.Facility_Location == 'West Showa'),
         'Facility_Location_GROUPED'] = 'West Showa'
+    MQD_df_ETH.loc[MQD_df_ETH['Facility_Location_GROUPED'].isnull(), 'Facility_Location_GROUPED'] = 'NA VALUE'
 
     # Facility_Name
     MQD_df_ETH = assignlabels(MQD_df_ETH, 'Facility_Name')
@@ -3334,37 +3337,121 @@ def MQDdataScript():
     '''Script looking at the MQD data'''
     import scipy.special as sps
     import numpy as np
-    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    import sys
     import os
-    sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate', 'exmples','data')))
+    SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+    filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
+    outputFileName = os.path.join(filesPath, 'pickleOutput')
+    #sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate', 'exmples','data')))
 
     # Grab processed data tables
+    '''
     dataDict = cleanMQD()
+    '''
+    import pickle
+    openFile = open(outputFileName, 'rb')  # Read the file
+    dataDict = pickle.load(openFile)
+    '''
+    DATA DICTIONARY KEYS:
+        'df_ALL', 'df_CAM', 'df_ETH', 'df_GHA', 'df_KEN', 'df_LAO', 'df_MOZ', 'df_PER', 'df_PHI', 'df_SEN', 'df_THA', 
+        'df_VIE', 'df_CAM_ff', 'df_ETH_ff', 'df_GHA_ff', 'df_KEN_ff', 'df_LAO_ff', 'df_MOZ_ff', 'df_PER_ff', 
+        'df_PHI_ff', 'df_SEN_ff', 'df_THA_ff', 'df_VIE_ff', 
+        'tbl_CAM_G1', 'tbl_CAM_G2', 'tbl_CAM_G3', 'tbl_ETH_G1', 'tbl_ETH_G2', 'tbl_ETH_G3', 
+        'tbl_GHA_G1', 'tbl_GHA_G2', 'tbl_GHA_G3', 'tbl_KEN_G1', 'tbl_KEN_G2', 'tbl_KEN_G3', 
+        'tbl_LAO_G1', 'tbl_LAO_G2', 'tbl_LAO_G3', 'tbl_MOZ_G1', 'tbl_MOZ_G2', 'tbl_MOZ_G3', 
+        'tbl_PER_G1', 'tbl_PER_G2', 'tbl_PER_G3', 'tbl_PHI_G1', 'tbl_PHI_G2', 'tbl_PHI_G3', 
+        'tbl_SEN_G1', 'tbl_SEN_G2', 'tbl_SEN_G3', 'tbl_THA_G1', 'tbl_THA_G2', 'tbl_THA_G3', 
+        'tbl_VIE_G1', 'tbl_VIE_G2', 'tbl_VIE_G3', 
+        'tbl_CAM_G1_ff', 'tbl_CAM_G2_ff', 'tbl_CAM_G3_ff', 'tbl_ETH_G1_ff', 'tbl_ETH_G2_ff', 'tbl_ETH_G3_ff', 
+        'tbl_GHA_G1_ff', 'tbl_GHA_G2_ff', 'tbl_GHA_G3_ff', 'tbl_KEN_G1_ff', 'tbl_KEN_G2_ff', 'tbl_KEN_G3_ff', 
+        'tbl_LAO_G1_ff', 'tbl_LAO_G2_ff', 'tbl_LAO_G3_ff', 'tbl_MOZ_G1_ff', 'tbl_MOZ_G2_ff', 'tbl_MOZ_G3_ff', 
+        'tbl_PER_G1_ff', 'tbl_PER_G2_ff', 'tbl_PER_G3_ff', 'tbl_PHI_G1_ff', 'tbl_PHI_G2_ff', 'tbl_PHI_G3_ff', 
+        'tbl_SEN_G1_ff', 'tbl_SEN_G2_ff', 'tbl_SEN_G3_ff', 'tbl_THA_G1_ff', 'tbl_THA_G2_ff', 'tbl_THA_G3_ff', 
+        'tbl_VIE_G1_ff', 'tbl_VIE_G2_ff', 'tbl_VIE_G3_ff', 
+        'tbl_CAM_G1_antibiotic', 'tbl_CAM_G2_antibiotic', 'tbl_CAM_G3_antibiotic', 
+        'tbl_CAM_G1_antimalarial', 'tbl_CAM_G2_antimalarial', 'tbl_CAM_G3_antimalarial', 
+        'tbl_ETH_G1_antibiotic', 'tbl_ETH_G2_antibiotic', 'tbl_ETH_G3_antibiotic', 
+        'tbl_ETH_G1_antimalarial', 'tbl_ETH_G2_antimalarial', 'tbl_ETH_G3_antimalarial', 
+        'tbl_GHA_G1_antimalarial', 'tbl_GHA_G2_antimalarial', 'tbl_GHA_G3_antimalarial', 
+        'tbl_KEN_G1_antimalarial', 'tbl_KEN_G2_antimalarial', 'tbl_KEN_G3_antimalarial',
+        'tbl_LAO_G1_antibiotic', 'tbl_LAO_G2_antibiotic', 'tbl_LAO_G3_antibiotic', 
+        'tbl_LAO_G1_antimalarial', 'tbl_LAO_G2_antimalarial', 'tbl_LAO_G3_antimalarial', 
+        'tbl_MOZ_G1_antibiotic', 'tbl_MOZ_G2_antibiotic', 'tbl_MOZ_G3_antibiotic', 
+        'tbl_MOZ_G1_antimalarial', 'tbl_MOZ_G2_antimalarial', 'tbl_MOZ_G3_antimalarial', 
+        'tbl_PER_G1_antibiotic', 'tbl_PER_G2_antibiotic', 'tbl_PER_G3_antibiotic', 
+        'tbl_PHI_G1_antituberculosis', 'tbl_PHI_G2_antituberculosis', 'tbl_PHI_G3_antituberculosis', 
+        'tbl_SEN_G1_antimalarial', 'tbl_SEN_G2_antimalarial', 'tbl_SEN_G3_antimalarial', 
+        'tbl_SEN_G1_antiretroviral', 'tbl_SEN_G2_antiretroviral', 'tbl_SEN_G3_antiretroviral', 
+        'tbl_THA_G1_antibiotic', 'tbl_THA_G2_antibiotic', 'tbl_THA_G3_antibiotic', 
+        'tbl_THA_G1_antimalarial', 'tbl_THA_G2_antimalarial', 'tbl_THA_G3_antimalarial', 
+        'tbl_VIE_G1_antibiotic', 'tbl_VIE_G2_antibiotic', 'tbl_VIE_G3_antibiotic', 
+        'tbl_VIE_G1_antimalarial', 'tbl_VIE_G2_antimalarial', 'tbl_VIE_G3_antimalarial', 
+        'tbl_CAM_G1_antibiotic_ff', 'tbl_CAM_G2_antibiotic_ff', 'tbl_CAM_G3_antibiotic_ff', 
+        'tbl_CAM_G1_antimalarial_ff', 'tbl_CAM_G2_antimalarial_ff', 'tbl_CAM_G3_antimalarial_ff', 
+        'tbl_ETH_G1_antibiotic_ff', 'tbl_ETH_G2_antibiotic_ff', 'tbl_ETH_G3_antibiotic_ff', 
+        'tbl_ETH_G1_antimalarial_ff', 'tbl_ETH_G2_antimalarial_ff', 'tbl_ETH_G3_antimalarial_ff', 
+        'tbl_GHA_G1_antimalarial_ff', 'tbl_GHA_G2_antimalarial_ff', 'tbl_GHA_G3_antimalarial_ff', 
+        'tbl_KEN_G1_antimalarial_ff', 'tbl_KEN_G2_antimalarial_ff', 'tbl_KEN_G3_antimalarial_ff', 
+        'tbl_LAO_G1_antibiotic_ff', 'tbl_LAO_G2_antibiotic_ff', 'tbl_LAO_G3_antibiotic_ff', 
+        'tbl_LAO_G1_antimalarial_ff', 'tbl_LAO_G2_antimalarial_ff', 'tbl_LAO_G3_antimalarial_ff', 
+        'tbl_MOZ_G1_antibiotic_ff', 'tbl_MOZ_G2_antibiotic_ff', 'tbl_MOZ_G3_antibiotic_ff', 
+        'tbl_MOZ_G1_antimalarial_ff', 'tbl_MOZ_G2_antimalarial_ff', 'tbl_MOZ_G3_antimalarial_ff', 
+        'tbl_PER_G1_antibiotic_ff', 'tbl_PER_G2_antibiotic_ff', 'tbl_PER_G3_antibiotic_ff', 
+        'tbl_PHI_G1_antituberculosis_ff', 'tbl_PHI_G2_antituberculosis_ff', 'tbl_PHI_G3_antituberculosis_ff', 
+        'tbl_SEN_G1_antimalarial_ff', 'tbl_SEN_G2_antimalarial_ff', 'tbl_SEN_G3_antimalarial_ff', 
+        'tbl_SEN_G1_antiretroviral_ff', 'tbl_SEN_G2_antiretroviral_ff', 'tbl_SEN_G3_antiretroviral_ff', 
+        'tbl_THA_G1_antibiotic_ff', 'tbl_THA_G2_antibiotic_ff', 'tbl_THA_G3_antibiotic_ff', 
+        'tbl_THA_G1_antimalarial_ff', 'tbl_THA_G2_antimalarial_ff', 'tbl_THA_G3_antimalarial_ff', 
+        'tbl_VIE_G1_antibiotic_ff', 'tbl_VIE_G2_antibiotic_ff', 'tbl_VIE_G3_antibiotic_ff', 
+        'tbl_VIE_G1_antimalarial_ff', 'tbl_VIE_G2_antimalarial_ff', 'tbl_VIE_G3_antimalarial_ff'
+    '''
 
-    # Run with Country as outlets
-    dataTblDict = util.testresultsfiletotable('MQDfiles/MQD_TRIMMED1')
-    dataTblDict.update({'diagSens': 1.0,
-                        'diagSpec': 1.0,
-                        'numPostSamples': 500,
-                        'prior': methods.prior_normal(mu=sps.logit(0.038)),
-                        'MCMCdict': MCMCdict})
-    logistigateDict = lg.runlogistigate(dataTblDict)
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    priorMean = sps.logit(0.038)
 
-    util.plotPostSamples(logistigateDict)
-    util.printEstimates(logistigateDict)
 
-    # Run with Country-Province as outlets
-    dataTblDict2 = util.testresultsfiletotable('MQDfiles/MQD_TRIMMED2.csv')
-    dataTblDict2.update({'diagSens': 1.0,
-                        'diagSpec': 1.0,
-                        'numPostSamples': 500,
-                        'prior': methods.prior_normal(mu=sps.logit(0.038)),
-                        'MCMCdict': MCMCdict})
-    logistigateDict2 = lg.runlogistigate(dataTblDict2)
+    # RAW COUNTRY DATA, BY EACH GEOGRAPHIC DIVISION
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1'], csvName=False)
+    print('size: '+str(lgDict['N'].shape)+', obsvns: '+str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0,  'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict,'int90',subTitleStr=[' Cambodia',' Cambodia'])
 
-    util.plotPostSamples(logistigateDict2)
-    util.printEstimates(logistigateDict2)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3'], csvName=False)
+    print('size: '+str(lgDict['N'].shape)+', obsvns: '+str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # OLDER CODE
 
     # Run with Cambodia provinces
     dataTblDict_CAM = util.testresultsfiletotable(dataDict['dataTbl_CAM'], csvName=False)
