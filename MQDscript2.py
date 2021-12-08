@@ -3431,7 +3431,7 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
-
+    
 
 
 
