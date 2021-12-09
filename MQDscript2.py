@@ -3406,16 +3406,20 @@ def MQDdataScript():
     '''
 
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    priorMean = sps.logit(0.038)
+    priorMean = sps.logit(0.038) # Mean SFP rate of the MQDB data
+    # priorMean = sps.logit(np.sum(dataTblDict_CAM['Y']) / np.sum(dataTblDict_CAM['N']))
 
-
-    # RAW COUNTRY DATA, BY EACH GEOGRAPHIC DIVISION
+    ##### CAMBODIA #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1'], csvName=False)
     print('size: '+str(lgDict['N'].shape)+', obsvns: '+str(lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0,  'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict,'int90',subTitleStr=[' Cambodia',' Cambodia'])
+    # Break up the SNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highSNInds = [i for i, x in enumerate(sampMedians[:lgDict['importerNum']]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', importerIndsSubset=highSNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2'], csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
@@ -3423,6 +3427,10 @@ def MQDdataScript():
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+    # Break up the SNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highSNInds = [i for i, x in enumerate(sampMedians[:lgDict['importerNum']]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', importerIndsSubset=highSNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3'], csvName=False)
     print('size: '+str(lgDict['N'].shape)+', obsvns: '+str(lgDict['N'].sum()))
@@ -3431,560 +3439,1266 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
-    
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+    # Break up the TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+    # Break up the TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+    # Break up the TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+    # Break up the TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
+    ##### END CAMBODIA #####
 
+    ##### ETHIOPIA #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
+    # Break up the TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
-    # OLDER CODE
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Run with Cambodia provinces
-    dataTblDict_CAM = util.testresultsfiletotable(dataDict['dataTbl_CAM'], csvName=False)
-    countryMean = np.sum(dataTblDict_CAM['Y']) / np.sum(dataTblDict_CAM['N'])
-    dataTblDict_CAM.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_CAM = lg.runlogistigate(dataTblDict_CAM)
-    numCamImps_fourth = int(np.floor(logistigateDict_CAM['importerNum'] / 4))
-    util.plotPostSamples(logistigateDict_CAM, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth).tolist(),
-                         subTitleStr=['\nCambodia - 1st Quarter', '\nCambodia'])
-    util.plotPostSamples(logistigateDict_CAM, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth,numCamImps_fourth*2).tolist(),
-                         subTitleStr=['\nCambodia - 2nd Quarter', '\nCambodia'])
-    util.plotPostSamples(logistigateDict_CAM, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth * 2, numCamImps_fourth * 3).tolist(),
-                         subTitleStr=['\nCambodia - 3rd Quarter', '\nCambodia'])
-    util.plotPostSamples(logistigateDict_CAM, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth * 3, numCamImps_fourth * 4).tolist(),
-                         subTitleStr=['\nCambodia - 4th Quarter', '\nCambodia'])
-    util.printEstimates(logistigateDict_CAM)
-    # Plot importers subset where median sample is above 0.4
-    totalEntities = logistigateDict_CAM['importerNum'] + logistigateDict_CAM['outletNum']
-    sampMedians = [np.median(logistigateDict_CAM['postSamples'][:,i]) for i in range(totalEntities)]
-    highImporterInds = [i for i, x in enumerate(sampMedians[:logistigateDict_CAM['importerNum']]) if x > 0.4]
-    util.plotPostSamples(logistigateDict_CAM, importerIndsSubset=highImporterInds,subTitleStr=['\nCambodia - Subset','\nCambodia'])
-    util.printEstimates(logistigateDict_CAM, importerIndsSubset=highImporterInds)
-    # Run with Cambodia provinces filtered for outlet-type samples
-    dataTblDict_CAM_filt = util.testresultsfiletotable(dataDict['dataTbl_CAM_filt'], csvName=False)
-    #dataTblDict_CAM_filt = util.testresultsfiletotable('MQDfiles/MQD_CAMBODIA_FACILITYFILTER.csv')
-    countryMean = np.sum(dataTblDict_CAM_filt['Y']) / np.sum(dataTblDict_CAM_filt['N'])
-    dataTblDict_CAM_filt.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_CAM_filt = lg.runlogistigate(dataTblDict_CAM_filt)
-    numCamImps_fourth = int(np.floor(logistigateDict_CAM_filt['importerNum'] / 4))
-    util.plotPostSamples(logistigateDict_CAM_filt, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth).tolist(),
-                         subTitleStr=['\nCambodia (filtered) - 1st Quarter', '\nCambodia (filtered)'])
-    util.plotPostSamples(logistigateDict_CAM_filt, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth, numCamImps_fourth * 2).tolist(),
-                         subTitleStr=['\nCambodia (filtered) - 2nd Quarter', '\nCambodia (filtered)'])
-    util.plotPostSamples(logistigateDict_CAM_filt, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth * 2, numCamImps_fourth * 3).tolist(),
-                         subTitleStr=['\nCambodia (filtered) - 3rd Quarter', '\nCambodia (filtered)'])
-    util.plotPostSamples(logistigateDict_CAM_filt, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_fourth * 3, logistigateDict_CAM_filt['importerNum']).tolist(),
-                         subTitleStr=['\nCambodia (filtered) - 4th Quarter', '\nCambodia (filtered)'])
-    # Run with Cambodia provinces filtered for antibiotics
-    dataTblDict_CAM_antibiotic = util.testresultsfiletotable('MQDfiles/MQD_CAMBODIA_ANTIBIOTIC.csv')
-    countryMean = np.sum(dataTblDict_CAM_antibiotic['Y']) / np.sum(dataTblDict_CAM_antibiotic['N'])
-    dataTblDict_CAM_antibiotic.update({'diagSens': 1.0,
-                                 'diagSpec': 1.0,
-                                 'numPostSamples': 1000,
-                                 'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                                 'MCMCdict': MCMCdict})
-    logistigateDict_CAM_antibiotic = lg.runlogistigate(dataTblDict_CAM_antibiotic)
-    numCamImps_third = int(np.floor(logistigateDict_CAM_antibiotic['importerNum'] / 3))
-    util.plotPostSamples(logistigateDict_CAM_antibiotic, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_third).tolist(),
-                         subTitleStr=['\nCambodia - 1st Third (Antibiotics)', '\nCambodia (Antibiotics)'])
-    util.plotPostSamples(logistigateDict_CAM_antibiotic, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_third, numCamImps_third * 2).tolist(),
-                         subTitleStr=['\nCambodia - 2nd Third (Antibiotics)', '\nCambodia (Antibiotics)'])
-    util.plotPostSamples(logistigateDict_CAM_antibiotic, plotType='int90',
-                         importerIndsSubset=np.arange(numCamImps_third * 2, logistigateDict_CAM_antibiotic['importerNum']).tolist(),
-                         subTitleStr=['\nCambodia - 3rd Third (Antibiotics)', '\nCambodia (Antibiotics)'])
-    util.printEstimates(logistigateDict_CAM_antibiotic)
-    # Run with Cambodia provinces filtered for antimalarials
-    dataTblDict_CAM_antimalarial = util.testresultsfiletotable(dataDict['dataTbl_CAM_antimalarial'], csvName=False)
-    countryMean = np.sum(dataTblDict_CAM_antimalarial['Y']) / np.sum(dataTblDict_CAM_antimalarial['N'])
-    dataTblDict_CAM_antimalarial.update({'diagSens': 1.0,
-                                       'diagSpec': 1.0,
-                                       'numPostSamples': 1000,
-                                       'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                                       'MCMCdict': MCMCdict})
-    logistigateDict_CAM_antimalarial = lg.runlogistigate(dataTblDict_CAM_antimalarial)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    #numCamImps_half = int(np.floor(logistigateDict_CAM_antimalarial['importerNum'] / 2))
-    #util.plotPostSamples(logistigateDict_CAM_antimalarial, plotType='int90',
-    #                     importerIndsSubset=np.arange(numCamImps_half).tolist(),
-    #                     subTitleStr=['\nCambodia - 1st Half (Antimalarials)', '\nCambodia (Antimalarials)'])
-    #util.plotPostSamples(logistigateDict_CAM_antimalarial, plotType='int90',
-    #                     importerIndsSubset=np.arange(numCamImps_half,
-    #                                                  logistigateDict_CAM_antimalarial['importerNum']).tolist(),
-    #                     subTitleStr=['\nCambodia - 2nd Half (Antimalarials)', '\nCambodia (Antimalarials)'])
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Special plotting for these data sets
-    numImp, numOut = logistigateDict_CAM_antimalarial['importerNum'], logistigateDict_CAM_antimalarial['outletNum']
-    lowerQuant, upperQuant = 0.05, 0.95
-    intStr = '90'
-    priorSamps = logistigateDict_CAM_antimalarial['prior'].expitrand(5000)
-    priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
-    importerIndsSubset = range(numImp)
-    impNames = [logistigateDict_CAM_antimalarial['importerNames'][i] for i in importerIndsSubset]
-    impLowers = [np.quantile(logistigateDict_CAM_antimalarial['postSamples'][:, l], lowerQuant) for l in importerIndsSubset]
-    impUppers = [np.quantile(logistigateDict_CAM_antimalarial['postSamples'][:, l], upperQuant) for l in importerIndsSubset]
-    midpoints = [impUppers[i] - (impUppers[i] - impLowers[i]) / 2 for i in range(len(impUppers))]
-    zippedList = zip(midpoints, impUppers, impLowers, impNames)
-    sorted_pairs = sorted(zippedList, reverse=True)
-    impNamesSorted = [tup[3] for tup in sorted_pairs]
-    impNamesSorted.append('')
-    impNamesSorted.append('(Prior)')
-    # Plot
-    import matplotlib.pyplot as plt
-    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
-    sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-    for _, upper, lower, name in sorted_pairs:
-        plt.plot((name, name), (lower, upper), 'o-', color='red')
-    plt.plot((impNamesSorted[-1], impNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-    plt.ylim([0, 1])
-    plt.xticks(range(len(impNamesSorted)), impNamesSorted, rotation=90)
-    plt.title('Manufacturers - ' + intStr + '% Intervals' + '\nCambodia Antimalarials',
-              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('Manufacturer Name', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-        label.set_fontname('Times New Roman')
-        label.set_fontsize(9)
-    fig.tight_layout()
-    plt.show()
-    plt.close()
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    outletIndsSubset = range(numOut)
-    outNames = [logistigateDict_CAM_antimalarial['outletNames'][i] for i in outletIndsSubset]
-    outLowers = [np.quantile(logistigateDict_CAM_antimalarial['postSamples'][:, numImp + l], lowerQuant) for l in outletIndsSubset]
-    outUppers = [np.quantile(logistigateDict_CAM_antimalarial['postSamples'][:, numImp + l], upperQuant) for l in outletIndsSubset]
-    midpoints = [outUppers[i] - (outUppers[i] - outLowers[i]) / 2 for i in range(len(outUppers))]
-    zippedList = zip(midpoints, outUppers, outLowers, outNames)
-    sorted_pairs = sorted(zippedList, reverse=True)
-    outNamesSorted = [tup[3] for tup in sorted_pairs]
-    outNamesSorted.append('')
-    outNamesSorted.append('(Prior)')
-    # Plot
-    fig, (ax) = plt.subplots(figsize=(8, 10), ncols=1)
-    sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-    for _, upper, lower, name in sorted_pairs:
-        plt.plot((name, name), (lower, upper), 'o-', color='purple')
-    plt.plot((outNamesSorted[-1], outNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-    plt.ylim([0, 1])
-    plt.xticks(range(len(outNamesSorted)), outNamesSorted, rotation=90)
-    plt.title('Regional Aggregates - ' + intStr + '% Intervals' + '\nCambodia Antimalarials',
-              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('Regional Aggregate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-        label.set_fontname('Times New Roman')
-        label.set_fontsize(11)
-    fig.tight_layout()
-    plt.show()
-    plt.close()
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    util.Summarize(logistigateDict_CAM_antimalarial)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Run with Ethiopia provinces
-    dataTblDict_ETH = util.testresultsfiletotable('MQDfiles/MQD_ETHIOPIA.csv')
-    countryMean = np.sum(dataTblDict_ETH['Y']) / np.sum(dataTblDict_ETH['N'])
-    dataTblDict_ETH.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 500,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_ETH = lg.runlogistigate(dataTblDict_ETH)
-    util.plotPostSamples(logistigateDict_ETH)
-    util.printEstimates(logistigateDict_ETH)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Run with Ghana provinces
-    dataTblDict_GHA = util.testresultsfiletotable(dataDict['dataTbl_GHA'], csvName=False)
-    #dataTblDict_GHA = util.testresultsfiletotable('MQDfiles/MQD_GHANA.csv')
-    countryMean = np.sum(dataTblDict_GHA['Y']) / np.sum(dataTblDict_GHA['N'])
-    dataTblDict_GHA.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_GHA = lg.runlogistigate(dataTblDict_GHA)
-    util.plotPostSamples(logistigateDict_GHA, plotType='int90',
-                         subTitleStr=['\nGhana', '\nGhana'])
-    util.printEstimates(logistigateDict_GHA)
-    # Plot importers subset where median sample is above 0.4
-    totalEntities = logistigateDict_GHA['importerNum'] + logistigateDict_GHA['outletNum']
-    sampMedians = [np.median(logistigateDict_GHA['postSamples'][:, i]) for i in range(totalEntities)]
-    highImporterInds = [i for i, x in enumerate(sampMedians[:logistigateDict_GHA['importerNum']]) if x > 0.4]
-    highOutletInds = [i for i, x in enumerate(sampMedians[logistigateDict_GHA['importerNum']:]) if x > 0.15]
-    util.plotPostSamples(logistigateDict_GHA, importerIndsSubset=highImporterInds,
-                         outletIndsSubset=highOutletInds,
-                         subTitleStr=['\nGhana - Subset', '\nGhana - Subset'])
-    util.printEstimates(logistigateDict_GHA, importerIndsSubset=highImporterInds,outletIndsSubset=highOutletInds)
-    # Run with Ghana provinces filtered for outlet-type samples
-    dataTblDict_GHA_filt = util.testresultsfiletotable(dataDict['dataTbl_GHA_filt'], csvName=False)
-    #dataTblDict_GHA_filt = util.testresultsfiletotable('MQDfiles/MQD_GHANA_FACILITYFILTER.csv')
-    countryMean = np.sum(dataTblDict_GHA_filt['Y']) / np.sum(dataTblDict_GHA_filt['N'])
-    dataTblDict_GHA_filt.update({'diagSens': 1.0,
-                                 'diagSpec': 1.0,
-                                 'numPostSamples': 1000,
-                                 'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                                 'MCMCdict': MCMCdict})
-    logistigateDict_GHA_filt = lg.runlogistigate(dataTblDict_GHA_filt)
-    util.plotPostSamples(logistigateDict_GHA_filt, plotType='int90',
-                         subTitleStr=['\nGhana (filtered)', '\nGhana (filtered)'])
-    util.printEstimates(logistigateDict_GHA_filt)
-    # Run with Ghana provinces filtered for antimalarials
-    dataTblDict_GHA_antimalarial = util.testresultsfiletotable(dataDict['dataTbl_GHA_antimalarial'], csvName=False)
-    #dataTblDict_GHA_antimalarial = util.testresultsfiletotable('MQDfiles/MQD_GHANA_ANTIMALARIAL.csv')
-    countryMean = np.sum(dataTblDict_GHA_antimalarial['Y']) / np.sum(dataTblDict_GHA_antimalarial['N'])
-    dataTblDict_GHA_antimalarial.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_GHA_antimalarial = lg.runlogistigate(dataTblDict_GHA_antimalarial)
-    #util.plotPostSamples(logistigateDict_GHA_antimalarial, plotType='int90',
-    #                     subTitleStr=['\nGhana (Antimalarials)', '\nGhana (Antimalarials)'])
-    #util.printEstimates(logistigateDict_GHA_antimalarial)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Special plotting for these data sets
-    numImp, numOut = logistigateDict_GHA_antimalarial['importerNum'], logistigateDict_GHA_antimalarial['outletNum']
-    lowerQuant, upperQuant = 0.05, 0.95
-    intStr = '90'
-    priorSamps = logistigateDict_GHA_antimalarial['prior'].expitrand(5000)
-    priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
-    importerIndsSubset = range(numImp)
-    impNames = [logistigateDict_GHA_antimalarial['importerNames'][i] for i in importerIndsSubset]
-    impLowers = [np.quantile(logistigateDict_GHA_antimalarial['postSamples'][:, l], lowerQuant) for l in
-                 importerIndsSubset]
-    impUppers = [np.quantile(logistigateDict_GHA_antimalarial['postSamples'][:, l], upperQuant) for l in
-                 importerIndsSubset]
-    midpoints = [impUppers[i] - (impUppers[i] - impLowers[i]) / 2 for i in range(len(impUppers))]
-    zippedList = zip(midpoints, impUppers, impLowers, impNames)
-    sorted_pairs = sorted(zippedList, reverse=True)
-    impNamesSorted = [tup[3] for tup in sorted_pairs]
-    impNamesSorted.append('')
-    impNamesSorted.append('(Prior)')
-    # Plot
-    import matplotlib.pyplot as plt
-    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
-    sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-    for _, upper, lower, name in sorted_pairs:
-        plt.plot((name, name), (lower, upper), 'o-', color='red')
-    plt.plot((impNamesSorted[-1], impNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-    plt.ylim([0, 1])
-    plt.xticks(range(len(impNamesSorted)), impNamesSorted, rotation=90)
-    plt.title('Manufacturers - ' + intStr + '% Intervals' + '\nGhana Antimalarials',
-              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('Manufacturer Name', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-        label.set_fontname('Times New Roman')
-        label.set_fontsize(9)
-    fig.tight_layout()
-    plt.show()
-    plt.close()
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    outletIndsSubset = range(numOut)
-    outNames = [logistigateDict_GHA_antimalarial['outletNames'][i][6:] for i in outletIndsSubset]
-    outNames[7] = 'Western'
-    outLowers = [np.quantile(logistigateDict_GHA_antimalarial['postSamples'][:, numImp + l], lowerQuant) for l in
-                 outletIndsSubset]
-    outUppers = [np.quantile(logistigateDict_GHA_antimalarial['postSamples'][:, numImp + l], upperQuant) for l in
-                 outletIndsSubset]
-    midpoints = [outUppers[i] - (outUppers[i] - outLowers[i]) / 2 for i in range(len(outUppers))]
-    zippedList = zip(midpoints, outUppers, outLowers, outNames)
-    sorted_pairs = sorted(zippedList, reverse=True)
-    outNamesSorted = [tup[3] for tup in sorted_pairs]
-    outNamesSorted.append('')
-    outNamesSorted.append('(Prior)')
-    # Plot
-    fig, (ax) = plt.subplots(figsize=(8, 10), ncols=1)
-    sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-    for _, upper, lower, name in sorted_pairs:
-        plt.plot((name, name), (lower, upper), 'o-', color='purple')
-    plt.plot((outNamesSorted[-1], outNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-    plt.ylim([0, 1])
-    plt.xticks(range(len(outNamesSorted)), outNamesSorted, rotation=90)
-    plt.title('Regional Aggregates - ' + intStr + '% Intervals' + '\nGhana Antimalarials',
-              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('Regional Aggregate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-        label.set_fontname('Times New Roman')
-        label.set_fontsize(11)
-    fig.tight_layout()
-    plt.show()
-    plt.close()
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    util.Summarize(logistigateDict_GHA_antimalarial)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Run with Kenya provinces
-    dataTblDict_KEN = util.testresultsfiletotable('MQDfiles/MQD_KENYA.csv')
-    countryMean = np.sum(dataTblDict_KEN['Y']) / np.sum(dataTblDict_KEN['N'])
-    dataTblDict_KEN.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 500,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_KEN = lg.runlogistigate(dataTblDict_KEN)
-    util.plotPostSamples(logistigateDict_KEN)
-    util.printEstimates(logistigateDict_KEN)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Run with Laos provinces
-    dataTblDict_LAO = util.testresultsfiletotable('MQDfiles/MQD_LAOS.csv')
-    countryMean = np.sum(dataTblDict_LAO['Y']) / np.sum(dataTblDict_LAO['N'])
-    dataTblDict_LAO.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 500,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_LAO = lg.runlogistigate(dataTblDict_LAO)
-    util.plotPostSamples(logistigateDict_LAO)
-    util.printEstimates(logistigateDict_LAO)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
+    lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
-    # Run with Mozambique provinces
-    dataTblDict_MOZ = util.testresultsfiletotable('MQDfiles/MQD_MOZAMBIQUE.csv')
-    countryMean = np.sum(dataTblDict_MOZ['Y']) / np.sum(dataTblDict_MOZ['N'])
-    dataTblDict_MOZ.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 500,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_MOZ = lg.runlogistigate(dataTblDict_MOZ)
-    util.plotPostSamples(logistigateDict_MOZ)
-    util.printEstimates(logistigateDict_MOZ)
+    ##### END ETHIOPIA #####
 
-    # Run with Nigeria provinces
-    dataTblDict_NIG = util.testresultsfiletotable('MQDfiles/MQD_NIGERIA.csv')
-    countryMean = np.sum(dataTblDict_NIG['Y']) / np.sum(dataTblDict_NIG['N'])
-    dataTblDict_NIG.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 500,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_NIG = lg.runlogistigate(dataTblDict_NIG)
-    util.plotPostSamples(logistigateDict_NIG)
-    util.printEstimates(logistigateDict_NIG)
+    ##### GHANA #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
-    # Run with Peru provinces
-    dataTblDict_PER = util.testresultsfiletotable('MQDfiles/MQD_PERU.csv')
-    countryMean = np.sum(dataTblDict_PER['Y']) / np.sum(dataTblDict_PER['N'])
-    dataTblDict_PER.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_PER = lg.runlogistigate(dataTblDict_PER)
-    numPeruImps_half = int(np.floor(logistigateDict_PER['importerNum']/2))
-    util.plotPostSamples(logistigateDict_PER, plotType='int90',
-                         importerIndsSubset=np.arange(0,numPeruImps_half).tolist(), subTitleStr=['\nPeru - 1st Half', '\nPeru'])
-    util.plotPostSamples(logistigateDict_PER, plotType='int90',
-                         importerIndsSubset=np.arange(numPeruImps_half,logistigateDict_PER['importerNum']).tolist(),
-                         subTitleStr=['\nPeru - 2nd Half', '\nPeru'])
-    util.printEstimates(logistigateDict_PER)
-    # Plot importers subset where median sample is above 0.4
-    totalEntities = logistigateDict_PER['importerNum'] + logistigateDict_PER['outletNum']
-    sampMedians = [np.median(logistigateDict_PER['postSamples'][:, i]) for i in range(totalEntities)]
-    highImporterInds = [i for i, x in enumerate(sampMedians[:logistigateDict_PER['importerNum']]) if x > 0.4]
-    highImporterInds = [highImporterInds[i] for i in [3,6,7,8,9,12,13,16]] # Only manufacturers with more than 1 sample
-    highOutletInds = [i for i, x in enumerate(sampMedians[logistigateDict_PER['importerNum']:]) if x > 0.12]
-    util.plotPostSamples(logistigateDict_PER, importerIndsSubset=highImporterInds,
-                         outletIndsSubset=highOutletInds,
-                         subTitleStr=['\nPeru - Subset', '\nPeru - Subset'])
-    util.printEstimates(logistigateDict_PER, importerIndsSubset=highImporterInds, outletIndsSubset=highOutletInds)
-    # Run with Peru provinces filtered for outlet-type samples
-    dataTblDict_PER_filt = util.testresultsfiletotable('MQDfiles/MQD_PERU_FACILITYFILTER.csv')
-    countryMean = np.sum(dataTblDict_PER_filt['Y']) / np.sum(dataTblDict_PER_filt['N'])
-    dataTblDict_PER_filt.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_PER_filt = lg.runlogistigate(dataTblDict_PER_filt)
-    numPeruImps_half = int(np.floor(logistigateDict_PER_filt['importerNum'] / 2))
-    util.plotPostSamples(logistigateDict_PER_filt, plotType='int90',
-                         importerIndsSubset=np.arange(0, numPeruImps_half).tolist(),
-                         subTitleStr=['\nPeru - 1st Half (filtered)', '\nPeru (filtered)'])
-    util.plotPostSamples(logistigateDict_PER_filt, plotType='int90',
-                         importerIndsSubset=np.arange(numPeruImps_half, logistigateDict_PER_filt['importerNum']).tolist(),
-                         subTitleStr=['\nPeru - 2nd Half (filtered)', '\nPeru (filtered)'])
-    util.printEstimates(logistigateDict_PER_filt)
-    # Run with Peru provinces filtered for antibiotics
-    dataTblDict_PER_antibiotics = util.testresultsfiletotable('MQDfiles/MQD_PERU_ANTIBIOTIC.csv')
-    countryMean = np.sum(dataTblDict_PER_antibiotics['Y']) / np.sum(dataTblDict_PER_antibiotics['N'])
-    dataTblDict_PER_antibiotics.update({'diagSens': 1.0,
-                                 'diagSpec': 1.0,
-                                 'numPostSamples': 1000,
-                                 'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                                 'MCMCdict': MCMCdict})
-    logistigateDict_PER_antibiotics = lg.runlogistigate(dataTblDict_PER_antibiotics)
-    numPeruImps_half = int(np.floor(logistigateDict_PER_antibiotics['importerNum'] / 2))
-    util.plotPostSamples(logistigateDict_PER_antibiotics, plotType='int90',
-                         importerIndsSubset=np.arange(numPeruImps_half).tolist(),
-                         subTitleStr=['\nPeru - 1st Half (Antibiotics)', '\nPeru (Antibiotics)'])
-    util.plotPostSamples(logistigateDict_PER_antibiotics, plotType='int90',
-                         importerIndsSubset=np.arange(numPeruImps_half, logistigateDict_PER_antibiotics['importerNum']).tolist(),
-                         subTitleStr=['\nPeru - 2nd Half (Antibiotics)', '\nPeru (Antibiotics)'])
-    util.printEstimates(logistigateDict_PER_antibiotics)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
-    # Run with Philippines provinces
-    dataTblDict_PHI = util.testresultsfiletotable(dataDict['dataTbl_PHI'], csvName=False)
-    #dataTblDict_PHI = util.testresultsfiletotable('MQDfiles/MQD_PHILIPPINES.csv')
-    countryMean = np.sum(dataTblDict_PHI['Y']) / np.sum(dataTblDict_PHI['N'])
-    dataTblDict_PHI.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_PHI = lg.runlogistigate(dataTblDict_PHI)
-    util.plotPostSamples(logistigateDict_PHI,plotType='int90',subTitleStr=['\nPhilippines','\nPhilippines'])
-    util.printEstimates(logistigateDict_PHI)
-    # Plot importers subset where median sample is above 0.1
-    totalEntities = logistigateDict_PHI['importerNum'] + logistigateDict_PHI['outletNum']
-    sampMedians = [np.median(logistigateDict_PHI['postSamples'][:, i]) for i in range(totalEntities)]
-    highImporterInds = [i for i, x in enumerate(sampMedians[:logistigateDict_PHI['importerNum']]) if x > 0.1]
-    #highImporterInds = [highImporterInds[i] for i in
-    #                    [3, 6, 7, 8, 9, 12, 13, 16]]  # Only manufacturers with more than 1 sample
-    highOutletInds = [i for i, x in enumerate(sampMedians[logistigateDict_PHI['importerNum']:]) if x > 0.1]
-    #util.plotPostSamples(logistigateDict_PHI, importerIndsSubset=highImporterInds,
-    #                     outletIndsSubset=highOutletInds,
-    #                     subTitleStr=['\nPhilippines - Subset', '\nPhilippines - Subset'])
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
+    # Break up TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
-    # Special plotting for these data sets
-    numImp, numOut = logistigateDict_PHI['importerNum'], logistigateDict_PHI['outletNum']
-    lowerQuant, upperQuant = 0.05, 0.95
-    intStr = '90'
-    priorSamps = logistigateDict_PHI['prior'].expitrand(5000)
-    priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
-    importerIndsSubset = range(numImp)
-    impNames = [logistigateDict_PHI['importerNames'][i] for i in importerIndsSubset]
-    impLowers = [np.quantile(logistigateDict_PHI['postSamples'][:, l], lowerQuant) for l in
-                 importerIndsSubset]
-    impUppers = [np.quantile(logistigateDict_PHI['postSamples'][:, l], upperQuant) for l in
-                 importerIndsSubset]
-    midpoints = [impUppers[i] - (impUppers[i] - impLowers[i]) / 2 for i in range(len(impUppers))]
-    zippedList = zip(midpoints, impUppers, impLowers, impNames)
-    sorted_pairs = sorted(zippedList, reverse=True)
-    impNamesSorted = [tup[3] for tup in sorted_pairs]
-    impNamesSorted.append('')
-    impNamesSorted.append('(Prior)')
-    # Plot
-    import matplotlib.pyplot as plt
-    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
-    sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-    for _, upper, lower, name in sorted_pairs:
-        plt.plot((name, name), (lower, upper), 'o-', color='red')
-    plt.plot((impNamesSorted[-1], impNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-    plt.ylim([0, 1])
-    plt.xticks(range(len(impNamesSorted)), impNamesSorted, rotation=90)
-    plt.title('Manufacturers - ' + intStr + '% Intervals' + '\nPhilippines Anti-tuberculosis Medicines',
-              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('Manufacturer Name', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-        label.set_fontname('Times New Roman')
-        label.set_fontsize(9)
-    fig.tight_layout()
-    plt.show()
-    plt.close()
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
-    outletIndsSubset = range(numOut)
-    outNames = [logistigateDict_PHI['outletNames'][i] for i in outletIndsSubset]
-    outLowers = [np.quantile(logistigateDict_PHI['postSamples'][:, numImp + l], lowerQuant) for l in
-                 outletIndsSubset]
-    outUppers = [np.quantile(logistigateDict_PHI['postSamples'][:, numImp + l], upperQuant) for l in
-                 outletIndsSubset]
-    midpoints = [outUppers[i] - (outUppers[i] - outLowers[i]) / 2 for i in range(len(outUppers))]
-    zippedList = zip(midpoints, outUppers, outLowers, outNames)
-    sorted_pairs = sorted(zippedList, reverse=True)
-    outNamesSorted = [tup[3] for tup in sorted_pairs]
-    outNamesSorted.append('')
-    outNamesSorted.append('(Prior)')
-    # Plot
-    fig, (ax) = plt.subplots(figsize=(8, 10), ncols=1)
-    sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-    for _, upper, lower, name in sorted_pairs:
-        plt.plot((name, name), (lower, upper), 'o-', color='purple')
-    plt.plot((outNamesSorted[-1], outNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-    plt.ylim([0, 1])
-    plt.xticks(range(len(outNamesSorted)), outNamesSorted, rotation=90)
-    plt.title('Regional Aggregates - ' + intStr + '% Intervals' + '\nPhilippines Anti-tuberculosis Medicines',
-              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('Regional Aggregate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-        label.set_fontname('Times New Roman')
-        label.set_fontsize(11)
-    fig.tight_layout()
-    plt.show()
-    plt.close()
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
-    util.Summarize(logistigateDict_PHI)
-    util.printEstimates(logistigateDict_PHI, importerIndsSubset=highImporterInds, outletIndsSubset=highOutletInds)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
-    # Run with Philippines provinces filtered for outlet-type samples
-    dataTblDict_PHI_filt = util.testresultsfiletotable('MQDfiles/MQD_PHILIPPINES_FACILITYFILTER.csv')
-    countryMean = np.sum(dataTblDict_PHI_filt['Y']) / np.sum(dataTblDict_PHI_filt['N'])
-    dataTblDict_PHI_filt.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 1000,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_PHI_filt = lg.runlogistigate(dataTblDict_PHI_filt)
-    util.plotPostSamples(logistigateDict_PHI_filt, plotType='int90', subTitleStr=['\nPhilippines (filtered)', '\nPhilippines (filtered)'])
-    util.printEstimates(logistigateDict_PHI_filt)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
-    # Run with Thailand provinces
-    dataTblDict_THA = util.testresultsfiletotable('MQDfiles/MQD_THAILAND.csv')
-    countryMean = np.sum(dataTblDict_THA['Y']) / np.sum(dataTblDict_THA['N'])
-    dataTblDict_THA.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 500,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_THA = lg.runlogistigate(dataTblDict_THA)
-    util.plotPostSamples(logistigateDict_THA)
-    util.printEstimates(logistigateDict_THA)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
-    # Run with Viet Nam provinces
-    dataTblDict_VIE = util.testresultsfiletotable('MQDfiles/MQD_VIETNAM.csv')
-    countryMean = np.sum(dataTblDict_VIE['Y']) / np.sum(dataTblDict_VIE['N'])
-    dataTblDict_VIE.update({'diagSens': 1.0,
-                            'diagSpec': 1.0,
-                            'numPostSamples': 500,
-                            'prior': methods.prior_normal(mu=sps.logit(countryMean)),
-                            'MCMCdict': MCMCdict})
-    logistigateDict_VIE = lg.runlogistigate(dataTblDict_VIE)
-    util.plotPostSamples(logistigateDict_VIE)
-    util.printEstimates(logistigateDict_VIE)
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
+
+    ##### END GHANA #####
+
+    ##### KENYA #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+    # Break up TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+    # Break up TNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
+
+    ##### END KENYA #####
+
+    ##### LAOS #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+    # Break up SNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highSNInds = [i for i, x in enumerate(sampMedians[:lgDict['importerNum']]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', importerIndsSubset=highSNInds, subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
+    ##### END LAOS #####
+
+    ##### MOZAMBIQUE #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+    # Break up SNs
+    sampMedians = [np.median(lgDict['postSamples'][:, i]) for i in range(lgDict['importerNum'] + lgDict['outletNum'])]
+    highSNInds = [i for i, x in enumerate(sampMedians[:lgDict['importerNum']]) if x > 0.1]
+    util.plotPostSamples(lgDict, 'int90', importerIndsSubset=highSNInds, subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
+    ##### END MOZAMBIQUE #####
+
+    ##### PERU #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
+    ##### END PERU #####
+
+    ##### PHILIPPINES #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1_antituberculosis'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2_antituberculosis'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3_antituberculosis'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1_antituberculosis_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2_antituberculosis_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3_antituberculosis_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
+
+    ##### END PHILIPPINES #####
+
+    ##### SENEGAL #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antiretroviral'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antiretroviral'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antiretroviral'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antiretroviral_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antiretroviral_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antiretroviral_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    ##### END SENEGAL #####
+
+    ##### THAILAND #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
+    ##### END THAILAND #####
+
+    ##### VIETNAM #####
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antibiotic'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antimalarial'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antibiotic_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antimalarial_ff'], csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
+
+    ##### END VIETNAM #####
 
     return
 
