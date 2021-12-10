@@ -2157,6 +2157,18 @@ def cleanMQD():
     templist = MQD_df_SEN['Province_Name'].tolist()
     MQD_df_SEN['Province_Name_GROUPED'] = templist
 
+    # Facility_Location and Facility_Name are clearly switched for samples from a certain date
+    tempOutletNames = MQD_df_SEN[(MQD_df_SEN['Date_Sample_Collected'].isin(['6/4/2010','6/23/2010','6/24/2010'])) & (MQD_df_SEN['Date_Received']=='7/12/2010')]['Facility_Location'].tolist()
+    tempLocationNames = MQD_df_SEN[
+        (MQD_df_SEN['Date_Sample_Collected'].isin(['6/4/2010', '6/23/2010', '6/24/2010'])) & (
+                    MQD_df_SEN['Date_Received'] == '7/12/2010')]['Facility_Name'].tolist()
+    MQD_df_SEN.loc[
+        (MQD_df_SEN['Date_Sample_Collected'].isin(['6/4/2010', '6/23/2010', '6/24/2010'])) & (
+                MQD_df_SEN['Date_Received'] == '7/12/2010'), 'Facility_Name' ] = tempOutletNames
+    MQD_df_SEN.loc[
+        (MQD_df_SEN['Date_Sample_Collected'].isin(['6/4/2010', '6/23/2010', '6/24/2010'])) & (
+                MQD_df_SEN['Date_Received'] == '7/12/2010'), 'Facility_Location'] = tempLocationNames
+
     # Facility_Location
     MQD_df_SEN = assignlabels(MQD_df_SEN, 'Facility_Location', thresh=90)
     MQD_df_SEN.loc[(MQD_df_SEN.Facility_Location_GROUPED == 'Centre de Santé Mbacké')
@@ -2201,6 +2213,13 @@ def cleanMQD():
     # Manufacturer
     templist = MQD_df_SEN['Manufacturer'].tolist()
     MQD_df_SEN['Manufacturer_GROUPED'] = templist
+
+    '''
+    a = MQD_df_SEN['Manufacturer_GROUPED'].astype('str').unique()
+    print(len(a))
+    for item in sorted(a):
+        print(item)
+    '''
 
     # THAILAND
     # Province_Name: 'Provinces' of Thailand
@@ -3411,7 +3430,7 @@ def MQDdataScript():
 
     ##### CAMBODIA #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1'], csvName=False)
-    print('size: '+str(lgDict['N'].shape)+', obsvns: '+str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0,  'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3422,7 +3441,7 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', importerIndsSubset=highSNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3440,39 +3459,39 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3483,21 +3502,21 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3508,21 +3527,21 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3533,21 +3552,21 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_CAM_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
                    'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3557,25 +3576,98 @@ def MQDdataScript():
     highTNInds = [i for i, x in enumerate(sampMedians[lgDict['importerNum']:]) if x > 0.1]
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
+    import pandas as pd
+    CAM_df = dataDict['df_CAM']
+    CAM_df['Date_Received_format'] = pd.to_datetime(CAM_df['Date_Received'], format='%m/%d/%Y')
+    CAM_df_2006 = CAM_df[CAM_df['Date_Received_format'] >= '2006-01-01']
+    CAM_df_2003 = CAM_df[CAM_df['Date_Received_format'] < '2006-01-01']
+
+    tbl_CAM_G1_2006 = CAM_df_2006[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_CAM_G1_2006 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_CAM_G1_2006]
+    tbl_CAM_G2_2006 = CAM_df_2006[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_CAM_G2_2006 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_CAM_G2_2006]
+    tbl_CAM_G3_2006 = CAM_df_2006[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_CAM_G3_2006 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_CAM_G3_2006]
+
+    lgDict = util.testresultsfiletotable(tbl_CAM_G1_2006, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+
+    lgDict = util.testresultsfiletotable(tbl_CAM_G2_2006, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+
+    lgDict = util.testresultsfiletotable(tbl_CAM_G3_2006, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+
+    tbl_CAM_G1_2003 = CAM_df_2003[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_CAM_G1_2003 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_CAM_G1_2003]
+    tbl_CAM_G2_2003 = CAM_df_2003[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_CAM_G2_2003 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_CAM_G2_2003]
+    tbl_CAM_G3_2003 = CAM_df_2003[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_CAM_G3_2003 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_CAM_G3_2003]
+
+    lgDict = util.testresultsfiletotable(tbl_CAM_G1_2003, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+
+    lgDict = util.testresultsfiletotable(tbl_CAM_G2_2003, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
+
+    lgDict = util.testresultsfiletotable(tbl_CAM_G3_2003, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500, 'prior': methods.prior_normal(mu=priorMean),
+                   'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Cambodia', ' Cambodia'])
     ##### END CAMBODIA #####
 
     ##### ETHIOPIA #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3586,105 +3678,105 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ethiopia', ' Ethiopia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_ETH_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3694,21 +3786,21 @@ def MQDdataScript():
 
     ##### GHANA #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3719,63 +3811,63 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Cambodia', ' Cambodia'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Ghana', ' Ghana'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_GHA_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3785,21 +3877,21 @@ def MQDdataScript():
 
     ##### KENYA #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3810,42 +3902,42 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3856,21 +3948,21 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', outletIndsSubset=highTNInds, subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Kenya', ' Kenya'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_KEN_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3880,7 +3972,7 @@ def MQDdataScript():
 
     ##### LAOS #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -3891,119 +3983,119 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', importerIndsSubset=highSNInds, subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Laos', ' Laos'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_LAO_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -4012,7 +4104,7 @@ def MQDdataScript():
 
     ##### MOZAMBIQUE #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -4023,119 +4115,119 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', importerIndsSubset=highSNInds, subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Mozambique', ' Mozambique'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_MOZ_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -4144,84 +4236,84 @@ def MQDdataScript():
 
     ##### PERU #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G1_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G2_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[' Peru', ' Peru'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PER_G3_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -4230,84 +4322,84 @@ def MQDdataScript():
 
     ##### PHILIPPINES #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1_antituberculosis'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2_antituberculosis'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3_antituberculosis'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G1_antituberculosis_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G2_antituberculosis_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Philippines', ', Philippines'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_PHI_G3_antituberculosis_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -4317,254 +4409,329 @@ def MQDdataScript():
 
     ##### SENEGAL #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antiretroviral'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antiretroviral'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antiretroviral'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G1_antiretroviral_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G2_antiretroviral_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_SEN_G3_antiretroviral_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    import pandas as pd
+    SEN_df = dataDict['df_SEN']
+    SEN_df_2009 = SEN_df[SEN_df['Date_Received'] == '6/1/2009']
+    SEN_df_2010 = SEN_df[SEN_df['Date_Received'] == '7/12/2010']
+
+    tbl_SEN_G1_2009 = SEN_df_2009[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G1_2009 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G1_2009]
+    tbl_SEN_G2_2009 = SEN_df_2009[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G2_2009 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G2_2009]
+    tbl_SEN_G3_2009 = SEN_df_2009[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G3_2009 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G3_2009]
+
+    tbl_SEN_G1_2010 = SEN_df_2010[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G1_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G1_2010]
+    tbl_SEN_G2_2010 = SEN_df_2010[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G2_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G2_2010]
+    tbl_SEN_G3_2010 = SEN_df_2010[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G3_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G3_2010]
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2009, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2009, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2009, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+
     ##### END SENEGAL #####
 
     ##### THAILAND #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Thailand', ', Thailand'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_THA_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
@@ -4573,126 +4740,126 @@ def MQDdataScript():
 
     ##### VIETNAM #####
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antibiotic'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antimalarial'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antibiotic_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G1_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G2_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     lgDict = util.testresultsfiletotable(dataDict['tbl_VIE_G3_antimalarial_ff'], csvName=False)
-    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()))
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(lgDict['Y'].sum()/lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
