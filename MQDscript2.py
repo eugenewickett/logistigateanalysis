@@ -2209,13 +2209,30 @@ def cleanMQD():
 
     # Facility_Name
     MQD_df_SEN = assignlabels(MQD_df_SEN, 'Facility_Name', thresh=90)
+    # Manual adjustments
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Name_GROUPED == 'Centre de SantÃ© de Diourbel tel : 33971-28-64')
+                   | (MQD_df_SEN.Facility_Name_GROUPED == 'Centre de Santé Diourbel'),
+                   'Facility_Name_GROUPED'] = 'Centre de Santé Diourbel'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Name_GROUPED == 'Centre de SantÃƒï¿½Ã¯Â¿Â½Ãƒï¿½Ã‚Â© de Richard Toll')
+                   | (MQD_df_SEN.Facility_Name_GROUPED == 'Centre de Santé de Richard Toll'),
+                   'Facility_Name_GROUPED'] = 'Centre de Santé de Richard Toll'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Name_GROUPED == 'Centre de Santé Mbacké')
+                   | (MQD_df_SEN.Facility_Name_GROUPED == 'Centre de Santé Mbacké  tel 33976-49-82'),
+                   'Facility_Name_GROUPED'] = 'Centre de Santé Mbacké'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Name_GROUPED == 'HÃ´pital Diourbel tel : 33971-15-35')
+                   | (MQD_df_SEN.Facility_Name_GROUPED == 'Hopital Diourbel'),
+                   'Facility_Name_GROUPED'] = 'Hopital Diourbel'
+    MQD_df_SEN.loc[(MQD_df_SEN.Facility_Name_GROUPED == 'PRA Diourbel')
+                   | (MQD_df_SEN.Facility_Name_GROUPED == 'PRA Diourbel tel : 33971-23-92'),
+                   'Facility_Name_GROUPED'] = 'PRA Diourbel'
+
 
     # Manufacturer
     templist = MQD_df_SEN['Manufacturer'].tolist()
     MQD_df_SEN['Manufacturer_GROUPED'] = templist
 
     '''
-    a = MQD_df_SEN['Manufacturer_GROUPED'].astype('str').unique()
+    a = MQD_df_SEN['Facility_Name_GROUPED'][SEN_df['Date_Received'] == '7/12/2010'].astype('str').unique()
     print(len(a))
     for item in sorted(a):
         print(item)
@@ -4534,6 +4551,7 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
+    # Breaking Senegal data into 2009 and 2010 data
     import pandas as pd
     SEN_df = dataDict['df_SEN']
     SEN_df_2009 = SEN_df[SEN_df['Date_Received'] == '6/1/2009']
@@ -4583,6 +4601,34 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
+    #########################   #########################   #########################
+    #####                           2010 SENEGAL DATA                           #####
+    #########################   #########################   #########################
+    # Print some overall summaries of the data
+    SEN_df_2010.pivot_table(index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'],
+                       aggfunc='size', fill_value=0)
+    SEN_df_2010.pivot_table(index=['Province_Name_GROUPED'], columns=['Final_Test_Conclusion'],
+                            aggfunc='size', fill_value=0)
+    SEN_df_2010.pivot_table(index=['Facility_Location_GROUPED'], columns=['Final_Test_Conclusion'],
+                            aggfunc='size', fill_value=0)
+    pivoted = SEN_df_2010.pivot_table(index=['Facility_Name_GROUPED'], columns=['Final_Test_Conclusion'],
+                            aggfunc='size', fill_value=0)
+    # pivoted[:15]
+    # SEN_df_2010['Province_Name_GROUPED'].unique()
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED'],
+        aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED'],
+        aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack']) & SEN_df_2010['Final_Test_Conclusion'].isin(['Fail'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED','Final_Test_Conclusion'],
+        aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis']) & SEN_df_2010['Final_Test_Conclusion'].isin(['Fail'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED','Final_Test_Conclusion'],
+        aggfunc='size', fill_value=0)
+
+
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
@@ -4607,6 +4653,78 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
+    # Rerun the 2010 data using untracked data; use N to estimate a sourcing probability matrix, Q
+    import numpy as np
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy() # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal [Untracked]', ', Senegal [Untracked]'])
+
+
+
+
+
+    # Rerun 2010 data using different testing tool accuracy
+    newSens, newSpec = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    newSens, newSpec = 0.6, 0.9
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
     ##### END SENEGAL #####
 
@@ -4869,4 +4987,11 @@ def MQDdataScript():
 
     return
 
+def examineSenegal():
+    '''
+    Code for closer analysis of the MQDB Senegal data
+    '''
 
+
+
+    return
