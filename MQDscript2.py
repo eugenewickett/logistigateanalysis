@@ -128,8 +128,8 @@ def cleanMQD():
     MQD_df = MQD_df.drop('Province', axis=1)
 
     # Remove 'Guatemala', 'Bolivia', 'Colombia', 'Ecuador', 'Guyana', and 'Yunnan China' due to low sample size
-    dropCountries = ['Bolivia', 'Colombia', 'Ecuador', 'Guatemala', 'Guyana', 'Yunnan China']
-    MQD_df = MQD_df[~MQD_df['Country_Name'].isin(dropCountries)]
+    #dropCountries = ['Bolivia', 'Colombia', 'Ecuador', 'Guatemala', 'Guyana', 'Yunnan China']
+    #MQD_df = MQD_df[~MQD_df['Country_Name'].isin(dropCountries)]
 
     # By collection year; need to add a year column
     MQD_df['Year_Sample_Collected'] = pd.DatetimeIndex(MQD_df['Date_Sample_Collected']).year
@@ -3442,7 +3442,8 @@ def MQDdataScript():
     '''
 
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    priorMean = sps.logit(0.038) # Mean SFP rate of the MQDB data
+    meanSFPrate = dataDict['df_ALL'][dataDict['df_ALL']['Final_Test_Conclusion']=='Fail']['Sample_ID'].count() / dataDict['df_ALL']['Sample_ID'].count()
+    priorMean = sps.logit(meanSFPrate) # Mean SFP rate of the MQDB data
     # priorMean = sps.logit(np.sum(dataTblDict_CAM['Y']) / np.sum(dataTblDict_CAM['N']))
 
     ##### CAMBODIA #####
@@ -4551,6 +4552,9 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
 
+    #########################   #########################   #########################
+    #####                           2010 SENEGAL DATA                           #####
+    #########################   #########################   #########################
     # Breaking Senegal data into 2009 and 2010 data
     import pandas as pd
     SEN_df = dataDict['df_SEN']
@@ -4604,6 +4608,232 @@ def MQDdataScript():
     #########################   #########################   #########################
     #####                           2010 SENEGAL DATA                           #####
     #########################   #########################   #########################
+    numPostSamps = 1000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    meanSFPrate = dataDict['df_ALL'][dataDict['df_ALL']['Final_Test_Conclusion'] == 'Fail']['Sample_ID'].count() / \
+                  dataDict['df_ALL']['Sample_ID'].count()
+    priorMean = sps.logit(meanSFPrate)  # Mean SFP rate of the MQDB data
+    priorVar = 5 # Enter desired variance
+
+    # Use moments of distribution of Ozawa Africa rates
+    #priorMean = -0.61617
+    #priorVar = 0.502954
+
+    SEN_df = dataDict['df_SEN']
+    # SEN_df_2010 = SEN_df[SEN_df['Date_Received'] == '7/12/2010']
+    # Remove 'Missing' and 'Unknown' labels
+    SEN_df_2010 = SEN_df[(SEN_df['Date_Received'] == '7/12/2010') & (SEN_df['Manufacturer_GROUPED'] != 'Unknown') & (SEN_df['Facility_Location_GROUPED'] != 'Missing')].copy()
+
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Médina')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Medina'),
+                    'Facility_Location_GROUPED'] = 'Medina'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Mbour-Thiès')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Mbour-Thies'),
+                    'Facility_Location_GROUPED'] = 'Mbour-Thies'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'saint louis')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Sor Saint Louis')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'pharmacie Mame Madia')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Saint Louis (Dept)'),
+                    'Facility_Location_GROUPED'] = 'Saint Louis (Dept)'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'velingara TÃ©l : 33 997 - 11- 10')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Velingara'),
+                    'Facility_Location_GROUPED'] = 'Velingara'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'koumpantoum')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Koumpantoum'),
+                    'Facility_Location_GROUPED'] = 'Koumpantoum'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Dr Dame SECK avenue J.F.KENNEDY B.P.157 tel/FAX941.17.11')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Kaolack (City)'),
+                    'Facility_Location_GROUPED'] = 'Kaolack (City)'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == '150m hpt kaff')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Kaffrine (City)'),
+                    'Facility_Location_GROUPED'] = 'Kaffrine (City)'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'kebemer')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Kebemer'),
+                    'Facility_Location_GROUPED'] = 'Kebemer'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Kaolack (City)')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Dr Assane TOURE tel 33.941.28.29 BP.53 Email boubakh@orange.sn'),
+                    'Facility_Location_GROUPED'] = 'Kaolack (City)'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Thiès')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Thies'),
+                    'Facility_Location_GROUPED'] = 'Thies'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'BP 60 TAMBACOUNDA SENEGAL')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Quartier Abattoir Tambacounda')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Quartier Pout, Avenue Léopold S, Senghor Tambacounda')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Tambacounda'),
+                    'Facility_Location_GROUPED'] = 'Tambacounda'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Quartier: Sare Moussa Tél. 33 996 23 47')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Quartier Sikilo, route de Tripano, Kolda')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Quartier Centre II Tél : 33 997-11-58')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Kolda')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Kolda (City)'),
+                    'Facility_Location_GROUPED'] = 'Kolda (City)'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Quartier Caba Club Kedougou')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Quartier Gomba n° 630 Kedougou')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Kedougou')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Kedougou (City)'),
+                    'Facility_Location_GROUPED'] = 'Kedougou (City)'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Location_GROUPED == 'Matam')
+                    | (SEN_df_2010.Facility_Location_GROUPED == 'Matam (City)'),
+                    'Facility_Location_GROUPED'] = 'Matam (City)'
+
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'hopital rÃƒÂ©gional de saint louis')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Hopital Regional de Saint Louis'),
+                    'Facility_Name_GROUPED'] = 'Hopital Regional de Saint Louis'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Centre de Santé Diourbel')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante Diourbel'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante Diourbel'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Hopital de Dioum')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Hopital de DIOUM'),
+                    'Facility_Name_GROUPED'] = 'Hopital de Dioum'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == "Pharmacie RÃƒÂ©gionale d' Approvisionnement de Saint Louis")
+                    | (SEN_df_2010.Facility_Name_GROUPED == "Pharmacie Regionale d' Approvisionnement de Saint Louis"),
+                    'Facility_Name_GROUPED'] = "Pharmacie Regionale d' Approvisionnement de Saint Louis"
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de sante de kolda')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Kolda'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Kolda'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de sante de velingara')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Velingara'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Velingara'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Hopitale regionale de Tambacounda')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Hopitale Regionale de Tambacounda'),
+                    'Facility_Name_GROUPED'] = 'Hopitale Regionale de Tambacounda'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de santÃ© de koumpantoum')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Koumpantoum'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Koumpantoum'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'PHARMACIE MAME MADIA')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Mame Madia'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Mame Madia'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Centre de Santé Mbacké')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante Mbacke'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante Mbacke'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Ndamatou  Dr Omar Niasse tel : 33978-17-68Touba')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Ndamatou Dr O.N.'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Ndamatou Dr O.N.'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie centrale  Dr A. Camara tel : 33971-11-20 Diourbel')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Centrale Dr A.C.'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Centrale Dr A.C.'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'District Sanitaire Touba tel: 33-978-13-70')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'District Sanitaire Touba'),
+                    'Facility_Name_GROUPED'] = 'District Sanitaire Touba'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie ousmane')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Ousmane'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Ousmane'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Centre de santé Ousmane Ngom')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante Ousmane Ngom'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante Ousmane Ngom'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de santé de matam')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Matam'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Matam'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie du Fleuve')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie du Fleuve'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie du Fleuve'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Centre de Santé de Richard Toll')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Richard Toll'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Richard Toll'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie boubakh')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Boubakh'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Boubakh'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de santÃ© de dioum')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Dioum'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Dioum'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de santÃ© de kanel')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Kanel'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Kanel'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'hôpital régionale de ouro-sogui')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Hopital Regionale de Ouro-Sogui'),
+                    'Facility_Name_GROUPED'] = 'Hopital Regionale de Ouro-Sogui'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Centre de traitement de la tuberculose d eTouba  tel : 33978-13-71')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Traitement de la Tuberculose de Touba'),
+                    'Facility_Name_GROUPED'] = 'Centre de Traitement de la Tuberculose de Touba'
+    SEN_df_2010.loc[
+        (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Mame  Ibrahima Ndour Dr Alassane Ndour Tél: 339760097 Mbacké')
+        | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Mame Ibrahima Ndour Dr A.N.'),
+        'Facility_Name_GROUPED'] = 'Pharmacie Mame Ibrahima Ndour Dr A.N.'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'hopitale regionale de koda')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Hopitale Regionale de Koda'),
+                    'Facility_Name_GROUPED'] = 'Hopitale Regionale de Koda'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Touba MosquÃ©e  Dr Amadou Malick Kane Tel : 33974-89-74')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Touba Mosque Dr A.M.K.'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Touba Mosque Dr A.M.K.'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == "pharmacie Château d'Eau")
+                    | (SEN_df_2010.Facility_Name_GROUPED == "Pharmacie Chateau d'Eau"),
+                    'Facility_Name_GROUPED'] = "Pharmacie Chateau d'Eau"
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie Babacar sy')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Babacar Sy'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Babacar Sy'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie Ceikh Ousmane Mbacké')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Ceikh Ousmane Mbacke'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Ceikh Ousmane Mbacke'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie du Baool Dr EL Badou Cissé tel :  33971-10-58   Diourbel')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie du Baool Dr El-B.C.'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie du Baool Dr El-B.C.'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Centre de Santé Roi Baudouin')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante Roi Baudouin'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante Roi Baudouin'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre Hospitalier Régional de Thiès')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre Hospitalier Regional de Thies'),
+                    'Facility_Name_GROUPED'] = 'Centre Hospitalier Regional de Thies'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'PRA Thiès')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'PRA Thies'),
+                    'Facility_Name_GROUPED'] = 'PRA Thies'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de sante de kedougou')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Kedougou'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Kedougou'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie sogui')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Sogui'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Sogui'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Hopital Touba tel: 33-978-13-70')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Hopital Touba'),
+                    'Facility_Name_GROUPED'] = 'Hopital Touba'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'centre de sante de Tambacounda')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Centre de Sante de Tambacounda'),
+                    'Facility_Name_GROUPED'] = 'Centre de Sante de Tambacounda'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie cheikh tidiane')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Cheikh Tidiane'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Cheikh Tidiane'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Mame Diarra Bousso Dr Yéro Diouma Dian  tel: 33-971-34-35 Diourbel')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Mame Diarra Bousso Dr Y.D.D.'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Mame Diarra Bousso Dr Y.D.D.'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie awa barry')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Awa Barry'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Awa Barry'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie FOULADOU')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Fouladou'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Fouladou'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie El hadj omar Tall')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie El Hadj Omar Tall'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie El Hadj Omar Tall'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie KANCISSE')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Kancisse'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Kancisse'
+    SEN_df_2010.loc[(SEN_df_2010.Facility_Name_GROUPED == 'pharmacie KOLDA')
+                    | (SEN_df_2010.Facility_Name_GROUPED == 'Pharmacie Kolda'),
+                    'Facility_Name_GROUPED'] = 'Pharmacie Kolda'
+    # END OF STRING CLEANING
+
+    tbl_SEN_G1_2010 = SEN_df_2010[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G1_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G1_2010]
+    tbl_SEN_G2_2010 = SEN_df_2010[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G2_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G2_2010]
+    tbl_SEN_G3_2010 = SEN_df_2010[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G3_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G3_2010]
+    '''
+    tbl_SEN_G1_2010_nomissing = SEN_df_2010_nomissing[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G1_2010_nomissing = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G1_2010_nomissing]
+    tbl_SEN_G2_2010_nomissing = SEN_df_2010_nomissing[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G2_2010_nomissing = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G2_2010_nomissing]
+    tbl_SEN_G3_2010_nomissing = SEN_df_2010_nomissing[
+        ['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G3_2010_nomissing = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G3_2010_nomissing]
+    '''
     # Print some overall summaries of the data
     SEN_df_2010.pivot_table(index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'],
                        aggfunc='size', fill_value=0)
@@ -4628,30 +4858,29 @@ def MQDdataScript():
         index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED','Final_Test_Conclusion'],
         aggfunc='size', fill_value=0)
 
-
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
-                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
-                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
-                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # Rerun the 2010 data using untracked data; use N to estimate a sourcing probability matrix, Q
     import numpy as np
@@ -4663,68 +4892,190 @@ def MQDdataScript():
     lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': 500,
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal [Untracked]', ', Senegal [Untracked]'])
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
 
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # np.count_nonzero(Q)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal [Untracked] - Facility Location', '\nSenegal [Untracked] - Facility Location'])
 
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal [Untracked] - Facility Name',
+                                                       '\nSenegal [Untracked] - Facility Name'])
 
+    # Rerun the 2010 data using untracked data; use N to estimate a sourcing probability matrix, Q, and add a
+    # "flattening" parameter to Q to make the sourcing probabilities less sharp
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Add a constant across Q
+    flatParam = 0.05
+    Q = Q + flatParam
+    for i, Qrow in enumerate(Q):
+        Q[i] = Qrow / np.sum(Qrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
 
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Add a constant across Q
+    flatParam = 0.01
+    Q = Q + flatParam
+    for i, Qrow in enumerate(Q):
+        Q[i] = Qrow / np.sum(Qrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Add a constant across Q
+    flatParam = 0.02
+    Q = Q + flatParam
+    for i, Qrow in enumerate(Q):
+        Q[i] = Qrow / np.sum(Qrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
 
     # Rerun 2010 data using different testing tool accuracy
     newSens, newSpec = 0.8, 0.95
+    #newSens, newSpec = 0.6, 0.9
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    subTitle = '\nSenegal [s=' + str(newSens) + ',r=' + str(newSpec) + '] - Province'
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[subTitle, subTitle])
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    subTitle = '\nSenegal [s=' + str(newSens) + ',r=' + str(newSpec) + '] - Facility Location'
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[subTitle, subTitle])
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    subTitle = '\nSenegal [s=' + str(newSens) + ',r=' + str(newSpec) + '] - Facility Name'
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[subTitle, subTitle])
 
-    newSens, newSpec = 0.6, 0.9
+    # Look at sensitivity to prior selection
+    priorMean, priorVar = -0.7, 2 # 0.7,2 is from Ozawa Africa SFP studies with n>149 samples
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
-                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean,var=priorVar), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
+    macleodInd = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.05)
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.95)
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.05)
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.95)
 
-    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+
+
+    priorMean, priorVar = -2., 5.
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010_nomissing, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
-                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
 
-    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    priorMean, priorVar = -1., 5.
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010_nomissing, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
-    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': 500,
-                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Senegal', ', Senegal'])
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
+
+    priorMean, priorVar = -1., -1.
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010_nomissing, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
+
 
     ##### END SENEGAL #####
 
@@ -4984,14 +5335,5 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', subTitleStr=[', Vietnam', ', Vietnam'])
 
     ##### END VIETNAM #####
-
-    return
-
-def examineSenegal():
-    '''
-    Code for closer analysis of the MQDB Senegal data
-    '''
-
-
 
     return
