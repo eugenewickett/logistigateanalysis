@@ -5132,134 +5132,288 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     ##### USE THIS RUN TO GENERATE PLOTS #####
-    numImp, numOut = logistigateDict['importerNum'], logistigateDict['outletNum']
+    import numpy as np
+    import matplotlib.pyplot as plt
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
 
-    if plotType == 'hist':  # Plot histograms
-        if importerIndsSubset == []:
-            importerIndsSubset = range(numImp)
-        for i in importerIndsSubset:
-            plt.hist(logistigateDict['postSamples'][:, i], alpha=0.2)
-        plt.xlim([0, 1])
-        plt.title('Supply Nodes' + subTitleStr[0], fontdict={'fontsize': 18})
-        plt.xlabel('SFP rate', fontdict={'fontsize': 14})
-        plt.ylabel('Posterior distribution frequency', fontdict={'fontsize': 14})
-        plt.show()
-        plt.close()
+    lowerQuant, upperQuant = 0.05, 0.95
+    priorSamps = lgDict['prior'].expitrand(5000)
+    priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
 
-        if outletIndsSubset == []:
-            outletIndsSubset = range(numOut)
-        for i in outletIndsSubset:
-            plt.hist(logistigateDict['postSamples'][:, numImp + i], alpha=0.2)
-        plt.xlim([0, 1])
-        plt.title('Test Nodes' + subTitleStr[1], fontdict={'fontsize': 18})
-        plt.xlabel('SFP rate', fontdict={'fontsize': 14})
-        plt.ylabel('Posterior distribution frequency', fontdict={'fontsize': 14})
-        plt.show()
-        plt.close()
-    elif plotType == 'int90' or plotType == 'int95' or plotType == 'int99':  # Plot 90%/95%/99% credible intervals, as well as the prior for comparison
-        if plotType == 'int90':
-            lowerQuant, upperQuant = 0.05, 0.95
-            intStr = '90'
-        elif plotType == 'int95':
-            lowerQuant, upperQuant = 0.025, 0.975
-            intStr = '95'
-        elif plotType == 'int99':
-            lowerQuant, upperQuant = 0.005, 0.995
-            intStr = '99'
-        priorSamps = logistigateDict['prior'].expitrand(5000)
-        priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind,i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind,i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    #sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    #sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    #sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    #sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    #sorted_pairs = sorted_pairs + sorted_pairs3
+    #sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node ("Manufacturer") 90% Intervals\nSenegal 2010 Data',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(10)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
 
-        if importerIndsSubset == []:
-            importerIndsSubset = range(numImp)
-            impNames = [logistigateDict['importerNames'][i] for i in importerIndsSubset]
-        else:
-            impNames = [logistigateDict['importerNames'][i] for i in importerIndsSubset]
-        impLowers = [np.quantile(logistigateDict['postSamples'][:, l], lowerQuant) for l in importerIndsSubset]
-        impUppers = [np.quantile(logistigateDict['postSamples'][:, l], upperQuant) for l in importerIndsSubset]
-        if sortBy == 'lower':
-            zippedList = zip(impLowers, impUppers, impNames)
-        elif sortBy == 'upper':
-            zippedList = zip(impUppers, impLowers, impNames)
-        elif sortBy == 'midpoint':
-            midpoints = [impUppers[i] - (impUppers[i] - impLowers[i]) / 2 for i in range(len(impUppers))]
-            zippedList = zip(midpoints, impUppers, impLowers, impNames)
-        sorted_pairs = sorted(zippedList, reverse=True)
-        impNamesSorted = [tup[3] for tup in sorted_pairs]
-        impNamesSorted.append('')
-        impNamesSorted.append('(Prior)')
-        # Plot
-        fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
-        if sortBy == 'lower':
-            sorted_pairs.append((np.nan, np.nan, ' '))  # for spacing
-            for lower, upper, name in sorted_pairs:
-                plt.plot((name, name), (lower, upper), 'o-', color='red')
-        elif sortBy == 'upper':
-            sorted_pairs.append((np.nan, np.nan, ' '))  # for spacing
-            for upper, lower, name in sorted_pairs:
-                plt.plot((name, name), (lower, upper), 'o-', color='red')
-        elif sortBy == 'midpoint':
-            sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-            for _, upper, lower, name in sorted_pairs:
-                plt.plot((name, name), (lower, upper), 'o-', color='red')
-        plt.plot((impNamesSorted[-1], impNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-        plt.ylim([0, 1])
-        plt.xticks(range(len(impNamesSorted)), impNamesSorted, rotation=90)
-        plt.title('Supply Nodes - ' + intStr + '% Intervals' + subTitleStr[0],
-                  fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-        plt.xlabel('Supply Node Name', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-        plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-        for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-            label.set_fontname('Times New Roman')
-            label.set_fontsize(10)
-        fig.tight_layout()
-        plt.show()
-        plt.close()
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node ("Province") 90% Intervals\nSenegal 2010 Data',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(10)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
 
-        if outletIndsSubset == []:
-            outletIndsSubset = range(numOut)
-            outNames = [logistigateDict['outletNames'][i] for i in outletIndsSubset]
-        else:
-            outNames = [logistigateDict['outletNames'][i] for i in outletIndsSubset]
-        outLowers = [np.quantile(logistigateDict['postSamples'][:, numImp + l], lowerQuant) for l in outletIndsSubset]
-        outUppers = [np.quantile(logistigateDict['postSamples'][:, numImp + l], upperQuant) for l in outletIndsSubset]
-        if sortBy == 'lower':
-            zippedList = zip(outLowers, outUppers, impNames)
-        elif sortBy == 'upper':
-            zippedList = zip(outUppers, outLowers, impNames)
-        elif sortBy == 'midpoint':
-            midpoints = [outUppers[i] - (outUppers[i] - outLowers[i]) / 2 for i in range(len(outUppers))]
-            zippedList = zip(midpoints, outUppers, outLowers, outNames)
-        sorted_pairs = sorted(zippedList, reverse=True)
-        outNamesSorted = [tup[3] for tup in sorted_pairs]
-        outNamesSorted.append('')
-        outNamesSorted.append('(Prior)')
-        # Plot
-        fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
-        if sortBy == 'lower':
-            sorted_pairs.append((np.nan, np.nan, ' '))  # for spacing
-            for lower, upper, name in sorted_pairs:
-                plt.plot((name, name), (lower, upper), 'o-', color='purple')
-        elif sortBy == 'upper':
-            sorted_pairs.append((np.nan, np.nan, ' '))  # for spacing
-            for upper, lower, name in sorted_pairs:
-                plt.plot((name, name), (lower, upper), 'o-', color='purple')
-        elif sortBy == 'midpoint':
-            sorted_pairs.append((np.nan, np.nan, np.nan, ' '))  # for spacing
-            for _, upper, lower, name in sorted_pairs:
-                plt.plot((name, name), (lower, upper), 'o-', color='purple')
-        plt.plot((outNamesSorted[-1], outNamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
-        plt.ylim([0, 1])
-        plt.xticks(range(len(outNamesSorted)), outNamesSorted, rotation=90)
-        plt.title('Test Nodes - ' + intStr + '% Intervals' + subTitleStr[1],
-                  fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
-        plt.xlabel('Test Node Name', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-        plt.ylabel('Interval value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-        for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-            label.set_fontname('Times New Roman')
-            label.set_fontsize(10)
-        fig.tight_layout()
-        plt.show()
-        plt.close()
+    # Facility Location as TNs
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node ("Facility Location") 90% Intervals\nSenegal 2010 Data',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(10)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # Facility Location as TNs
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node ("Facility Name") 90% Intervals\nSenegal 2010 Data',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(10)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+
+
 
     ##### END OF MANUAL PLOT GENERATION #####
 
