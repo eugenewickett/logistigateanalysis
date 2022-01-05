@@ -5040,6 +5040,99 @@ def MQDdataScript():
         index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED','Final_Test_Conclusion'],
         aggfunc='size', fill_value=0)
 
+    # DEIDENTIFICATION
+    import random
+
+    # Replace Manufacturers
+    orig_MANUF_lst = ['Ajanta Pharma Limited', 'Aurobindo Pharmaceuticals Ltd', 'Bliss Gvis Pharma Ltd', 'Cipla Ltd',
+                      'Cupin', 'EGR pharm Ltd', 'El Nasr', 'Emcure Pharmaceuticals Ltd', 'Expharm',
+                      'F.Hoffmann-La Roche Ltd', 'Gracure Pharma Ltd', 'Hetdero Drugs Limited', 'Imex Health',
+                      'Innothera Chouzy', 'Ipca Laboratories', 'Lupin Limited', 'Macleods Pharmaceuticals Ltd',
+                      'Matrix Laboratories Limited', 'Medico Remedies Pvt Ltd', 'Mepha Ltd', 'Novartis', 'Odypharm Ltd',
+                      'Pfizer', 'Sanofi Aventis', 'Sanofi Synthelabo']
+    shuf_MANUF_lst = orig_MANUF_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_MANUF_lst)
+    # print(shuf_MANUF_lst)
+    for i in range(len(shuf_MANUF_lst)):
+        currName = shuf_MANUF_lst[i]
+        newName = 'Mnfr. ' + str(i)
+        for ind, item in enumerate(tbl_SEN_G1_2010):
+            if item[1] == currName:
+                tbl_SEN_G1_2010[ind][1] = newName
+        for ind, item in enumerate(tbl_SEN_G2_2010):
+            if item[1] == currName:
+                tbl_SEN_G2_2010[ind][1] = newName
+        for ind, item in enumerate(tbl_SEN_G3_2010):
+            if item[1] == currName:
+                tbl_SEN_G3_2010[ind][1] = newName
+    # Replace Province
+    orig_PROV_lst = ['Dakar', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Matam', 'Saint Louis']
+    shuf_PROV_lst = orig_PROV_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_PROV_lst)
+    # print(shuf_PROV_lst)
+    for i in range(len(shuf_PROV_lst)):
+        currName = shuf_PROV_lst[i]
+        newName = 'Province ' + str(i)
+        for ind, item in enumerate(tbl_SEN_G1_2010):
+            if item[0] == currName:
+                tbl_SEN_G1_2010[ind][0] = newName
+    # Replace Facility Location
+    orig_LOCAT_lst = ['Dioum', 'Diourbel', 'Fann- Dakar', 'Guediawaye', 'Hann', 'Kaffrine (City)', 'Kanel',
+                      'Kaolack (City)', 'Kebemer', 'Kedougou (City)', 'Kolda (City)', 'Koumpantoum', 'Matam (City)',
+                      'Mbour-Thies', 'Medina', 'Ouro-Sogui', 'Richard Toll', 'Rufisque-Dakar', 'Saint Louis (City)',
+                      'Tambacounda', 'Thies', 'Tivaoune', 'Velingara']
+    shuf_LOCAT_lst = orig_LOCAT_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_LOCAT_lst)
+    # print(shuf_LOCAT_lst)
+    for i in range(len(shuf_LOCAT_lst)):
+        currName = shuf_LOCAT_lst[i]
+        newName = 'Facil. Location ' + str(i)
+        for ind, item in enumerate(tbl_SEN_G2_2010):
+            if item[0] == currName:
+                tbl_SEN_G2_2010[ind][0] = newName
+    # Replace Facility Name
+    orig_NAME_lst = ['CHR', 'CTA-Fann', 'Centre Hospitalier Regional de Thies', 'Centre de Sante Diourbel',
+                     'Centre de Sante Mbacke', 'Centre de Sante Ousmane Ngom', 'Centre de Sante Roi Baudouin',
+                     'Centre de Sante de Dioum', 'Centre de Sante de Kanel', 'Centre de Sante de Kedougou',
+                     'Centre de Sante de Kolda', 'Centre de Sante de Koumpantoum', 'Centre de Sante de Matam',
+                     'Centre de Sante de Richard Toll', 'Centre de Sante de Tambacounda',
+                     'Centre de Sante de Velingara',
+                     'Centre de Traitement de la Tuberculose de Touba', 'District Sanitaire Touba',
+                     'District Sanitaire de Mbour',
+                     'District Sanitaire de Rufisque', 'District Sanitaire de Tivaoune', 'District Sud',
+                     'Hopital Diourbel',
+                     'Hopital Regional de Saint Louis', 'Hopital Regionale de Ouro-Sogui', 'Hopital Touba',
+                     'Hopital de Dioum',
+                     'Hopitale Regionale de Koda', 'Hopitale Regionale de Tambacounda', 'PNA', 'PRA', 'PRA Diourbel',
+                     'PRA Thies',
+                     'Pharmacie', 'Pharmacie Awa Barry', 'Pharmacie Babacar Sy', 'Pharmacie Boubakh',
+                     'Pharmacie Ceikh Ousmane Mbacke', 'Pharmacie Centrale Dr A.C.', "Pharmacie Chateau d'Eau",
+                     'Pharmacie Cheikh Tidiane', 'Pharmacie El Hadj Omar Tall', 'Pharmacie Fouladou',
+                     'Pharmacie Kancisse',
+                     'Pharmacie Keneya', 'Pharmacie Kolda', 'Pharmacie Koldoise',
+                     'Pharmacie Mame Diarra Bousso Dr Y.D.D.',
+                     'Pharmacie Mame Fatou Diop Yoro', 'Pharmacie Mame Ibrahima Ndour Dr A.N.', 'Pharmacie Mame Madia',
+                     'Pharmacie Ndamatou Dr O.N.', 'Pharmacie Oriantale', 'Pharmacie Oumou Khairy Ndiaye',
+                     'Pharmacie Ousmane',
+                     "Pharmacie Regionale d' Approvisionnement de Saint Louis", 'Pharmacie Saloum', 'Pharmacie Sogui',
+                     'Pharmacie Teddungal', 'Pharmacie Thiala', 'Pharmacie Thierno Mouhamadou Seydou Ba',
+                     'Pharmacie Touba Mosque Dr A.M.K.', 'Pharmacie Ya Salam', 'Pharmacie du Baool Dr El-B.C.',
+                     'Pharmacie du Fleuve', 'Pharmacie du Marche']
+    shuf_NAME_lst = orig_NAME_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_NAME_lst)
+    # print(shuf_NAME_lst)
+    for i in range(len(shuf_NAME_lst)):
+        currName = shuf_NAME_lst[i]
+        newName = 'Facility ' + str(i)
+        for ind, item in enumerate(tbl_SEN_G3_2010):
+            if item[0] == currName:
+                tbl_SEN_G3_2010[ind][0] = newName
+
+
     # RUN 1: s=1.0, r=1.0, prior is MQDB countries with at least 1 SFP
     priorMean = -1.338762078
     priorVar = 0.209397261
@@ -5089,6 +5182,7 @@ def MQDdataScript():
     # RUN 2: s=1.0, r=1.0, prior is MQDB countries with at least 1 SFP, with 5 times the variance
     priorMean = -1.338762078
     priorVar = 0.209397261 * 5
+
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
@@ -5134,9 +5228,11 @@ def MQDdataScript():
     ##### USE THIS RUN TO GENERATE PLOTS #####
     import numpy as np
     import matplotlib.pyplot as plt
+    priorMean = -2.5
+    priorVar = 4
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
 
@@ -5201,13 +5297,13 @@ def MQDdataScript():
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
-    plt.title('Supply Node ("Manufacturer") 90% Intervals\nSenegal 2010 Data',
+    plt.title('Supply Node 90% Intervals\nManufacturer-Province Analysis',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
-        label.set_fontsize(10)
+        label.set_fontsize(12)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5263,13 +5359,13 @@ def MQDdataScript():
     plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
-    plt.title('Test Node ("Province") 90% Intervals\nSenegal 2010 Data',
+    plt.title('Test Node 90% Intervals\nManufacturer-Province Analysis',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
-        label.set_fontsize(10)
+        label.set_fontsize(12)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5338,13 +5434,13 @@ def MQDdataScript():
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
-    plt.title('Supply Node ("Manufacturer") 90% Intervals\nSenegal 2010 Data',
+    plt.title('Supply Node 90% Intervals\nManufacturer-Facility Location Analysis',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
-        label.set_fontsize(10)
+        label.set_fontsize(12)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5400,13 +5496,13 @@ def MQDdataScript():
     plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
-    plt.title('Test Node ("Facility Location") 90% Intervals\nSenegal 2010 Data',
+    plt.title('Test Node 90% Intervals\nManufacturer-Facility Location Analysis',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
-        label.set_fontsize(10)
+        label.set_fontsize(12)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5475,13 +5571,13 @@ def MQDdataScript():
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
-    plt.title('Supply Node ("Manufacturer") 90% Intervals\nSenegal 2010 Data',
+    plt.title('Supply Node 90% Intervals\nManufacturer-Facility Analysis',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
-        label.set_fontsize(10)
+        label.set_fontsize(12)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5537,16 +5633,28 @@ def MQDdataScript():
     plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
-    plt.title('Test Node ("Facility Name") 90% Intervals\nSenegal 2010 Data',
+    plt.title('Test Node 90% Intervals\nManufacturer-Facility Analysis',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
-        label.set_fontsize(10)
+        label.set_fontsize(9)
     fig.tight_layout()
     plt.show()
     plt.close()
+
+    # What does a good prior look like?
+    mean = -2.5
+    var = 4
+    s = np.random.laplace(mean, np.sqrt(var/2), 2000)
+    t = np.exp(s) / (1 + np.exp(s))
+    print(np.mean(t))
+    plt.hist(s, density=True, bins=30)
+    plt.show()
+    plt.hist(t, density=True, bins=30)
+    plt.show()
+
 
 
     ##### END OF MANUAL PLOT GENERATION #####

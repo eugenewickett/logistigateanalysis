@@ -37,7 +37,8 @@ def generateSyntheticData():
     numPostSamps = 1000
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 
-    # NAME KEYS
+
+
     import random
 
     # Replace Manufacturers
@@ -50,7 +51,7 @@ def generateSyntheticData():
     shuf_MANUF_lst = orig_MANUF_lst.copy()
     random.seed(333)
     random.shuffle(shuf_MANUF_lst)
-    # print(orig_MANUF_lst)
+    # print(shuf_MANUF_lst)
     for i in range(len(shuf_MANUF_lst)):
         currName = shuf_MANUF_lst[i]
         newName = 'Mnfr ' + str(i)
@@ -64,12 +65,74 @@ def generateSyntheticData():
             if item[1] == currName:
                 tbl_sen3[ind][1] = newName
     # Replace Province
+    orig_PROV_lst = ['Dakar', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Matam', 'Saint Louis']
+    shuf_PROV_lst = orig_PROV_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_PROV_lst)
+    # print(shuf_PROV_lst)
+    for i in range(len(shuf_PROV_lst)):
+        currName = shuf_PROV_lst[i]
+        newName = 'Province ' + str(i)
+        for ind, item in enumerate(tbl_sen1):
+            if item[0] == currName:
+                tbl_sen1[ind][0] = newName
+    # Replace Facility Location
+    orig_LOCAT_lst = ['Dioum', 'Diourbel', 'Fann- Dakar', 'Guediawaye', 'Hann', 'Kaffrine (City)', 'Kanel',
+                      'Kaolack (City)', 'Kebemer', 'Kedougou (City)', 'Kolda (City)', 'Koumpantoum', 'Matam (City)',
+                      'Mbour-Thies', 'Medina', 'Ouro-Sogui', 'Richard Toll', 'Rufisque-Dakar', 'Saint Louis (City)',
+                      'Tambacounda', 'Thies', 'Tivaoune', 'Velingara']
+    shuf_LOCAT_lst = orig_LOCAT_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_LOCAT_lst)
+    # print(shuf_LOCAT_lst)
+    for i in range(len(shuf_LOCAT_lst)):
+        currName = shuf_LOCAT_lst[i]
+        newName = 'Facil. Location ' + str(i)
+        for ind, item in enumerate(tbl_sen2):
+            if item[0] == currName:
+                tbl_sen2[ind][0] = newName
+    # Replace Facility Name
+    orig_NAME_lst = ['CHR', 'CTA-Fann', 'Centre Hospitalier Regional de Thies', 'Centre de Sante Diourbel',
+            'Centre de Sante Mbacke', 'Centre de Sante Ousmane Ngom', 'Centre de Sante Roi Baudouin',
+            'Centre de Sante de Dioum', 'Centre de Sante de Kanel', 'Centre de Sante de Kedougou',
+            'Centre de Sante de Kolda', 'Centre de Sante de Koumpantoum', 'Centre de Sante de Matam',
+            'Centre de Sante de Richard Toll', 'Centre de Sante de Tambacounda', 'Centre de Sante de Velingara',
+            'Centre de Traitement de la Tuberculose de Touba', 'District Sanitaire Touba', 'District Sanitaire de Mbour',
+            'District Sanitaire de Rufisque', 'District Sanitaire de Tivaoune', 'District Sud', 'Hopital Diourbel',
+            'Hopital Regional de Saint Louis', 'Hopital Regionale de Ouro-Sogui', 'Hopital Touba', 'Hopital de Dioum',
+            'Hopitale Regionale de Koda', 'Hopitale Regionale de Tambacounda', 'PNA', 'PRA', 'PRA Diourbel', 'PRA Thies',
+            'Pharmacie', 'Pharmacie Awa Barry', 'Pharmacie Babacar Sy', 'Pharmacie Boubakh',
+            'Pharmacie Ceikh Ousmane Mbacke', 'Pharmacie Centrale Dr A.C.', "Pharmacie Chateau d'Eau",
+            'Pharmacie Cheikh Tidiane', 'Pharmacie El Hadj Omar Tall', 'Pharmacie Fouladou', 'Pharmacie Kancisse',
+            'Pharmacie Keneya', 'Pharmacie Kolda', 'Pharmacie Koldoise', 'Pharmacie Mame Diarra Bousso Dr Y.D.D.',
+            'Pharmacie Mame Fatou Diop Yoro', 'Pharmacie Mame Ibrahima Ndour Dr A.N.', 'Pharmacie Mame Madia',
+            'Pharmacie Ndamatou Dr O.N.', 'Pharmacie Oriantale', 'Pharmacie Oumou Khairy Ndiaye', 'Pharmacie Ousmane',
+            "Pharmacie Regionale d' Approvisionnement de Saint Louis", 'Pharmacie Saloum', 'Pharmacie Sogui',
+            'Pharmacie Teddungal', 'Pharmacie Thiala', 'Pharmacie Thierno Mouhamadou Seydou Ba',
+            'Pharmacie Touba Mosque Dr A.M.K.', 'Pharmacie Ya Salam', 'Pharmacie du Baool Dr El-B.C.',
+            'Pharmacie du Fleuve', 'Pharmacie du Marche']
+    shuf_NAME_lst = orig_NAME_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_NAME_lst)
+    # print(shuf_NAME_lst)
+    for i in range(len(shuf_NAME_lst)):
+        currName = shuf_NAME_lst[i]
+        newName = 'Facil. Name ' + str(i)
+        for ind, item in enumerate(tbl_sen3):
+            if item[0] == currName:
+                tbl_sen3[ind][0] = newName
+
+
+
+
+    '''
+    Use estimated Q to generate 400 samples under different seeds until finding a data set that works
+    '''
 
 
 
 
 
-    ['Dakar', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Matam', 'Saint Louis']
 
     lgDict = util.testresultsfiletotable(tbl_sen1, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
