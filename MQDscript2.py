@@ -5039,6 +5039,25 @@ def MQDdataScript():
     SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis']) & SEN_df_2010['Final_Test_Conclusion'].isin(['Fail'])].pivot_table(
         index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED','Final_Test_Conclusion'],
         aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack'])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis'])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack'])].pivot_table(
+        index=['Facility_Name_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine'])].pivot_table(
+        index=['Facility_Name_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis'])].pivot_table(
+        index=['Facility_Name_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Facility_Name_GROUPED'].isin(['Hopitale Regionale de Koda',
+                                                           "Pharmacie Keneya"])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Facility_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar'])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Facility_Location_GROUPED'].isin(['Tambacounda'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+
+    SEN_df_2010['Facility_Location_GROUPED'].count()
 
     # DEIDENTIFICATION
     import random
@@ -5056,7 +5075,7 @@ def MQDdataScript():
     # print(shuf_MANUF_lst)
     for i in range(len(shuf_MANUF_lst)):
         currName = shuf_MANUF_lst[i]
-        newName = 'Mnfr. ' + str(i)
+        newName = 'Mnfr. ' + str(i+1)
         for ind, item in enumerate(tbl_SEN_G1_2010):
             if item[1] == currName:
                 tbl_SEN_G1_2010[ind][1] = newName
@@ -5074,7 +5093,7 @@ def MQDdataScript():
     # print(shuf_PROV_lst)
     for i in range(len(shuf_PROV_lst)):
         currName = shuf_PROV_lst[i]
-        newName = 'Province ' + str(i)
+        newName = 'Province ' + str(i+1)
         for ind, item in enumerate(tbl_SEN_G1_2010):
             if item[0] == currName:
                 tbl_SEN_G1_2010[ind][0] = newName
@@ -5089,7 +5108,7 @@ def MQDdataScript():
     # print(shuf_LOCAT_lst)
     for i in range(len(shuf_LOCAT_lst)):
         currName = shuf_LOCAT_lst[i]
-        newName = 'Facil. Location ' + str(i)
+        newName = 'Facil. Location ' + str(i+1)
         for ind, item in enumerate(tbl_SEN_G2_2010):
             if item[0] == currName:
                 tbl_SEN_G2_2010[ind][0] = newName
@@ -5127,109 +5146,117 @@ def MQDdataScript():
     # print(shuf_NAME_lst)
     for i in range(len(shuf_NAME_lst)):
         currName = shuf_NAME_lst[i]
-        newName = 'Facility ' + str(i)
+        newName = 'Facility ' + str(i+1)
         for ind, item in enumerate(tbl_SEN_G3_2010):
             if item[0] == currName:
                 tbl_SEN_G3_2010[ind][0] = newName
 
 
-    # RUN 1: s=1.0, r=1.0, prior is MQDB countries with at least 1 SFP
-    priorMean = -1.338762078
-    priorVar = 0.209397261
+    # RUN 1: s=1.0, r=1.0, prior is laplace(-2.5,3.5)
+    priorMean = -2.5
+    priorVar = 3.5
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    #util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
                        :5] + ',' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+    #util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
                           :5] + ',' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
                            :5] + ',' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
-    # RUN 2: s=1.0, r=1.0, prior is MQDB countries with at least 1 SFP, with 5 times the variance
-    priorMean = -1.338762078
-    priorVar = 0.209397261 * 5
+    # RUN 2: s=1.0, r=1.0, prior is laplace(-2.5,1.5)
+    priorMean = -2.5
+    priorVar = 1.5
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    #util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames'])+TNinds], 0.05))[:5] + ',' + str(
-        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames'])+TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    #util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     ##### USE THIS RUN TO GENERATE PLOTS #####
     import numpy as np
     import matplotlib.pyplot as plt
+    import scipy.stats as sps
+    import scipy.special as spsp
     priorMean = -2.5
-    priorVar = 4
+    priorVar = 3.5
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
@@ -5238,7 +5265,9 @@ def MQDdataScript():
 
     lowerQuant, upperQuant = 0.05, 0.95
     priorSamps = lgDict['prior'].expitrand(5000)
-    priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
+    #priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
+    priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+    priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
 
     SNindsSubset = range(numSN)
     SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
@@ -5645,122 +5674,135 @@ def MQDdataScript():
     plt.close()
 
     # What does a good prior look like?
-    mean = -2.5
-    var = 4
-    s = np.random.laplace(mean, np.sqrt(var/2), 2000)
+    mean = -3.5
+    var = 3.5
+    s = np.random.laplace(mean, np.sqrt(var/2), 10000)
     t = np.exp(s) / (1 + np.exp(s))
     print(np.mean(t))
     plt.hist(s, density=True, bins=30)
     plt.show()
     plt.hist(t, density=True, bins=30)
     plt.show()
+    np.quantile(t,0.05)
 
-
+    import scipy.stats as sps
+    import scipy.special as spsp
+    int50 = sps.laplace.ppf(0.50, loc=mean, scale=np.sqrt(var / 2))
+    int05 = sps.laplace.ppf(0.05, loc=mean, scale=np.sqrt(var/2))
+    int95 = sps.laplace.ppf(0.95, loc=mean, scale=np.sqrt(var / 2))
+    print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int95))
 
     ##### END OF MANUAL PLOT GENERATION #####
 
-    # RUN 3: s=1.0, r=1.0, prior is Ozawa Africa countries with n>=150
-    priorMean = -0.718837654
-    priorVar = 0.283239494
+    # RUN 3: s=1.0, r=1.0, prior is laplace(-3.5, 3.5)
+    priorMean = -3.5
+    priorVar = 3.5
+
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
-    # RUN 4: s=1.0, r=1.0, prior is Ozawa Africa countries with n>=150, with 5 times the variance
-    priorMean = -0.718837654
-    priorVar = 0.283239494 * 5
+    # RUN 4: s=1.0, r=1.0, prior is laplace(-3.5, 1.5)
+    priorMean = -3.5
+    priorVar = 1.5
+
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     import numpy as np
 
-    # RUN 5: s=1.0, r=1.0, prior is MQDB countries with at least 1 SFP; UNTRACKED
-    priorMean = -1.338762078
-    priorVar = 0.209397261
+    # RUN 5: s=1.0, r=1.0, prior is laplace(-2.5, 3.5 ) ; UNTRACKED
+    priorMean = -2.5
+    priorVar = 3.5
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     Q = lgDict['N'].copy()  # Generate Q
@@ -5771,22 +5813,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    #util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -5798,18 +5840,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    #util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
@@ -5820,9 +5864,9 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
-    # RUN 6: s=1.0, r=1.0, prior is MQDB countries with at least 1 SFP, with 5 times the variance; UNTRACKED
-    priorMean = -1.338762078
-    priorVar = 0.209397261 * 5
+    # RUN 6: s=1.0, r=1.0, prior is laplace(-2.5, 1.5 ) ; UNTRACKED
+    priorMean = -2.5
+    priorVar = 1.5
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     Q = lgDict['N'].copy()  # Generate Q
@@ -5833,22 +5877,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -5860,18 +5904,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
@@ -5882,9 +5928,9 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
-    # RUN 7: s=1.0, r=1.0, prior is Ozawa Africa studies w n>=150; UNTRACKED
-    priorMean = -0.718837654
-    priorVar = 0.283239494
+    # RUN 7: s=1.0, r=1.0, prior is laplace(-2.5, 1.5 ) ; UNTRACKED
+    priorMean = -3.5
+    priorVar = 3.5
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     Q = lgDict['N'].copy()  # Generate Q
@@ -5895,22 +5941,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -5922,18 +5968,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
@@ -5944,9 +5992,9 @@ def MQDdataScript():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
-    # RUN 8: s=1.0, r=1.0, prior is MQDB countries with at least 1 SFP; UNTRACKED
-    priorMean = -0.718837654
-    priorVar = 0.283239494 * 5
+    # RUN 8: s=1.0, r=1.0, prior is laplace(-2.5, 1.5 ) ; UNTRACKED
+    priorMean = -3.5
+    priorVar = 1.5
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     Q = lgDict['N'].copy()  # Generate Q
@@ -5957,22 +6005,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -5984,18 +6032,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
@@ -6007,214 +6057,222 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # RUN 9: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP
-    priorMean = -1.338762078
-    priorVar = 0.209397261
+    priorMean = -2.5
+    priorVar = 3.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # RUN 10: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP, with 5 times the variance
-    priorMean = -1.338762078
-    priorVar = 0.209397261 * 5
+    priorMean = -2.5
+    priorVar = 1.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # RUN 11: s=0.8, r=0.95, prior is Ozawa Africa countries with n>=150
-    priorMean = -0.718837654
-    priorVar = 0.283239494
+    priorMean = -3.5
+    priorVar = 3.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # RUN 12: s=0.8, r=0.95, prior is Ozawa Africa countries with n>=150, with 5 times the variance
-    priorMean = -0.718837654
-    priorVar = 0.283239494 * 5
+    priorMean = -3.5
+    priorVar = 1.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     import numpy as np
 
     # RUN 13: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP; UNTRACKED
-    priorMean = -1.338762078
-    priorVar = 0.209397261
+    priorMean = -2.5
+    priorVar = 3.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
@@ -6226,22 +6284,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -6253,18 +6311,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
@@ -6276,8 +6336,8 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # RUN 14: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP, with 5 times the variance; UNTRACKED
-    priorMean = -1.338762078
-    priorVar = 0.209397261 * 5
+    priorMean = -2.5
+    priorVar = 1.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
@@ -6289,22 +6349,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -6316,18 +6376,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
@@ -6339,8 +6401,8 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # RUN 15: s=0.8, r=0.95, prior is Ozawa Africa studies w n>=150; UNTRACKED
-    priorMean = -0.718837654
-    priorVar = 0.283239494
+    priorMean = -3.5
+    priorVar = 3.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
@@ -6352,22 +6414,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -6379,18 +6441,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
@@ -6402,8 +6466,8 @@ def MQDdataScript():
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
 
     # RUN 16: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP; UNTRACKED
-    priorMean = -0.718837654
-    priorVar = 0.283239494 * 5
+    priorMean = -3.5
+    priorVar = 1.5
     s, r = 0.8, 0.95
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
@@ -6415,22 +6479,22 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
-    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
-    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
-    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    SNinds = lgDict['importerNames'].index('Lupin Limited')
-    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Dakar')
-    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                       :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
@@ -6442,18 +6506,20 @@ def MQDdataScript():
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
                    'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
     lgDict = methods.GeneratePostSamples(lgDict)
-    util.plotPostSamples(lgDict, 'int90',
-                         subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
-    TNinds = lgDict['outletNames'].index('Diourbel')
-    print('Diourbel: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                          :5] + ',' + str(
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
-    TNinds = lgDict['outletNames'].index('Velingara')
-    print('Velingara: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
-                           :5] + ',' + str(
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
