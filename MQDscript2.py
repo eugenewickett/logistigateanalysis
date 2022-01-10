@@ -5674,11 +5674,12 @@ def MQDdataScript():
     plt.close()
 
     # What does a good prior look like?
-    mean = -3.5
+    mean = -2.5
     var = 3.5
     s = np.random.laplace(mean, np.sqrt(var/2), 10000)
     t = np.exp(s) / (1 + np.exp(s))
     print(np.mean(t))
+    import matplotlib.pyplot as plt
     plt.hist(s, density=True, bins=30)
     plt.show()
     plt.hist(t, density=True, bins=30)
@@ -5690,7 +5691,8 @@ def MQDdataScript():
     int50 = sps.laplace.ppf(0.50, loc=mean, scale=np.sqrt(var / 2))
     int05 = sps.laplace.ppf(0.05, loc=mean, scale=np.sqrt(var/2))
     int95 = sps.laplace.ppf(0.95, loc=mean, scale=np.sqrt(var / 2))
-    print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int95))
+    int70 = sps.laplace.ppf(0.70, loc=mean, scale=np.sqrt(var / 2))
+    print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int70), spsp.expit(int95))
 
     ##### END OF MANUAL PLOT GENERATION #####
 

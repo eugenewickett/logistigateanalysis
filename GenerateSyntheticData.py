@@ -37,9 +37,7 @@ def generateSyntheticData():
     tbl_sen3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_sen3]
 
     '''Replace Senegal identities with generic names'''
-    priorMean, priorVar = -2.5, 3.5
-    numPostSamps = 1000
-    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+
 
     import random
 
@@ -142,102 +140,101 @@ def generateSyntheticData():
                      .02, .02, .02, .03, .03, .05, .05, .07, .07, .07, .10, .15, .20])
     random.seed(3)
     random.shuffle(Qrow)
+    # Qrow: [0.01, 0.03, 0.1 , 0.02, 0.01, 0.01, 0.07, 0.01, 0.01, 0.02, 0.2, 0.02,
+    #        0.01, 0.01, 0.07, 0.15, 0.01, 0.01, 0.03, 0.07, 0.01, 0.01, 0.05, 0.05, 0.01])
 
 
-    # Number of SFPs: 18%
-    # SN rates: 1% baseline; 5% node: ~25/30%, 3% node: ~5%,
-    # TN rates: 1% baseline; 1 major node: 17%, 1 minor node: 10%; 3 minor nodes: 5%
-
+    # Overall SFP rate: ???
+    # SN rates: 1% baseline; 20% node: 25%, 5% node: ~25/30%, 7% node: 10%, 2% node: 40%
+    # TN rates: 1% baseline; 1 major node: 25%, 1 minor node: 30%; 3 minor nodes: 10%; 1 minor minor node: 50%
 
     numTN, numSN = 25, 25
-    rseed = 44
+    numSamples = 500
+    s, r = 1.0, 1.0
+
 
     dataTblDict = {}
 
     SNnames = ['Manufacturer ' + str(i + 1) for i in range(numSN)]
-    outNames = ['District ' + str(i + 1) for i in range(numTN)]
+    TNnames = ['District ' + str(i + 1) for i in range(numTN)]
 
     trueRates = np.zeros(numSN + numTN)  # importers first, outlets second
-    trueRates[:numSN] =
 
-    random.seed(randSeed)
+    SNtrueRates = [.02 for i in range(numSN)]
+    SN1ind = 3 # 40% SFP rate
+    SN2ind = 10 # 25% SFP rate, major node
+    SN3ind = 14 # 10% SFP rate, minor node
+    SN4ind = 22 # 30% SFP rate, minor node
+    SNtrueRates[SN1ind], SNtrueRates[SN2ind] = 0.4, 0.25
+    SNtrueRates[SN3ind], SNtrueRates[SN4ind] = 0.1, 0.3
 
-    trueRates[:numImp] = [random.betavariate(1, 9) for i in range(numImp)]
-    trueRates[numImp:] = [random.betavariate(1, 9) for i in range(numOut)]
+    trueRates[:numSN] = SNtrueRates # SN SFP rates
 
-    # Generate random transition matrix
-    transMat = np.zeros(shape=(numOut, numImp))
-    if randSeed >= 0:
-        random.seed(randSeed + 1)
-    for outInd in range(numOut):
-        rowRands = [random.paretovariate(transMatLambda) for i in range(numImp)]
-        if numImp > 10:  # Only keep 10 randomly chosen importers, if numImp > 10
-            rowRands[10:] = [0.0 for i in range(numImp - 10)]
-            random.shuffle(rowRands)
+    TN1ind = 5 # 20% sourced node, 25% SFP rate
+    TN2inds = [2, 11, 14, 22] # 10% sourced
+    TN3inds = [3, 6, 8, 10, 16, 17, 24] # 3% sourced
+    TN4inds = [0, 1, 9, 12, 18, 23] # 2% sourced
+    TNsampProbs = [.01 for i in range(numTN)] # Update sampling probs
+    TNsampProbs[TN1ind] = 0.20
+    for j in TN2inds:
+        TNsampProbs[j] = 0.10
+    for j in TN3inds:
+        TNsampProbs[j] = 0.03
+    for j in TN4inds:
+        TNsampProbs[j] = 0.02
+    print(np.sum(TNsampProbs))
 
-        normalizedRands = [rowRands[i] / sum(rowRands) for i in range(numImp)]
-        # only keep transition probabilities above 2%
-        # normalizedRands = [normalizedRands[i] if normalizedRands[i]>0.02 else 0.0 for i in range(numImp)]
+    TNtrueRates = [.01 for i in range(numTN)] # Update SFP rates for TNs
+    TNtrueRates[TN1ind] = 0.25
+    TNtrueRates[TN2inds[1]] = 0.1
+    TNtrueRates[TN2inds[2]] = 0.1
+    TNtrueRates[TN3inds[1]] = 0.4
+    trueRates[numSN:] = TNtrueRates # Put TN rates in main vector
 
-        # normalizedRands = [normalizedRands[i] / sum(normalizedRands) for i in range(numImp)]
-        transMat[outInd, :] = normalizedRands
-
-    # np.linalg.det(transMat.T @ transMat) / numOut
-    # 1.297 for n=50
-
-    # Generate testing data
+    rseed = 46
+    random.seed(rseed)
+    np.random.seed(rseed+1)
     testingDataList = []
-    if dataType == 'Tracked':
-        if randSeed >= 0:
-            random.seed(randSeed + 2)
-            np.random.seed(randSeed)
-        for currSamp in range(numSamples):
-            currOutlet = random.sample(outNames, 1)[0]
-            currImporter = random.choices(impNames, weights=transMat[outNames.index(currOutlet)], k=1)[0]
-            currOutRate = trueRates[numImp + outNames.index(currOutlet)]
-            currImpRate = trueRates[impNames.index(currImporter)]
-            realRate = currOutRate + currImpRate - currOutRate * currImpRate
-            realResult = np.random.binomial(1, p=realRate)
-            if realResult == 1:
-                result = np.random.binomial(1, p=diagSens)
-            if realResult == 0:
-                result = np.random.binomial(1, p=1 - diagSpec)
-            testingDataList.append([currOutlet, currImporter, result])
-    elif dataType == 'Untracked':
-        if randSeed >= 0:
-            random.seed(randSeed + 3)
-            np.random.seed(randSeed)
-        for currSamp in range(numSamples):
-            currOutlet = random.sample(outNames, 1)[0]
-            currImporter = random.choices(impNames, weights=transMat[outNames.index(currOutlet)], k=1)[0]
-            currOutRate = trueRates[numImp + outNames.index(currOutlet)]
-            currImpRate = trueRates[impNames.index(currImporter)]
-            realRate = currOutRate + currImpRate - currOutRate * currImpRate
-            realResult = np.random.binomial(1, p=realRate)
-            if realResult == 1:
-                result = np.random.binomial(1, p=diagSens)
-            if realResult == 0:
-                result = np.random.binomial(1, p=1 - diagSpec)
-            testingDataList.append([currOutlet, result])
+    for currSamp in range(numSamples):
+        currTN = random.choices(TNnames, weights=TNsampProbs, k=1)[0]
+        currSN = random.choices(SNnames, weights=Qrow, k=1)[0] #[TNnames.index(currTN)] to index Q
+        currTNrate = trueRates[numSN + TNnames.index(currTN)]
+        currSNrate = trueRates[SNnames.index(currSN)]
+        realRate = currTNrate + currSNrate - currTNrate * currSNrate
+        realResult = np.random.binomial(1, p=realRate)
+        if realResult == 1:
+            result = np.random.binomial(1, p = s)
+        if realResult == 0:
+            result = np.random.binomial(1, p=1. - r)
+        testingDataList.append([currTN, currSN, result])
 
-    dataTblDict.update({'outletNames': outNames, 'importerNames': impNames,
-                        'diagSens': 0.90, 'diagSpec': 0.99, 'type': dataType,
-                        'dataTbl': testingDataList, 'transMat': transMat,
-                        'trueRates': trueRates})
+    # Inspect testing data; check: (1) overall SFP rate, (2) plots, (3) N, Y matrices align more or less with
+    # statements from case-study section
+    priorMean, priorVar = -2.5, 3.5
+    numPostSamps = 1000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 
-
-
-
-
-
-
-    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    lgDict = util.testresultsfiletotable(testingDataList, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+
+
+
+
+    #np.savetxt("N_matrix.csv", lgDict['N'], delimiter=",")
+    #np.savetxt("Y_matrix.csv", lgDict['Y'], delimiter=",")
+
+    # NEED TO DO:
+    #   GROUP DISTRICTS INTO PROVINCES, RE-RUN
+    #   SEPARATE DISTRICTS INTO FACILITIES, RE-RUN
+    #
+
+
+    '''
     SNinds = lgDict['importerNames'].index('Mnfr. 5')
     print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
         np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
@@ -277,6 +274,6 @@ def generateSyntheticData():
                    'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+    '''
 
-
-return
+    return
