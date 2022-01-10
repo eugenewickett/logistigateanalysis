@@ -164,9 +164,9 @@ def generateSyntheticData():
     SN1ind = 3 # 40% SFP rate
     SN2ind = 10 # 25% SFP rate, major node
     SN3ind = 14 # 10% SFP rate, minor node
-    SN4ind = 22 # 30% SFP rate, minor node
+    SN4ind = 22 # 20% SFP rate, minor node
     SNtrueRates[SN1ind], SNtrueRates[SN2ind] = 0.4, 0.25
-    SNtrueRates[SN3ind], SNtrueRates[SN4ind] = 0.1, 0.3
+    SNtrueRates[SN3ind], SNtrueRates[SN4ind] = 0.1, 0.2
 
     trueRates[:numSN] = SNtrueRates # SN SFP rates
 
@@ -175,7 +175,7 @@ def generateSyntheticData():
     TN3inds = [3, 6, 8, 10, 16, 17, 24] # 3% sourced
     TN4inds = [0, 1, 9, 12, 18, 23] # 2% sourced
     TNsampProbs = [.01 for i in range(numTN)] # Update sampling probs
-    TNsampProbs[TN1ind] = 0.20
+    TNsampProbs[TN1ind] = 0.2
     for j in TN2inds:
         TNsampProbs[j] = 0.10
     for j in TN3inds:
@@ -191,7 +191,7 @@ def generateSyntheticData():
     TNtrueRates[TN3inds[1]] = 0.4
     trueRates[numSN:] = TNtrueRates # Put TN rates in main vector
 
-    rseed = 46
+    rseed = 47
     random.seed(rseed)
     np.random.seed(rseed+1)
     testingDataList = []
