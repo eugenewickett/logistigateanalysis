@@ -14,6 +14,7 @@ def generateSyntheticData():
     happens in the 2nd tier, as well as with a few select supply nodes.
 
     '''
+    '''
     import scipy.special as sps
     import numpy as np
     import os
@@ -36,7 +37,7 @@ def generateSyntheticData():
     tbl_sen3 = sen_df_2010[['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
     tbl_sen3 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_sen3]
 
-    '''Replace Senegal identities with generic names'''
+    #Replace Senegal identities with generic names
 
 
     import random
@@ -121,7 +122,7 @@ def generateSyntheticData():
         for ind, item in enumerate(tbl_sen3):
             if item[0] == currName:
                 tbl_sen3[ind][0] = newName
-
+    '''
 
 
 

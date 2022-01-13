@@ -5674,8 +5674,8 @@ def MQDdataScript():
     plt.close()
 
     # What does a good prior look like?
-    mean = -2.5
-    var = 3.5
+    mean = -4
+    var = 2
     s = np.random.laplace(mean, np.sqrt(var/2), 10000)
     t = np.exp(s) / (1 + np.exp(s))
     print(np.mean(t))
@@ -5693,6 +5693,277 @@ def MQDdataScript():
     int95 = sps.laplace.ppf(0.95, loc=mean, scale=np.sqrt(var / 2))
     int70 = sps.laplace.ppf(0.70, loc=mean, scale=np.sqrt(var / 2))
     print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int70), spsp.expit(int95))
+
+
+
+    # Generate samples for paper example in Section 3
+    lgDict = {}
+    priorMean, priorVar = -2, 1
+    int50 = sps.norm.ppf(0.50, loc=priorMean, scale=np.sqrt(priorVar))
+    int05 = sps.norm.ppf(0.05, loc=priorMean, scale=np.sqrt(priorVar))
+    int95 = sps.norm.ppf(0.95, loc=priorMean, scale=np.sqrt(priorVar))
+    int70 = sps.norm.ppf(0.70, loc=priorMean, scale=np.sqrt(priorVar))
+    print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int70), spsp.expit(int95))
+    Ntoy = np.array([[6, 11], [12, 6], [2, 13]])
+    Ytoy = np.array([[3, 0], [6, 0], [0, 0]])
+    TNnames, SNnames = ['Test Node 1', 'Test Node 2', 'Test Node 3'], ['Supply Node 1', 'Supply Node 2']
+    lgDict.update({'type':'Tracked', 'outletNum':3, 'importerNum':2, 'diagSens':1.0, 'diagSpec':1.0,
+                   'N':Ntoy, 'Y':Ytoy, 'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                   'outletNames':TNnames, 'importerNames':SNnames,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+    lowerQuant, upperQuant = 0.05, 0.95
+    priorLower = spsp.expit(sps.norm.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar)))
+    priorUpper = spsp.expit(sps.norm.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar)))
+    SNindsSubset = range(numSN)
+
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.2
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(5, 5), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nExample',
+              fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(11)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.2
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(5, 5), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nExample',
+              fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(11)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # TIMING ANALYSIS
+    import time
+
+    numPostSamps = 1000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+
+    # Look at difference in runtimes for HMC and LMC
+    times1 = []
+    times2 = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=50, numOut=50, diagSens=0.90,
+                             diagSpec=0.99, numSamples=50 * 20,
+                             dataType='Tracked', transMatLambda=1.1,
+                             randSeed=-1,trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        print(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        MCMCdict.update({'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4})
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime-startTime)
+        times1.append(endTime-startTime)
+        MCMCdict.update({'MCMCtype': 'Langevin'})
+        testSysDict.update({'MCMCdict': MCMCdict})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times2.append(endTime-startTime)
+    print(np.max(times1), np.min(times1), np.mean(times1))
+    print(np.max(times2), np.min(times2), np.mean(times2))
+    # Look at effect of more supply-chain traces
+    baseN = [346,318,332,331,361,348,351,321,334,341,322,328,315,307,341,333,331,344,334,323]
+    print(np.mean(baseN)/(50*50))
+    MCMCdict.update({'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4})
+    times3 = [] # Less supply-chain traces
+    lowerN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=50, numOut=50, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=0.5,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        lowerN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times3.append(endTime - startTime)
+    print(np.max(times3), np.min(times3), np.mean(times3))
+    print(np.average(lowerN)/(50*50))
+    times4 = [] # More supply-chain traces
+    upperN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=50, numOut=50, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=4.5,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        upperN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times4.append(endTime - startTime)
+    print(np.max(times4), np.min(times4), np.mean(times4))
+    print(np.average(upperN)/(50*50))
+    # Look at effect of less or more nodes
+    times5 = [] # Less nodes
+    upperN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=25, numOut=25, diagSens=0.90,
+                                                diagSpec=0.99, numSamples= 50 * 20,
+                                                dataType='Tracked', transMatLambda=1.1,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        upperN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times5.append(endTime - startTime)
+    print(np.max(times5), np.min(times5), np.mean(times5))
+    print(np.average(upperN)/(25*25))
+    times6 = []  # More nodes
+    upperN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=100, numOut=100, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=1.1,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        upperN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times6.append(endTime - startTime)
+    print(np.max(times6), np.min(times6), np.mean(times6))
+    print(np.average(upperN) / (100 * 100))
+
+
 
     ##### END OF MANUAL PLOT GENERATION #####
 
