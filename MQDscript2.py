@@ -5108,10 +5108,17 @@ def MQDdataScript():
     # print(shuf_LOCAT_lst)
     for i in range(len(shuf_LOCAT_lst)):
         currName = shuf_LOCAT_lst[i]
-        newName = 'Facil. Location ' + str(i+1)
+        newName = 'District ' + str(i+1)
         for ind, item in enumerate(tbl_SEN_G2_2010):
             if item[0] == currName:
                 tbl_SEN_G2_2010[ind][0] = newName
+    # Swap Districts 7 & 8
+    for ind, item in enumerate(tbl_SEN_G2_2010):
+        if item[0] == 'District 7':
+            tbl_SEN_G2_2010[ind][0] = 'District 8'
+        elif item[0] == 'District 8':
+            tbl_SEN_G2_2010[ind][0] = 'District 7'
+
     # Replace Facility Name
     orig_NAME_lst = ['CHR', 'CTA-Fann', 'Centre Hospitalier Regional de Thies', 'Centre de Sante Diourbel',
                      'Centre de Sante Mbacke', 'Centre de Sante Ousmane Ngom', 'Centre de Sante Roi Baudouin',
@@ -5197,6 +5204,126 @@ def MQDdataScript():
                    'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 1b: s=1.0, r=1.0, prior is normal(-2.5,3.5)
+    priorMean = -2.5
+    priorVar = 3.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior':  methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 7')
+    print('District 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 8')
+    print('District 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 1c: s=0.8, r=1.0, prior is normal(-2.5,3.5)
+    priorMean = -2.5
+    priorVar = 3.5
+    s, r = 0.8, 1.0
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar/2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 7')
+    print('District 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 8')
+    print('District 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    s, r = 1.0, 0.95
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 7')
+    print('District 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 8')
+    print('District 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
 
     # RUN 2: s=1.0, r=1.0, prior is laplace(-2.5,1.5)
     priorMean = -2.5
@@ -5399,10 +5526,10 @@ def MQDdataScript():
     plt.show()
     plt.close()
 
-    # Facility Location as TNs
+    # District as TNs; TRACKED
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
 
@@ -5450,20 +5577,20 @@ def MQDdataScript():
     # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
     SNnamesSorted.append(' ')
     SNnamesSorted.append('(Prior)')
-    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
     for _, upper, lower, name in sorted_pairs1:
         plt.plot((name, name), (lower, upper), 'o-', color='red')
     plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
     for _, upper, lower, name in sorted_pairs2:
-        plt.plot((name, name), (lower, upper), 'o-', color='orange')
-    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
     for _, upper, lower, name in sorted_pairs3:
-        plt.plot((name, name), (lower, upper), 'o-', color='green')
-    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
-    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
-    plt.title('Supply Node 90% Intervals\nManufacturer-Facility Location Analysis',
+    plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Tracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
@@ -5512,20 +5639,165 @@ def MQDdataScript():
     TNnamesSorted = TNnamesSorted + TNnamesSorted3
     TNnamesSorted.append(' ')
     TNnamesSorted.append('(Prior)')
-    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
     for _, upper, lower, name in sorted_pairs1:
         plt.plot((name, name), (lower, upper), 'o-', color='red')
     plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
     for _, upper, lower, name in sorted_pairs2:
-        plt.plot((name, name), (lower, upper), 'o-', color='orange')
-    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
     for _, upper, lower, name in sorted_pairs3:
-        plt.plot((name, name), (lower, upper), 'o-', color='green')
-    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
-    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
-    plt.title('Test Node 90% Intervals\nManufacturer-Facility Location Analysis',
+    plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Tracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # District as TNs; UNTRACKED
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
@@ -5674,8 +5946,8 @@ def MQDdataScript():
     plt.close()
 
     # What does a good prior look like?
-    mean = -4
-    var = 2
+    mean = -2.5
+    var = 1.5
     s = np.random.laplace(mean, np.sqrt(var/2), 10000)
     t = np.exp(s) / (1 + np.exp(s))
     print(np.mean(t))
@@ -5689,16 +5961,17 @@ def MQDdataScript():
     import scipy.stats as sps
     import scipy.special as spsp
     int50 = sps.laplace.ppf(0.50, loc=mean, scale=np.sqrt(var / 2))
-    int05 = sps.laplace.ppf(0.05, loc=mean, scale=np.sqrt(var/2))
+    int05 = sps.laplace.ppf(0.05, loc=mean, scale=np.sqrt(var / 2))
     int95 = sps.laplace.ppf(0.95, loc=mean, scale=np.sqrt(var / 2))
     int70 = sps.laplace.ppf(0.70, loc=mean, scale=np.sqrt(var / 2))
     print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int70), spsp.expit(int95))
+    print(spsp.expit(int05), spsp.expit(int95))
 
-
-
-    # Generate samples for paper example in Section 3
+    # Generate samples for paper example in Section 3, to be used in Section 5
     lgDict = {}
-    priorMean, priorVar = -2, 1
+    priorMean, priorVar = -2.5, 1
+    numPostSamps = 1000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     int50 = sps.norm.ppf(0.50, loc=priorMean, scale=np.sqrt(priorVar))
     int05 = sps.norm.ppf(0.05, loc=priorMean, scale=np.sqrt(priorVar))
     int95 = sps.norm.ppf(0.95, loc=priorMean, scale=np.sqrt(priorVar))
@@ -5781,6 +6054,8 @@ def MQDdataScript():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(11)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.3) # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.3) # line for 'u'
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5843,9 +6118,92 @@ def MQDdataScript():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(11)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.3)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.3)  # line for 'u'
     fig.tight_layout()
     plt.show()
     plt.close()
+
+    # COMBINED INTO ONE PLOT; FORMATTED FOR VERY PARTICULAR DATA SET, E.G., SKIPS HIGH RISK INTERVALS FOR TEST NODES
+
+    # Third group
+
+    # Combine groups
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+
+
+
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.2
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNmidpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNmidpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+
+
+    # Combine groups
+    namesSorted = SNnamesSorted1.copy()
+    namesSorted.append(' ')
+    namesSorted = namesSorted + TNnamesSorted2
+    namesSorted.append(' ')
+    namesSorted = namesSorted + TNnamesSorted3 + SNnamesSorted3
+    namesSorted.append(' ')
+    namesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(5, 5), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((namesSorted[-1], namesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(namesSorted)), namesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nExample',
+              fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(11)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.2)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.2)  # line for 'u'
+    fig.tight_layout()
+    plt.show()
+    plt.close(
 
     # TIMING ANALYSIS
     import time
