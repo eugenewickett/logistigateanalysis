@@ -5527,6 +5527,12 @@ def MQDdataScript():
     plt.close()
 
     # District as TNs; TRACKED
+    priorMean = -2.5
+    priorVar = 3.5
+    lowerQuant, upperQuant = 0.05, 0.95
+    priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+    priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
@@ -5597,6 +5603,10 @@ def MQDdataScript():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal+.015, 'l=0.05', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5659,6 +5669,10 @@ def MQDdataScript():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5742,6 +5756,10 @@ def MQDdataScript():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -5804,6 +5822,10 @@ def MQDdataScript():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -6125,17 +6147,6 @@ def MQDdataScript():
     plt.close()
 
     # COMBINED INTO ONE PLOT; FORMATTED FOR VERY PARTICULAR DATA SET, E.G., SKIPS HIGH RISK INTERVALS FOR TEST NODES
-
-    # Third group
-
-    # Combine groups
-    SNnamesSorted = SNnamesSorted + SNnamesSorted3
-
-
-
-    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
-    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
-    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
     floorVal = 0.05
     ceilVal = 0.2
     # First group
@@ -6159,17 +6170,24 @@ def MQDdataScript():
     TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
     TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
     TNmidpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
-    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    TNzippedList3 = zip(TNmidpoints3, TNuppers3, TNlowers3, TNnames3)
+    TNsorted_pairs3 = sorted(TNzippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in TNsorted_pairs3]
 
     SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
     SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
     SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
     SNmidpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
-    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    SNzippedList3 = zip(SNmidpoints3, SNuppers3, SNlowers3, SNnames3)
+    SNsorted_pairs3 = sorted(SNzippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in SNsorted_pairs3]
 
-    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    midpoints3 = TNmidpoints3 + SNmidpoints3
+    uppers3 = TNuppers3 + SNuppers3
+    lowers3 = TNlowers3 + SNlowers3
+    names3 = TNnames3 + SNnames3
+    zippedList3 = zip(midpoints3, uppers3, lowers3, names3)
     sorted_pairs3 = sorted(zippedList3, reverse=True)
-
 
     # Combine groups
     namesSorted = SNnamesSorted1.copy()
@@ -6192,18 +6210,20 @@ def MQDdataScript():
     plt.plot((namesSorted[-1], namesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
     plt.xticks(range(len(namesSorted)), namesSorted, rotation=90)
-    plt.title('Test Node 90% Intervals\nExample',
+    plt.title('Node 90% Intervals',
               fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('Test Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Interval value', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(11)
-    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.2)  # line for 'l'
-    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.2)  # line for 'u'
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(6.7, 0.215, 'u=0.20', color='blue', alpha=0.5)
+    plt.text(6.7, 0.065, 'l=0.05', color='r', alpha=0.5)
     fig.tight_layout()
     plt.show()
-    plt.close(
+    plt.close()
 
     # TIMING ANALYSIS
     import time
