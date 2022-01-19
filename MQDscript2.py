@@ -5991,7 +5991,7 @@ def MQDdataScript():
 
     # Generate samples for paper example in Section 3, to be used in Section 5
     lgDict = {}
-    priorMean, priorVar = -2.5, 1
+    priorMean, priorVar = -2, 1
     numPostSamps = 1000
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     int50 = sps.norm.ppf(0.50, loc=priorMean, scale=np.sqrt(priorVar))
