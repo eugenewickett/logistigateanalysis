@@ -6350,24 +6350,27 @@ def MQDdataScript():
 
     # Combine groups
     namesSorted = SNnamesSorted1.copy()
-    namesSorted.append(' ')
+    #namesSorted.append(' ')
     namesSorted = namesSorted + TNnamesSorted2
-    namesSorted.append(' ')
+    #namesSorted.append(' ')
     namesSorted = namesSorted + TNnamesSorted3 + SNnamesSorted3
     namesSorted.append(' ')
     namesSorted.append('(Prior)')
     fig, (ax) = plt.subplots(figsize=(5, 5), ncols=1)
     for _, upper, lower, name in sorted_pairs1:
-        plt.plot((name, name), (lower, upper), 'o-', color='red')
-    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+        #plt.plot((name, name), (lower, upper), 'o-', color='red')
+        plt.plot((name, name), (lower, upper), 'o-', color='blue')
+ #   plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
     for _, upper, lower, name in sorted_pairs2:
-        plt.plot((name, name), (lower, upper), 'o--', color='orange')
-    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+        #plt.plot((name, name), (lower, upper), 'o--', color='orange')
+        plt.plot((name, name), (lower, upper), 'o-', color='blue')
+    #plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
     for _, upper, lower, name in sorted_pairs3:
-        plt.plot((name, name), (lower, upper), 'o:', color='green')
+        #plt.plot((name, name), (lower, upper), 'o:', color='green')
+        plt.plot((name, name), (lower, upper), 'o-', color='blue')
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((namesSorted[-1], namesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
-    plt.ylim([0, 1])
+    plt.ylim([0, 0.6])
     plt.xticks(range(len(namesSorted)), namesSorted, rotation=90)
     plt.title('Node 90% Intervals',
               fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
@@ -6376,10 +6379,10 @@ def MQDdataScript():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         label.set_fontsize(11)
-    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
-    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(6.7, 0.215, 'u=0.20', color='blue', alpha=0.5)
-    plt.text(6.7, 0.065, 'l=0.05', color='r', alpha=0.5)
+    #plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    #plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    #plt.text(6.7, 0.215, 'u=0.20', color='blue', alpha=0.5)
+    #plt.text(6.7, 0.065, 'l=0.05', color='r', alpha=0.5)
     fig.tight_layout()
     plt.show()
     plt.close()
