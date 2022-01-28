@@ -6387,6 +6387,24 @@ def MQDdataScript():
     plt.show()
     plt.close()
 
+    # 90% CI VALUES USING NEWTON, 2009
+    for i in range(numSN):  # sum across TNs to see totals for SNs
+        currTotal = np.sum(lgDict['N'], axis=0)[i]
+        currPos = np.sum(lgDict['Y'], axis=0)[i]
+        pHat = currPos / currTotal
+        lowerBd = pHat - (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        upperBd = pHat + (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        print(lgDict['importerNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + ')')
+    # Test nodes
+    for i in range(numTN):  # sum across SNs to see totals for TNs
+        currTotal = np.sum(lgDict['N'], axis=1)[i]
+        currPos = np.sum(lgDict['Y'], axis=1)[i]
+        pHat = currPos / currTotal
+        lowerBd = pHat - (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        upperBd = pHat + (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        print(lgDict['outletNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + ')')
+
+
     # TIMING ANALYSIS
     import time
 
