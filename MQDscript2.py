@@ -6137,7 +6137,18 @@ def MQDdataScript():
     plt.show()
     plt.hist(t, density=True, bins=30)
     plt.show()
-    np.quantile(t,0.05)
+
+    mean = -2.5
+    var = 1.5
+    s = np.random.laplace(mean, np.sqrt(var / 2), 10000)
+    t = np.exp(s) / (1 + np.exp(s))
+    print(np.mean(t))
+    import matplotlib.pyplot as plt
+    plt.hist(s, density=True, bins=30)
+    plt.show()
+    plt.hist(t, density=True, bins=30)
+    plt.show()
+
 
     import scipy.stats as sps
     import scipy.special as spsp
