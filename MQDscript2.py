@@ -6140,10 +6140,9 @@ def MQDdataScript():
 
     mean = -2.5
     var = 1.5
-    s = np.random.laplace(mean, np.sqrt(var / 2), 10000)
+    s = np.random.normal(mean, np.sqrt(var), 10000)
     t = np.exp(s) / (1 + np.exp(s))
     print(np.mean(t))
-    import matplotlib.pyplot as plt
     plt.hist(s, density=True, bins=30)
     plt.show()
     plt.hist(t, density=True, bins=30)
