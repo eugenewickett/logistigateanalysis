@@ -8,6 +8,11 @@ each PMS data point.
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
 from logistigate.logistigate import lg
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.stats as sps
+import scipy.special as spsp
+import random
 
 
 def assignlabels(df, coltogroup, categorylist=[], thresh=90):
@@ -3545,6 +3550,2851 @@ outputFileName = os.path.join(filesPath, 'pickleOutput')
 pickle.dump(outputDict, open(outputFileName,'wb'))
 '''
 
+def SenegalDataScript():
+    '''
+    This script runs everything needed for the paper 'Inferring sources of substandard and falsified products in
+    pharmaceutical supply chains'.
+    '''
+    import os
+    import pickle
+    #import pandas as pd
+
+    SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+    filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
+    outputFileName = os.path.join(filesPath, 'pickleOutput')
+
+    openFile = open(outputFileName, 'rb')  # Read the file
+    dataDict = pickle.load(openFile)
+
+    numPostSamps = 1000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    meanSFPrate = dataDict['df_ALL'][dataDict['df_ALL']['Final_Test_Conclusion'] == 'Fail']['Sample_ID'].count() / \
+                  dataDict['df_ALL']['Sample_ID'].count()
+    priorMean = spsp.logit(meanSFPrate)  # Mean SFP rate of the MQDB data
+    priorVar = 1.416197468
+
+    SEN_df = dataDict['df_SEN']
+    # 7 unique Province_Name_GROUPED; 23 unique Facility_Location_GROUPED; 66 unique Facility_Name_GROUPED
+    # Remove 'Missing' and 'Unknown' labels
+    SEN_df_2010 = SEN_df[(SEN_df['Date_Received'] == '7/12/2010') & (SEN_df['Manufacturer_GROUPED'] != 'Unknown') & (
+                SEN_df['Facility_Location_GROUPED'] != 'Missing')].copy()
+    tbl_SEN_G1_2010 = SEN_df_2010[['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G1_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G1_2010]
+    tbl_SEN_G2_2010 = SEN_df_2010[['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G2_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G2_2010]
+    tbl_SEN_G3_2010 = SEN_df_2010[['Facility_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G3_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G3_2010]
+
+    # Print some overall summaries of the data
+    SEN_df_2010.pivot_table(index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'],
+                            aggfunc='size', fill_value=0)
+    SEN_df_2010.pivot_table(index=['Province_Name_GROUPED'], columns=['Final_Test_Conclusion'],
+                            aggfunc='size', fill_value=0)
+    SEN_df_2010.pivot_table(index=['Facility_Location_GROUPED'], columns=['Final_Test_Conclusion'],
+                            aggfunc='size', fill_value=0)
+    pivoted = SEN_df_2010.pivot_table(index=['Facility_Name_GROUPED'], columns=['Final_Test_Conclusion'],
+                                      aggfunc='size', fill_value=0)
+    # pivoted[:15]
+    # SEN_df_2010['Province_Name_GROUPED'].unique()
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack']) & SEN_df_2010[
+        'Final_Test_Conclusion'].isin(['Fail'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED', 'Final_Test_Conclusion'],
+        aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis']) & SEN_df_2010[
+        'Final_Test_Conclusion'].isin(['Fail'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Province_Name_GROUPED', 'Final_Test_Conclusion'],
+        aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack'])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis'])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine', 'Kedougou', 'Kaolack'])].pivot_table(
+        index=['Facility_Name_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar', 'Kaffrine'])].pivot_table(
+        index=['Facility_Name_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Matam', 'Kolda', 'Saint Louis'])].pivot_table(
+        index=['Facility_Name_GROUPED'], columns=['Province_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Facility_Name_GROUPED'].isin(['Hopitale Regionale de Koda',
+                                                           "Pharmacie Keneya"])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Facility_Name_GROUPED'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Province_Name_GROUPED'].isin(['Dakar'])].pivot_table(
+        index=['Facility_Location_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+    SEN_df_2010[SEN_df_2010['Facility_Location_GROUPED'].isin(['Tambacounda'])].pivot_table(
+        index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'], aggfunc='size', fill_value=0)
+
+    SEN_df_2010['Facility_Location_GROUPED'].count()
+
+    # DEIDENTIFICATION
+
+    # Replace Manufacturers
+    orig_MANUF_lst = ['Ajanta Pharma Limited', 'Aurobindo Pharmaceuticals Ltd', 'Bliss Gvis Pharma Ltd', 'Cipla Ltd',
+                      'Cupin', 'EGR pharm Ltd', 'El Nasr', 'Emcure Pharmaceuticals Ltd', 'Expharm',
+                      'F.Hoffmann-La Roche Ltd', 'Gracure Pharma Ltd', 'Hetdero Drugs Limited', 'Imex Health',
+                      'Innothera Chouzy', 'Ipca Laboratories', 'Lupin Limited', 'Macleods Pharmaceuticals Ltd',
+                      'Matrix Laboratories Limited', 'Medico Remedies Pvt Ltd', 'Mepha Ltd', 'Novartis', 'Odypharm Ltd',
+                      'Pfizer', 'Sanofi Aventis', 'Sanofi Synthelabo']
+    shuf_MANUF_lst = orig_MANUF_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_MANUF_lst)
+    # print(shuf_MANUF_lst)
+    for i in range(len(shuf_MANUF_lst)):
+        currName = shuf_MANUF_lst[i]
+        newName = 'Mnfr. ' + str(i + 1)
+        for ind, item in enumerate(tbl_SEN_G1_2010):
+            if item[1] == currName:
+                tbl_SEN_G1_2010[ind][1] = newName
+        for ind, item in enumerate(tbl_SEN_G2_2010):
+            if item[1] == currName:
+                tbl_SEN_G2_2010[ind][1] = newName
+        for ind, item in enumerate(tbl_SEN_G3_2010):
+            if item[1] == currName:
+                tbl_SEN_G3_2010[ind][1] = newName
+    # Replace Province
+    orig_PROV_lst = ['Dakar', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Matam', 'Saint Louis']
+    shuf_PROV_lst = orig_PROV_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_PROV_lst)
+    # print(shuf_PROV_lst)
+    for i in range(len(shuf_PROV_lst)):
+        currName = shuf_PROV_lst[i]
+        newName = 'Province ' + str(i + 1)
+        for ind, item in enumerate(tbl_SEN_G1_2010):
+            if item[0] == currName:
+                tbl_SEN_G1_2010[ind][0] = newName
+    # Replace Facility Location
+    orig_LOCAT_lst = ['Dioum', 'Diourbel', 'Fann- Dakar', 'Guediawaye', 'Hann', 'Kaffrine (City)', 'Kanel',
+                      'Kaolack (City)', 'Kebemer', 'Kedougou (City)', 'Kolda (City)', 'Koumpantoum', 'Matam (City)',
+                      'Mbour-Thies', 'Medina', 'Ouro-Sogui', 'Richard Toll', 'Rufisque-Dakar', 'Saint Louis (City)',
+                      'Tambacounda', 'Thies', 'Tivaoune', 'Velingara']
+    shuf_LOCAT_lst = orig_LOCAT_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_LOCAT_lst)
+    # print(shuf_LOCAT_lst)
+    for i in range(len(shuf_LOCAT_lst)):
+        currName = shuf_LOCAT_lst[i]
+        newName = 'District ' + str(i + 1)
+        for ind, item in enumerate(tbl_SEN_G2_2010):
+            if item[0] == currName:
+                tbl_SEN_G2_2010[ind][0] = newName
+    # Swap Districts 7 & 8
+    for ind, item in enumerate(tbl_SEN_G2_2010):
+        if item[0] == 'District 7':
+            tbl_SEN_G2_2010[ind][0] = 'District 8'
+        elif item[0] == 'District 8':
+            tbl_SEN_G2_2010[ind][0] = 'District 7'
+
+    # Replace Facility Name
+    orig_NAME_lst = ['CHR', 'CTA-Fann', 'Centre Hospitalier Regional de Thies', 'Centre de Sante Diourbel',
+                     'Centre de Sante Mbacke', 'Centre de Sante Ousmane Ngom', 'Centre de Sante Roi Baudouin',
+                     'Centre de Sante de Dioum', 'Centre de Sante de Kanel', 'Centre de Sante de Kedougou',
+                     'Centre de Sante de Kolda', 'Centre de Sante de Koumpantoum', 'Centre de Sante de Matam',
+                     'Centre de Sante de Richard Toll', 'Centre de Sante de Tambacounda',
+                     'Centre de Sante de Velingara',
+                     'Centre de Traitement de la Tuberculose de Touba', 'District Sanitaire Touba',
+                     'District Sanitaire de Mbour',
+                     'District Sanitaire de Rufisque', 'District Sanitaire de Tivaoune', 'District Sud',
+                     'Hopital Diourbel',
+                     'Hopital Regional de Saint Louis', 'Hopital Regionale de Ouro-Sogui', 'Hopital Touba',
+                     'Hopital de Dioum',
+                     'Hopitale Regionale de Koda', 'Hopitale Regionale de Tambacounda', 'PNA', 'PRA', 'PRA Diourbel',
+                     'PRA Thies',
+                     'Pharmacie', 'Pharmacie Awa Barry', 'Pharmacie Babacar Sy', 'Pharmacie Boubakh',
+                     'Pharmacie Ceikh Ousmane Mbacke', 'Pharmacie Centrale Dr A.C.', "Pharmacie Chateau d'Eau",
+                     'Pharmacie Cheikh Tidiane', 'Pharmacie El Hadj Omar Tall', 'Pharmacie Fouladou',
+                     'Pharmacie Kancisse',
+                     'Pharmacie Keneya', 'Pharmacie Kolda', 'Pharmacie Koldoise',
+                     'Pharmacie Mame Diarra Bousso Dr Y.D.D.',
+                     'Pharmacie Mame Fatou Diop Yoro', 'Pharmacie Mame Ibrahima Ndour Dr A.N.', 'Pharmacie Mame Madia',
+                     'Pharmacie Ndamatou Dr O.N.', 'Pharmacie Oriantale', 'Pharmacie Oumou Khairy Ndiaye',
+                     'Pharmacie Ousmane',
+                     "Pharmacie Regionale d' Approvisionnement de Saint Louis", 'Pharmacie Saloum', 'Pharmacie Sogui',
+                     'Pharmacie Teddungal', 'Pharmacie Thiala', 'Pharmacie Thierno Mouhamadou Seydou Ba',
+                     'Pharmacie Touba Mosque Dr A.M.K.', 'Pharmacie Ya Salam', 'Pharmacie du Baool Dr El-B.C.',
+                     'Pharmacie du Fleuve', 'Pharmacie du Marche']
+    shuf_NAME_lst = orig_NAME_lst.copy()
+    random.seed(333)
+    random.shuffle(shuf_NAME_lst)
+    # print(shuf_NAME_lst)
+    for i in range(len(shuf_NAME_lst)):
+        currName = shuf_NAME_lst[i]
+        newName = 'Facility ' + str(i + 1)
+        for ind, item in enumerate(tbl_SEN_G3_2010):
+            if item[0] == currName:
+                tbl_SEN_G3_2010[ind][0] = newName
+
+    # RUN 1: s=1.0, r=1.0, prior is laplace(-2.5,3.5)
+    priorMean = -2.5
+    priorVar = 3.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 1b: s=1.0, r=1.0, prior is normal(-2.5,3.5)
+    priorMean = -2.5
+    priorVar = 3.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 7')
+    print('District 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 8')
+    print('District 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 1c: s=0.8, r=1.0, prior is normal(-2.5,3.5)
+    priorMean = -2.5
+    priorVar = 3.5
+    s, r = 0.8, 1.0
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 7')
+    print('District 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 8')
+    print('District 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    s, r = 1.0, 0.95
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 7')
+    print('District 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('District 8')
+    print('District 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    # RUN 2: s=1.0, r=1.0, prior is laplace(-2.5,1.5)
+    priorMean = -2.5
+    priorVar = 1.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    ##### USE THIS RUN TO GENERATE PLOTS #####
+    priorMean = -2.5
+    priorVar = 3.5
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    lowerQuant, upperQuant = 0.05, 0.95
+    priorSamps = lgDict['prior'].expitrand(5000)
+    # priorLower, priorUpper = np.quantile(priorSamps, lowerQuant), np.quantile(priorSamps, upperQuant)
+    priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+    priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nManufacturer-Province Analysis',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nManufacturer-Province Analysis',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # District as TNs; TRACKED
+    priorMean = -2.5
+    priorVar = 3.5
+    lowerQuant, upperQuant = 0.05, 0.95
+    priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+    priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Tracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Tracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # District as TNs; UNTRACKED
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # District as TNs; UNTRACKED; what if Q looked different?
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    random.seed(31)
+    for i, Nrow in enumerate(lgDict['N']):
+        tempRow = Nrow / np.sum(Nrow)
+        random.shuffle(tempRow)
+        Q[i] = tempRow
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # District as TNs; UNTRACKED; what if Q looked different? USE BOOTSTRAP SAMPLES FOR ESTIMATES OF Q
+    priorMean, priorVar = -2.5, 3.5
+    lowerQuant, upperQuant = 0.05, 0.95
+    btlowerQuant, btupperQuant = 0.05, 0.95
+    priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+    priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+
+    # First get posterior draws from original Q estimate for later comparison
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    origpostdraws = lgDict['postSamples']
+
+    # Now use bootstrapped Q estimates
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    outNum, impNum = lgDict['N'].shape
+    # Update N and Y
+    Nmat = lgDict['N']
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'importerNum': impNum, 'outletNum': outNum})
+    # Initialize empty Q
+    Q = np.zeros(shape=(outNum, impNum))
+    random.seed(313)  # Set a seed
+    btuppers, btlowers = [], []
+    for rep in range(100):  # SET BOOTSTRAP REPLICATIONS HERE
+        print('Bootstrap sample: '+str(rep)+'...')
+        # Every row needs at least one observation; add 1 for each row first before bootstrap (23 total)
+        for rw in range(Q.shape[0]):
+            currProbs = Nmat[rw] / np.sum(Nmat[rw])
+            Q[rw, random.choices(range(Q.shape[1]), currProbs)] += 1  # Add one to the chosen element
+        # Now pull bootstrap samples
+        for btsamp in range(len(lgDict['dataTbl']) - Q.shape[
+            0]):  # Pull samples equal to number of data points in original data set
+            currSamp = random.choices(lgDict['dataTbl'])[0]
+            rw, col = lgDict['outletNames'].index(currSamp[0]), lgDict['importerNames'].index(currSamp[1])
+            Q[rw, col] += 1
+        # Normalize
+        for ind, rw in enumerate(Q):
+            newrw = rw / np.sum(rw)
+            Q[ind] = newrw
+        # Generate posterior draws using this bootstrapped Q
+        lgDict.update({'transMat': Q})
+        lgDict = methods.GeneratePostSamples(lgDict) # Overwrites any old samples
+        # Grab 90% upper and lower bounds for each node
+        currpostdraws = lgDict['postSamples']
+        newuppers = [np.quantile(currpostdraws[:, i], upperQuant) for i in range(impNum + outNum)]
+        newlowers = [np.quantile(currpostdraws[:, i], lowerQuant) for i in range(impNum + outNum)]
+        btuppers.append(newuppers)
+        btlowers.append(newlowers)
+
+    btuppers = np.array(btuppers)
+    btlowers = np.array(btlowers)
+    # Generate plots that show the range of inference when using the bootstrap samples
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(origpostdraws[:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(origpostdraws[:, l], upperQuant) for l in SNindsSubset]
+    # Bootstrap ranges
+    SNlowers_bthigh = [np.quantile(btlowers[:, l], btupperQuant) for l in SNindsSubset]
+    SNlowers_btlow = [np.quantile(btlowers[:, l], btlowerQuant) for l in SNindsSubset]
+    SNuppers_bthigh = [np.quantile(btuppers[:, l], btupperQuant) for l in SNindsSubset]
+    SNuppers_btlow = [np.quantile(btuppers[:, l], btlowerQuant) for l in SNindsSubset]
+
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals w/ Bounds from 100 Bootstrap Samples\nManufacturer-District Analysis, Untracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    # Put in bootstrap upper and lower intervals
+    SNnames_bt = SNnamesSorted1 + SNnamesSorted2 + SNnamesSorted3
+    btuppers_high_sorted = [SNuppers_bthigh[SNnames.index(nm)] for nm in SNnames_bt]
+    btuppers_low_sorted = [SNuppers_btlow[SNnames.index(nm)] for nm in SNnames_bt]
+    btlowers_high_sorted = [SNlowers_bthigh[SNnames.index(nm)] for nm in SNnames_bt]
+    btlowers_low_sorted = [SNlowers_btlow[SNnames.index(nm)] for nm in SNnames_bt]
+    for ind, nm in enumerate(SNnames_bt):
+        plt.plot((nm, nm), (btuppers_low_sorted[ind], btuppers_high_sorted[ind]), '_-',
+                 color='k',alpha=0.3)
+    for ind, nm in enumerate(SNnames_bt):
+        plt.plot((nm, nm), (btlowers_low_sorted[ind], btlowers_high_sorted[ind]), '_-',
+                 color='k', alpha=0.3)
+    ###
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(origpostdraws[:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(origpostdraws[:, numSN + l], upperQuant) for l in TNindsSubset]
+    # Bootstrap ranges
+    TNlowers_bthigh = [np.quantile(btlowers[:, numSN + l], btupperQuant) for l in TNindsSubset]
+    TNlowers_btlow = [np.quantile(btlowers[:, numSN + l], btlowerQuant) for l in TNindsSubset]
+    TNuppers_bthigh = [np.quantile(btuppers[:, numSN + l], btupperQuant) for l in TNindsSubset]
+    TNuppers_btlow = [np.quantile(btuppers[:, numSN + l], btlowerQuant) for l in TNindsSubset]
+
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals w/ Bounds from 100 Bootstrap Samples\nManufacturer-District Analysis, Untracked Setting',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    # Put in bootstrap upper and lower intervals
+    TNnames_bt = TNnamesSorted1 + TNnamesSorted2 + TNnamesSorted3
+    btuppers_high_sorted = [TNuppers_bthigh[TNnames.index(nm)] for nm in TNnames_bt]
+    btuppers_low_sorted = [TNuppers_btlow[TNnames.index(nm)] for nm in TNnames_bt]
+    btlowers_high_sorted = [TNlowers_bthigh[TNnames.index(nm)] for nm in TNnames_bt]
+    btlowers_low_sorted = [TNlowers_btlow[TNnames.index(nm)] for nm in TNnames_bt]
+    for ind, nm in enumerate(TNnames_bt):
+        plt.plot((nm, nm), (btuppers_low_sorted[ind], btuppers_high_sorted[ind]), '_-',
+                 color='k', alpha=0.3)
+    for ind, nm in enumerate(TNnames_bt):
+        plt.plot((nm, nm), (btlowers_low_sorted[ind], btlowers_high_sorted[ind]), '_-',
+                 color='k', alpha=0.3)
+    ###
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+
+
+
+
+    #########################
+    #########################
+    # Facility Location as TNs
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nManufacturer-Facility Analysis',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 10), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o-', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o-', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o-', color='red')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o--', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nManufacturer-Facility Analysis',
+              fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(9)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # What does a good prior look like?
+    mean = -2.5
+    var = 1.5
+    s = np.random.laplace(mean, np.sqrt(var / 2), 10000)
+    t = np.exp(s) / (1 + np.exp(s))
+    print(np.mean(t))
+    import matplotlib.pyplot as plt
+    plt.hist(s, density=True, bins=30)
+    plt.show()
+    plt.hist(t, density=True, bins=30)
+    plt.show()
+
+    mean = -2.5
+    var = 1.5
+    s = np.random.normal(mean, np.sqrt(var), 10000)
+    t = np.exp(s) / (1 + np.exp(s))
+    print(np.mean(t))
+    plt.hist(s, density=True, bins=30)
+    plt.show()
+    plt.hist(t, density=True, bins=30)
+    plt.show()
+
+    import scipy.stats as sps
+    import scipy.special as spsp
+    int50 = sps.laplace.ppf(0.50, loc=mean, scale=np.sqrt(var / 2))
+    int05 = sps.laplace.ppf(0.05, loc=mean, scale=np.sqrt(var / 2))
+    int95 = sps.laplace.ppf(0.95, loc=mean, scale=np.sqrt(var / 2))
+    int70 = sps.laplace.ppf(0.70, loc=mean, scale=np.sqrt(var / 2))
+    print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int70), spsp.expit(int95))
+    print(spsp.expit(int05), spsp.expit(int95))
+
+    # Generate samples for paper example in Section 3, to be used in Section 5
+    lgDict = {}
+    priorMean, priorVar = -2, 1
+    numPostSamps = 1000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    int50 = sps.norm.ppf(0.50, loc=priorMean, scale=np.sqrt(priorVar))
+    int05 = sps.norm.ppf(0.05, loc=priorMean, scale=np.sqrt(priorVar))
+    int95 = sps.norm.ppf(0.95, loc=priorMean, scale=np.sqrt(priorVar))
+    int70 = sps.norm.ppf(0.70, loc=priorMean, scale=np.sqrt(priorVar))
+    print(spsp.expit(int05), spsp.expit(int50), spsp.expit(int70), spsp.expit(int95))
+    Ntoy = np.array([[6, 11], [12, 6], [2, 13]])
+    Ytoy = np.array([[3, 0], [6, 0], [0, 0]])
+    TNnames, SNnames = ['Test Node 1', 'Test Node 2', 'Test Node 3'], ['Supply Node 1', 'Supply Node 2']
+    lgDict.update({'type': 'Tracked', 'outletNum': 3, 'importerNum': 2, 'diagSens': 1.0, 'diagSpec': 1.0,
+                   'N': Ntoy, 'Y': Ytoy, 'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                   'outletNames': TNnames, 'importerNames': SNnames,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+    lowerQuant, upperQuant = 0.05, 0.95
+    priorLower = spsp.expit(sps.norm.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar)))
+    priorUpper = spsp.expit(sps.norm.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar)))
+    SNindsSubset = range(numSN)
+
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.2
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(5, 5), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title('Supply Node 90% Intervals\nExample',
+              fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(11)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.3)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.3)  # line for 'u'
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
+    floorVal = 0.05
+    ceilVal = 0.2
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(5, 5), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title('Test Node 90% Intervals\nExample',
+              fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(11)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.3)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.3)  # line for 'u'
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # COMBINED INTO ONE PLOT; FORMATTED FOR VERY PARTICULAR DATA SET, E.G., SKIPS HIGH RISK INTERVALS FOR TEST NODES
+    floorVal = 0.05
+    ceilVal = 0.2
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNmidpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    TNzippedList3 = zip(TNmidpoints3, TNuppers3, TNlowers3, TNnames3)
+    TNsorted_pairs3 = sorted(TNzippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in TNsorted_pairs3]
+
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNmidpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    SNzippedList3 = zip(SNmidpoints3, SNuppers3, SNlowers3, SNnames3)
+    SNsorted_pairs3 = sorted(SNzippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in SNsorted_pairs3]
+
+    midpoints3 = TNmidpoints3 + SNmidpoints3
+    uppers3 = TNuppers3 + SNuppers3
+    lowers3 = TNlowers3 + SNlowers3
+    names3 = TNnames3 + SNnames3
+    zippedList3 = zip(midpoints3, uppers3, lowers3, names3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+
+    # Combine groups
+    namesSorted = SNnamesSorted1.copy()
+    # namesSorted.append(' ')
+    namesSorted = namesSorted + TNnamesSorted2
+    # namesSorted.append(' ')
+    namesSorted = namesSorted + TNnamesSorted3 + SNnamesSorted3
+    namesSorted.append(' ')
+    namesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(5, 5), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        # plt.plot((name, name), (lower, upper), 'o-', color='red')
+        plt.plot((name, name), (lower, upper), 'o-', color='blue')
+    #   plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        # plt.plot((name, name), (lower, upper), 'o--', color='orange')
+        plt.plot((name, name), (lower, upper), 'o-', color='blue')
+    # plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        # plt.plot((name, name), (lower, upper), 'o:', color='green')
+        plt.plot((name, name), (lower, upper), 'o-', color='blue')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((namesSorted[-1], namesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 0.6])
+    plt.xticks(range(len(namesSorted)), namesSorted, rotation=90)
+    plt.title('Node 90% Intervals',
+              fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Node Name', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(11)
+    # plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    # plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    # plt.text(6.7, 0.215, 'u=0.20', color='blue', alpha=0.5)
+    # plt.text(6.7, 0.065, 'l=0.05', color='r', alpha=0.5)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    # 90% CI VALUES USING NEWTON, 2009
+    for i in range(numSN):  # sum across TNs to see totals for SNs
+        currTotal = np.sum(lgDict['N'], axis=0)[i]
+        currPos = np.sum(lgDict['Y'], axis=0)[i]
+        pHat = currPos / currTotal
+        lowerBd = pHat - (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        upperBd = pHat + (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        print(lgDict['importerNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + ')')
+    # Test nodes
+    for i in range(numTN):  # sum across SNs to see totals for TNs
+        currTotal = np.sum(lgDict['N'], axis=1)[i]
+        currPos = np.sum(lgDict['Y'], axis=1)[i]
+        pHat = currPos / currTotal
+        lowerBd = pHat - (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        upperBd = pHat + (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
+        print(lgDict['outletNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + ')')
+
+    # TIMING ANALYSIS
+    import time
+
+    numPostSamps = 1000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+
+    # Look at difference in runtimes for HMC and LMC
+    times1 = []
+    times2 = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=50, numOut=50, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=1.1,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        print(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        MCMCdict.update({'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4})
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times1.append(endTime - startTime)
+        MCMCdict.update({'MCMCtype': 'Langevin'})
+        testSysDict.update({'MCMCdict': MCMCdict})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times2.append(endTime - startTime)
+    print(np.max(times1), np.min(times1), np.mean(times1))
+    print(np.max(times2), np.min(times2), np.mean(times2))
+    # Look at effect of more supply-chain traces
+    baseN = [346, 318, 332, 331, 361, 348, 351, 321, 334, 341, 322, 328, 315, 307, 341, 333, 331, 344, 334, 323]
+    print(np.mean(baseN) / (50 * 50))
+    MCMCdict.update({'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4})
+    times3 = []  # Less supply-chain traces
+    lowerN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=50, numOut=50, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=0.5,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        lowerN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times3.append(endTime - startTime)
+    print(np.max(times3), np.min(times3), np.mean(times3))
+    print(np.average(lowerN) / (50 * 50))
+    times4 = []  # More supply-chain traces
+    upperN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=50, numOut=50, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=4.5,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        upperN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times4.append(endTime - startTime)
+    print(np.max(times4), np.min(times4), np.mean(times4))
+    print(np.average(upperN) / (50 * 50))
+    # Look at effect of less or more nodes
+    times5 = []  # Less nodes
+    upperN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=25, numOut=25, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=1.1,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        upperN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times5.append(endTime - startTime)
+    print(np.max(times5), np.min(times5), np.mean(times5))
+    print(np.average(upperN) / (25 * 25))
+    times6 = []  # More nodes
+    upperN = []
+    for runs in range(20):
+        testSysDict = util.generateRandDataDict(numImp=100, numOut=100, diagSens=0.90,
+                                                diagSpec=0.99, numSamples=50 * 20,
+                                                dataType='Tracked', transMatLambda=1.1,
+                                                randSeed=-1, trueRates=[])
+        testSysDict = util.GetVectorForms(testSysDict)
+        upperN.append(np.count_nonzero(testSysDict['N']))
+        priorMean, priorVar = -2.4, 1
+        testSysDict.update({'numPostSamples': numPostSamps, 'MCMCdict': MCMCdict,
+                            'prior': methods.prior_normal(mu=priorMean, var=priorVar)})
+        startTime = time.time()
+        testSysDict = methods.GeneratePostSamples(testSysDict)
+        endTime = time.time()
+        print(endTime - startTime)
+        times6.append(endTime - startTime)
+    print(np.max(times6), np.min(times6), np.mean(times6))
+    print(np.average(upperN) / (100 * 100))
+
+    ##### END OF MANUAL PLOT GENERATION #####
+
+    # RUN 3: s=1.0, r=1.0, prior is laplace(-3.5, 3.5)
+    priorMean = -3.5
+    priorVar = 3.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 4: s=1.0, r=1.0, prior is laplace(-3.5, 1.5)
+    priorMean = -3.5
+    priorVar = 1.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    import numpy as np
+
+    # RUN 5: s=1.0, r=1.0, prior is laplace(-2.5, 3.5 ) ; UNTRACKED
+    priorMean = -2.5
+    priorVar = 3.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 6: s=1.0, r=1.0, prior is laplace(-2.5, 1.5 ) ; UNTRACKED
+    priorMean = -2.5
+    priorVar = 1.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 7: s=1.0, r=1.0, prior is laplace(-2.5, 1.5 ) ; UNTRACKED
+    priorMean = -3.5
+    priorVar = 3.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 8: s=1.0, r=1.0, prior is laplace(-2.5, 1.5 ) ; UNTRACKED
+    priorMean = -3.5
+    priorVar = 1.5
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 9: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP
+    priorMean = -2.5
+    priorVar = 3.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 10: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP, with 5 times the variance
+    priorMean = -2.5
+    priorVar = 1.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 11: s=0.8, r=0.95, prior is Ozawa Africa countries with n>=150
+    priorMean = -3.5
+    priorVar = 3.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 12: s=0.8, r=0.95, prior is Ozawa Africa countries with n>=150, with 5 times the variance
+    priorMean = -3.5
+    priorVar = 1.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    import numpy as np
+
+    # RUN 13: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP; UNTRACKED
+    priorMean = -2.5
+    priorVar = 3.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 14: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP, with 5 times the variance; UNTRACKED
+    priorMean = -2.5
+    priorVar = 1.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 15: s=0.8, r=0.95, prior is Ozawa Africa studies w n>=150; UNTRACKED
+    priorMean = -3.5
+    priorVar = 3.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # RUN 16: s=0.8, r=0.95, prior is MQDB countries with at least 1 SFP; UNTRACKED
+    priorMean = -3.5
+    priorVar = 1.5
+    s, r = 0.8, 0.95
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Province', '\nSenegal - Province'])
+    SNinds = lgDict['importerNames'].index('Mnfr. 5')
+    print('Manufacturer 5: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 8')
+    print('Manufacturer 8: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Mnfr. 10')
+    print('Manufacturer 10: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Province 2')
+    print('Province 2: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                            :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    # util.plotPostSamples(lgDict, 'int90',
+    #                     subTitleStr=['\nSenegal - Facility Location', '\nSenegal - Facility Location'])
+    TNinds = lgDict['outletNames'].index('Facil. Location 7')
+    print('Facility Location 7: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Facil. Location 8')
+    print('Facility Location 8: (' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                                     :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': s, 'diagSpec': r, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal - Facility Name', '\nSenegal - Facility Name'])
+
+    # Rerun the 2010 data using untracked data; use N to estimate a sourcing probability matrix, Q
+    import numpy as np
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
+    SNinds = lgDict['importerNames'].index('Aurobindo Pharmaceuticals Ltd')
+    print('Aurobindo Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
+    print('Macleods Pharmaceuticals Ltd: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    SNinds = lgDict['importerNames'].index('Lupin Limited')
+    print('Lupin Limited: (' + str(np.quantile(lgDict['postSamples'][:, SNinds], 0.05))[:5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, SNinds], 0.95))[:5] + ')')
+    TNinds = lgDict['outletNames'].index('Dakar')
+    print('Dakar: (' + str(np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.05))[
+                       :5] + ',' + str(
+        np.quantile(lgDict['postSamples'][:, len(lgDict['importerNames']) + TNinds], 0.95))[:5] + ')')
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # np.count_nonzero(Q)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal [Untracked] - Facility Location',
+                                                       '\nSenegal [Untracked] - Facility Location'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nSenegal [Untracked] - Facility Name',
+                                                       '\nSenegal [Untracked] - Facility Name'])
+
+    # Rerun the 2010 data using untracked data; use N to estimate a sourcing probability matrix, Q, and add a
+    # "flattening" parameter to Q to make the sourcing probabilities less sharp
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Add a constant across Q
+    flatParam = 0.05
+    Q = Q + flatParam
+    for i, Qrow in enumerate(Q):
+        Q[i] = Qrow / np.sum(Qrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Add a constant across Q
+    flatParam = 0.01
+    Q = Q + flatParam
+    for i, Qrow in enumerate(Q):
+        Q[i] = Qrow / np.sum(Qrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    Q = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Q[i] = Nrow / np.sum(Nrow)
+    # Add a constant across Q
+    flatParam = 0.02
+    Q = Q + flatParam
+    for i, Qrow in enumerate(Q):
+        Q[i] = Qrow / np.sum(Qrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict,
+                   'transMat': Q, 'importerNum': Q.shape[1], 'outletNum': Q.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [Untracked] - Province', '\nSenegal [Untracked] - Province'])
+
+
+
+
+
+    # Rerun 2010 data using different testing tool accuracy
+    newSens, newSpec = 0.8, 0.95
+    # newSens, newSpec = 0.6, 0.9
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    subTitle = '\nSenegal [s=' + str(newSens) + ',r=' + str(newSpec) + '] - Province'
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[subTitle, subTitle])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    subTitle = '\nSenegal [s=' + str(newSens) + ',r=' + str(newSpec) + '] - Facility Location'
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[subTitle, subTitle])
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': newSens, 'diagSpec': newSpec, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    subTitle = '\nSenegal [s=' + str(newSens) + ',r=' + str(newSpec) + '] - Facility Name'
+    util.plotPostSamples(lgDict, 'int90', subTitleStr=[subTitle, subTitle])
+
+    # Look at sensitivity to prior selection
+    priorMean, priorVar = -0.7, 2  # 0.7,2 is from Ozawa Africa SFP studies with n>149 samples
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
+    macleodInd = lgDict['importerNames'].index('Macleods Pharmaceuticals Ltd')
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.05)
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.95)
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.05)
+    np.quantile(lgDict['postSamples'][:, macleodInd], 0.95)
+
+    priorMean, priorVar = -2., 5.
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
+
+    priorMean, priorVar = -1., 5.
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
+
+    priorMean, priorVar = -1., -1.
+
+    lgDict = util.testresultsfiletotable(tbl_SEN_G1_2010, csvName=False)
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_normal(mu=priorMean, var=priorVar), 'MCMCdict': MCMCdict})
+    lgDict = lg.runlogistigate(lgDict)
+    util.plotPostSamples(lgDict, 'int90',
+                         subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
+                                      '\nSenegal [mu=-2,var=1] - Province'])
+
+    return
+
 def MQDdataScript():
     '''Script looking at the MQD data'''
     import scipy.special as sps
@@ -4732,7 +7582,7 @@ def MQDdataScript():
     #####                           2010 SENEGAL DATA                           #####
     #########################   #########################   #########################
     # Breaking Senegal data into 2009 and 2010 data
-    import pandas as pd
+    #import pandas as pd
     SEN_df = dataDict['df_SEN']
     SEN_df_2009 = SEN_df[SEN_df['Date_Received'] == '6/1/2009']
     SEN_df_2010 = SEN_df[SEN_df['Date_Received'] == '7/12/2010']
@@ -5985,9 +8835,6 @@ def MQDdataScript():
     fig.tight_layout()
     plt.show()
     plt.close()
-
-
-
 
     # Facility Location as TNs
     lgDict = util.testresultsfiletotable(tbl_SEN_G3_2010, csvName=False)
