@@ -4245,6 +4245,14 @@ def SenegalDataScript():
     plt.close()
 
     # District as TNs; UNTRACKED
+    priorMean = -2.5
+    priorVar = 3.5
+    lowerQuant, upperQuant = 0.05, 0.95
+    priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+    priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
+    numPostSamps = 200000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 50000, 'delta': 0.4}
+
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     Q = lgDict['N'].copy()  # Generate Q
     for i, Nrow in enumerate(lgDict['N']):
