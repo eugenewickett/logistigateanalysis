@@ -10,6 +10,7 @@ from logistigate.logistigate import methods
 from logistigate.logistigate import lg
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import scipy.stats as sps
 import scipy.special as spsp
 import random
@@ -4094,6 +4095,8 @@ def SenegalDataScript():
     plt.close()
 
     # District as TNs; TRACKED
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    numPostSamps = 1000
     priorMean = -2.5
     priorVar = 3.5
     lowerQuant, upperQuant = 0.05, 0.95
@@ -4162,6 +4165,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
     plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Tracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4172,8 +4176,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(26.3, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -4228,6 +4232,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
     plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Tracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4238,8 +4243,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(24.4, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -4250,8 +4255,8 @@ def SenegalDataScript():
     lowerQuant, upperQuant = 0.05, 0.95
     priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
     priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=np.sqrt(priorVar / 2)))
-    numPostSamps = 200000
-    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 50000, 'delta': 0.4}
+    numPostSamps = 5000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 
     lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
     Q = lgDict['N'].copy()  # Generate Q
@@ -4323,6 +4328,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
     plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4333,8 +4339,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(26.3, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -4389,6 +4395,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
     plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4399,8 +4406,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(24.4, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -4479,6 +4486,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
     plt.title('Supply Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4489,8 +4497,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(26.3, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -4545,6 +4553,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
     plt.title('Test Node 90% Intervals\nManufacturer-District Analysis, Untracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4555,8 +4564,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(24.4, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -4691,6 +4700,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
     plt.title('Supply Node 90% Intervals w/ Bounds from 100 Bootstrap Samples\nManufacturer-District Analysis, Untracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4701,8 +4711,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(26.3, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(26.3, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(26.3, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     # Put in bootstrap upper and lower intervals
     SNnames_bt = SNnamesSorted1 + SNnamesSorted2 + SNnamesSorted3
     btuppers_high_sorted = [SNuppers_bthigh[SNnames.index(nm)] for nm in SNnames_bt]
@@ -4776,6 +4786,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
     plt.title('Test Node 90% Intervals w/ Bounds from 100 Bootstrap Samples\nManufacturer-District Analysis, Untracked Setting',
               fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
@@ -4786,8 +4797,8 @@ def SenegalDataScript():
         label.set_fontsize(12)
     plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
     plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
-    plt.text(24.4, ceilVal + .015, 'u=0.30', color='blue', alpha=0.5, size=9)
-    plt.text(24.4, floorVal + .015, 'l=0.05', color='r', alpha=0.5, size=9)
+    plt.text(24.4, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(24.4, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
     # Put in bootstrap upper and lower intervals
     TNnames_bt = TNnamesSorted1 + TNnamesSorted2 + TNnamesSorted3
     btuppers_high_sorted = [TNuppers_bthigh[TNnames.index(nm)] for nm in TNnames_bt]
@@ -5058,6 +5069,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
     plt.title('Supply Node 90% Intervals\nExample',
               fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
@@ -5202,6 +5214,7 @@ def SenegalDataScript():
     plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
     plt.plot((namesSorted[-1], namesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
     plt.ylim([0, 0.6])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.xticks(range(len(namesSorted)), namesSorted, rotation=90)
     plt.title('Node 90% Intervals',
               fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
@@ -9259,7 +9272,7 @@ def MQDdataScript():
         pHat = currPos / currTotal
         lowerBd = pHat - (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
         upperBd = pHat + (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
-        print(lgDict['importerNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + ')')
+        print(lgDict['importerNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + '), ' + str(currPos) + '/'+str(currTotal))
     # Test nodes
     for i in range(numTN):  # sum across SNs to see totals for TNs
         currTotal = np.sum(lgDict['N'], axis=1)[i]
@@ -9267,7 +9280,7 @@ def MQDdataScript():
         pHat = currPos / currTotal
         lowerBd = pHat - (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
         upperBd = pHat + (1.645 * np.sqrt(pHat * (1 - pHat) / currTotal))
-        print(lgDict['outletNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + ')')
+        print(lgDict['outletNames'][i] + ': (' + str(lowerBd)[:5] + ', ' + str(upperBd)[:5] + '), ' + str(currPos) + '/'+ str(currTotal))
 
 
     # TIMING ANALYSIS
