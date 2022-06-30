@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Script that generates and analyzes a synthetic set of PMS data. These data differ from the data used in the paper but
-capture the important elements of what is presented in the paper.
+Script that generates and analyzes a synthetic set of PMS data, akin to the substance of "Inferring sources of
+substandard and falsified products in pharmaceutical supply chains." These data differ from the data used in the paper
+but capture the important elements of what is presented in the paper.
 Inference generation requires use of the logistigate package, available at https://logistigate.readthedocs.io/en/main/.
 Running the generateSyntheticData() function generates Figures 2, 3, and 4, as well as the interval widths for Tables
 1 and 2, that are analagous to the items produced using the de-identified data.
@@ -21,6 +22,7 @@ def generateSyntheticData():
     Use a generated sourcing-probability matrix to produce 500 samples under specified random seeds
     '''
     import random
+    import matplotlib.ticker as mtick
 
     Qrow = np.array([.01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01, .01,
                      .02, .02, .02, .03, .03, .05, .05, .07, .07, .07, .10, .15, .20])
@@ -90,8 +92,7 @@ def generateSyntheticData():
             result = np.random.binomial(1, p = 1. - r)
         testingDataList.append([currTN, currSN, result])
 
-    # Inspect testing data; check: (1) overall SFP rate, (2) plots, (3) N, Y matrices align more or less with
-    # statements from case-study section
+    # Initialize needed parameters for the prior and the MCMC sampler
     priorMean, priorScale = -2.5, 1.3
     numPostSamps = 1000
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -315,7 +316,6 @@ def generateSyntheticData():
     '''
 
     # Untracked
-    lgDict = {}
     lgDict = util.testresultsfiletotable(testingDataList, csvName=False)
     Qest = lgDict['N'].copy()  # Generate Q
     for i, Nrow in enumerate(lgDict['N']):
@@ -459,6 +459,253 @@ def generateSyntheticData():
     fig.tight_layout()
     plt.show()
     plt.close()
+
+    # Untracked, using bootstrap samples to estimate Q
+    priorMean, priorScale = -2.5, 1.3
+    lowerQuant, upperQuant = 0.05, 0.95
+    btlowerQuant, btupperQuant = 0.05, 0.95
+    priorLower = spsp.expit(sps.laplace.ppf(lowerQuant, loc=priorMean, scale=priorScale))
+    priorUpper = spsp.expit(sps.laplace.ppf(upperQuant, loc=priorMean, scale=priorScale))
+    # First get posterior draws from original Q estimate for later comparison
+
+    lgDict = util.testresultsfiletotable(testingDataList, csvName=False)
+    Qest = lgDict['N'].copy()  # Generate Q
+    for i, Nrow in enumerate(lgDict['N']):
+        Qest[i] = Nrow / np.sum(Nrow)
+    # Update N and Y
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=priorScale), 'MCMCdict': MCMCdict,
+                   'transMat': Qest, 'importerNum': Qest.shape[1], 'outletNum': Qest.shape[0]})
+    lgDict = methods.GeneratePostSamples(lgDict)
+    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+    origpostdraws = lgDict['postSamples']
+
+    ######################
+    lgDict = util.testresultsfiletotable(testingDataList, csvName=False)
+    # Update N and Y
+    Nmat = lgDict['N']
+    lgDict.update({'N': np.sum(lgDict['N'], axis=1), 'Y': np.sum(lgDict['Y'], axis=1)})
+    print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
+        lgDict['Y'].sum() / lgDict['N'].sum()))
+    lgDict.update({'type': 'Untracked', 'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=priorScale), 'MCMCdict': MCMCdict,
+                   'importerNum': numSN, 'outletNum': numTN})
+
+    random.seed(313)  # Set a seed
+    btuppers, btlowers = [], [] # For storing 90% upper and lower intervals
+    for rep in range(100):  # Set number of bootstrap samples here
+        print('Bootstrap sample: ' + str(rep+1) + '...')
+        # Initialize empty Q
+        Q = np.zeros(shape=(numTN, numSN))
+        # Every row needs at least one observation; add 1 for each row first before bootstrap (23 total)
+        for rw in range(Q.shape[0]):
+            currProbs = Nmat[rw] / np.sum(Nmat[rw])
+            Q[rw, random.choices(range(Q.shape[1]), currProbs)] += 1  # Add one to the chosen element
+        # Now pull bootstrap samples equal to number of data points in original data set
+        for btsamp in range(len(lgDict['dataTbl']) - Q.shape[0]):
+            currSamp = random.choices(lgDict['dataTbl'])[0]
+            rw, col = lgDict['outletNames'].index(currSamp[0]), lgDict['importerNames'].index(currSamp[1])
+            Q[rw, col] += 1
+        # Normalize
+        for ind, rw in enumerate(Q):
+            newrw = rw / np.sum(rw)
+            Q[ind] = newrw
+        # Generate posterior draws using this bootstrapped Q
+        lgDict.update({'transMat': Q})
+        lgDict = methods.GeneratePostSamples(lgDict)  # Overwrites any old samples
+        # Grab 90% upper and lower bounds for each node
+        currpostdraws = lgDict['postSamples']
+        newuppers = [np.quantile(currpostdraws[:, i], upperQuant) for i in range(numSN + numTN)]
+        newlowers = [np.quantile(currpostdraws[:, i], lowerQuant) for i in range(numSN + numTN)]
+        btuppers.append(newuppers)
+        btlowers.append(newlowers)
+
+    btuppers = np.array(btuppers)
+    btlowers = np.array(btlowers)
+    # Generate plots that show the range of inference when using the bootstrap samples
+    SNindsSubset = range(numSN)
+    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNlowers = [np.quantile(origpostdraws[:, l], lowerQuant) for l in SNindsSubset]
+    SNuppers = [np.quantile(origpostdraws[:, l], upperQuant) for l in SNindsSubset]
+    # Bootstrap ranges
+    SNlowers_bthigh = [np.quantile(btlowers[:, l], btupperQuant) for l in SNindsSubset]
+    SNlowers_btlow = [np.quantile(btlowers[:, l], btlowerQuant) for l in SNindsSubset]
+    SNuppers_bthigh = [np.quantile(btuppers[:, l], btupperQuant) for l in SNindsSubset]
+    SNuppers_btlow = [np.quantile(btuppers[:, l], btlowerQuant) for l in SNindsSubset]
+
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    SNlowers1 = [i for i in SNlowers if i > floorVal]
+    SNuppers1 = [SNuppers[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    SNnames1 = [SNnames[ind] for ind, i in enumerate(SNlowers) if i > floorVal]
+    midpoints1 = [SNuppers1[i] - (SNuppers1[i] - SNlowers1[i]) / 2 for i in range(len(SNuppers1))]
+    zippedList1 = zip(midpoints1, SNuppers1, SNlowers1, SNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    SNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    SNuppers2 = [i for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers2 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames2 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i > ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints2 = [SNuppers2[i] - (SNuppers2[i] - SNlowers2[i]) / 2 for i in range(len(SNuppers2))]
+    zippedList2 = zip(midpoints2, SNuppers2, SNlowers2, SNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    SNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    SNuppers3 = [i for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNlowers3 = [SNlowers[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    SNnames3 = [SNnames[ind] for ind, i in enumerate(SNuppers) if (i <= ceilVal and SNlowers[ind] <= floorVal)]
+    midpoints3 = [SNuppers3[i] - (SNuppers3[i] - SNlowers3[i]) / 2 for i in range(len(SNuppers3))]
+    zippedList3 = zip(midpoints3, SNuppers3, SNlowers3, SNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    SNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    SNnamesSorted = SNnamesSorted1.copy()
+    # sorted_pairs = sorted_pairs1.copy()
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted2
+    # sorted_pairs = sorted_pairs + sorted_pairs2
+    SNnamesSorted.append(' ')
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted = SNnamesSorted + SNnamesSorted3
+    # sorted_pairs = sorted_pairs + sorted_pairs3
+    # sorted_pairs.append((np.nan, np.nan, np.nan, ' '))
+    SNnamesSorted.append(' ')
+    SNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((SNnamesSorted[-1], SNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    plt.xticks(range(len(SNnamesSorted)), SNnamesSorted, rotation=90)
+    plt.title(
+        'Supply Node 90% Intervals w/ Bounds from 100 Bootstrap Samples\nManufacturer-District Analysis, Untracked Setting',
+        fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Supply Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
+    # Put in bootstrap upper and lower intervals
+    SNnames_bt = SNnamesSorted1 + SNnamesSorted2 + SNnamesSorted3
+    btuppers_high_sorted = [SNuppers_bthigh[SNnames.index(nm)] for nm in SNnames_bt]
+    btuppers_low_sorted = [SNuppers_btlow[SNnames.index(nm)] for nm in SNnames_bt]
+    btlowers_high_sorted = [SNlowers_bthigh[SNnames.index(nm)] for nm in SNnames_bt]
+    btlowers_low_sorted = [SNlowers_btlow[SNnames.index(nm)] for nm in SNnames_bt]
+    for ind, nm in enumerate(SNnames_bt):
+        plt.plot((nm, nm), (btuppers_low_sorted[ind], btuppers_high_sorted[ind]), '_-',
+                 color='k', alpha=0.3)
+    for ind, nm in enumerate(SNnames_bt):
+        plt.plot((nm, nm), (btlowers_low_sorted[ind], btlowers_high_sorted[ind]), '_-',
+                 color='k', alpha=0.3)
+    ###
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    TNindsSubset = range(numTN)
+    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNlowers = [np.quantile(origpostdraws[:, numSN + l], lowerQuant) for l in TNindsSubset]
+    TNuppers = [np.quantile(origpostdraws[:, numSN + l], upperQuant) for l in TNindsSubset]
+    # Bootstrap ranges
+    TNlowers_bthigh = [np.quantile(btlowers[:, numSN + l], btupperQuant) for l in TNindsSubset]
+    TNlowers_btlow = [np.quantile(btlowers[:, numSN + l], btlowerQuant) for l in TNindsSubset]
+    TNuppers_bthigh = [np.quantile(btuppers[:, numSN + l], btupperQuant) for l in TNindsSubset]
+    TNuppers_btlow = [np.quantile(btuppers[:, numSN + l], btlowerQuant) for l in TNindsSubset]
+
+    floorVal = 0.05
+    ceilVal = 0.3
+    # First group
+    TNlowers1 = [i for i in TNlowers if i > floorVal]
+    TNuppers1 = [TNuppers[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    TNnames1 = [TNnames[ind] for ind, i in enumerate(TNlowers) if i > floorVal]
+    midpoints1 = [TNuppers1[i] - (TNuppers1[i] - TNlowers1[i]) / 2 for i in range(len(TNuppers1))]
+    zippedList1 = zip(midpoints1, TNuppers1, TNlowers1, TNnames1)
+    sorted_pairs1 = sorted(zippedList1, reverse=True)
+    TNnamesSorted1 = [tup[-1] for tup in sorted_pairs1]
+    # Second group
+    TNuppers2 = [i for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers2 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames2 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i > ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints2 = [TNuppers2[i] - (TNuppers2[i] - TNlowers2[i]) / 2 for i in range(len(TNuppers2))]
+    zippedList2 = zip(midpoints2, TNuppers2, TNlowers2, TNnames2)
+    sorted_pairs2 = sorted(zippedList2, reverse=True)
+    TNnamesSorted2 = [tup[-1] for tup in sorted_pairs2]
+    # Third group
+    TNuppers3 = [i for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNlowers3 = [TNlowers[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    TNnames3 = [TNnames[ind] for ind, i in enumerate(TNuppers) if (i <= ceilVal and TNlowers[ind] <= floorVal)]
+    midpoints3 = [TNuppers3[i] - (TNuppers3[i] - TNlowers3[i]) / 2 for i in range(len(TNuppers3))]
+    zippedList3 = zip(midpoints3, TNuppers3, TNlowers3, TNnames3)
+    sorted_pairs3 = sorted(zippedList3, reverse=True)
+    TNnamesSorted3 = [tup[-1] for tup in sorted_pairs3]
+    # Combine groups
+    TNnamesSorted = TNnamesSorted1.copy()
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted2
+    TNnamesSorted.append(' ')
+    TNnamesSorted = TNnamesSorted + TNnamesSorted3
+    TNnamesSorted.append(' ')
+    TNnamesSorted.append('(Prior)')
+    fig, (ax) = plt.subplots(figsize=(10, 6), ncols=1)
+    for _, upper, lower, name in sorted_pairs1:
+        plt.plot((name, name), (lower, upper), 'o-', color='red')
+    plt.plot(('', ''), (np.nan, np.nan), 'o-', color='red')
+    for _, upper, lower, name in sorted_pairs2:
+        plt.plot((name, name), (lower, upper), 'o--', color='orange')
+    plt.plot((' ', ' '), (np.nan, np.nan), 'o--', color='orange')
+    for _, upper, lower, name in sorted_pairs3:
+        plt.plot((name, name), (lower, upper), 'o:', color='green')
+    plt.plot(('  ', '  '), (np.nan, np.nan), 'o:', color='green')
+    plt.plot((TNnamesSorted[-1], TNnamesSorted[-1]), (priorLower, priorUpper), 'o-', color='gray')
+    plt.ylim([0, 1])
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    plt.xticks(range(len(TNnamesSorted)), TNnamesSorted, rotation=90)
+    plt.title(
+        'Test Node 90% Intervals w/ Bounds from 100 Bootstrap Samples\nManufacturer-District Analysis, Untracked Setting',
+        fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('Test Node Name', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Interval value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontname('Times New Roman')
+        label.set_fontsize(12)
+    plt.axhline(y=floorVal, color='r', linestyle='-', alpha=0.1)  # line for 'l'
+    plt.axhline(y=ceilVal, color='blue', linestyle='-', alpha=0.1)  # line for 'u'
+    plt.text(26.3, ceilVal + .015, 'u=30%', color='blue', alpha=0.5, size=9)
+    plt.text(26.3, floorVal + .015, 'l=5%', color='r', alpha=0.5, size=9)
+    # Put in bootstrap upper and lower intervals
+    TNnames_bt = TNnamesSorted1 + TNnamesSorted2 + TNnamesSorted3
+    btuppers_high_sorted = [TNuppers_bthigh[TNnames.index(nm)] for nm in TNnames_bt]
+    btuppers_low_sorted = [TNuppers_btlow[TNnames.index(nm)] for nm in TNnames_bt]
+    btlowers_high_sorted = [TNlowers_bthigh[TNnames.index(nm)] for nm in TNnames_bt]
+    btlowers_low_sorted = [TNlowers_btlow[TNnames.index(nm)] for nm in TNnames_bt]
+    for ind, nm in enumerate(TNnames_bt):
+        plt.plot((nm, nm), (btuppers_low_sorted[ind], btuppers_high_sorted[ind]), '_-',
+                 color='k', alpha=0.3)
+    for ind, nm in enumerate(TNnames_bt):
+        plt.plot((nm, nm), (btlowers_low_sorted[ind], btlowers_high_sorted[ind]), '_-',
+                 color='k', alpha=0.3)
+    ###
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
 
     # Run tracked again for completing sensitivity analyses
     priorMean, priorScale = -2.5, 1.3
@@ -870,5 +1117,6 @@ def timingAnalysis():
 
 # Running the functions produces results similar/analagous to those featured in the noted figures and tables.
 _ = generateExampleInference() # Figure 2
-_ = generateSyntheticData() # Figures 3 and 4, Tables 2 and 3
+_ = generateSyntheticData() # Figures 3, 4 and 5, Tables 2 and 3
 _ = timingAnalysis() # Table 1; MAY TAKE UPWARDS OF AN HOUR TO COMPLETE
+

@@ -4816,10 +4816,6 @@ def SenegalDataScript():
     plt.show()
     plt.close()
 
-
-
-
-
     #########################
     #########################
     # Facility Location as TNs
