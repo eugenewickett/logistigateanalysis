@@ -339,19 +339,111 @@ def bayesianexample1():
     return
 
 
-def getDesignUtility(priordatadict, lossfunc, lossDict, estdecision, design, numtests, omeganum, t=0.1,
-                     priordraws=[], randinds=[]):
+def getDesignUtility(priordatadict, lossfunc, lossdict, estdecision, designlist, numtests, omeganum, designnames=[],
+                     type=['trace'], priordraws=[], randinds=[]):
     '''
-    Produces loss vectors for entered design choices under a given data set and specified loss.
-    Designed for use with plotLossVecs() to plot Bayesian risk associated with each design
-    priordatadict: should have posterior draws from initial data set already included
-    estdecision: how to form a decision from the posterior samples; one of 'mean', 'mode', or 'median'
-    design: a sampling probability vector along all test nodes
-    numtests: how many samples will be obtained under the design
+    Produces a list of loss vectors for entered design choices under a given data set and specified loss.
+    Designed for use with plotLossVecs() to plot Bayesian risk associated with each design.
+    priordatadict: should have posterior draws from initial data set already included, with keys identical to those
+        provided by logistigate functions
+    lossfunc: loss function that takes arguments 'est', 'targ', and 'paramDict' that passes any required arguments
+    lossdict: the parameter dictionary to pass to lossfunc
+    estdecision: list for how to form a decision from the posterior samples; one of ['mean'], ['median'], or
+        ['mode', t], where t is the assignment threshold for designating the classification estimate
+    designlist: list of sampling probability vectors along all test nodes or traces
+    designnames: list of names for the designs
+    numtests: how many samples will be obtained under each design
+    omeganum: number of prior draws to use for calculating the Bayesian risk
+    type: list for the type of sample collection described in each design; one of ['trace'] (collect along SN-TN trace) or
+        ['test node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
+    priordraws: set of prior draws to use for synchronized data collection in different designs
+    randinds: the indices with which to iterate through priordraws for all omeganum loops
     '''
+    # Initiate the list to return
+    lossveclist = []
+    # Retrieve prior draws if empty
+    if priordraws==[]:
+        priordraws = priordatadict['postSamples']
+    if randinds==[]:
+        randinds = [i for i in range(omeganum)]
+    if designnames==[]:
+        for i in range(len(designlist)):
+            designnames.append('Design '+str(i))
+    # Get key supply-chain elements from priordatadict
+    (numTN, numSN) = priordatadict['N'].shape
+    Q = priordatadict['transMat'] #May be empty
+    s, r = priordatadict['diagSens'], priordatadict['diagSpec']
+
+    # Loop through each design and generate omeganum loss realizations
+    for designind, design in enumerate(designlist):
+        currlossvec = []
+        # Initialize samples to be drawn from traces, per the design
+        sampMat = roundDesignLow(design, numtests)
+        for omega in range(omeganum):
+            TNsamps = sampMat.copy()
+            # Grab a draw from the prior
+            currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
+            # Initialize Ntilde and Ytilde
+            Ntilde = np.zeros(shape = priordatadict['N'].shape)
+            Ytilde = Ntilde.copy()
+            while np.sum(TNsamps) > 0.:
+                # Go to first non-empty row of TN samps
+                i, j = 0, 0
+                while np.sum(TNsamps[i])==0:
+                    i += 1
+                # Go to first non-empty column of this row
+                while TNsamps[i][j]==0:
+                    j += 1
+                TNsamps[i][j] -= 1
+                # Generate test result
+                currTNrate = currpriordraw[numSN+i]
+                currSNrate = currpriordraw[j]
+                currrealrate = currTNrate + (1-currTNrate)*currSNrate # z_star for this sample
+                currposrate = s*currrealrate+(1-r)*(1-currrealrate) # z for this sample
+                result = np.random.binomial(1, p=currposrate)
+                Ntilde[i, j] += 1
+                Ytilde[i, j] += result
+
+            # We have a new set of data d_tilde
+            Nomega = priordatadict['N'] + Ntilde
+            Yomega = priordatadict['Y'] + Ytilde
+
+            postdatadict = priordatadict.copy()
+            postdatadict['N'] = Nomega
+            postdatadict['Y'] = Yomega
+
+            postdatadict = methods.GeneratePostSamples(postdatadict)
+            currSamps = sps.logit(postdatadict['postSamples'])
+
+            if estdecision[0] == 'mean':
+                logitmeans = np.average(currSamps,axis=0)
+                currEst = sps.expit(logitmeans)
+            elif estdecision[0] == 'mode':
+                currEst = np.array([1 if np.sum(currSamps[:,i]>sps.logit(estdecision[1]))>=(len(currSamps[:,i])/2) else 0 for i in range(numSN+numTN) ])
 
 
-    return
+            # Average loss for all postpost samples
+            sumloss = 0
+            for currsamp in postdatadict['postSamples']:
+                currloss = lossfunc(currEst, currsamp, lossdict)
+                sumloss += currloss
+            avgloss = sumloss/len(postdatadict['postSamples'])
+
+            #Append to utility storage vector
+            currlossvec.append(avgloss)
+            print(designnames[designind]+', '+'omega '+str(omega) + ' complete')
+        lossveclist.append(currlossvec)
+
+
+    if type[0]=='trace':
+        pass
+
+    elif type[0]=='test node':
+        ##############
+        # PUT CODE HERE FOR WHEN PULLING FROM TEST NODE AND NOT TRACE
+        pass
+
+    return lossveclist
 
 
 
@@ -405,120 +497,48 @@ def bayesianexample2():
     design6_6 = balancedesign(exampleDict['N'],6)
     design6_30 = balancedesign(exampleDict['N'],30)
 
+    designList = [design1, design2, design3, design4,design5,design6_6]
+
+    import pickle
+    import os
+
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.1}
+    designList = [design1, design2, design3, design4,design5,design6_6]
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    numtests = 30
+    omeganum = 10
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                               estdecision=['mean'], designlist=designList, designnames=designNames, numtests=numtests,
+                               omeganum=omeganum, type=['trace'],
+                               priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb')),
+                               randinds=randinds)
+    plotLossVecs(lossveclist,lvecnames=designNames)
+
+    #### TO DOS JULY 13....
+    #todo: adding conditional for when not able to choose the trace and Q is estimated
+        #todo: ask K+M: worth doing choose the trace, but Q is known?
+    #todo: redo all plots in paper with error bar plots
+    #todo: figure out set of designs on toy example for playing with different parameter choices
+    #todo: set up case study and start compiling analysis
+
+
+
+
     ###############################################
     ########## REMOVE LATER #######################
     # FOR USING WITH THE FUNCTION WHILE CODING IT #
     ###############################################
-    priordatadict = exampleDict.copy()
-    #priordraws = priordatadict['postSamples']
+    '''HOW TO WRITE PRIOR DRAWS TO A PICKLE OBJECT TO BE LOADED LATER'''
     #import pickle
     #import os
     #outputFilePath = os.getcwd()
     #outputFileName = os.path.join(outputFilePath, 'priordraws')
     #pickle.dump(priordraws, open(outputFileName, 'wb'))
 
-    import pickle
-    import os
-    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb'))
-    numtests = 30
-    design = design6_30.copy()
-    estdecision = 'mean'
-    t = 0.1
-    lossDict = {'overEstWt':1.,'rateTarget':t}
-    lossfunc = loss_pms
 
-    random.seed(35)
-    randinds = random.sample(range(0,1000),100)
-
-    def bayesutility(priordatadict, lossfunc, lossDict, estdecision, designlist, numtests, omeganum, t=0.1,
-                     priordraws=[], randinds=[]):
-        '''
-        priordatadict: should have posterior draws from initial data set already included
-        estdecision: how to form a decision from the posterior samples; one of 'mean', 'mode', or 'median'
-        design: a sampling probability vector along all test nodes
-        numtests: how many samples will be obtained under the design
-        '''
-
-        # Retrieve prior draws
-        #priordraws = priordatadict['postSamples']
-
-        omeganum = 100    # UPDATE
-
-        (numTN, numSN) = priordatadict['N'].shape
-        Q = priordatadict['transMat']
-        s, r = priordatadict['diagSens'], priordatadict['diagSpec']
-
-        # Store loss for each omega in an array
-        lossvec = []
-
-        # Initialize samples to be drawn from traces, per the design
-        sampMat = roundDesignLow(design,numtests)
-
-        for omega in range(omeganum):
-
-            TNsamps = sampMat.copy()
-            # Grab a draw from the prior
-            #currpriordraw = priordraws[np.random.choice(priordraws.shape[0], size=1)[0]] # [SN rates, TN rates]
-            currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
-            # Initialize Ntilde and Ytilde
-            Ntilde = np.zeros(shape = priordatadict['N'].shape)
-            Ytilde = Ntilde.copy()
-
-            while np.sum(TNsamps) > 0.:
-                # Go to first non-empty row of TN samps
-                i, j = 0, 0
-                while np.sum(TNsamps[i])==0:
-                    i += 1
-                # Go to first non-empty column of this row
-                while TNsamps[i][j]==0:
-                    j += 1
-                TNsamps[i][j] -= 1
-                # Generate test result
-                currTNrate = currpriordraw[numSN+i]
-                currSNrate = currpriordraw[j]
-                currrealrate = currTNrate + (1-currTNrate)*currSNrate # z_star for this sample
-                currposrate = s*currrealrate+(1-r)*(1-currrealrate) # z for this sample
-                result = np.random.binomial(1, p=currposrate)
-                Ntilde[i, j] += 1
-                Ytilde[i, j] += result
-
-            # We have a new set of data d_tilde
-            Nomega = priordatadict['N'] + Ntilde
-            Yomega = priordatadict['Y'] + Ytilde
-
-            postdatadict = priordatadict.copy()
-            postdatadict['N'] = Nomega
-            postdatadict['Y'] = Yomega
-
-            postdatadict = methods.GeneratePostSamples(postdatadict)
-            # Get mean of samples as estimate
-            currSamps = sps.logit(postdatadict['postSamples'])
-
-            if estdecision == 'mean':
-                logitmeans = np.average(currSamps,axis=0)
-                currEst = sps.expit(logitmeans)
-            elif estdecision == 'mode':
-                currEst = np.array([1 if np.sum(currSamps[:,i]>sps.logit(t))>=(len(currSamps[:,i])/2) else 0 for i in range(numSN+numTN) ])
-
-
-            # Average loss for all postpost samples
-            avgloss = 0
-            for currsamp in postdatadict['postSamples']:
-                currloss = lossfunc(currEst,currsamp,lossDict)
-                avgloss += currloss
-            avgloss = avgloss/len(postdatadict['postSamples'])
-
-            #Append to utility storage vector
-            lossvec.append(avgloss)
-            print('omega '+str(omega) + ' complete')
-
-        lossval = np.average(lossvec)
-        losssd = np.std(lossvec)
-        print(lossvec)
-
-
-
-        return lossvec, lossval, losssd, lossval-2*losssd, lossval+2*losssd
 
 def bayesianexample3():
     '''
