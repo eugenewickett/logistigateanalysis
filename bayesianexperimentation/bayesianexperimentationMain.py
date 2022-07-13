@@ -75,7 +75,7 @@ def roundDesignHigh(D,n):
     return roundMat
 
 def plotLossVecs(lveclist, lvecnames=[], type='CI', CIalpha = 0.05,
-                 plottitle='Confidence Intervals for Loss Averages'):
+                 plottitle='Confidence Intervals for Loss Averages', plotlim=[]):
     '''
     Takes a list of loss vectors and produces either a series of histograms or a single plot marking average confidence
     intervals
@@ -112,7 +112,10 @@ def plotLossVecs(lveclist, lvecnames=[], type='CI', CIalpha = 0.05,
         color = iter(cm.rainbow(np.linspace(0, 1, len(lveclist))))
         for ind in range(numvecs):
             plt.plot(lossavgs[ind],lvecnames[ind], 'D', color=next(color), markersize=6)
-        plt.xlim([0,maxval])
+        if plotlim==[]:
+            plt.xlim([0,maxval])
+        else:
+            plt.xlim(plotlim)
         color = iter(cm.rainbow(np.linspace(0, 1, len(lveclist))))
         for ind in range(numvecs):
             currcolor = next(color)
@@ -190,31 +193,130 @@ def loss_classification(est, targ, paramDict):
 def loss_pms(est, targ, paramDict):
     '''
     Loss function tailored for PMS
-    paramDict should have fields: 'overEstWt', 'rateTarget'
+    paramDict should have fields: 'overEstWt', 'rateTarget', (optional) vector 'rho'
     '''
     currloss = 0.
     epsTarg = 0.5 - paramDict['rateTarget']
+    if len(paramDict['nodeWtVec'])==0: #
+        nodeWtVec = [1. for i in range(len(est))]
     for i in range(len(est)):
         errterm = (paramDict['overEstWt']*max(targ[i] - est[i], 0) + max(est[i]-targ[i],0))**2
         if epsTarg < 0:
             wtterm = targ[i]*(1-targ[i]-2*epsTarg)
         else:
             wtterm = (targ[i]+2*epsTarg)*(1-targ[i])
-        currloss += errterm * wtterm
+        currloss += errterm * wtterm * nodeWtVec[i]
     return currloss
 
+def getDesignUtility(priordatadict, lossfunc, lossdict, estdecision, designlist, numtests, omeganum, designnames=[],
+                     type=['trace'], priordraws=[], randinds=[], roundAlg=roundDesignLow):
+    '''
+    Produces a list of loss vectors for entered design choices under a given data set and specified loss.
+    Designed for use with plotLossVecs() to plot Bayesian risk associated with each design.
+    priordatadict: should have posterior draws from initial data set already included, with keys identical to those
+        provided by logistigate functions
+    lossfunc: loss function that takes arguments 'est', 'targ', and 'paramDict' that passes any required arguments
+    lossdict: the parameter dictionary to pass to lossfunc
+    estdecision: list for how to form a decision from the posterior samples; one of ['mean'], ['median'], or
+        ['mode', t], where t is the assignment threshold for designating the classification estimate
+    designlist: list of sampling probability vectors along all test nodes or traces
+    designnames: list of names for the designs
+    numtests: how many samples will be obtained under each design
+    omeganum: number of prior draws to use for calculating the Bayesian risk
+    type: list for the type of sample collection described in each design; one of ['trace'] (collect along SN-TN trace) or
+        ['test node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
+    priordraws: set of prior draws to use for synchronized data collection in different designs
+    randinds: the indices with which to iterate through priordraws for all omeganum loops
+    '''
+    # Initiate the list to return
+    lossveclist = []
+    # Retrieve prior draws if empty
+    if len(priordraws)==0:
+        priordraws = priordatadict['postSamples']
+    if len(randinds)==0:
+        randinds = [i for i in range(omeganum)]
+    if len(designnames)==0:
+        for i in range(len(designlist)):
+            designnames.append('Design '+str(i))
+    # Get key supply-chain elements from priordatadict
+    (numTN, numSN) = priordatadict['N'].shape
+    Q = priordatadict['transMat'] #May be empty
+    s, r = priordatadict['diagSens'], priordatadict['diagSpec']
+
+    # Loop through each design and generate omeganum loss realizations
+    for designind, design in enumerate(designlist):
+        currlossvec = []
+        # Initialize samples to be drawn from traces, per the design
+        sampMat = roundAlg(design, numtests)
+        for omega in range(omeganum):
+            TNsamps = sampMat.copy()
+            # Grab a draw from the prior
+            currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
+            # Initialize Ntilde and Ytilde
+            Ntilde = np.zeros(shape = priordatadict['N'].shape)
+            Ytilde = Ntilde.copy()
+            while np.sum(TNsamps) > 0.:
+                # Go to first non-empty row of TN samps
+                i, j = 0, 0
+                while np.sum(TNsamps[i])==0:
+                    i += 1
+                # Go to first non-empty column of this row
+                while TNsamps[i][j]==0:
+                    j += 1
+                TNsamps[i][j] -= 1
+                # Generate test result
+                currTNrate = currpriordraw[numSN+i]
+                currSNrate = currpriordraw[j]
+                currrealrate = currTNrate + (1-currTNrate)*currSNrate # z_star for this sample
+                currposrate = s*currrealrate+(1-r)*(1-currrealrate) # z for this sample
+                result = np.random.binomial(1, p=currposrate)
+                Ntilde[i, j] += 1
+                Ytilde[i, j] += result
+
+            # We have a new set of data d_tilde
+            Nomega = priordatadict['N'] + Ntilde
+            Yomega = priordatadict['Y'] + Ytilde
+
+            postdatadict = priordatadict.copy()
+            postdatadict['N'] = Nomega
+            postdatadict['Y'] = Yomega
+
+            postdatadict = methods.GeneratePostSamples(postdatadict)
+            currSamps = sps.logit(postdatadict['postSamples'])
+
+            if estdecision[0] == 'mean':
+                logitmeans = np.average(currSamps,axis=0)
+                currEst = sps.expit(logitmeans)
+            elif estdecision[0] == 'mode':
+                currEst = np.array([1 if np.sum(currSamps[:,i]>sps.logit(estdecision[1]))>=(len(currSamps[:,i])/2) else 0 for i in range(numSN+numTN) ])
+
+
+            # Average loss for all postpost samples
+            sumloss = 0
+            for currsamp in postdatadict['postSamples']:
+                currloss = lossfunc(currEst, currsamp, lossdict)
+                sumloss += currloss
+            avgloss = sumloss/len(postdatadict['postSamples'])
+
+            #Append to utility storage vector
+            currlossvec.append(avgloss)
+            print(designnames[designind]+', '+'omega '+str(omega) + ' complete')
+        lossveclist.append(currlossvec)
+
+
+    if type[0]=='trace':
+        pass
+
+    elif type[0]=='test node':
+        ##############
+        # PUT CODE HERE FOR WHEN PULLING FROM TEST NODE AND NOT TRACE
+        pass
+
+    return lossveclist
+
 def bayesianexample1():
-    '''
-    Use a small example to find the utility from different sampling designs.
-    '''
 
-    # Define squared loss function
-    def lossfunc1(est,param):
-        return np.linalg.norm(est-param,2)
-
-    # Designate number of test and supply nodes
-    numTN = 3
-    numSN = 2
+    numTN, numSN = 3, 2
     s, r = 1., 1.
 
     # Generate a supply chain
@@ -249,6 +351,8 @@ def bayesianexample1():
     design4 = np.array([0.4, 0.3, 0.3])
     design5 = np.array([0., 0.5, 0.5])
 
+
+
     ##################################
     ########## REMOVE LATER ##########
     ##################################
@@ -256,7 +360,7 @@ def bayesianexample1():
     estdecision = 'mean'
     numtests = 8
     design = design5.copy()
-    lossfunc = lossfunc1
+    lossfunc = loss_pms
 
     def bayesutility(priordatadict, lossfunc, estdecision, design, numtests, omeganum):
         '''
@@ -338,116 +442,6 @@ def bayesianexample1():
 
     return
 
-
-def getDesignUtility(priordatadict, lossfunc, lossdict, estdecision, designlist, numtests, omeganum, designnames=[],
-                     type=['trace'], priordraws=[], randinds=[]):
-    '''
-    Produces a list of loss vectors for entered design choices under a given data set and specified loss.
-    Designed for use with plotLossVecs() to plot Bayesian risk associated with each design.
-    priordatadict: should have posterior draws from initial data set already included, with keys identical to those
-        provided by logistigate functions
-    lossfunc: loss function that takes arguments 'est', 'targ', and 'paramDict' that passes any required arguments
-    lossdict: the parameter dictionary to pass to lossfunc
-    estdecision: list for how to form a decision from the posterior samples; one of ['mean'], ['median'], or
-        ['mode', t], where t is the assignment threshold for designating the classification estimate
-    designlist: list of sampling probability vectors along all test nodes or traces
-    designnames: list of names for the designs
-    numtests: how many samples will be obtained under each design
-    omeganum: number of prior draws to use for calculating the Bayesian risk
-    type: list for the type of sample collection described in each design; one of ['trace'] (collect along SN-TN trace) or
-        ['test node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
-    priordraws: set of prior draws to use for synchronized data collection in different designs
-    randinds: the indices with which to iterate through priordraws for all omeganum loops
-    '''
-    # Initiate the list to return
-    lossveclist = []
-    # Retrieve prior draws if empty
-    if priordraws==[]:
-        priordraws = priordatadict['postSamples']
-    if randinds==[]:
-        randinds = [i for i in range(omeganum)]
-    if designnames==[]:
-        for i in range(len(designlist)):
-            designnames.append('Design '+str(i))
-    # Get key supply-chain elements from priordatadict
-    (numTN, numSN) = priordatadict['N'].shape
-    Q = priordatadict['transMat'] #May be empty
-    s, r = priordatadict['diagSens'], priordatadict['diagSpec']
-
-    # Loop through each design and generate omeganum loss realizations
-    for designind, design in enumerate(designlist):
-        currlossvec = []
-        # Initialize samples to be drawn from traces, per the design
-        sampMat = roundDesignLow(design, numtests)
-        for omega in range(omeganum):
-            TNsamps = sampMat.copy()
-            # Grab a draw from the prior
-            currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
-            # Initialize Ntilde and Ytilde
-            Ntilde = np.zeros(shape = priordatadict['N'].shape)
-            Ytilde = Ntilde.copy()
-            while np.sum(TNsamps) > 0.:
-                # Go to first non-empty row of TN samps
-                i, j = 0, 0
-                while np.sum(TNsamps[i])==0:
-                    i += 1
-                # Go to first non-empty column of this row
-                while TNsamps[i][j]==0:
-                    j += 1
-                TNsamps[i][j] -= 1
-                # Generate test result
-                currTNrate = currpriordraw[numSN+i]
-                currSNrate = currpriordraw[j]
-                currrealrate = currTNrate + (1-currTNrate)*currSNrate # z_star for this sample
-                currposrate = s*currrealrate+(1-r)*(1-currrealrate) # z for this sample
-                result = np.random.binomial(1, p=currposrate)
-                Ntilde[i, j] += 1
-                Ytilde[i, j] += result
-
-            # We have a new set of data d_tilde
-            Nomega = priordatadict['N'] + Ntilde
-            Yomega = priordatadict['Y'] + Ytilde
-
-            postdatadict = priordatadict.copy()
-            postdatadict['N'] = Nomega
-            postdatadict['Y'] = Yomega
-
-            postdatadict = methods.GeneratePostSamples(postdatadict)
-            currSamps = sps.logit(postdatadict['postSamples'])
-
-            if estdecision[0] == 'mean':
-                logitmeans = np.average(currSamps,axis=0)
-                currEst = sps.expit(logitmeans)
-            elif estdecision[0] == 'mode':
-                currEst = np.array([1 if np.sum(currSamps[:,i]>sps.logit(estdecision[1]))>=(len(currSamps[:,i])/2) else 0 for i in range(numSN+numTN) ])
-
-
-            # Average loss for all postpost samples
-            sumloss = 0
-            for currsamp in postdatadict['postSamples']:
-                currloss = lossfunc(currEst, currsamp, lossdict)
-                sumloss += currloss
-            avgloss = sumloss/len(postdatadict['postSamples'])
-
-            #Append to utility storage vector
-            currlossvec.append(avgloss)
-            print(designnames[designind]+', '+'omega '+str(omega) + ' complete')
-        lossveclist.append(currlossvec)
-
-
-    if type[0]=='trace':
-        pass
-
-    elif type[0]=='test node':
-        ##############
-        # PUT CODE HERE FOR WHEN PULLING FROM TEST NODE AND NOT TRACE
-        pass
-
-    return lossveclist
-
-
-
-
 def bayesianexample2():
     '''
     Use paper example to find the utility from different sampling designs; in this case, we can choose the full trace,
@@ -487,6 +481,9 @@ def bayesianexample2():
     # Generate posterior draws
     exampleDict = methods.GeneratePostSamples(exampleDict)
 
+    import pickle
+    import os
+
     # Different designs; they take matrix form as the traces can be selected directly
     design0 = np.array([[0., 0.], [0., 0.], [0., 0.]])
     design1 = np.array([[0., 0.], [0., 0.], [1., 0.]])
@@ -497,16 +494,31 @@ def bayesianexample2():
     design6_6 = balancedesign(exampleDict['N'],6)
     design6_30 = balancedesign(exampleDict['N'],30)
 
-    designList = [design1, design2, design3, design4,design5,design6_6]
 
-    import pickle
-    import os
+    ### overEstWt=1, rateTarget=0.1 ###
+    # Get null first
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.1, 'nodeWtVec': np.array([])}
+    designList = [design0]
+    designNames = ['Design 0']
+    numtests = 0
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict, estdecision=['mean'], designlist=designList, designnames=designNames, numtests=numtests,
+                               omeganum=omeganum, type=['trace'], priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb')), randinds=randinds)
+    plotLossVecs(lossveclist,lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22
+    designNames = ['Design 0']
+    lossvec = [0.019569590550210146, 0.018092371811103986, 0.01954246465421608, 0.020914496921947023, 0.01964367220843864, 0.020981146965744612, 0.020411976009742896, 0.01998054629835811, 0.02051173006515475, 0.01996062634555006, 0.018337067085706968, 0.01735330626416865, 0.01939375591807688, 0.01818561219794017, 0.017318610582432295, 0.022950282938003736, 0.019941488153579257, 0.021650913134953185, 0.020104260456137193, 0.019481188614483023, 0.01837418382055576, 0.019078682953491966, 0.018567296316432516, 0.018481985866425788, 0.017218472582177013, 0.019228696126969955, 0.02043082352434529, 0.018082794769974743, 0.017736052898510234, 0.019583232995566253, 0.019678224650880895, 0.018692445368837674, 0.02034705129293681, 0.019767909042704698, 0.018058421832613365, 0.020753797128276647, 0.019219060866237668, 0.01967742580680451, 0.01880651499264533, 0.018757244253713334, 0.020180041180841473, 0.017168794524750813, 0.019250184068190297, 0.021610624733049175, 0.02053601883152264, 0.019582415665743622, 0.01952857715851995, 0.018597170882492926, 0.01865269913866327, 0.016697834246837878, 0.015916290817666174, 0.018710532646643702, 0.019234887492896362, 0.018760984042810486, 0.019626393110086002, 0.020104077118097405, 0.01910440600413062, 0.01890111183596823, 0.017088320550924126, 0.01849864549437201, 0.020140221661565882, 0.0198616438305644, 0.019005068915460274, 0.01803511478115506, 0.019567364176094063, 0.017675381135470656, 0.021799034001097367, 0.01820816938587736, 0.020297336549731294, 0.022121001974852554, 0.020392002723539568, 0.02201837170052598, 0.01754193783247564, 0.01646967662413141, 0.018155095897774656, 0.018380921932151156, 0.019073510655549523, 0.0197334146909067, 0.019781623604550432, 0.01889064646772271, 0.018363963219953268, 0.019344046089125235, 0.020983924209479705, 0.018855428888274312, 0.018034439557907324, 0.021096142293803032, 0.019369819812765622, 0.019720089741926357, 0.02225671967386222, 0.019957770005292898, 0.02014610823455731, 0.01816521681192342, 0.01839905929098039, 0.02412211010306297, 0.019222744813499486, 0.018063714679961686, 0.019321402957663488, 0.018965530244317422, 0.017943880607948177, 0.02013973432216419]
+    '''
 
-    lossDict = {'overEstWt': 1., 'rateTarget': 0.1}
+    # 6 tests for all designs
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.1, 'nodeWtVec': np.array([])}
     designList = [design1, design2, design3, design4,design5,design6_6]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
-    numtests = 30
-    omeganum = 10
+    numtests = 6
+    omeganum = 100
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
@@ -516,12 +528,222 @@ def bayesianexample2():
                                priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb')),
                                randinds=randinds)
     plotLossVecs(lossveclist,lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22; CONSOLE 1
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    lossveclist = 
+    
+    '''
+
+    # 30 tests for all designs
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.1, 'nodeWtVec': np.array([])}
+    designList = [design1, design2, design3, design4, design5, design6_30]
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    numtests = 30
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22; CONSOLE 2
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    lossveclist = 
+
+    '''
+
+    ### overEstWt=5, rateTarget=0.1 ###
+    # Get null first
+    lossDict = {'overEstWt': 5., 'rateTarget': 0.1, 'nodeWtVec': np.array([])}
+    designList = [design0]
+    designNames = ['Design 0']
+    numtests = 0
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22
+    designNames = ['Design 0']
+    lossvec = 
+    
+    '''
+    # 30 tests for all designs
+    lossDict = {'overEstWt': 5., 'rateTarget': 0.1, 'nodeWtVec': np.array([])}
+    designList = [design1, design2, design3, design4, design5, design6_30]
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    numtests = 30
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22; CONSOLE 3
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    lossveclist = 
+
+    '''
+
+    ### overEstWt=0.2, rateTarget=0.1 ###
+    # Get null first
+    lossDict = {'overEstWt': 0.2, 'rateTarget': 0.1, 'nodeWtVec': np.array([])}
+    designList = [design0]
+    designNames = ['Design 0']
+    numtests = 0
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22
+    designNames = ['Design 0']
+    lossvec = 
+
+    '''
+    # 30 tests for all designs
+    lossDict = {'overEstWt': 0.2, 'rateTarget': 0.1, 'nodeWtVec': np.array([])}
+    designList = [design1, design2, design3, design4, design5, design6_30]
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    numtests = 30
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22; CONSOLE 4
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    lossveclist = 
+
+    '''
+
+    ### overEstWt=1., rateTarget=0.01 ###
+    # Get null first
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.01, 'nodeWtVec': np.array([])}
+    designList = [design0]
+    designNames = ['Design 0']
+    numtests = 0
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22
+    designNames = ['Design 0']
+    lossvec = 
+
+    '''
+    # 30 tests for all designs
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.01, 'nodeWtVec': np.array([])}
+    designList = [design1, design2, design3, design4, design5, design6_30]
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    numtests = 30
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22; CONSOLE 5
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    lossveclist = 
+
+    '''
+
+    ### overEstWt=1., rateTarget=0.4 ###
+    # Get null first
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.4, 'nodeWtVec': np.array([])}
+    designList = [design0]
+    designNames = ['Design 0']
+    numtests = 0
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22
+    designNames = ['Design 0']
+    lossvec = 
+
+    '''
+    # 30 tests for all designs
+    lossDict = {'overEstWt': 1., 'rateTarget': 0.4, 'nodeWtVec': np.array([])}
+    designList = [design1, design2, design3, design4, design5, design6_30]
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    numtests = 30
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossfunc=loss_pms, lossdict=lossDict,
+                                   estdecision=['mean'], designlist=designList, designnames=designNames,
+                                   numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
+    plotLossVecs(lossveclist, lvecnames=designNames)
+    '''
+    # LOSS VECS: 13-JUL-22; CONSOLE 6
+    designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
+    lossveclist = 
+
+    '''
+
 
     #### TO DOS JULY 13....
     #todo: adding conditional for when not able to choose the trace and Q is estimated
         #todo: ask K+M: worth doing choose the trace, but Q is known?
     #todo: redo all plots in paper with error bar plots
-    #todo: figure out set of designs on toy example for playing with different parameter choices
+    #todo: figure out set of designs on toy example for playing with different parameter choices (delta and t)
     #todo: set up case study and start compiling analysis
 
 
