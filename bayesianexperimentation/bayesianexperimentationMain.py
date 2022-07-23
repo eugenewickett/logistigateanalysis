@@ -270,14 +270,6 @@ def score_check(est, targ, paramDict):
         scorevec[i] = (est[i]-targ[i])*(paramDict['slope']- (1 if est[i]<targ[i] else 0))
     return scorevec
 
-t=[0.3]
-pdict = {'slope':0.05}
-x = np.linspace(0,1,100)
-y = [score_check([x[i]],t,pdict)[0] for i in range(x.shape[0])]
-plt.plot(x,y)
-plt.show()
-plt.close()
-
 def loss_pms(est, targ, score, scoreDict, risk, riskDict, market):
     '''
     Loss/utility function tailored for PMS.
@@ -340,6 +332,20 @@ def showRateWeights():
     plt.show()
     plt.close()
 
+    return
+
+def utilityOverIncreasingData():
+    '''Generate a figure showing the change in utility as n increases'''
+
+    return
+
+def writeObjToPickle(obj, objname='pickleObject'):
+    '''HOW TO WRITE PRIOR DRAWS TO A PICKLE OBJECT TO BE LOADED LATER'''
+    import pickle
+    import os
+    outputFilePath = os.getcwd()
+    outputFileName = os.path.join(outputFilePath, objname)
+    pickle.dump(obj, open(outputFileName, 'wb'))
     return
 
 def getDesignUtility(priordatadict, lossdict, estdecision, designlist, numtests, omeganum, designnames=[],
@@ -971,20 +977,6 @@ def bayesianexample():
     #### TO DOS JULY 13....
     #todo: redo all plots in paper with error bar plots
     #todo: figure out set of designs on toy example for playing with different parameter choices
-
-
-
-
-    ###############################################
-    ########## REMOVE LATER #######################
-    # FOR USING WITH THE FUNCTION WHILE CODING IT #
-    ###############################################
-    '''HOW TO WRITE PRIOR DRAWS TO A PICKLE OBJECT TO BE LOADED LATER'''
-    #import pickle
-    #import os
-    #outputFilePath = os.getcwd()
-    #outputFileName = os.path.join(outputFilePath, 'priordraws')
-    #pickle.dump(priordraws, open(outputFileName, 'wb'))
 
 def designUtilityCaseStudy():
     '''
