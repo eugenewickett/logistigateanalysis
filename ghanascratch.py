@@ -48,24 +48,31 @@ def GhanaAnalysis():
                    'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nGhana - Facility ID/Manufacturer Analysis', '\nGhana - Facility ID/Manufacturer Analysis'])
-    # Now print 90% intervals
+    # Now print 90% intervals and write intervals to file
     # Supply nodes first
+    import csv
+    outputFileName = os.path.join(filesPath, 'SNintervals_FCLY.csv')
+    f = open(outputFileName, 'w', newline='')
+    writer = csv.writer(f)
+
+
     writelist = []
     for i in range(lgDict['N'].shape[1]):
         interval = [np.quantile(lgDict['postSamples'][:,i], 0.05),np.quantile(lgDict['postSamples'][:,i], 0.95)]
         name = lgDict['importerNames'][i]
         writelist.append([name, interval[0], interval[1]])
+        writer.writerow([name, interval[0], interval[1]])
         print(name + ': ' + str(interval))
-    #outputFileName = os.path.join(filesPath, 'SNintervals_FCLY.csv')
     writelist = []
     numSN = lgDict['N'].shape[1]
     for i in range(lgDict['N'].shape[0]):
         interval = [np.quantile(lgDict['postSamples'][:,numSN + i], 0.05), np.quantile(lgDict['postSamples'][:,numSN + i], 0.95)]
         name = lgDict['outletNames'][i]
         writelist.append([name, interval[0], interval[1]])
+        writer.writerow([name, interval[0], interval[1]])
         print(name+': '+str(interval))
-        ###### WRITE TO CSV
 
+    f.close()
 
     # CITIES
     lgDict = util.testresultsfiletotable(GHAlist_CITY, csvName=False)
@@ -76,12 +83,18 @@ def GhanaAnalysis():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nGhana - City/Manufacturer Analysis', '\nGhana - City/Manufacturer Analysis'])
     # Now print 90% intervals
+    import csv
+    outputFileName = os.path.join(filesPath, 'SNintervals_CITY.csv')
+    f = open(outputFileName, 'w', newline='')
+    writer = csv.writer(f)
+
     # Supply nodes first
     writelist = []
     for i in range(lgDict['N'].shape[1]):
         interval = [np.quantile(lgDict['postSamples'][:, i], 0.05), np.quantile(lgDict['postSamples'][:, i], 0.95)]
         name = lgDict['importerNames'][i]
         writelist.append([name, interval[0], interval[1]])
+        writer.writerow([name, interval[0], interval[1]])
         print(name + ': ' + str(interval))
     # outputFileName = os.path.join(filesPath, 'SNintervals_FCLY.csv')
     writelist = []
@@ -91,8 +104,10 @@ def GhanaAnalysis():
                     np.quantile(lgDict['postSamples'][:, numSN + i], 0.95)]
         name = lgDict['outletNames'][i]
         writelist.append([name, interval[0], interval[1]])
+        writer.writerow([name, interval[0], interval[1]])
         print(name + ': ' + str(interval))
-        ###### WRITE TO CSV
+
+    f.close()
 
     # PROVINCES
     lgDict = util.testresultsfiletotable(GHAlist_PROV, csvName=False)
@@ -103,12 +118,18 @@ def GhanaAnalysis():
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nGhana - Province/Manufacturer Analysis', '\nGhana - Province/Manufacturer Analysis'])
     # Now print 90% intervals
+    import csv
+    outputFileName = os.path.join(filesPath, 'SNintervals_PROV.csv')
+    f = open(outputFileName, 'w', newline='')
+    writer = csv.writer(f)
+
     # Supply nodes first
     writelist = []
     for i in range(lgDict['N'].shape[1]):
         interval = [np.quantile(lgDict['postSamples'][:, i], 0.05), np.quantile(lgDict['postSamples'][:, i], 0.95)]
         name = lgDict['importerNames'][i]
         writelist.append([name, interval[0], interval[1]])
+        writer.writerow([name, interval[0], interval[1]])
         print(name + ': ' + str(interval))
     # outputFileName = os.path.join(filesPath, 'SNintervals_FCLY.csv')
     writelist = []
@@ -118,12 +139,11 @@ def GhanaAnalysis():
                     np.quantile(lgDict['postSamples'][:, numSN + i], 0.95)]
         name = lgDict['outletNames'][i]
         writelist.append([name, interval[0], interval[1]])
+        writer.writerow([name, interval[0], interval[1]])
         print(name + ': ' + str(interval))
         ###### WRITE TO CSV
+    f.close()
 
-    #todo: Write intervals to CSV files
     #todo: Send workbook and plots to Tim
-
-
 
     return

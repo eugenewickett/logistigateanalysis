@@ -306,8 +306,8 @@ def loss_pms2(est, targ, paramDict):
         currloss += scoreterm * wtterm * nodeWtVec[i]
     return currloss
 
-def showRateWeights():
-    '''Generate a figure showcasing how the rate weights change with different parameter choices'''
+def showRiskVals():
+    '''Generate a figure showcasing how the risk changes with different parameter choices'''
     x = np.linspace(0.001,0.999,1000)
     t = 0.3 # Our target
     y1 = (x+2*(0.5-t))*(1-x)
@@ -328,6 +328,44 @@ def showRateWeights():
     plt.text(0.84, 0.50, 'Check, $m=0.6$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
     plt.text(0.84, 0.21, 'Check, $m=0.95$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
     plt.text(0.00, 0.47, 'Parabolic', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    return
+
+def showScoreVals():
+    '''Generate a figure showcasing how the score changes with different parameter choices'''
+    gEst = np.linspace(0.001,0.999,50) #gamma_hat
+    gStar = 0.4 # gamma_star
+    tauvec = [0.05,0.25,0.9] # For check score
+    vvec = [0.5,1.2] # For absolute difference and classification scores
+    tvec = [0.2]
+    fig, ax = plt.subplots(figsize=(8, 7))
+    for tau in tauvec: # Check scores
+        newy = [(gStar-gEst[i])*(tau-(1 if gEst[i]<gStar else 0)) for i in range(len(gEst))]
+        plt.plot(gEst,newy,':')
+    for v in vvec: # Absolute difference scores
+        newy = [-1*(max(gEst[i]-gStar,0)+v*max(gStar-gEst[i],0)) for i in range(len(gEst))]
+        plt.plot(gEst,newy,'-')
+        for t in tvec:
+            classEst = [1 if gEst[i]>=t else 0 for i in range(len(gEst))]
+            classStar = 1 if gStar >= t else 0
+            newy = [-1*(max(classEst[i]-classStar,0)+v*max(classStar-classEst[i],0)) for i in range(len(gEst))]
+            plt.plot(gEst,newy,'<',)
+    import matplotlib.ticker as mtick
+    plt.ylim([-1.3,0.1])
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    plt.title('Values for selected score terms\n$\gamma^\star=0.4$',fontdict={'fontsize':16,'fontname':'Trebuchet MS'})
+    plt.ylabel('Score term value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('SFP rate estimate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.16, -0.55,'Class., $l=0.3$, $v=0.5$',fontdict={'fontsize': 10, 'fontname': 'Trebuchet MS'})
+    plt.text(0.16, -1.17, 'Class., $l=0.3$, $v=1.2$', fontdict={'fontsize': 10, 'fontname': 'Trebuchet MS'})
+    plt.text(0.80, -0.07, 'Check, $m=0.05$', fontdict={'fontsize': 10, 'fontname': 'Trebuchet MS'})
+    plt.text(0.8, -0.2, 'Check, $m=0.25$', fontdict={'fontsize': 10, 'fontname': 'Trebuchet MS'})
+    plt.text(0.81, -0.36, 'Check, $m=0.9$', fontdict={'fontsize': 10, 'fontname': 'Trebuchet MS'})
+    plt.text(0., -0.1, 'Abs. Diff., $v=0.5$', fontdict={'fontsize': 10, 'fontname': 'Trebuchet MS'})
+    plt.text(0.13, -0.37, 'Abs. Diff., $v=1.2$', fontdict={'fontsize': 10, 'fontname': 'Trebuchet MS'})
     fig.tight_layout()
     plt.show()
     plt.close()
