@@ -273,36 +273,22 @@ def score_check(est, targ, paramDict):
 def bayesEst(samps, scoredict):
     '''
     Returns the Bayes estimate for a set of SFP rates based on the type of score and parameters used
-    scoredict: must have key 'name'
+    scoredict: must have key 'name' and other necessary keys for calculating the associated Bayes estimate
     '''
     scorename = scoredict['name']
     if scorename == 'AbsDiff':
-        pass
+        underEstWt = scoredict['underEstWt']
+        est = np.quantile(samps,underEstWt/(1+underEstWt), axis=0)
     elif scorename == 'Check':
-        pass
+        slope = scoredict['slope']
+        est = np.quantile(samps,1-slope, axis=0)
+    elif scorename == 'Class':
+        underEstWt = scoredict['underEstWt']
+        critVal = np.quantile(samps, underEstWt / (1 + underEstWt), axis=0)
+        classlst = [1 if critVal[i]>=scoredict['threshold'] else 0 for i in range(len(samps[0]))]
+        est = np.array(classlst)
     else:
         print('Not a valid score name')
-
-    '''
-    bayesDict = {'name': lossdict['scoreFunc'], 'scoredict': lossdict['scoreDict']}
-    currEst = bayesEst(currSamps, bayesDict.copy())
-    
-    
-    
-    
-    if estdecision[0] == 'mean':
-        logitmeans = np.average(currSamps, axis=0)
-        currEst = sps.expit(logitmeans)
-    elif estdecision[0] == 'mode':
-        currEst = np.array(
-            [1 if np.sum(currSamps[:, i] > sps.logit(estdecision[1])) >= (len(currSamps[:, i]) / 2) else 0 for i in
-             range(numSN + numTN)])
-    elif estdecision[0] == 'median':
-        logitmedians = np.median(currSamps, axis=0)
-        currEst = sps.expit(logitmedians)
-    '''
-
-    est = 0.
 
     return est
 
@@ -422,7 +408,7 @@ def writeObjToPickle(obj, objname='pickleObject'):
     pickle.dump(obj, open(outputFileName, 'wb'))
     return
 
-def getDesignUtility(priordatadict, lossdict, estdecision, designlist, numtests, omeganum, designnames=[],
+def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, designnames=[],
                      type=['trace'], priordraws=[], randinds=[], roundAlg=roundDesignLow):
     '''
     Produces a list of loss vectors for entered design choices under a given data set and specified loss.
@@ -500,19 +486,9 @@ def getDesignUtility(priordatadict, lossdict, estdecision, designlist, numtests,
             postdatadict['Y'] = Yomega
 
             postdatadict = methods.GeneratePostSamples(postdatadict)
-            currSamps = sps.logit(postdatadict['postSamples'])
 
             # Get the Bayes estimate
-            bayesDict = lossdict['scoreDict'].copy()
-            currEst = bayesEst(currSamps,bayesDict)
-            if estdecision[0] == 'mean':
-                logitmeans = np.average(currSamps,axis=0)
-                currEst = sps.expit(logitmeans)
-            elif estdecision[0] == 'mode':
-                currEst = np.array([1 if np.sum(currSamps[:,i]>sps.logit(estdecision[1]))>=(len(currSamps[:,i])/2) else 0 for i in range(numSN+numTN) ])
-            elif estdecision[0] == 'median':
-                logitmedians = np.median(currSamps,axis=0)
-                currEst = sps.expit(logitmedians)
+            currEst = bayesEst(postdatadict['postSamples'],lossdict['scoreDict'])
 
             # Average loss for all postpost samples
             sumloss = 0
@@ -597,7 +573,7 @@ def bayesianexample():
     omeganum = 100
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'], designlist=designList, designnames=designNames, numtests=numtests,
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList, designnames=designNames, numtests=numtests,
                                omeganum=omeganum, type=['trace'], priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb')), randinds=randinds)
     plotLossVecs(lossveclist,lvecnames=designNames)
     '''
@@ -626,9 +602,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist,lvecnames=designNames)
@@ -671,9 +646,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -723,9 +697,8 @@ def bayesianexample():
     omeganum = 100
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -748,9 +721,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -792,9 +764,8 @@ def bayesianexample():
     omeganum = 100
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -817,9 +788,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -861,9 +831,8 @@ def bayesianexample():
     omeganum = 100
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -886,9 +855,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -930,9 +898,8 @@ def bayesianexample():
     omeganum = 100
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -955,9 +922,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -996,12 +962,11 @@ def bayesianexample():
     designList = [design0]
     designNames = ['Design 0']
     numtests = 0
-    omeganum = 100
+    omeganum = 1
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1024,9 +989,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1069,9 +1033,8 @@ def bayesianexample():
     omeganum = 100
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1095,9 +1058,8 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
 
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), estdecision=['median'],
-                                   designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1160,12 +1122,11 @@ def bayesianexample():
     for scenind in range(100):
         omeganum = 1
         Qest = Qlist[scenind]
-        lossvec = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
-                                       estdecision=['median'],
-                                       designlist=designList, designnames=designNames, numtests=numtests,
-                                       omeganum=omeganum, type=['test node', Qest],
-                                       priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
-                                       randinds=randinds)
+        lossvec = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum,
+                                   type=['test node', Qest],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds)
         lossveclist.append(lossvec[0][0])
         print('Scenario '+str(scenind)+' finished')
     '''
@@ -1192,7 +1153,6 @@ def bayesianexample():
         omeganum = 1
         Qest = Qlist[scenind]
         lossvec = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
-                                   estdecision=['median'],
                                    designlist=designList, designnames=designNames, numtests=numtests,
                                    omeganum=omeganum, type=['test node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
@@ -1233,7 +1193,6 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
     omeganum = 100
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
-                               estdecision=['median'],
                                designlist=designList, designnames=designNames, numtests=numtests,
                                omeganum=omeganum, type=['test node', Qest],
                                priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
@@ -1260,7 +1219,6 @@ def bayesianexample():
 
     omeganum = 100
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
-                                   estdecision=['median'],
                                    designlist=designList, designnames=designNames, numtests=numtests,
                                    omeganum=omeganum, type=['test node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
