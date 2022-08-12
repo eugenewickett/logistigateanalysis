@@ -409,9 +409,10 @@ def writeObjToPickle(obj, objname='pickleObject'):
     return
 
 def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, designnames=[],
-                     type=['trace'], priordraws=[], randinds=[], roundAlg=roundDesignLow):
+                     type=['trace'], priordraws=[], randinds=[], roundAlg=roundDesignLow, method='MCMC'):
     '''
-    Produces a list of loss vectors for entered design choices under a given data set and specified loss.
+    Produces a list of loss vectors for entered design choices under a given data set and specified loss. Each loss
+        vector contains omeganum Monte Carlo integration iterations
     Designed for use with plotLossVecs() to plot Bayesian risk associated with each design.
     priordatadict: dictionary capturing all prior data. should have posterior draws from initial data set already
     included, with keys identical to those provided by logistigate functions
@@ -426,6 +427,8 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
         ['test node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
     priordraws: set of prior draws to use for synchronized data collection in different designs
     randinds: the indices with which to iterate through priordraws for all omeganum loops
+    method: one of 'MCMC' or 'approx'; 'MCMC' completes full MCMC sampling for generating posterior probabilities,
+        'approx' approximates the posterior probabilities
     '''
     # Initiate the list to return
     lossveclist = []
@@ -485,17 +488,43 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             postdatadict['N'] = Nomega
             postdatadict['Y'] = Yomega
 
-            postdatadict = methods.GeneratePostSamples(postdatadict)
+            if method == 'MCMC':
+                # Writes over previous MCMC draws
+                postdatadict = methods.GeneratePostSamples(postdatadict)
+            elif method == 'approx':
+                # Before calculating loss, get density weights normalized to len(postSamples)
+                postDensWts = []
+                for currsamp in postdatadict['postSamples']:
+                    if postdatadict['type'] == 'Tracked':
+                        currWt = np.exp(methods.Tracked_LogPost(currsamp, Ntilde, Ytilde, priordatadict['diagSens'],
+                                                         priordatadict['diagSpec'], priordatadict['prior']))
+                    elif postdatadict['type'] == 'Untracked': #todo: REST OF FUNCTION NEEDS TO BE ADAPTED FOR UNTRACKED, NODE SAMPING SETTING
+                        currWt = np.exp(methods.Untracked_LogLike(currsamp, Ntilde, Ytilde,priordatadict['diagSens'],
+                                                                  priordatadict['diagSpec']),priordatadict['transMat'])
+                    postDensWts.append(currWt)
+                postDensWts = np.array(postDensWts)
+                postDensWts = postDensWts * (len(postdatadict['postSamples']) / np.sum(postDensWts)) # Normalize
+
+                plt.hist(postDensWts)
+                plt.show()
+
+
 
             # Get the Bayes estimate
             currEst = bayesEst(postdatadict['postSamples'],lossdict['scoreDict'])
 
             # Average loss for all postpost samples
             sumloss = 0
-            for currsamp in postdatadict['postSamples']:
-                currloss = loss_pms(currEst, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                    lossdict['riskFunc'],lossdict['riskDict'],lossdict['marketVec'])
-                sumloss += currloss
+            for currsampind, currsamp in enumerate(postdatadict['postSamples']):
+                if method == 'MCMC':
+                    currloss = loss_pms(currEst, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                        lossdict['riskFunc'],lossdict['riskDict'],lossdict['marketVec'])
+                    sumloss += currloss
+                if method == 'approx': # weigh each sample by p(dTilde|gamma)
+                    currWt = postDensWts[currsampind]
+                    currloss = currWt * loss_pms(currEst, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                                 lossdict['riskFunc'],lossdict['riskDict'],lossdict['marketVec'])
+                    sumloss += currloss
             avgloss = sumloss/len(postdatadict['postSamples'])
 
             #Append to utility storage vector
@@ -504,6 +533,114 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
         lossveclist.append(currlossvec)
 
     return lossveclist
+
+def EvalAlgTiming():
+    '''
+    Script for evaluating the time for running getDesignUtility under the standard MCMC and approximation routines
+    '''
+    numTN, numSN = 3, 2
+    # Designate testing accuracy
+    s, r = 1., 1.
+    # Designate the true SFP rates
+    trueSFPrates = [0.5, 0.05, 0.1, 0.08, 0.02]
+
+    # Generate a supply chain
+    exampleDict = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r, numSamples=0,
+                                            dataType='Tracked', randSeed=86, trueRates=trueSFPrates)
+    exampleDict[
+        'diagSens'] = s  # bug from older version of logistigate that doesn't affect the data but reports s,r=0.9,0.99
+    exampleDict['diagSpec'] = r
+    # Update dictionary with needed summary vectors
+    exampleDict = util.GetVectorForms(exampleDict)
+    # Populate N and Y with numbers from paper example
+    exampleDict['N'] = np.array([[6, 11], [12, 6], [2, 13]])
+    exampleDict['Y'] = np.array([[3, 0], [6, 0], [0, 0]])
+    # Add a prior
+    exampleDict['prior'] = methods.prior_normal()
+    exampleDict['numPostSamples'] = 1000
+    exampleDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    exampleDict['importerNum'] = numSN
+    exampleDict['outletNum'] = numTN
+
+    # Store the sourcing probability matrix; assume Q is known, but it could be estimated otherwise
+    # Q = exampleDict['transMat']
+
+    # Summarize the data results
+    # N_init = exampleDict['N']
+    # Y_init = exampleDict['Y']
+
+    # Generate posterior draws
+    exampleDict = methods.GeneratePostSamples(exampleDict)
+
+    import pickle
+    import os
+    import time
+
+    # Different designs; they take matrix form as the traces can be selected directly
+    testdesign = np.array([[1 / 3, 0.], [1 / 3, 1 / 3], [0., 0.]])
+    underWt, t = 1., 0.1
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'threshold': t}
+    marketvec = np.ones(5)
+    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+                'marketVec': marketvec}
+    designList = [testdesign]
+    designNames = ['Test Design']
+    numtests = 0
+    omeganum = 100
+    random.seed(35)
+    randinds = random.sample(range(0, 1000), 100)
+    mcmcstart = time.time()
+    lossvec_mcmc = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds, method = 'MCMC')[0]
+    mcmcsecs = time.time()-mcmcstart
+
+    approxstart = time.time()
+    lossvec_approx = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds, method='approx')[0]
+    approxsecs = time.time() - approxstart
+
+    CIalpha = 0.1
+    z = spstat.norm.ppf(1 - (CIalpha / 2))
+    mn_mcmc = np.mean(lossvec_mcmc)
+    sd_mcmc = np.std(lossvec_mcmc)
+    intval_mcmc = z * sd_mcmc / np.sqrt(len(lossvec_mcmc))
+    loint_mcmc, hiint_mcmc = mn_mcmc - intval_mcmc, mn_mcmc + intval_mcmc
+
+    mn_approx = np.mean(lossvec_approx)
+    sd_approx = np.std(lossvec_approx)
+    intval_approx = z * sd_approx / np.sqrt(len(lossvec_approx))
+    loint_approx, hiint_approx = mn_approx - intval_approx, mn_approx + intval_approx
+
+    print(str(loint_mcmc)+', ' + str(hiint_mcmc))
+    print(str(loint_approx) + ', ' + str(hiint_approx))
+
+
+    '''
+    numtests=50:    0.1266, 0.1336
+                    0.1511, 0.1539
+    mcmc_secs: 805.2s
+    approx_secs: 8.9s
+                  
+    numtests=5:     0.1500, 0.1551
+                    0.1490, 0.1494
+    mcmc_secs: 3474.2s
+    approx_secs: 38.0s
+    
+    numtests=0:     0.1593, 0.1608
+                    0.1514, 0.1514
+    mcmc_secs: 5050.7s
+    approx_secs: 39.8s
+    '''
+
+
+
 
 
 def bayesianexample():
