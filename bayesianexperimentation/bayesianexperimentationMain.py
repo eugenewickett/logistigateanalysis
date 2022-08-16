@@ -496,18 +496,15 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                 postDensWts = []
                 for currsamp in postdatadict['postSamples']:
                     if postdatadict['type'] == 'Tracked':
-                        currWt = np.exp(methods.Tracked_LogPost(currsamp, Ntilde, Ytilde, priordatadict['diagSens'],
-                                                         priordatadict['diagSpec'], priordatadict['prior']))
+                        #todo: LIKELIHOOD OR POSTERIOR LIKELIHOOD?
+                        currWt = np.exp(methods.Tracked_LogLike(currsamp, Ntilde, Ytilde, priordatadict['diagSens'],
+                                                         priordatadict['diagSpec']))#, priordatadict['prior']))
                     elif postdatadict['type'] == 'Untracked': #todo: REST OF FUNCTION NEEDS TO BE ADAPTED FOR UNTRACKED, NODE SAMPING SETTING
                         currWt = np.exp(methods.Untracked_LogLike(currsamp, Ntilde, Ytilde,priordatadict['diagSens'],
                                                                   priordatadict['diagSpec']),priordatadict['transMat'])
                     postDensWts.append(currWt)
                 postDensWts = np.array(postDensWts)
                 postDensWts = postDensWts * (len(postdatadict['postSamples']) / np.sum(postDensWts)) # Normalize
-
-                plt.hist(postDensWts)
-                plt.show()
-
 
 
             # Get the Bayes estimate
@@ -557,7 +554,7 @@ def EvalAlgTiming():
     exampleDict['Y'] = np.array([[3, 0], [6, 0], [0, 0]])
     # Add a prior
     exampleDict['prior'] = methods.prior_normal()
-    exampleDict['numPostSamples'] = 1000
+    exampleDict['numPostSamples'] = 10000
     exampleDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     exampleDict['importerNum'] = numSN
     exampleDict['outletNum'] = numTN
@@ -577,24 +574,26 @@ def EvalAlgTiming():
     import time
 
     # Different designs; they take matrix form as the traces can be selected directly
-    testdesign = np.array([[1 / 3, 0.], [1 / 3, 1 / 3], [0., 0.]])
+    testdesign1 = np.array([[1 / 3, 0.], [1 / 3, 1 / 3], [0., 0.]])
+    testdesign2 = np.array([[0., 0.], [1/2, 1/2], [0., 0.]])
+
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
     riskdict = {'threshold': t}
     marketvec = np.ones(5)
     lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
-    designList = [testdesign]
+    designList = [testdesign1]
     designNames = ['Test Design']
     numtests = 0
     omeganum = 100
-    random.seed(35)
-    randinds = random.sample(range(0, 1000), 100)
+    random.seed(36)
+    randinds = random.sample(range(0, len(exampleDict['postSamples'])), omeganum)
+
     mcmcstart = time.time()
     lossvec_mcmc = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
                                    omeganum=omeganum, type=['trace'],
-                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds, method = 'MCMC')[0]
     mcmcsecs = time.time()-mcmcstart
 
@@ -602,12 +601,12 @@ def EvalAlgTiming():
     lossvec_approx = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
                                    omeganum=omeganum, type=['trace'],
-                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds, method='approx')[0]
     approxsecs = time.time() - approxstart
 
     CIalpha = 0.1
     z = spstat.norm.ppf(1 - (CIalpha / 2))
+
     mn_mcmc = np.mean(lossvec_mcmc)
     sd_mcmc = np.std(lossvec_mcmc)
     intval_mcmc = z * sd_mcmc / np.sqrt(len(lossvec_mcmc))
@@ -618,12 +617,15 @@ def EvalAlgTiming():
     intval_approx = z * sd_approx / np.sqrt(len(lossvec_approx))
     loint_approx, hiint_approx = mn_approx - intval_approx, mn_approx + intval_approx
 
+    print('MCMC time: '+ str(mcmcsecs))
+    print('approx time: '+ str(approxsecs))
     print(str(loint_mcmc)+', ' + str(hiint_mcmc))
     print(str(loint_approx) + ', ' + str(hiint_approx))
 
 
     '''
-    numtests=50:    0.1266, 0.1336
+    TESTDESIGN1, USING NTILDE,YTILDE
+    numtests=30:    0.1266, 0.1336
                     0.1511, 0.1539
     mcmc_secs: 805.2s
     approx_secs: 8.9s
@@ -637,6 +639,56 @@ def EvalAlgTiming():
                     0.1514, 0.1514
     mcmc_secs: 5050.7s
     approx_secs: 39.8s
+    
+    TESTDESIGN2
+    numtests=30:    0.1288, 0.1363
+                    0.1423, 0.1440
+    
+    TESTDESIGN1, USING NOMEGA,YOMEGA
+    numtests=30:    0.1560, 0.1595
+    approx_secs: 8.1s
+                  
+    numtests=5:     0.1425, 0.1433
+    approx_secs: s
+    
+    numtests=0:     0.1420, 0.1514
+    approx_secs: 39.8s
+    
+    TESTDESIGN1, USING NTILDE,YTILDE W/ LOG-LIKE RATHER THAN LOG-POST; NUMPOSTSAMPLES=1,000
+    (MCMClo,MCMChi)
+    (approxlo,approxhi)
+    numtests=30:        0.1249, 0.1317
+                        0.1496, 0.1520
+    MCMC time:      877.6s
+    approx time:      7.0s
+                  
+    numtests=5:         0.1486, 0.1541
+                        0.1498, 0.1502
+    MCMC time:      783.0s
+    approx time:      7.0s
+    
+    numtests=0:     0.1592, 0.1610
+                    0.1603, 0.1603    
+    mcmc_secs:      
+    approx_secs:    6.1s
+    
+    TESTDESIGN1, USING NTILDE,YTILDE W/ LOG-LIKE; NUMPOSTSAMPLES=10,000
+    (MCMClo,MCMChi)
+    (approxlo,approxhi)
+    numtests=30:        0.1261, 0.1411
+                        0.1552, 0.1581
+    MCMC time:      0.0s
+    approx time:      0.0s
+                  
+    numtests=5:         0.1498, 0.1552
+                        0.1567, 0.1572
+    MCMC time:      1949.4s
+    approx time:      60.7s
+    
+    numtests=0:     0.16035547903409098, 0.16089660564175046
+                    0.1607984206452502, 0.1607984206452502    
+    MCMC time: 4935.137982368469
+    approx time: 72.35974860191345
     '''
 
 
