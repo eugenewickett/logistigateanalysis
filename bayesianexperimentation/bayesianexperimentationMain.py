@@ -585,7 +585,7 @@ def EvalAlgTiming():
                 'marketVec': marketvec}
     designList = [testdesign1]
     designNames = ['Test Design']
-    numtests = 0
+    numtests = 10
     omeganum = 100
     random.seed(36)
     randinds = random.sample(range(0, len(exampleDict['postSamples'])), omeganum)
@@ -680,13 +680,18 @@ def EvalAlgTiming():
     MCMC time:      0.0s
     approx time:      0.0s
                   
+    numtests=10:        0.1456, 0.1525
+                        0.1556, 0.1564
+    MCMC time:      1949.4s
+    approx time:      60.7s
+    
     numtests=5:         0.1498, 0.1552
                         0.1567, 0.1572
     MCMC time:      1949.4s
     approx time:      60.7s
     
-    numtests=0:     0.16035547903409098, 0.16089660564175046
-                    0.1607984206452502, 0.1607984206452502    
+    numtests=0:     0.1604, 0.1609
+                    0.1608, 0.1608    
     MCMC time: 4935.137982368469
     approx time: 72.35974860191345
     '''
