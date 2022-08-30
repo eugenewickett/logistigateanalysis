@@ -45,13 +45,15 @@ def roundDesignLow(D,n):
         sortinds = np.argsort(-roundMat,axis=None).tolist()
         for removeInd in range(int(np.sum(roundMat)-n)):
             roundMat[sortinds[removeInd]] += -1
-        roundMat = roundMat.reshape(D.shape[0],D.shape[1])
+        if roundMat.ndim == 2:
+            roundMat = roundMat.reshape(D.shape[0],D.shape[1])
     elif np.sum(roundMat) < n: # Too few tests; add to lowest represented traces
         roundMat = roundMat.flatten()
         sortinds = np.argsort(roundMat, axis=None).tolist()
         for addind in range(int(n-np.sum(roundMat))):
             roundMat[sortinds[addind]] += 1
-        roundMat = roundMat.reshape(D.shape[0],D.shape[1])
+        if roundMat.ndim == 2:
+            roundMat = roundMat.reshape(D.shape[0],D.shape[1])
     return roundMat
 
 def roundDesignHigh(D,n):
@@ -65,13 +67,15 @@ def roundDesignHigh(D,n):
         sortinds = np.argsort(roundMat,axis=None).tolist()
         for removeInd in range(int(np.sum(roundMat)-n)):
             roundMat[sortinds[removeInd]] += -1
-        roundMat = roundMat.reshape(D.shape[0],D.shape[1])
+        if roundMat.ndim == 2:
+            roundMat = roundMat.reshape(D.shape[0],D.shape[1])
     elif np.sum(roundMat) < n: # Too few tests; add to highest represented traces
         roundMat = roundMat.flatten()
         sortinds = np.argsort(-roundMat, axis=None).tolist()
         for addind in range(int(n-np.sum(roundMat))):
             roundMat[sortinds[addind]] += 1
-        roundMat = roundMat.reshape(D.shape[0],D.shape[1])
+        if roundMat.ndim == 2:
+            roundMat = roundMat.reshape(D.shape[0],D.shape[1])
     return roundMat
 
 def plotLossVecs(lveclist, lvecnames=[], type='CI', CIalpha = 0.05,legendlabel=[],
@@ -409,7 +413,8 @@ def writeObjToPickle(obj, objname='pickleObject'):
     return
 
 def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, designnames=[],
-                     type=['trace'], priordraws=[], randinds=[], roundAlg=roundDesignLow, method='MCMC'):
+                     type=['trace'], priordraws=[], randinds=[], roundAlg=roundDesignLow, method='MCMC',
+                     printUpdate=True):
     '''
     Produces a list of loss vectors for entered design choices under a given data set and specified loss. Each loss
         vector contains omeganum Monte Carlo integration iterations
@@ -450,86 +455,106 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
         currlossvec = []
         # Initialize samples to be drawn from traces, per the design
         sampMat = roundAlg(design, numtests)
-        for omega in range(omeganum):
-            TNsamps = sampMat.copy()
-            # Grab a draw from the prior
-            currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
-            # Initialize Ntilde and Ytilde
-            Ntilde = np.zeros(shape = priordatadict['N'].shape)
-            Ytilde = Ntilde.copy()
-            while np.sum(TNsamps) > 0.:
-                # Go to first non-empty row of TN samps
-                i, j = 0, 0
-                while np.sum(TNsamps[i])==0:
-                    i += 1
-                if type[0]=='trace':
-                    # Go to first non-empty column of this row
-                    while TNsamps[i][j]==0:
-                        j += 1
-                    TNsamps[i][j] -= 1
-                if type[0]=='test node':
-                    # Pick a supply node according to Qest
-                    j = choice([i for i in range(numSN)], p=type[1][i]/np.sum(type[1][i]).tolist())
-                    TNsamps[i] -= 1
-                # Generate test result
-                currTNrate = currpriordraw[numSN+i]
-                currSNrate = currpriordraw[j]
-                currrealrate = currTNrate + (1-currTNrate)*currSNrate # z_star for this sample
-                currposrate = s*currrealrate+(1-r)*(1-currrealrate) # z for this sample
-                result = np.random.binomial(1, p=currposrate)
-                Ntilde[i, j] += 1
-                Ytilde[i, j] += result
+        if method == 'MCMC':
+            for omega in range(omeganum):
+                TNsamps = sampMat.copy()
+                # Grab a draw from the prior
+                currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
 
-            # We have a new set of data d_tilde
-            Nomega = priordatadict['N'] + Ntilde
-            Yomega = priordatadict['Y'] + Ytilde
+                # Initialize Ntilde and Ytilde
+                Ntilde = np.zeros(shape=priordatadict['N'].shape)
+                Ytilde = Ntilde.copy()
+                while np.sum(TNsamps) > 0.:
+                    # Go to first non-empty row of TN samps
+                    i, j = 0, 0
+                    while np.sum(TNsamps[i]) == 0:
+                        i += 1
+                    if type[0] == 'trace':
+                        # Go to first non-empty column of this row
+                        while TNsamps[i][j] == 0:
+                            j += 1
+                        TNsamps[i][j] -= 1
+                    if type[0] == 'test node':
+                        # Pick a supply node according to Qest
+                        j = choice([i for i in range(numSN)], p=type[1][i] / np.sum(type[1][i]).tolist())
+                        TNsamps[i] -= 1
+                    # Generate test result
+                    currTNrate = currpriordraw[numSN + i]
+                    currSNrate = currpriordraw[j]
+                    currrealrate = currTNrate + (1 - currTNrate) * currSNrate  # z_star for this sample
+                    currposrate = s * currrealrate + (1 - r) * (1 - currrealrate)  # z for this sample
+                    result = np.random.binomial(1, p=currposrate)
+                    Ntilde[i, j] += 1
+                    Ytilde[i, j] += result
+                # We have a new set of data d_tilde
+                Nomega = priordatadict['N'] + Ntilde
+                Yomega = priordatadict['Y'] + Ytilde
 
-            postdatadict = priordatadict.copy()
-            postdatadict['N'] = Nomega
-            postdatadict['Y'] = Yomega
+                postdatadict = priordatadict.copy()
+                postdatadict['N'] = Nomega
+                postdatadict['Y'] = Yomega
 
-            if method == 'MCMC':
                 # Writes over previous MCMC draws
                 postdatadict = methods.GeneratePostSamples(postdatadict)
-            elif method == 'approx':
-                # Before calculating loss, get density weights normalized to len(postSamples)
-                postDensWts = []
-                for currsamp in postdatadict['postSamples']:
-                    if postdatadict['type'] == 'Tracked':
-                        #todo: LIKELIHOOD OR POSTERIOR LIKELIHOOD?
-                        currWt = np.exp(methods.Tracked_LogLike(currsamp, Ntilde, Ytilde, priordatadict['diagSens'],
-                                                         priordatadict['diagSpec']))#, priordatadict['prior']))
-                    elif postdatadict['type'] == 'Untracked': #todo: REST OF FUNCTION NEEDS TO BE ADAPTED FOR UNTRACKED, NODE SAMPING SETTING
-                        currWt = np.exp(methods.Untracked_LogLike(currsamp, Ntilde, Ytilde,priordatadict['diagSens'],
-                                                                  priordatadict['diagSpec']),priordatadict['transMat'])
-                    postDensWts.append(currWt)
-                postDensWts = np.array(postDensWts)
-                postDensWts = postDensWts * (len(postdatadict['postSamples']) / np.sum(postDensWts)) # Normalize
 
+                # Get the Bayes estimate
+                currEst = bayesEst(postdatadict['postSamples'], lossdict['scoreDict'])
 
-            # Get the Bayes estimate
-            currEst = bayesEst(postdatadict['postSamples'],lossdict['scoreDict'])
-
-            # Average loss for all postpost samples
-            sumloss = 0
-            for currsampind, currsamp in enumerate(postdatadict['postSamples']):
-                if method == 'MCMC':
+                sumloss = 0
+                for currsampind, currsamp in enumerate(postdatadict['postSamples']):
                     currloss = loss_pms(currEst, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                        lossdict['riskFunc'],lossdict['riskDict'],lossdict['marketVec'])
+                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
                     sumloss += currloss
-                if method == 'approx': # weigh each sample by p(dTilde|gamma)
-                    currWt = postDensWts[currsampind]
-                    currloss = currWt * loss_pms(currEst, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                                 lossdict['riskFunc'],lossdict['riskDict'],lossdict['marketVec'])
-                    sumloss += currloss
-            avgloss = sumloss/len(postdatadict['postSamples'])
+                avgloss = sumloss / len(postdatadict['postSamples'])
 
-            #Append to utility storage vector
-            currlossvec.append(avgloss)
-            print(designnames[designind]+', '+'omega '+str(omega) + ' complete')
-        lossveclist.append(currlossvec)
+                # Append to loss storage vector
+                currlossvec.append(avgloss)
+                if printUpdate==True:
+                    print(designnames[designind] + ', ' + 'omega ' + str(omega) + ' complete')
+
+            lossveclist.append(currlossvec)  # Add the loss vector for this design
+        # END IF FOR MCMC
+
+        elif method == 'approx': # We are using approximation; use expected value of data
+            # todo: REST OF SECTION NEEDS TO BE ADAPTED FOR UNTRACKED
+            postDensWts = []  # Initialize our weights for each vector of SFP rates
+            for currdraw in priordatadict['postSamples']: #Iterate through each prior draw
+                currWt = 0
+                for currTN in range(numTN):
+                    for currSN in range(numSN):
+                        currzProb = zProbTr(currTN,currSN,numSN,currdraw,priordatadict['diagSens'],priordatadict['diagSpec'])
+                        currzTerm = np.log(currzProb)*currzProb + np.log(1-currzProb)*(1-currzProb)
+                        if type[0] == 'trace':
+                            currTerm = sampMat[currTN][currSN]*currzTerm
+                        elif type[0] == 'test node':
+                            currTerm = sampMat[currTN]*type[1][currTN][currSN]*currzTerm
+                        currWt += currTerm
+                postDensWts.append(np.exp(currWt)) # Want the likelihood; currWt signifies the log-likelihood
+            # Nomralize the weights to sum to the number of prior draws
+            postWtsSum = np.sum(postDensWts)
+            postDensWts = [postDensWts[i]*len(priordatadict['postSamples'])/postWtsSum for i in range(len(postDensWts))]
+            # Get the Bayes estimate
+            currEst = bayesEst(priordatadict['postSamples'], lossdict['scoreDict'])
+            # Now average the loss across prior draws
+            sumloss = 0
+            for currdrawind, currdraw in enumerate(priordatadict['postSamples']):
+                currloss = postDensWts[currdrawind] * loss_pms(currEst, currdraw, lossdict['scoreFunc'],
+                                                               lossdict['scoreDict'], lossdict['riskFunc'],
+                                                               lossdict['riskDict'], lossdict['marketVec'])
+                sumloss += currloss
+            avgloss = sumloss/len(priordatadict['postSamples'])
+            lossveclist.append(avgloss)
+            if printUpdate==True:
+                print(designnames[designind] + ' complete')
+        # END ELIF FOR APPROXIMATION
+    # END FOR FOR DESIGNS
 
     return lossveclist
+
+def zProbTr(tnInd, snInd, snNum, gammaVec, sens=1., spec=1.):
+    '''Provides consolidated SFP probability for the entered TN, SN indices; gammaVec should start with SN rates'''
+    zStar = gammaVec[snNum+tnInd]+(1-gammaVec[snNum+tnInd])*gammaVec[snInd]
+    return sens*zStar+(1-spec)*zStar
 
 def EvalAlgTiming():
     '''
@@ -697,9 +722,6 @@ def EvalAlgTiming():
     '''
 
 
-
-
-
 def bayesianexample():
     '''
     Use paper example to find the utility from different sampling designs; in this case, we can choose the full trace,
@@ -770,6 +792,12 @@ def bayesianexample():
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList, designnames=designNames, numtests=numtests,
                                omeganum=omeganum, type=['trace'], priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb')), randinds=randinds)
     plotLossVecs(lossveclist,lvecnames=designNames)
+    # APPROXIMATION
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['trace'],
+                                   priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
+                                   randinds=randinds, method='approx')
     '''
     # LOSS VECS: 19-JUL-22
     designNames = ['Design 0']
@@ -780,6 +808,17 @@ def bayesianexample():
     z = spstat.norm.ppf(1 - (CIalpha / 2))
     intval = z * (vecSD) / np.sqrt(len(lossvec))
     print('['+str(vecmean-intval)+', '+str(vecmean)+', '+str(vecmean+intval)+']')
+    # LOSS VECS: 29-AUG-22
+    designNames = ['Design 0']
+    lossvec = [[0.1631624760638568, 0.15720307855535465, 0.1608639458015167, 0.16447283684593733, 0.1597308858525191, 0.16530244555035933, 0.16669312810707285, 0.16160074117278947, 0.1653192236072529, 0.16204418974476908, 0.15497871429023474, 0.15467411765416555, 0.1613750771551091, 0.15747074496261462, 0.15227562871749936, 0.17145553434981564, 0.16369361082463926, 0.16692521749216743, 0.16203792928496977, 0.1590776035470591, 0.1551749348303539, 0.16082428779764713, 0.15756807299460315, 0.1550608320048446, 0.15631195454060692, 0.15770983060319332, 0.16414686544787604, 0.15488810166410838, 0.15665288807970829, 0.1603004871311405, 0.16244412648327097, 0.15682117281806454, 0.16354500356802104, 0.16415919851377875, 0.15638019764514263, 0.16670011136232835, 0.15949899115009494, 0.1615188645137574, 0.15735859905742092, 0.15677491970077437, 0.1632770477454912, 0.14924291956044927, 0.1574308890174942, 0.16345504155976637, 0.16461700092995968, 0.16393482231407522, 0.1567846630510756, 0.1592431152969494, 0.15772433382534407, 0.14844073064826993, 0.1480748185152451, 0.15995265165098485, 0.15794841277723592, 0.1572413873265836, 0.1622471046539544, 0.16417357970743476, 0.15887070770145548, 0.1564296671429403, 0.1540633086236506, 0.1574801602328406, 0.1636280978407651, 0.1614998685157631, 0.1577330744011513, 0.15305409049467894, 0.16450330767712035, 0.15431738262912842, 0.1704341250563957, 0.15808855691643203, 0.1624660034460682, 0.16984983201379783, 0.16483379350966765, 0.17121651483881745, 0.15037817832139538, 0.15245994964489948, 0.15922731238943802, 0.1591623946701067, 0.1593963075601854, 0.1566343324544281, 0.16163975965273666, 0.16063162964748812, 0.15588301419308162, 0.16196747619948323, 0.16966545510320571, 0.1608916131441504, 0.15122267730328054, 0.1650651247623661, 0.163162013176352, 0.16165030963215343, 0.16726574770151145, 0.16236020655648817, 0.16454285631917326, 0.15453297321044887, 0.15539168550866006, 0.17099218057510968, 0.1600247961031962, 0.15695387350753648, 0.15969570999392832, 0.15967241534002483, 0.15652864332227961, 0.1649838594051987]]
+    vecSD = np.std(lossvec[0])
+    vecmean = np.mean(lossvec[0])
+    CIalpha = 0.1
+    z = spstat.norm.ppf(1 - (CIalpha / 2))
+    intval = z * (vecSD) / np.sqrt(len(lossvec))
+    print('['+str(vecmean-intval)+', '+str(vecmean)+', '+str(vecmean+intval)+']')
+    # VIA APPROXIMATION
+    lossvec = [0.15265587864150065]
     '''
 
     # 6 tests for all designs
