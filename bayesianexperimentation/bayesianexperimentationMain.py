@@ -297,7 +297,7 @@ def bayesEst(samps, scoredict):
 
     return est
 
-def bayesEstAdapt(samps, wts, scoredict):
+def bayesEstAdapt(samps, wts, scoredict,printUpdate=True):
     '''
     Returns the Bayes estimate for a set of SFP rates, adjusted for weighting of samples, based on the type of score
         and parameters used
@@ -322,7 +322,8 @@ def bayesEstAdapt(samps, wts, scoredict):
     est = np.empty(shape=(len(samps[0])))
     # Iterate through each node's distribution of SFP rates, sorting the weights accordingly
     for gind in range(len(samps[0])):
-        print('start '+str(gind)+': '+str(round(time.time())))
+        if printUpdate==True:
+            print('start '+str(gind)+': '+str(round(time.time())))
         currRates = samps[:,gind]
         sortRatesWts = [(y, x) for y, x in sorted(zip(currRates, wts))]
         sortRates = [x[0] for x in sortRatesWts]
@@ -331,7 +332,8 @@ def bayesEstAdapt(samps, wts, scoredict):
         #critInd = np.argmax(sortWtsSum>=wtTarg)
         critInd = np.argmax(np.cumsum(sortWts)>=wtTarg)
         est[gind] = sortRates[critInd]
-        print('end ' + str(gind) + ': ' + str(round(time.time())))
+        if printUpdate==True:
+            print('end ' + str(gind) + ': ' + str(round(time.time())))
 
     return est
 
@@ -625,7 +627,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             postWtsSum = np.sum(postDensWts)
             postDensWts = [postDensWts[i]*len(priordatadict['postSamples'])/postWtsSum for i in range(len(postDensWts))]
             # Get the Bayes estimate
-            currEst = bayesEstAdapt(priordatadict['postSamples'], postDensWts, lossdict['scoreDict'])
+            currEst = bayesEstAdapt(priordatadict['postSamples'], postDensWts, lossdict['scoreDict'],printUpdate=printUpdate)
             # Now average the loss across prior draws
             sumloss = 0
             for currdrawind, currdraw in enumerate(priordatadict['postSamples']):
@@ -673,9 +675,25 @@ def testApproximation():
     exampleDict['outletNum'] = numTN
 
     # Generate posterior draws
-    numdraws = 5000
+    numdraws = 200000
     exampleDict['numPostSamples'] = numdraws
     exampleDict = methods.GeneratePostSamples(exampleDict)
+
+    # How many unique draws?
+    draws1 = exampleDict['postSamples'].copy()
+    exampleDict = methods.GeneratePostSamples(exampleDict)
+    draws2 = exampleDict['postSamples'].copy()
+    combDraws = np.concatenate((draws1,draws2),axis=0)
+    combDrawsUnique = np.unique(combDraws,axis=0)
+    len(np.unique(draws1,axis=0))
+    len(combDrawsUnique)
+    #if len(uniqueDraws)<numdraws: # Conduct more MCMC sampling
+    #    newDrawNum = round((numdraws-len(uniqueDraws))*(numdraws/len(uniqueDraws))*1.1)
+    #    exampleDict['numPostSamples'] = newDrawNum
+    #    exampleDict = methods.GeneratePostSamples(exampleDict)
+    # Look again
+    #nextDraws = np.unique(exampleDict['postSamples'],axis=0)
+    #combDraws = np.concatenate((uniqueDraws,nextDraws),axis=0)
 
     # Specify the design
     design = np.array([[1 / 3, 0.], [1 / 3, 1 / 3], [0., 0.]])
@@ -689,7 +707,7 @@ def testApproximation():
                 'marketVec': marketvec}
     designList = [design]
     designNames = ['Design 2']
-    numtests = 30
+    numtests = 0
     omeganum = 200
     #random.seed(35)
     randinds = random.sample(range(numdraws), omeganum)
@@ -706,12 +724,15 @@ def testApproximation():
     print(lossveclist)
     # APPROXIMATION
     for currtestnum in [0,6,12,18,24,30]:
-        numtests = currtestnum
-        lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                    designnames=designNames, numtests=numtests,
-                                    omeganum=omeganum, type=['trace'], randinds=randinds, method='approx')
-        print('Batch size '+str(currtestnum)+' interval:')
-        print(lossveclist)
+        for drawint in [100,250,500,1000,5000,10000,20000,40000,80000,150000]:
+            newDict = exampleDict.copy()
+            randmcmcinds = random.sample(range(len(combDrawsUnique)),drawint)
+            newDict['postSamples'] = combDraws[randmcmcinds]
+            lossveclist = getDesignUtility(priordatadict=newDict, lossdict=lossDict.copy(), designlist=designList,
+                                    designnames=designNames, numtests=currtestnum,
+                                    omeganum=omeganum, type=['trace'], method='approx',printUpdate=False)
+            print('Batch size '+str(currtestnum)+', '+str(drawint)+' MCMC draws,'+' value:')
+            print(lossveclist)
 
     '''
     # MCMC; numdraws = 1000; omeganum=200
@@ -929,7 +950,7 @@ def testApproximation():
     lossveclist4 = [0.1608736676007705, 0.15196368495742088, 0.1473685094428317, 0.14558821300901453,
                     0.14325485146947434, 0.135464713197221]
     
-    # APPROX; numdraws = 250000; using IMPROVED bayesEstAdapt (each dimension takes about ?????? second)
+    # APPROX; numdraws = 250000; using IMPROVED bayesEstAdapt (each dimension takes about 1 second)
     # numtests=0
     lossveclist=[0.16114772938133556]
     
@@ -950,6 +971,35 @@ def testApproximation():
     
     lossveclist5 = [0.16114772938133556, 0.15208856250396258, 0.1473751376944487, 0.14547364382798042,
                     0.14325932211490888, 0.13585248677215966]
+                    
+    # APPROX; sampling draws from 400000 NON-UNIQUE MCMC draws, in [100,250,500,1000,5000,10000,20000,40000,80000,150000]
+    # numtests in [0,6,12,18,24,30]
+    
+    draws100 = [0.16226799394044747, 0.15030390031248322, 0.1652483554928061, 0.15106089740121725, 0.13841408632561247, 0.1159094344187765]
+    draws250 = [0.15039340888924507, 0.14097776035074683, 0.1537864304396148, 0.14645395302729636, 0.14180635630117971, 0.13033512256345897]
+    draws500 = [0.15850917537764464, 0.15219391851010758, 0.14280662505076822, 0.142060294419292, 0.13347598000368208, 0.13501683348141524]
+    draws1000 = [0.1590571594630983, 0.15247746341509646, 0.14253625827683797, 0.14468655901298322, 0.14578950682715444, 0.13901018789442268]
+    draws5000 = [0.16111942204713253, 0.15274910436525085, 0.14832070956068447, 0.14136168638856758, 0.14276297233913796, 0.12706633488030922]
+    draws10000 = [0.16090066400592046, 0.1509820707564127, 0.14634608608972083, 0.14411984117760757, 0.1442062183690515, 0.13830324270797764]
+    draws20000 = [0.16147830593651225, 0.15241649007938265, 0.14712275534442787, 0.14622559810619648, 0.14235427567763337, 0.13334869464315666]
+    draws40000 = [0.16171425312867435, 0.15175956800436066, 0.14734394510717688, 0.14466889135249483, 0.14643289009339078, 0.13506677346297244]
+    draws80000 = [0.16101099210652306, 0.15184628569603184, 0.14681681936042537, 0.14594875402986385, 0.14295133659414094, 0.13605956812420109]
+    draws150000 = [0.1611367995406028, 0.15225817568834663, 0.14739411601480204, 0.145153193158838, 0.14281617823043918, 0.13522189243359178]
+    
+    # APPROX; sampling draws from 278677 UNIQUE MCMC draws, in [100,250,500,1000,5000,10000,20000,40000,80000,150000]
+    # numtests in [0,6,12,18,24,30]
+    
+    draws100 = [0.16499927948509882, 0.14407504133695004, 0.1475768128486625, 0.14094868593630808, 0.1290078603817898, 0.14759927382299656]
+    draws250 = [0.16123805346897357, 0.151851709514405, 0.14667282964977918, 0.15197373021464955, 0.12725176844428124, 0.11814498899576165]
+    draws500 = [0.16041303658396466, 0.15091875615832262, 0.14973203826269482, 0.13697582073551204, 0.1446410960903732, 0.12639053825864222]
+    draws1000 = [0.1609180720686395, 0.1514796255240732, 0.14871021571042595, 0.1439498720475455, 0.15193071859520518, 0.12450028444175697]
+    draws5000 = [0.16067980045971691, 0.15219061231808853, 0.1483011412450344, 0.1457743728169702, 0.14339140931759076, 0.14264022889039507]
+    draws10000 = [0.16275236852230993, 0.15214727939098988, 0.14674514901178184, 0.14388291093191075, 0.14119390782707553, 0.13422201161240124]
+    draws20000 = [0.16067748518890895, 0.15269685087903964, 0.14757571978600964, 0.14226575508783973, 0.1447106223453837, 0.13533945532967667]
+    draws40000 = [0.16055196457278764, 0.15187085600983244, 0.14677489180501024, 0.14364099598149832, 0.141869369516582, 0.13160605195517308]
+    draws80000 = [0.16090197615381285, 0.15251055914266282, 0.14753310781076256, 0.14471768059505935, 0.14246981663935632, 0.13319823573998638]
+    draws150000 = [0.16124177667723333, 0.15202837721763274, 0.14732278178469982, 0.14505192968234837, 0.1420726812381061, 0.13447770603300369]
+    
     '''
     # APPROXIMATION; LOOKING AT CHANGE WITH NUMBER OF PRIOR DRAWS WITH DICTIONARY WITH 200000 DRAWS
     lossestvec = []
@@ -973,13 +1023,13 @@ def testApproximation():
     #plt.plot(intlist, lossveclist_hi, color='black', linewidth=3)
     #plt.plot(intlist, lossveclist_lo2, color='red', linewidth=3)
     #plt.plot(intlist, lossveclist_hi2, color='red', linewidth=3)
-    plt.plot(intlist, mcmcexp_lo, color='blue', linewidth=3) # Using MCMCexpect
-    plt.plot(intlist, mcmcexp_hi, color='blue', linewidth=3) # Using MCMCexpect
-    plt.plot(intlist, lossveclist0, '--', color='purple', linewidth=2) # 1000
-    plt.plot(intlist, lossveclist2, '--', color='red', linewidth=2) # 20000
-    plt.plot(intlist, lossveclist3, '--', color='green', linewidth=2) # 50000
-    plt.plot(intlist, lossveclist4, '--', color='blue', linewidth=2)  # 150000
-    plt.plot(intlist, lossveclist5, '--', color='orange', linewidth=2)  # 250000
+    plt.plot(intlist, mcmcexp_lo, color='black', linewidth=3) # Using MCMCexpect
+    plt.plot(intlist, mcmcexp_hi, color='black', linewidth=3) # Using MCMCexpect
+    plt.plot(intlist, draws100, '--', color='purple', linewidth=0.5) # 1000
+    plt.plot(intlist, draws500, '--', color='red', linewidth=1.) # 20000
+    plt.plot(intlist, draws5000, '--', color='green', linewidth=1.5) # 50000
+    plt.plot(intlist, draws20000, '--', color='blue', linewidth=2.5)  # 150000
+    plt.plot(intlist, draws150000, '--', color='orange', linewidth=3.5)  # 250000
     plt.ylim(0.1, 0.18)
     plt.xlabel('Batch size', fontsize=12)
     plt.ylabel('Loss estimate', fontsize=12)
