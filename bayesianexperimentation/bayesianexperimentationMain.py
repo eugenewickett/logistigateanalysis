@@ -691,39 +691,105 @@ def checkDistsAlign():
     exampleDict['outletNum'] = numTN
 
     # Generate posterior draws
-    numdraws = 40000
+    numdraws = 10000
+    numdrawspost = 1000
     exampleDict['numPostSamples'] = numdraws
     exampleDict = methods.GeneratePostSamples(exampleDict)
 
-    sampMat = np.array()
-    for currpriordraw in exampleDict['postSamples']:
+    design = np.array([[0., 0.], [1., 0.], [0., 0.]])
+    numtests = 20
+    sampMat = design * numtests
+    omeganum = 20
+    randinds = random.sample(range(numdraws), omeganum)
+
+    sampsArr = np.zeros(shape=(omeganum,numdraws,numTN+numSN))
+    for drawnum, currpriordraw in enumerate(exampleDict['postSamples'][randinds]):
+
         # Initialize Ntilde and Ytilde
         Ntilde = sampMat.copy()
-        Ytilde = np.zeros(shape=priordatadict['N'].shape)
+        Ytilde = np.zeros(shape=exampleDict['N'].shape)
 
         for currTN in range(numTN):
             for currSN in range(numSN):
-                currzProb = zProbTr(currTN, currSN, numSN, currpriordraw, priordatadict['diagSens'],
-                                    priordatadict['diagSpec'])
+                currzProb = zProbTr(currTN, currSN, numSN, currpriordraw, exampleDict['diagSens'],
+                                    exampleDict['diagSpec'])
                 if type[0] == 'trace':
                     currTerm = sampMat[currTN][currSN] * currzProb
                 elif type[0] == 'test node':
                     currTerm = sampMat[currTN] * type[1][currTN][currSN] * currzProb
                 Ytilde[currTN][currSN] = currTerm
 
-        # We have a new set of data d_tilde
-        Nomega = priordatadict['N'] + Ntilde
-        Yomega = priordatadict['Y'] + Ytilde
 
-        postdatadict = priordatadict.copy()
+        '''
+        rts = [0.2,0.4,0.1,0.7]
+        zProbTr(0,0,2,rts,1.,1.)
+        '''
+        # We have a new set of data d_tilde
+        Nomega = exampleDict['N'] + Ntilde
+        Yomega = exampleDict['Y'] + Ytilde
+
+        postdatadict = exampleDict.copy()
         postdatadict['N'] = Nomega
         postdatadict['Y'] = Yomega
 
         # Writes over previous MCMC draws
-        postdatadict.update({'numPostSamples': numpostdraws})
+        postdatadict.update({'numPostSamples': numdraws})
         postdatadict = methods.GeneratePostSamples(postdatadict)
+        sampsArr[drawnum] = postdatadict['postSamples']
 
 
+    # We now have MCMC draws; get draws from weights
+    postDensWts = []  # Initialize our weights for each vector of SFP rates
+    for currdraw in exampleDict['postSamples']:  # Iterate through each prior draw
+        currWt = 1
+        for currTN in range(numTN):
+            for currSN in range(numSN):
+                currzProb = zProbTr(currTN, currSN, numSN, currdraw, exampleDict['diagSens'],
+                                    exampleDict['diagSpec'])
+                currzTerm = (currzProb ** currzProb) * ((1 - currzProb) ** (1 - currzProb))
+                if type[0] == 'trace':
+                    currTerm = currzTerm ** (sampMat[currTN][currSN])
+                elif type[0] == 'test node':
+                    currTerm = currzTerm ** (sampMat[currTN] * type[1][currTN][currSN])
+                currWt = currWt * currTerm
+        postDensWts.append((currWt))  # Want the likelihood; currWt signifies the log-likelihood
+
+    # Normalize the weights to sum to the number of prior draws
+    postWtsSum = np.sum(postDensWts)
+    postDensWts = [postDensWts[i] * len(exampleDict['postSamples']) / postWtsSum for i in range(len(postDensWts))]
+
+    ###### Generate histograms of MCMC and weight methods
+    intrange = np.arange(0.,1.,0.01)
+    priorMat = np.zeros(shape=(numTN+numSN,len(intrange)))
+    mcmcMat = np.zeros(shape=(omeganum,numTN+numSN,len(intrange)))
+    wtMat = np.zeros(shape=(numTN + numSN, len(intrange)))
+    for cellind, cell_lo in enumerate(intrange):
+        cell_hi = cell_lo+0.01
+        for draw in exampleDict['postSamples']:
+            for nodeind in range(numTN + numSN):
+                if (draw[nodeind]>=cell_lo) and (draw[nodeind]<cell_hi):
+                    priorMat[nodeind][cellind] += 1
+        for omega in range(omeganum):
+            for draw in sampsArr[omega]:
+                for nodeind in range(numTN + numSN):
+                    if (draw[nodeind]>=cell_lo) and (draw[nodeind]<cell_hi):
+                        mcmcMat[omega][nodeind][cellind] += 1
+        for drawind, draw in enumerate(exampleDict['postSamples']):
+            for nodeind in range(numTN+numSN):
+                if (draw[nodeind]>=cell_lo) and (draw[nodeind]<cell_hi):
+                    wtMat[nodeind][cellind] += postDensWts[drawind]
+
+    for i in range(numTN+numSN):
+        for omega in range(omeganum):
+            plt.plot(intrange,mcmcMat[omega][i],color='blue',linewidth=0.5)
+        plt.plot(intrange,wtMat[i],color='orange',linewidth=4)
+        plt.plot(intrange, priorMat[i],color='black',linewidth=4)
+        plt.show()
+
+
+
+
+    return
 
 def testApproximation():
     numTN, numSN = 3, 2
