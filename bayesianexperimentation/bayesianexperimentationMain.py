@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import random
 import pickle
 import time
+from math import comb
 
 def balancedesign(N,ntilde):
     '''
@@ -498,6 +499,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
         currlossvec = []
         # Initialize samples to be drawn from traces, per the design
         sampMat = roundAlg(design, numtests)
+
         if method == 'MCMC':
             for omega in range(omeganum):
                 TNsamps = sampMat.copy()
@@ -624,6 +626,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                         currWt += currTerm
                 postDensWts.append(np.exp(currWt))  # Want the likelihood; currWt signifies the log-likelihood
                 '''
+                '''
                 currWt = 1
                 for currTN in range(numTN):
                     for currSN in range(numSN):
@@ -635,8 +638,22 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                         elif type[0] == 'test node':
                             currTerm =  currzTerm**(sampMat[currTN] * type[1][currTN][currSN])
                         currWt = currWt*currTerm
-                postDensWts.append((currWt)) # Want the likelihood; currWt signifies the log-likelihood
+                '''
+                currWt = 1
+                for currTN in range(numTN):
+                    for currSN in range(numSN):
+                        currzProb = zProbTr(currTN, currSN, numSN, currdraw, priordatadict['diagSens'],
+                                            priordatadict['diagSpec'])
+                        if type[0] == 'trace':
+                            currN = sampMat[currTN][currSN]
+                            currY = currzProb * currN
+                        elif type[0] == 'test node':
+                            roundRow = roundAlg(type[1][currTN],sampMat[currTN])
+                            currN = roundRow[currSN]
+                        currTerm = (currzProb ** currY) * ((1 - currzProb) ** (currN - currY)) * comb(int(currN), int(currY))
+                        currWt = currWt * currTerm
 
+                postDensWts.append((currWt)) # Want the likelihood
 
             # Nomralize the weights to sum to the number of prior draws
             postWtsSum = np.sum(postDensWts)
@@ -672,7 +689,7 @@ def checkDistsAlign():
     # Designate the true SFP rates
     trueSFPrates = [0.5, 0.05, 0.1, 0.08, 0.02]
 
-    # Generate a supply chain
+    # Generate a supply chain, with no testing data
     exampleDict = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r, numSamples=0,
                                             dataType='Tracked', randSeed=86, trueRates=trueSFPrates)
     exampleDict[
@@ -691,18 +708,19 @@ def checkDistsAlign():
     exampleDict['outletNum'] = numTN
 
     # Generate posterior draws
-    numdraws = 10000
+    numdraws = 50000
     numdrawspost = 1000
     exampleDict['numPostSamples'] = numdraws
     exampleDict = methods.GeneratePostSamples(exampleDict)
 
     design = np.array([[0., 0.], [1., 0.], [0., 0.]])
-    numtests = 20
+    numtests = 30
     sampMat = design * numtests
     omeganum = 20
     randinds = random.sample(range(numdraws), omeganum)
 
-    sampsArr = np.zeros(shape=(omeganum,numdraws,numTN+numSN))
+    # Use MCMC to get omeganum scenarios
+    sampsArr = np.zeros(shape=(omeganum,numdrawspost,numTN+numSN))
     for drawnum, currpriordraw in enumerate(exampleDict['postSamples'][randinds]):
 
         # Initialize Ntilde and Ytilde
@@ -719,11 +737,6 @@ def checkDistsAlign():
                     currTerm = sampMat[currTN] * type[1][currTN][currSN] * currzProb
                 Ytilde[currTN][currSN] = currTerm
 
-
-        '''
-        rts = [0.2,0.4,0.1,0.7]
-        zProbTr(0,0,2,rts,1.,1.)
-        '''
         # We have a new set of data d_tilde
         Nomega = exampleDict['N'] + Ntilde
         Yomega = exampleDict['Y'] + Ytilde
@@ -733,7 +746,7 @@ def checkDistsAlign():
         postdatadict['Y'] = Yomega
 
         # Writes over previous MCMC draws
-        postdatadict.update({'numPostSamples': numdraws})
+        postdatadict.update({'numPostSamples': numdrawspost})
         postdatadict = methods.GeneratePostSamples(postdatadict)
         sampsArr[drawnum] = postdatadict['postSamples']
 
@@ -742,6 +755,7 @@ def checkDistsAlign():
     postDensWts = []  # Initialize our weights for each vector of SFP rates
     for currdraw in exampleDict['postSamples']:  # Iterate through each prior draw
         currWt = 1
+        '''
         for currTN in range(numTN):
             for currSN in range(numSN):
                 currzProb = zProbTr(currTN, currSN, numSN, currdraw, exampleDict['diagSens'],
@@ -752,7 +766,16 @@ def checkDistsAlign():
                 elif type[0] == 'test node':
                     currTerm = currzTerm ** (sampMat[currTN] * type[1][currTN][currSN])
                 currWt = currWt * currTerm
-        postDensWts.append((currWt))  # Want the likelihood; currWt signifies the log-likelihood
+        '''
+        for currTN in range(numTN):
+            for currSN in range(numSN):
+                currN = sampMat[currTN][currSN]
+                currzProb = zProbTr(currTN, currSN, numSN, currdraw, exampleDict['diagSens'],
+                                    exampleDict['diagSpec'])
+                currY = currzProb * currN
+                currTerm = (currzProb ** currY) * ((1 - currzProb) ** (currN - currY)) * comb(int(currN),int(currY))
+                currWt = currWt * currTerm
+        postDensWts.append((currWt))
 
     # Normalize the weights to sum to the number of prior draws
     postWtsSum = np.sum(postDensWts)
@@ -762,8 +785,10 @@ def checkDistsAlign():
     intrange = np.arange(0.,1.,0.01)
     priorMat = np.zeros(shape=(numTN+numSN,len(intrange)))
     mcmcMat = np.zeros(shape=(omeganum,numTN+numSN,len(intrange)))
+    sampsArrComb = sampsArr.reshape((-1,sampsArr.shape[-1]))
+    mcmcCombMat = np.zeros(shape=(numTN+numSN,len(intrange)))
     wtMat = np.zeros(shape=(numTN + numSN, len(intrange)))
-    for cellind, cell_lo in enumerate(intrange):
+    for cellind, cell_lo in enumerate(intrange): # Iterate through each histogram bin
         cell_hi = cell_lo+0.01
         for draw in exampleDict['postSamples']:
             for nodeind in range(numTN + numSN):
@@ -773,17 +798,22 @@ def checkDistsAlign():
             for draw in sampsArr[omega]:
                 for nodeind in range(numTN + numSN):
                     if (draw[nodeind]>=cell_lo) and (draw[nodeind]<cell_hi):
-                        mcmcMat[omega][nodeind][cellind] += 1
-        for drawind, draw in enumerate(exampleDict['postSamples']):
+                        mcmcMat[omega][nodeind][cellind] += 1*numdraws/numdrawspost
+        for draw in sampsArrComb: # All combined posterior MCMC draws
+            for nodeind in range(numTN + numSN):
+                if (draw[nodeind]>=cell_lo) and (draw[nodeind]<cell_hi):
+                    mcmcCombMat[nodeind][cellind] += 1*numdraws/(omeganum * numdrawspost)
+        for drawind, draw in enumerate(exampleDict['postSamples']): # The posterior weights
             for nodeind in range(numTN+numSN):
                 if (draw[nodeind]>=cell_lo) and (draw[nodeind]<cell_hi):
                     wtMat[nodeind][cellind] += postDensWts[drawind]
 
     for i in range(numTN+numSN):
         for omega in range(omeganum):
-            plt.plot(intrange,mcmcMat[omega][i],color='blue',linewidth=0.5)
-        plt.plot(intrange,wtMat[i],color='orange',linewidth=4)
-        plt.plot(intrange, priorMat[i],color='black',linewidth=4)
+            plt.plot(intrange,mcmcMat[omega][i],color='blue',linewidth=0.3)
+        plt.plot(intrange,mcmcCombMat[i],color='darkblue',linewidth=3)
+        plt.plot(intrange,wtMat[i],color='orange',linewidth=3)
+        plt.plot(intrange, priorMat[i],color='black',linewidth=3)
         plt.show()
 
 
