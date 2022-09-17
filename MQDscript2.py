@@ -4249,6 +4249,7 @@ def SenegalDataScript():
     plt.show()
     plt.close()
 
+
     # District as TNs; UNTRACKED
     priorMean = -2.5
     priorVar = 3.5
@@ -6409,6 +6410,58 @@ def SenegalDataScript():
     util.plotPostSamples(lgDict, 'int90',
                          subTitleStr=['\nSenegal [mu=' + str(priorMean) + ',var=' + str(priorVar) + '] - Province',
                                       '\nSenegal [mu=-2,var=1] - Province'])
+
+    # Use RUN 1 to explore the sufficiency of using different numbers of MCMC draws
+    # RUN 1: s=1.0, r=1.0, prior is laplace(-2.5,3.5)
+    priorMean = -2.5
+    priorVar = 3.5
+
+    # How much Madapt to use?
+    numPostSamps = 1000
+    sampMat = []
+    for madapt in [100,500,1000,5000,10000]:
+        for delt in [0.4,0.5,0.6]:
+            MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': madapt, 'delta': delt}
+            lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+            lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+            lgDict = lg.runlogistigate(lgDict)
+            sampMat.append(lgDict['postSamples'])
+
+    # Trace plots along a few key nodes: Mftr. 5, Dist. 7; indices 20, 45
+    plt.figure(figsize=(9,5))
+    plt.plot(sampMat[0][:, 20],'b-.',linewidth=0.4, label='Manuf. 5; mAdapt=100')
+    plt.plot(sampMat[12][:, 20],'b-.',linewidth=2.,alpha=0.2,label='Manuf. 5; mAdapt=10000')
+    plt.plot(sampMat[0][:, 25], 'g--', linewidth=0.5, label='Dist. 1; mAdapt=100')
+    plt.plot(sampMat[12][:, 25], 'g--', linewidth=2,alpha=0.3,label='Dist. 1; mAdapt=10000')
+    plt.ylim([0,0.6])
+    plt.xlabel('MCMC Draw',fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('SFP rate',fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.legend()
+    plt.title('Traces of MCMC draws for Manufacturer 5 and District 1\nUsing mAdapt of 100 and 10000',fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0%}'.format(x) for x in current_values])
+  #  for label in (plt.axis.get_xticklabels() + plt.axis.get_yticklabels()):
+  #      label.set_fontname('Times New Roman')
+  #      label.set_fontsize(12)
+    plt.tight_layout()
+    plt.show()
+    plt.close()
+
+
+
+
+
+    ind=1
+    np.average(minKSpvalList[(ind-1)*dimnum:ind*dimnum])
+    plt.show()
+    plt.close()
+
+    for ind, vec in enumerate(mvecs):
+        plt.hist(vec,bins=bins,histtype='step',linewidth=0.2+1.*ind)
+#    plt.plot(mvecs[4])
+    plt.show()
+    plt.close()
 
     return
 

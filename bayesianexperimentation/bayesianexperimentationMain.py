@@ -657,7 +657,6 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                         flrTerm = (currzProb ** currYflr) * ((1 - currzProb) ** (currN - currYflr)) * comb(int(currN), currYflr)
                         ceilTerm = (currzProb ** currYceil) * ((1 - currzProb) ** (currN - currYceil)) * comb(int(currN), currYceil)
                         currTerm = (1-yRem) * flrTerm + (yRem) * ceilTerm
-                        #currTerm = (currzProb ** currY) * ((1 - currzProb) ** (currN - currY)) * comb(int(currN), math.ceil(currY))
                         currWt = currWt * currTerm
 
                 postDensWts.append((currWt)) # Want the likelihood
@@ -762,7 +761,7 @@ def checkDistsAlign():
     # We now have MCMC draws; get draws from weights
     postDensWts = []  # Initialize our weights for each vector of SFP rates
     for currdraw in exampleDict['postSamples']:  # Iterate through each prior draw
-        currWt = 1
+        currWt = 0
         '''
         for currTN in range(numTN):
             for currSN in range(numSN):
@@ -778,9 +777,14 @@ def checkDistsAlign():
         '''
         for currTN in range(numTN):
             for currSN in range(numSN):
-                currN = sampMat[currTN][currSN]
+                currN = int(sampMat[currTN][currSN])
                 currzProb = zProbTr(currTN, currSN, numSN, currdraw, exampleDict['diagSens'],
                                     exampleDict['diagSpec'])
+                for currY in range(currN+1):
+                    currTerm = (((currzProb ** currY) * ((1 - currzProb) ** (currN - currY)) ) ** 2) * comb(int(currN),
+                        int(currY))
+                    currWt += currTerm
+                '''
                 currY = currzProb * currN
                 currYflr, currYceil = math.floor(currY), math.ceil(currY)
                 if currYceil > 0:
@@ -791,12 +795,8 @@ def checkDistsAlign():
                     currTerm = (1 - yRem) * flrTerm + (yRem) * ceilTerm
                 else:
                     currTerm = 1
-                #currTerm = (currzProb ** currY) * ((1 - currzProb) ** (currN - currY)) * comb(int(currN),int(math.ceil(currY)))
-                currWt = currWt * currTerm
-
+                '''
         postDensWts.append((currWt))
-
-
     # Normalize the weights to sum to the number of prior draws
     postWtsSum = np.sum(postDensWts)
     postDensWts = [postDensWts[i] * (len(exampleDict['postSamples']) / postWtsSum) for i in range(len(postDensWts))]
@@ -833,9 +833,8 @@ def checkDistsAlign():
             plt.plot(intrange,mcmcMat[omega][i],color='blue',linewidth=0.05)
         plt.plot(intrange,mcmcCombMat[i],color='darkblue',linewidth=3)
         plt.plot(intrange,wtMat[i],color='orange',linewidth=3)
-        plt.plot(intrange, priorMat[i],color='black',linewidth=3)
+        plt.plot(intrange, priorMat[i],color='black',linewidth=2)
         plt.show()
-
 
 
     return
