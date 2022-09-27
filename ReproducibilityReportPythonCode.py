@@ -12,6 +12,7 @@ from logistigate.logistigate import utilities as util # Pull from the submodule 
 from logistigate.logistigate import methods
 from logistigate.logistigate import lg
 import numpy as np
+import matplotlib.pyplot as plt
 
 def generateSyntheticData():
     '''
@@ -460,7 +461,7 @@ def generateSyntheticData():
     plt.show()
     plt.close()
 
-    # Untracked, using bootstrap samples to estimate Q
+    # Untracked, using bootstrap samples to estimate Q; produces Figure 7
     priorMean, priorScale = -2.5, 1.3
     lowerQuant, upperQuant = 0.05, 0.95
     btlowerQuant, btupperQuant = 0.05, 0.95
@@ -868,6 +869,73 @@ def generateSyntheticData():
     row5 = '| District 7      | ' + ' | '.join([str(i)[:4].ljust(19) for i in Dist7list]) + ' | \n'
     print(mainTitle + header + row1 + row2 + row3 + row4 + row5)
 
+    #todo: HERE
+    # Produce MCMC trace plots similar to Figures 5 and 6
+    priorMean = -2.5
+    priorVar = 3.38
+
+    # How much Madapt to use?
+    numPostSamps = 1000
+    sampMat = []
+    for madapt in [100, 10000]:
+        MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': madapt, 'delta': 0.4}
+        lgDict = util.testresultsfiletotable(testingDataList, csvName=False)
+        lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                       'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)),
+                       'MCMCdict': MCMCdict})
+        lgDict = lg.runlogistigate(lgDict)
+        sampMat.append(lgDict['postSamples'])
+
+    # Trace plots along a few key nodes: Mftr. 5, Dist. 10; indices 20, 26
+    plt.figure(figsize=(9, 5))
+    plt.plot(sampMat[0][:, 20], 'b-.', linewidth=0.4, label='Manuf. 5; $M^{adapt}=100$')
+    plt.plot(sampMat[1][:, 20], 'b-.', linewidth=2., alpha=0.2, label='Manuf. 5; $M^{adapt}=10000$')
+    plt.plot(sampMat[0][:, 25], 'g--', linewidth=0.5, label='Dist. 1; $M^{adapt}=100$')
+    plt.plot(sampMat[1][:, 25], 'g--', linewidth=2, alpha=0.3, label='Dist. 1; $M^{adapt}=10000$')
+    plt.ylim([0, 0.6])
+    plt.xlabel('MCMC Draw', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('SFP rate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.legend()
+    plt.title('Traces of MCMC draws for Manufacturer 5 and District 10\nUsing $M^{adapt}$ of 100 and 10000',
+              fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0%}'.format(x) for x in current_values])
+    plt.tight_layout()
+    plt.show()
+    plt.close()
+
+    # Now illustrate where the quantiles converge
+    numPostSamps = 2000
+    MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    plt.figure(figsize=(9, 5))
+    for rep in range(20):
+        lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+        lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+                       'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+        lgDict = lg.runlogistigate(lgDict)
+        targSamps = lgDict['postSamples'][:, 20]  # Manufacturer 5
+        cumQuant05 = [np.quantile(targSamps[:i + 1], 0.05) for i in range(len(targSamps))]
+        cumQuant95 = [np.quantile(targSamps[:i + 1], 0.95) for i in range(len(targSamps))]
+        plt.plot(cumQuant05, 'b-', linewidth=0.4)
+        plt.plot(cumQuant95, 'b--', linewidth=0.4)
+        targSamps = lgDict['postSamples'][:, 26]  # District 10
+        cumQuant05 = [np.quantile(targSamps[:i + 1], 0.05) for i in range(len(targSamps))]
+        cumQuant95 = [np.quantile(targSamps[:i + 1], 0.95) for i in range(len(targSamps))]
+        plt.plot(cumQuant05, 'g-', linewidth=0.4)
+        plt.plot(cumQuant95, 'g--', linewidth=0.4)
+        print('Rep ' + str(rep) + ' done')
+
+    plt.ylim([0, 0.48])
+    plt.xlabel('MCMC Draw', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('SFP rate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.title('Traces of $5\%$ and $95\%$ quantiles of MCMC draws\nManufacturer 5 and District 10',
+              fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0%}'.format(x) for x in current_values])
+    plt.tight_layout()
+    plt.show()
+    plt.close()
+
     return
 
 def generateExampleInference():
@@ -1117,6 +1185,6 @@ def timingAnalysis():
 
 # Running the functions produces results similar/analagous to those featured in the noted figures and tables.
 _ = generateExampleInference() # Figure 2
-_ = generateSyntheticData() # Figures 3, 4 and 5, Tables 2 and 3
+_ = generateSyntheticData() # Figures 3, 4, 5, 6, and 7; Tables 2 and 3
 _ = timingAnalysis() # Table 1; MAY TAKE UPWARDS OF AN HOUR TO COMPLETE
 

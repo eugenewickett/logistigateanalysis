@@ -6419,21 +6419,20 @@ def SenegalDataScript():
     # How much Madapt to use?
     numPostSamps = 1000
     sampMat = []
-    for madapt in [100,500,1000,5000,10000]:
-        for delt in [0.4,0.5,0.6]:
-            MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': madapt, 'delta': delt}
-            lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
-            lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
-            lgDict = lg.runlogistigate(lgDict)
-            sampMat.append(lgDict['postSamples'])
+    for madapt in [100,10000]:
+        MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': madapt, 'delta': 0.4}
+        lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+        lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
+               'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+        lgDict = lg.runlogistigate(lgDict)
+        sampMat.append(lgDict['postSamples'])
 
     # Trace plots along a few key nodes: Mftr. 5, Dist. 10; indices 20, 26
     plt.figure(figsize=(9,5))
     plt.plot(sampMat[0][:, 20],'b-.',linewidth=0.4, label='Manuf. 5; $M^{adapt}=100$')
-    plt.plot(sampMat[12][:, 20],'b-.',linewidth=2.,alpha=0.2,label='Manuf. 5; $M^{adapt}=10000$')
-    plt.plot(sampMat[0][:, 26], 'g--', linewidth=0.5, label='Dist. 1; $M^{adapt}=100$')
-    plt.plot(sampMat[12][:, 26], 'g--', linewidth=2,alpha=0.3,label='Dist. 1; $M^{adapt}=10000$')
+    plt.plot(sampMat[1][:, 20],'b-.',linewidth=2.,alpha=0.2,label='Manuf. 5; $M^{adapt}=10000$')
+    plt.plot(sampMat[0][:, 26], 'g--', linewidth=0.5, label='Dist. 10; $M^{adapt}=100$')
+    plt.plot(sampMat[1][:, 26], 'g--', linewidth=2,alpha=0.3,label='Dist. 10; $M^{adapt}=10000$')
     plt.ylim([0,0.6])
     plt.xlabel('MCMC Draw',fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
     plt.ylabel('SFP rate',fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
