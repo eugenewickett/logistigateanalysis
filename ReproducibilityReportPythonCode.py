@@ -3,9 +3,9 @@
 Script that generates and analyzes a synthetic set of PMS data, akin to the substance of "Inferring sources of
 substandard and falsified products in pharmaceutical supply chains." These data differ from the data used in the paper
 but capture the important elements of what is presented in the paper.
-Inference generation requires use of the logistigate package, available at https://logistigate.readthedocs.io/en/main/.
-Running the generateSyntheticData() function generates Figures 2, 3, and 4, as well as the interval widths for Tables
-1 and 2, that are analagous to the items produced using the de-identified data.
+Inference generation requires use of the logistigate package, available at https://github.com/eugenewickett/logistigate/.
+Running the generateSyntheticData() function generates Figures 3, 4, 5, 6 and 7, as well as the interval widths for
+Tables 1 and 2, that are analagous to the items produced using the de-identified data.
 '''
 
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
@@ -869,7 +869,6 @@ def generateSyntheticData():
     row5 = '| District 7      | ' + ' | '.join([str(i)[:4].ljust(19) for i in Dist7list]) + ' | \n'
     print(mainTitle + header + row1 + row2 + row3 + row4 + row5)
 
-    #todo: HERE
     # Produce MCMC trace plots similar to Figures 5 and 6
     priorMean = -2.5
     priorVar = 3.38
@@ -886,17 +885,17 @@ def generateSyntheticData():
         lgDict = lg.runlogistigate(lgDict)
         sampMat.append(lgDict['postSamples'])
 
-    # Trace plots along a few key nodes: Mftr. 5, Dist. 10; indices 20, 26
+    # Trace plots along a few key nodes: Mftr. 16, Dist. 6; Figure 5
     plt.figure(figsize=(9, 5))
-    plt.plot(sampMat[0][:, 20], 'b-.', linewidth=0.4, label='Manuf. 5; $M^{adapt}=100$')
-    plt.plot(sampMat[1][:, 20], 'b-.', linewidth=2., alpha=0.2, label='Manuf. 5; $M^{adapt}=10000$')
-    plt.plot(sampMat[0][:, 25], 'g--', linewidth=0.5, label='Dist. 1; $M^{adapt}=100$')
-    plt.plot(sampMat[1][:, 25], 'g--', linewidth=2, alpha=0.3, label='Dist. 1; $M^{adapt}=10000$')
+    plt.plot(sampMat[0][:, 7], 'b-.', linewidth=0.4, label='Manuf. 16; $M^{adapt}=100$')
+    plt.plot(sampMat[1][:, 7], 'b-.', linewidth=2., alpha=0.2, label='Manuf. 16; $M^{adapt}=10000$')
+    plt.plot(sampMat[0][:, 46], 'g--', linewidth=0.5, label='Dist. 6; $M^{adapt}=100$')
+    plt.plot(sampMat[1][:, 46], 'g--', linewidth=2, alpha=0.3, label='Dist. 6; $M^{adapt}=10000$')
     plt.ylim([0, 0.6])
     plt.xlabel('MCMC Draw', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
     plt.ylabel('SFP rate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
     plt.legend()
-    plt.title('Traces of MCMC draws for Manufacturer 5 and District 10\nUsing $M^{adapt}$ of 100 and 10000',
+    plt.title('Traces of MCMC draws for Manufacturer 16 and District 6\nUsing $M^{adapt}$ of 100 and 10000',
               fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     current_values = plt.gca().get_yticks()
     plt.gca().set_yticklabels(['{:,.0%}'.format(x) for x in current_values])
@@ -904,21 +903,21 @@ def generateSyntheticData():
     plt.show()
     plt.close()
 
-    # Now illustrate where the quantiles converge
+    # Now illustrate where the quantiles converge; Figure 6
     numPostSamps = 2000
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     plt.figure(figsize=(9, 5))
     for rep in range(20):
-        lgDict = util.testresultsfiletotable(tbl_SEN_G2_2010, csvName=False)
+        lgDict = util.testresultsfiletotable(testingDataList, csvName=False)
         lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
                        'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
         lgDict = lg.runlogistigate(lgDict)
-        targSamps = lgDict['postSamples'][:, 20]  # Manufacturer 5
+        targSamps = lgDict['postSamples'][:, 7]  # Manufacturer 16
         cumQuant05 = [np.quantile(targSamps[:i + 1], 0.05) for i in range(len(targSamps))]
         cumQuant95 = [np.quantile(targSamps[:i + 1], 0.95) for i in range(len(targSamps))]
         plt.plot(cumQuant05, 'b-', linewidth=0.4)
         plt.plot(cumQuant95, 'b--', linewidth=0.4)
-        targSamps = lgDict['postSamples'][:, 26]  # District 10
+        targSamps = lgDict['postSamples'][:, 46]  # District 6
         cumQuant05 = [np.quantile(targSamps[:i + 1], 0.05) for i in range(len(targSamps))]
         cumQuant95 = [np.quantile(targSamps[:i + 1], 0.95) for i in range(len(targSamps))]
         plt.plot(cumQuant05, 'g-', linewidth=0.4)
@@ -928,7 +927,7 @@ def generateSyntheticData():
     plt.ylim([0, 0.48])
     plt.xlabel('MCMC Draw', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
     plt.ylabel('SFP rate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.title('Traces of $5\%$ and $95\%$ quantiles of MCMC draws\nManufacturer 5 and District 10',
+    plt.title('Traces of $5\%$ and $95\%$ quantiles of MCMC draws\nManufacturer 16 and District 6',
               fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     current_values = plt.gca().get_yticks()
     plt.gca().set_yticklabels(['{:,.0%}'.format(x) for x in current_values])
@@ -1183,7 +1182,7 @@ def timingAnalysis():
     print(np.average(upperN) / (100 * 100))
     return
 
-# Running the functions produces results similar/analagous to those featured in the noted figures and tables.
+# Running these functions produces results similar to those featured in the noted figures and tables.
 _ = generateExampleInference() # Figure 2
 _ = generateSyntheticData() # Figures 3, 4, 5, 6, and 7; Tables 2 and 3
 _ = timingAnalysis() # Table 1; MAY TAKE UPWARDS OF AN HOUR TO COMPLETE
