@@ -299,7 +299,7 @@ def bayesEst(samps, scoredict):
 
     return est
 
-def bayesEstAdapt(samps, wts, scoredict,printUpdate=True):
+def bayesEstAdapt(samps, wts, scoredict, printUpdate=True):
     '''
     Returns the Bayes estimate for a set of SFP rates, adjusted for weighting of samples, based on the type of score
         and parameters used
@@ -475,8 +475,9 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
         ['test node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
     priordraws: set of prior draws to use for synchronized data collection in different designs
     randinds: the indices with which to iterate through priordraws for all omeganum loops
-    method: one of 'MCMC' or 'approx'; 'MCMC' completes full MCMC sampling for generating posterior probabilities,
-        'approx' approximates the posterior probabilities
+    method: one of 'MCMC', 'MCMCexpec', 'weights' or 'approx'; 'MCMC' completes full MCMC sampling for generating
+        posterior probabilities, 'approx' approximates the posterior probabilities, 'weights' uses a weighting
+        equivalence scheme
     '''
     # Initiate the list to return
     lossveclist = []
@@ -610,16 +611,14 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             lossveclist.append(currlossvec)  # Add the loss vector for this design
         # END ELIF FOR MCMCEXPECT
 
-        elif method == 'weights': # We are using approximation; use expected value of data
-            for omega in range(omeganum):
+        elif method == 'weights': # Weight each prior draw by the likelihood of a new data set
+            wts = []
+            for currpriordraw in priordraws:
                 TNsamps = sampMat.copy()
-                # Grab a draw from the prior
-                currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
-
                 # Initialize Ntilde and Ytilde
                 Ntilde = np.zeros(shape=priordatadict['N'].shape)
                 Ytilde = Ntilde.copy()
-                while np.sum(TNsamps) > 0.:
+                while np.sum(TNsamps) > 0.: # Generate new data set
                     # Go to first non-empty row of TN samps
                     i, j = 0, 0
                     while np.sum(TNsamps[i]) == 0:
@@ -642,57 +641,68 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                     Ntilde[i, j] += 1
                     Ytilde[i, j] += result
 
-                ######### RESUME HERE
                 # Use new data to get a weight for the current prior draw
+                currwt = 1.
+                for currTN in range(numTN):
+                    for currSN in range(numSN):
+                        currz = zProbTr(currTN,currSN,numSN,currpriordraw,sens=s,spec=r)
+                        currn, curry = int(Ntilde[currTN,currSN]), int(Ytilde[currTN,currSN])
+                        term1 = (currz**curry) * ((1-currz)**(currn-Ytilde[currTN,currSN])) * comb(currn, curry)
+                        term2 = np.exp(methods.Tracked_LogPost(sps.logit(currpriordraw),priordatadict['N'],priordatadict['Y'],
+                                                        priordatadict['diagSens'],priordatadict['diagSpec'],
+                                                        priordatadict['prior']))
 
+                        currwt = currwt * (term1 * term2)
 
-                # We have a new set of data d_tilde
-                Nomega = priordatadict['N'] + Ntilde
-                Yomega = priordatadict['Y'] + Ytilde
+                wts.append(currwt)
 
-                postdatadict = priordatadict.copy()
-                postdatadict['N'] = Nomega
-                postdatadict['Y'] = Yomega
-
-                # Writes over previous MCMC draws
-                postdatadict.update({'numPostSamples': numpostdraws})
-                postdatadict = methods.GeneratePostSamples(postdatadict)
-
-                # Get the Bayes estimate
-                currEst = bayesEst(postdatadict['postSamples'], lossdict['scoreDict'])
-
-                sumloss = 0
-                for currsampind, currsamp in enumerate(postdatadict['postSamples']):
-                    currloss = loss_pms(currEst, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
-                    sumloss += currloss
-                avgloss = sumloss / len(postdatadict['postSamples'])
-
-                # Append to loss storage vector
-                currlossvec.append(avgloss)
-                if printUpdate == True:
-                    print(designnames[designind] + ', ' + 'omega ' + str(omega) + ' complete')
-
-            lossveclist.append(currlossvec)  # Add the loss vector for this design
-
-            # Nomralize the weights to sum to the number of prior draws
-            postWtsSum = np.sum(postDensWts)
-            postDensWts = [postDensWts[i]*len(priordatadict['postSamples'])/postWtsSum for i in range(len(postDensWts))]
-            # Get the Bayes estimate
-            currEst = bayesEstAdapt(priordatadict['postSamples'], postDensWts, lossdict['scoreDict'],printUpdate=printUpdate)
-            #currEst = bayesEst(priordatadict['postSamples'], lossdict['scoreDict'])
-            # Now average the loss across prior draws
+            # Normalize weights; this permits comparison among different methods
+            wtsnorm = [wts[i] / np.sum(wts) for i in range(len(wts))]
+            # Obtain Bayes estimate
+            currest = bayesEstAdapt(priordraws,wtsnorm,lossdict['scoreDict'],printUpdate=False)
+            # Sum the weighted loss under each prior draw
             sumloss = 0
-            for currdrawind, currdraw in enumerate(priordatadict['postSamples']):
-                currloss = postDensWts[currdrawind] * loss_pms(currEst, currdraw, lossdict['scoreFunc'],
-                                                               lossdict['scoreDict'], lossdict['riskFunc'],
-                                                               lossdict['riskDict'], lossdict['marketVec'])
-                sumloss += currloss
-            avgloss = sumloss/len(priordatadict['postSamples'])
-            lossveclist.append(avgloss)
-            if printUpdate==True:
+            for currsampind, currsamp in enumerate(priordraws):
+                currloss = loss_pms(currest,currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                    lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                sumloss += currloss * wtsnorm[currsampind]
+            lossveclist.append(sumloss)  # Add the loss vector for this design
+            if printUpdate == True:
                 print(designnames[designind] + ' complete')
         # END ELIF FOR WEIGHTS
+
+        elif method == 'weights2': # Weight each prior draw by the likelihood of a new data set
+            ###### ONLY ONE TRACE ALLOWED ######
+            TNsamps = sampMat.copy()
+            TNind,SNind = 0,0
+            while np.sum(TNsamps[TNind]) == 0:
+                TNind += 1
+            while np.sum(TNsamps[:,SNind]) == 0:
+                SNind += 1
+            Ntilde = np.zeros(shape=priordatadict['N'].shape)
+            Ntilde[TNind,SNind] += numtests
+            sumloss = 0
+            for dtilde in range(numtests+1):
+                wts = []
+                Ytilde = np.zeros(shape=priordatadict['N'].shape)
+                Ytilde[TNind,SNind] += dtilde
+                for currpriordraw in priordraws:
+                    # Use new data to get a weight for the current prior draw
+                    currz = zProbTr(TNind,SNind,numSN,currpriordraw,sens=s,spec=r)
+                    currwt = (currz**dtilde) * ((1-currz)**(numtests-dtilde)) * comb(numtests, dtilde)
+                    wts.append(currwt)
+
+                # Obtain Bayes estimate
+                currest = bayesEstAdapt(priordraws,wts,lossdict['scoreDict'],printUpdate=False)
+                # Sum the weighted loss under each prior draw
+                for currsampind, currsamp in enumerate(priordraws):
+                    currloss = loss_pms(currest,currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                    sumloss += currloss * wts[currsampind]
+            lossveclist.append(sumloss / len(priordraws))  # Add the loss vector for this design
+            if printUpdate == True:
+                print(designnames[designind] + ' complete')
+        # END ELIF FOR WEIGHTS2
 
         elif method == 'approx': # We are using approximation; use expected value of data
             # todo: REST OF SECTION NEEDS TO BE ADAPTED FOR UNTRACKED
@@ -798,7 +808,7 @@ def testApproximation():
     exampleDict['outletNum'] = numTN
 
     # Generate posterior draws
-    numdraws = 100000
+    numdraws = 200000
     exampleDict['numPostSamples'] = numdraws
     exampleDict = methods.GeneratePostSamples(exampleDict)
 
@@ -832,7 +842,7 @@ def testApproximation():
                 'marketVec': marketvec}
     designList = [design]
     designNames = ['Design 1']
-    numtests = 25
+    numtests = 20
     omeganum = 200
     #random.seed(35)
     randinds = random.sample(range(numdraws), omeganum)
@@ -853,30 +863,17 @@ def testApproximation():
                                    designnames=designNames, numtests=numtests,
                                    omeganum=omeganum, type=['trace'], method='approx', printUpdate=False)
     print(lossveclist)
+    # WEIGHTS
+    for nextn in [5, 10, 15, 20, 25]:
+        lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=nextn,
+                                   omeganum=omeganum, type=['trace'], method='weights2', printUpdate=False)
+        print(lossveclist)
 
 
 
 
 
-    # Doing many approximations together
-    lossvecmat = []
-    for drawint in [100, 500, 1000, 20000, 50000, 100000]:
-        currdrawvec = []
-        newDict = exampleDict.copy()
-        #newDict['numPostSamples'] = drawint
-        #newDict = methods.GeneratePostSamples(newDict)
-        for currtestnum in [0,5,10,15,20,25]:
-            randmcmcinds = random.sample(range(len(exampleDict['postSamples'])),drawint)
-            newDict['postSamples'] = exampleDict['postSamples'][randmcmcinds]
-            lossveclist = getDesignUtility(priordatadict=newDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                    designnames=designNames, numtests=currtestnum,
-                                    omeganum=omeganum, type=['trace'], method='approx',printUpdate=False)
-            print('Batch size '+str(currtestnum)+', '+str(drawint)+' MCMC draws,'+' value:')
-            print(lossveclist)
-            currdrawvec.append(lossveclist[0])
-        lossvecmat.append(currdrawvec)
-        print(currdrawvec)
-    print(lossvecmat)
 
     '''
     # MCMC; numdraws = 1000; omeganum=200, design = design = np.array([[0., 0.], [1., 0.], [0., 0.]])
@@ -903,7 +900,18 @@ def testApproximation():
     # numtests = 25
     lossveclist = [[0.13976481119172288, 0.1402721193916987, 0.15548591458956226, 0.1437571446348328, 0.13295950834951595, 0.1352892105009851, 0.14506942321269145, 0.1413483606166796, 0.14661319825032995, 0.14657395954122285, 0.14016620112027045, 0.13280757748547445, 0.14114737525233284, 0.15920372312049624, 0.13788851846595324, 0.14274390602689407, 0.13983006325055644, 0.14910677959636634, 0.13822060157050212, 0.1493989910601474, 0.13714763011443679, 0.14480913677141657, 0.14142599970827652, 0.14080482156111804, 0.1443381497882648, 0.14189754453353468, 0.15423285863918612, 0.1467878604821344, 0.14406080038093438, 0.13896729927557558, 0.13830976517659974, 0.14741165514032784, 0.14509408208270455, 0.1470568182320232, 0.14620391554920217, 0.1454127493093117, 0.14922159612877037, 0.14130832837299304, 0.14317081634310425, 0.14198742541383533, 0.13190953267636488, 0.14244385390278838, 0.14810072342539166, 0.13511240090035767, 0.14001447205799308, 0.14635569530136458, 0.14182961647144832, 0.13726203510348076, 0.14365633817314416, 0.13867543322405954, 0.15132424475388206, 0.14192040146065993, 0.14679781869760772, 0.14513110353950853, 0.14034186169846394, 0.14881396154955537, 0.1560713712678311, 0.13332312905129237, 0.14444647498567068, 0.14190294278629775, 0.14617291762392565, 0.13637430336456485, 0.15143778218276527, 0.14044548149830685, 0.14094467299037836, 0.1431124155267114, 0.1501424956903045, 0.1416253363321605, 0.14898226535433506, 0.1472812434527108, 0.14126655615067205, 0.1459111529255601, 0.14647858031838087, 0.1443543651653473, 0.15081392319686973, 0.1362780748437499, 0.14331992435378615, 0.15012959347277716, 0.13893905816910165, 0.1489161296063529, 0.13764273586098172, 0.1460776410253233, 0.15076771070685743, 0.1403061227138892, 0.13313460201515717, 0.13698290225144302, 0.1385277907078083, 0.13407867130533932, 0.1465255688464108, 0.13721740193707765, 0.14142668825634433, 0.15628084170881096, 0.1482598668911832, 0.14687544118617102, 0.14010032795106322, 0.1452532615550579, 0.1417532708281067, 0.13655869512182522, 0.1411303877604745, 0.14120371218953826, 0.1430384717963851, 0.15630992474477384, 0.13501775822167256, 0.14833473186382634, 0.13972901258754125, 0.1484182982562263, 0.15238078106668967, 0.13762759191247023, 0.14187832835621994, 0.14908824564154077, 0.14255439361532019, 0.14463152879575367, 0.14552721370007884, 0.1359182793828399, 0.14010693715816558, 0.151870482462486, 0.14525142543858857, 0.14129948495469058, 0.14183683795412047, 0.15520386034916062, 0.13959214217418592, 0.1473340137684806, 0.14244725472553318, 0.13728653008028985, 0.13364195193413345, 0.14459008288868566, 0.14339369054158954, 0.13364150800546523, 0.14582649874579548, 0.14026261813717472, 0.16340344430269718, 0.14342685807860922, 0.14066923957050484, 0.14203268267881103, 0.1466643045535809, 0.15182814113668164, 0.14859948491743477, 0.14553019740765405, 0.15108853254472185, 0.13845306835978116, 0.14003746082175128, 0.1467341774550569, 0.13416592650487305, 0.1371454980950849, 0.1498760584745087, 0.14168099255026517, 0.13396974191642355, 0.14337723878792388, 0.1368266599758664, 0.14896011331087092, 0.14660095815249008, 0.1358937008146437, 0.140884804934718, 0.14472144743263052, 0.14502351449757053, 0.14445776650157352, 0.14513288406424063, 0.13580427961036673, 0.1484502839343305, 0.14084125680631132, 0.15519856309522156, 0.1431661072525992, 0.15907982038244084, 0.14821308658080148, 0.14356698353465788, 0.15432839278651503, 0.1409236434902716, 0.14453518946074553, 0.14588053460669403, 0.13913169194343183, 0.14751389115797153, 0.13828621152923162, 0.14009943300198954, 0.1470758822512471, 0.14602365500701311, 0.13366888470994845, 0.1487820920963565, 0.1442479191117537, 0.13698504510064827, 0.1381018991876545, 0.15076103713747738, 0.14140413278506697, 0.14080346181090994, 0.15426292164407263, 0.1536733378033161, 0.1374854066083664, 0.1432104874720429, 0.14136606575187627, 0.15078619449612876, 0.1428640513747599, 0.14350786218933875, 0.15009661024463078, 0.13944128698477087, 0.15169726133570563, 0.1536859773600667, 0.1458554943649039, 0.13821941655326522, 0.14025682887821003, 0.13933813876984136, 0.1387590234041701]]
     [0.1428698188560852, 0.14447382599396227]
-        
+    
+    lossvec_lo = [0.15506736184284828, 0.15108957430579725, 0.1465841760151503, 0.14525831399887887, 0.1428698188560852]
+    lossvec_hi = [0.15641337994076746, 0.15261417246493894, 0.14812630053969397, 0.14700181315518987, 0.14447382599396227]
+    
+    # WEIGHTS; 10000 prior draws for [5, 10, 15, 20, 25] tests:
+    wts10 = [0.15871820009453552,0.1549758143406811,0.15207878808947314,0.1497671277680296,0.14783182923356122]
+        50000 prior draws:
+    wts50 = [0.15634284977105467,0.15239093186022373,0.1493421799432922,0.14691131384181857,0.1449136946098867]
+        200000 prior draws:
+    wts200 = [0.1556824914607332,0.15169556728979305, 0.14862528766821606, 0.1461760931219823, 0.14416658451707415]
+    
+    
     mcmcexp_lo = [0.1597614327786745, 0.15506736184284828, 0.15108957430579725, 0.1465841760151503, 0.14525831399887887, 0.1428698188560852]
     mcmcexp_hi = [0.1613232845995245, 0.15641337994076746, 0.15261417246493894, 0.14812630053969397, 0.14700181315518987, 0.14447382599396227]   
         
@@ -924,9 +932,7 @@ def testApproximation():
         intval = z * (sd) / np.sqrt(len(lst))
         loperc = (mn-intval)
         hiperc = (mn+intval)
-        print('['+str(loperc)+', '+str(hiperc)+']')
-        
-   
+        print('['+str(loperc)+', '+str(hiperc)+']')   
     '''
 
     '''
@@ -1001,23 +1007,17 @@ def testApproximation():
     '''
 
     # Plot
-    intlist = [0,5,10,15,20,25]
-    #plt.plot(intlist, lossveclist_lo, color='black', linewidth=3)
-    #plt.plot(intlist, lossveclist_hi, color='black', linewidth=3)
-    #plt.plot(intlist, lossveclist_lo2, color='red', linewidth=3)
-    #plt.plot(intlist, lossveclist_hi2, color='red', linewidth=3)
-    plt.plot(intlist, mcmcexp_lo, color='black', linewidth=3) # Using MCMCexpect
-    plt.plot(intlist, mcmcexp_hi, color='black', linewidth=3) # Using MCMCexpect
-    #plt.plot(intlist, draws100, '--', color='purple', linewidth=0.5) # 100
-    #plt.plot(intlist, draws500, '--', color='red', linewidth=0.8) # 250
-    #plt.plot(intlist, draws1000, '--', color='green', linewidth=1.2) # 1000
-    plt.plot(intlist, draws20000, '--', color='yellow', linewidth=1.5)  # 10000
-    plt.plot(intlist, draws50000, '--', color='aqua', linewidth=1.8)  # 40000
-    plt.plot(intlist, draws100000, '--', color='blue', linewidth=2.3)  # 80000
-    plt.ylim(0.1, 0.20)
+    intlist = [5,10,15,20,25]
+    plt.plot(intlist, lossvec_lo, color='black', linewidth=4, label='MCMC 90% interval - high')
+    plt.plot(intlist, lossvec_hi, color='black', linewidth=4, label='MCMC 90% interval - low')
+    plt.plot(intlist, wts10, 'r--', linewidth=3,label='Alternate: $|\Gamma|=10,000$') # Using weights
+    plt.plot(intlist, wts50, 'g--', linewidth=3,label='Alternate: $|\Gamma|=50,000$') # Using weights
+    plt.plot(intlist, wts200, 'b--', linewidth=3, label='Alternate: $|\Gamma|=200,000$')  # Using weights
+    plt.ylim(0.13, 0.161)
     plt.xlabel('Batch size', fontsize=12)
     plt.ylabel('Loss estimate', fontsize=12)
-    plt.suptitle('Loss estimate vs. UNIQUE MCMC draws', fontsize=16)
+    plt.suptitle('Loss estimate vs. Batch size', fontsize=16)
+    plt.legend(loc='lower left')
     plt.show()
     plt.close()
 
