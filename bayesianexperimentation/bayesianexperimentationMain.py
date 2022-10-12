@@ -442,6 +442,38 @@ def showScoreVals():
 
     return
 
+def showScoreAndRiskVals():
+    x = np.linspace(0.001, 0.999, 1000)
+    t = 0.2  # Our target
+    y1 = ((x + 2 * (0.5 - t)) * (1 - x))+0.1
+    fig, ax = plt.subplots(figsize=(8, 7))
+    plt.plot(x, y1,linewidth=3)
+
+    gEst = np.linspace(0.001, 0.999, 50)  # gamma_hat
+    gStar = 0.4  # gamma_star
+    tauvec = [0.1]
+    for tau in tauvec: # Check scores
+        newy = [(gStar-gEst[i])*(tau-(1 if gEst[i]<gStar else 0))*-1 for i in range(len(gEst))]
+        plt.plot(gEst,newy,':',linewidth=3)
+
+    import matplotlib.ticker as mtick
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    plt.title('Values for a selected score and risk',
+              fontdict={'fontsize': 20, 'fontname': 'Trebuchet MS'})
+
+    plt.ylabel('Score/risk value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylim([0.,0.9])
+    plt.xlabel('SFP rate', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+
+    plt.text(0.00, 0.67, 'Parabolic risk', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.00, 0.37, 'Check score', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+    
+    return
+
 def utilityOverIncreasingData():
     '''Generate a figure showing the change in utility as n increases'''
 
@@ -706,6 +738,46 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                 print(designnames[designind] + ' complete')
         # END ELIF FOR WEIGHTS2
 
+        elif method == 'weights1': # Weight each prior draw by the likelihood of a new data set
+            Ntilde = sampMat.copy()
+            sumloss = 0
+            if type[0] == 'trace':
+                Yset = possibleYSets(Ntilde)
+            else: # node sampling
+                Yset = possibleYSets(Ntilde, Q)
+            for Ytilde in Yset:
+                wts = []
+                for currpriordraw in priordraws:
+                    # Use current new data to get a weight for the current prior draw
+                    currwt=1.0
+                    if type[0] == 'trace':
+                        for TNind in range(numTN):
+                            for SNind in range(numSN):
+                                curry, currn = int(Ytilde[TNind][SNind]), int(Ntilde[TNind][SNind])
+                                currz = zProbTr(TNind,SNind,numSN,currpriordraw,sens=s,spec=r)
+                                currwt = currwt * (currz**curry) * ((1-currz)**(currn-curry)) * comb(currn, curry)
+                        wts.append(currwt) # Add weight for this gamma draw
+                    else: # node sampling
+                        for TNind in range(numTN):
+                            for SNind in range(numSN):
+                                curry, currn = int(Ytilde[TNind][SNind]), int(Ntilde[TNind][SNind])
+                                currz = zProbTr(TNind, SNind, numSN, currpriordraw, sens=s, spec=r)
+                                currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry))*comb(currn,curry)
+
+                        #todo: NEED TO DO FOR NODE SAMPLING
+                        pass
+                # Obtain Bayes estimate
+                currest = bayesEstAdapt(priordraws,wts,lossdict['scoreDict'],printUpdate=False)
+                # Sum the weighted loss under each prior draw
+                for currsampind, currsamp in enumerate(priordraws):
+                    currloss = loss_pms(currest,currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                    sumloss += currloss * wts[currsampind]
+            lossveclist.append(sumloss / len(priordraws))  # Add the loss vector for this design
+            if printUpdate == True:
+                print(designnames[designind] + ' complete')
+        # END ELIF FOR WEIGHTS1
+
         elif method == 'approx': # We are using approximation; use expected value of data
             # todo: REST OF SECTION NEEDS TO BE ADAPTED FOR UNTRACKED
             postDensWts = []  # Initialize our weights for each vector of SFP rates
@@ -779,12 +851,50 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
 
     return lossveclist
 
+def possibleYSets(n, Q=np.array([])):
+    '''
+    Return all combinatorially possible data outcomes for experiment
+    array n. If n is 1-dimensional, Q is used to establish possible outcomes
+    along each trace. The returned
+    '''
+    if len(Q) == 0:
+        Y = [np.zeros(n.shape)]
+        # Initialize set of indices with positive testing probability
+        J = [(a,b) for a in range(n.shape[0]) for b in range(n.shape[1]) if n[a][b]>0]
+    else:
+        Y = [np.zeros(Q.shape)]
+        Qdotn = np.multiply(np.tile(n.reshape(Q.shape[0],1),Q.shape[1]),Q)
+        J = [(a, b) for a in range(Qdotn.shape[0]) for b in range(Qdotn.shape[1]) if Qdotn[a][b] > 0]
+
+    for (a,b) in J:
+        Ycopy = Y.copy()
+        for curry in range(1,int(n[a][b])+1):
+            addArray = np.zeros(n.shape)
+            addArray[a][b] += curry
+            Ynext = [y+addArray for y in Ycopy]
+            for y in Ynext:
+                Y.append(y)
+
+    return Y
+
+def nVecs(length,target):
+    '''Return all possible vectors of 'length' of positive integers that sum to target'''
+    if length == 1:
+        return [[target]]
+    else:
+        retSet = []
+        for nexttarg in range(target+1):
+            for nextset in nVecs(length-1,target-nexttarg):
+                retSet.append([nexttarg]+nextset)
+
+    return retSet
+
 def zProbTr(tnInd, snInd, snNum, gammaVec, sens=1., spec=1.):
     '''Provides consolidated SFP probability for the entered TN, SN indices; gammaVec should start with SN rates'''
     zStar = gammaVec[snNum+tnInd]+(1-gammaVec[snNum+tnInd])*gammaVec[snInd]
     return sens*zStar+(1-spec)*zStar
 
-def GetOptAllocation(U, method='nonBinary'):
+def GetOptAllocation(U):
     '''
     :param U
     :return x
@@ -793,301 +903,6 @@ def GetOptAllocation(U, method='nonBinary'):
     the case of node sampling and 3-dimensional in the case of path sampling.
     '''
     ''' With 200k prior draws, up to ntilde=50
-    [0.1609893209312415]
-[0.159266482909195]
-[0.15765787534164477]
-[0.1561767486512307]
-[0.1547756304753814]
-[0.1534854881102148]
-[0.15225738839866132]
-[0.15110962704589637]
-[0.15003010427194452]
-[0.14900606107440686]
-[0.14803930996770326]
-[0.14712574861718233]
-[0.14625471596630032]
-[0.1454311220186706]
-[0.1446469287922831]
-[0.14389572452541463]
-[0.14317966295023363]
-[0.14249730046006007]
-[0.1418433332383199]
-[0.141217363496816]
-[0.14061905536503647]
-[0.14004234926398904]
-[0.13948944262776306]
-[0.13895667617971771]
-[0.13844451064766147]
-[0.1379546025614626]
-[0.13747690694119824]
-[0.1370212448979097]
-[0.1365772508738202]
-[0.1361501292483389]
-[0.13573617379599207]
-[0.13533675377398616]
-[0.13494958747005234]
-[0.1345768829872744]
-[0.13421296762550358]
-[0.1338587532603064]
-[0.13351799485036348]
-[0.1331855144646015]
-[0.13286335267837568]
-[0.1325498437240659]
-[0.13224530607645302]
-[0.13194758146266508]
-[0.13165972644502863]
-[0.13137863027749655]
-[0.1311048322207863]
-[0.13083778658397596]
-[0.13057651562109543]
-[0.13032458160292898]
-[0.13007498705691517][0.12983473958939257]
-[0.1609893209312415]
-[0.16050358939666473]
-[0.1600444098832386]
-[0.15961103745676686]
-[0.1592001854324038]
-[0.15881279462758238]
-[0.1584470264898236]
-[0.15809987301671935]
-[0.15776859693192288]
-[0.1574539650941533]
-[0.15715835138363177]
-[0.15687876860618938]
-[0.15661239678675615]
-[0.15635825575507628]
-[0.15611411986874943]
-[0.1558832679951228]
-[0.1556612791770822]
-[0.15544815659216318]
-[0.15524373846477726]
-[0.155047088802477]
-[0.1548584976037714]
-[0.15467651400833862]
-[0.15450131834028263]
-[0.15433267606448414]
-[0.15417049729938667]
-[0.15401327660483674]
-[0.1538618453589484]
-[0.15371606706650098]
-[0.1535754350995571]
-[0.15343896811010693]
-[0.153306818091972]
-[0.15317997241638961]
-[0.15305608685751207]
-[0.15293706279104896]
-[0.15282039845372372]
-[0.1527073320438279]
-[0.15259705626163658]
-[0.1524901114387678]
-[0.1523865624910315]
-[0.1522854310328453]
-[0.15218841195757646]
-[0.15209217233744846]
-[0.15199948789786716]
-[0.15190909008899592]
-[0.1518202644401571]
-[0.15173358177218066]
-[0.15165005919649088]
-[0.151568124978095]
-[0.15148840707242522][0.15140938340622265]
-[0.1609893209312415]
-[0.1597611894720939]
-[0.15860765548782954]
-[0.15754740406220333]
-[0.1565326056655184]
-[0.15559972834725125]
-[0.1547144729646049]
-[0.1538806706424771]
-[0.15309160238162597]
-[0.15234468701145407]
-[0.151635706378525]
-[0.1509692887080809]
-[0.15032749986613492]
-[0.14971716353981457]
-[0.14913830917504653]
-[0.14858462649080745]
-[0.1480532682299794]
-[0.14754521248209276]
-[0.14705871637721288]
-[0.14659064520580525]
-[0.14614120066907862]
-[0.1457092309849725]
-[0.14529534260414215]
-[0.1448930042547857]
-[0.14451055339833013]
-[0.14413558663599252]
-[0.14377903194071542]
-[0.14342947690981914]
-[0.14309587610229801]
-[0.14276969406012405]
-[0.14245412178487016]
-[0.14215019790197456]
-[0.14185658086658065]
-[0.14157104751696728]
-[0.14129150582733047]
-[0.14102223118167712]
-[0.1407593070786867]
-[0.14050511416428124]
-[0.14025716127024432]
-[0.14001543274471473]
-[0.13978049334817463]
-[0.1395519730027168]
-[0.13932881922760706]
-[0.13911313072969306]
-[0.13890054891702092]
-[0.13869455571700498]
-[0.13849414513230696]
-[0.1382967892528577]
-[0.1381048593510093][0.13791963339041421]
-[0.1609893209312415]
-[0.15908716827109232]
-[0.15741709202743515]
-[0.15594023301954463]
-[0.15461668215507796]
-[0.15341839968962556]
-[0.1523332606193933]
-[0.15133658305650574]
-[0.15043013043123407]
-[0.1495910267044587]
-[0.14882036864962497]
-[0.14810895892780762]
-[0.1474444750232803]
-[0.14682306161667671]
-[0.14624620644455527]
-[0.14570199400417147]
-[0.14518813252577098]
-[0.14470303169388715]
-[0.144247970044256]
-[0.14381986961491067]
-[0.14340659824511737]
-[0.14301844876433578]
-[0.14264604059020453]
-[0.1422930297385806]
-[0.14195553620909646]
-[0.14163386872679035]
-[0.1413285883679977]
-[0.141036811877634]
-[0.1407539179315317]
-[0.14048388670291673]
-[0.14022568747134825]
-[0.13997599836566388]
-[0.13973577986320307]
-[0.13950556846654225]
-[0.13928147371322025]
-[0.1390642763306217]
-[0.13885515877795063]
-[0.1386531502224516]
-[0.1384564697026685]
-[0.13826737956550125]
-[0.13808468880744762]
-[0.1379093106676793]
-[0.13773702063764048]
-[0.1375719365497931]
-[0.13741206982567947]
-[0.1372551677222303]
-[0.1371024613493838]
-[0.13695439070967352]
-[0.13681016084843156][0.136670567556981]
-[0.1609893209312415]
-[0.15908208033475554]
-[0.1573003506411316]
-[0.15567289106029625]
-[0.15412214731042262]
-[0.15269259736804464]
-[0.15133217729704584]
-[0.15006173770097164]
-[0.14885946342335712]
-[0.14772244408104324]*
-[0.14664796559146037]
-[0.14562799654540765]
-[0.14465937665815617]
-[0.14373773418430116]
-[0.1428637682732513]
-[0.14202866519795088]
-[0.14123549278554573]
-[0.14047946579638054]
-[0.13975658504607955]
-[0.13906728983412067]*
-[0.1384051557833735]
-[0.13777320970128978]
-[0.1371659624063279]
-[0.1365858401051598]
-[0.1360269541590816]
-[0.13549190517076093]
-[0.13497545251588342]
-[0.13447981717300897]
-[0.13400014960388812]
-[0.1335390749921764]*
-[0.13309362771650066]
-[0.13266275316781714]
-[0.1322464749952618]
-[0.13184206042669455]
-[0.13145176852643278]
-[0.13107341693690364]
-[0.13070769642931457]
-[0.13035275367214624]
-[0.1300059025712023]
-[0.12967103246083792]*
-[0.12934571683826493]
-[0.1290280507215918]
-[0.12872037810405632]
-[0.1284197838799412]
-[0.12812732631771734]
-[0.1278437022458646]
-[0.12756626472114319]
-[0.12729608465518683]
-[0.12703348553353314][0.12677520215813273]
-[0.1609893209312415]
-[0.16076937841699596]
-[0.16055743624931493]
-[0.16035460849530886]
-[0.1601602003037863]
-[0.15997434830198234]
-[0.15979612209404134]
-[0.1596256041534367]
-[0.1594616059942458]
-[0.15930334048296282]
-[0.15915105297268686]
-[0.15900444163510535]
-[0.158863314473058]
-[0.15872770370508668]
-[0.15859688434770478]
-[0.15847044173009026]
-[0.15834870394359638]
-[0.1582314425167373]
-[0.15811731511172303]
-[0.1580071188448902]
-[0.15790032823303754]
-[0.15779704601205446]
-[0.1576968664682758]
-[0.15760021399424612]
-[0.1575060480522432]
-[0.15741478194182656]
-[0.15732573981104017]
-[0.1572402857095495]
-[0.15715673704657906]
-[0.1570756263108559]
-[0.156996465618125]
-[0.15691931188254682]
-[0.156844232868918]
-[0.1567711415854966]
-[0.15670022874311565]
-[0.15663086583682054]
-[0.15656296443407852]
-[0.15649724722218647]
-[0.15643283519223714]
-[0.15637000314577998]
-[0.15630883439615734]
-[0.1562494649294155]
-[0.15619138349588949]
-[0.156134363867392]
-[0.156078745068515]
-[0.15602396385796177]
-[0.15597062624218222]
-[0.15591827520716223]
-[0.15586711394250394]
-[0.15581695856950947]
 Umat = array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
          0.15348549, 0.15225739, 0.15110963, 0.1500301 , 0.14900606,
          0.14803931, 0.14712575, 0.14625472, 0.14543112, 0.14464693,
@@ -1163,71 +978,35 @@ Umat = array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
             pass
         # Add first element (corresponding to no testing) to all elements of U
         U = U + (U[0][0]*-1)
-        if method == 'nonBinary':
-            # Create pw-linear approximation of U for non-integer number of tests
-            def Upw(U,node,n):
-                if n > U.shape[1] or n < 0:
-                    print('n value is outside the feasible range.')
-                    return
-                nflr, nceil = int(np.floor(n)), int(np.ceil(n))
-                nrem = n-nflr # decimal remainder
-                return U[node][nceil]*(nrem) + U[node][nflr]*(1-nrem)
-            def vecUpw(U,x):
-                retVal = 0
-                for i in range(len(x)):
-                    retVal += Upw(U,i,x[i])
-                return retVal
-            def negVecUpw(x):
-                return vecUpw(U,x)*-1
-            # Initialize x
-            xinit = np.zeros((numTN))
-            # Maximize the utility
-            bds = spo.Bounds(np.repeat(0,numTN),np.repeat(numTests,numTN))
-            linConstraint = spo.LinearConstraint(np.repeat(1,numTN),0,numTests)
-            spoOutput = spo.minimize(negVecUpw,xinit,method='trust-constr',constraints=[linConstraint],
-                                     bounds=bds)
-            sol = spoOutput.x
-            maxU = spoOutput.fun * -1
 
-    elif Udim == 3: # Path Sampling
-        (numTN, numSN, numTests) = U.shape
-        xinit = np.zeros((U.shape[0],U.shape[1]))
-        if U[0][0][1] > U[0][0][0]: # We have utility
-            utilNotLoss = True
-        else: # We have loss
-            utilNotLoss = False
-
-    '''
-    def knapSack(W, wt, val, n):
-        K = [[0 for x in range(W + 1)] for x in range(n + 1)]
-      
-        # Build table K[][] in bottom up manner
-        for i in range(n + 1):
-            for w in range(W + 1):
-                if i == 0 or w == 0:
-                    K[i][w] = 0
-                elif wt[i-1] <= w:
-                    K[i][w] = max(val[i-1] + K[i-1][w-wt[i-1]],  K[i-1][w])
-                else:
-                    K[i][w] = K[i-1][w]
-      
-        return K[n][W] # This code is contributed by Bhavya Jain
-
-    val = [60, 100, 120]
-    wt = [10, 20, 30]
-    W = 50
-    n = len(val)
-    print(knapSack(W, wt, val, n))
-    
-       
-    '''
-    # Cleaning; remove any dominated traces from consideration
-    #xremove = []
+        # Create pw-linear approximation of U for non-integer number of tests
+        def Upw(U,node,n):
+            if n > U.shape[1] or n < 0:
+                print('n value is outside the feasible range.')
+                return
+            nflr, nceil = int(np.floor(n)), int(np.ceil(n))
+            nrem = n-nflr # decimal remainder
+            return U[node][nceil]*(nrem) + U[node][nflr]*(1-nrem)
+        def vecUpw(U,x):
+            retVal = 0
+            for i in range(len(x)):
+                retVal += Upw(U,i,x[i])
+            return retVal
+        def negVecUpw(x):
+            return vecUpw(U,x)*-1
+        # Initialize x
+        xinit = np.zeros((numTN))
+        # Maximize the utility
+        bds = spo.Bounds(np.repeat(0,numTN),np.repeat(numTests,numTN))
+        linConstraint = spo.LinearConstraint(np.repeat(1,numTN),0,numTests)
+        spoOutput = spo.minimize(negVecUpw,xinit,method='trust-constr',constraints=[linConstraint],
+                                 bounds=bds)
+        sol = spoOutput.x
+        maxU = spoOutput.fun * -1
 
 
     return sol, maxU
 
-#def
 
 def testApproximation():
     numTN, numSN = 3, 2
@@ -1289,7 +1068,7 @@ def testApproximation():
                 'marketVec': marketvec}
     designList = [design]
     designNames = ['Design 1']
-    numtests = 20
+    numtests = 5
     omeganum = 200
     #random.seed(35)
     randinds = random.sample(range(numdraws), omeganum)
@@ -1311,6 +1090,11 @@ def testApproximation():
                                    omeganum=omeganum, type=['trace'], method='approx', printUpdate=False)
     print(lossveclist)
     # WEIGHTS
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['trace'], method='weights3', printUpdate=False)
+    print(lossveclist)
+
     numdraws = 100000
     exampleDict['numPostSamples'] = numdraws
     exampleDict = methods.GeneratePostSamples(exampleDict)
