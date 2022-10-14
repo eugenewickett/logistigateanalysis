@@ -18,11 +18,11 @@ def GhanaInference():
 
     SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
     filesPath = os.path.join(SCRIPT_DIR, 'uspfiles')
-    GHA_df1 = pd.read_csv(os.path.join(filesPath, 'FACILID_MNFR.csv'), low_memory=False) # Facilities as test nodes
+    GHA_df1 = pd.read_csv(os.path.join(filesPath, 'FACILID_MNFR_MCH.csv'), low_memory=False) # Facilities as test nodes
     GHAlist_FCLY = GHA_df1.values.tolist()
-    GHA_df2 = pd.read_csv(os.path.join(filesPath, 'CITY_MNFR.csv'), low_memory=False) # Cities as test nodes
+    GHA_df2 = pd.read_csv(os.path.join(filesPath, 'CITY_MNFR_MCH.csv'), low_memory=False) # Cities as test nodes
     GHAlist_CITY = GHA_df2.values.tolist()
-    GHA_df3= pd.read_csv(os.path.join(filesPath, 'PROV_MNFR.csv'), low_memory=False) # Provinces as test nodes
+    GHA_df3= pd.read_csv(os.path.join(filesPath, 'PROV_MNFR_MCH.csv'), low_memory=False) # Provinces as test nodes
     GHAlist_PROV = GHA_df3.values.tolist()
 
     '''

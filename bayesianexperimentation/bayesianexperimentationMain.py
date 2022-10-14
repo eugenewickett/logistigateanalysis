@@ -489,7 +489,7 @@ def writeObjToPickle(obj, objname='pickleObject'):
     return
 
 def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, designnames=[],
-                     type=['trace'], priordraws=[], randinds=[], roundAlg=roundDesignLow, method='MCMC',
+                     type=['path'], priordraws=[], randinds=[], roundAlg=roundDesignLow, method='MCMC',
                      printUpdate=True, numpostdraws=0):
     '''
     Produces a list of loss vectors for entered design choices under a given data set and specified loss. Each loss
@@ -504,13 +504,13 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
     designnames: list of names for the designs
     numtests: how many samples will be obtained under each design
     omeganum: number of prior draws to use for calculating the Bayesian risk
-    type: list for the type of sample collection described in each design; one of ['trace'] (collect along SN-TN trace) or
-        ['test node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
+    type: list for the type of sample collection described in each design; one of ['path'] (collect along SN-TN trace) or
+        ['node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
     priordraws: set of prior draws to use for synchronized data collection in different designs
     randinds: the indices with which to iterate through priordraws for all omeganum loops
     method: one of 'MCMC', 'MCMCexpec', 'weights' or 'approx'; 'MCMC' completes full MCMC sampling for generating
-        posterior probabilities, 'approx' approximates the posterior probabilities, 'weights' uses a weighting
-        equivalence scheme
+        posterior probabilities, 'approx' approximates the posterior probabilities, 'weights1' uses a weighting
+        equivalence while integraing over all possible data outcomes
     '''
     # Initiate the list to return
     lossveclist = []
@@ -549,12 +549,12 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                     i, j = 0, 0
                     while np.sum(TNsamps[i]) == 0:
                         i += 1
-                    if type[0] == 'trace':
+                    if type[0] == 'path':
                         # Go to first non-empty column of this row
                         while TNsamps[i][j] == 0:
                             j += 1
                         TNsamps[i][j] -= 1
-                    if type[0] == 'test node':
+                    if type[0] == 'node':
                         # Pick a supply node according to Qest
                         j = choice([i for i in range(numSN)], p=type[1][i] / np.sum(type[1][i]).tolist())
                         TNsamps[i] -= 1
@@ -608,9 +608,9 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                 for currTN in range(numTN):
                     for currSN in range(numSN):
                         currzProb = zProbTr(currTN,currSN,numSN,currpriordraw,priordatadict['diagSens'],priordatadict['diagSpec'])
-                        if type[0] == 'trace':
+                        if type[0] == 'path':
                             currTerm = sampMat[currTN][currSN]*currzProb
-                        elif type[0] == 'test node':
+                        elif type[0] == 'node':
                             currTerm = sampMat[currTN]*type[1][currTN][currSN]*currzProb
                         Ytilde[currTN][currSN] = currTerm
 
@@ -644,128 +644,22 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             lossveclist.append(currlossvec)  # Add the loss vector for this design
         # END ELIF FOR MCMCEXPECT
 
-        elif method == 'weights': # Weight each prior draw by the likelihood of a new data set
-            wts = []
-            for currpriordraw in priordraws:
-                TNsamps = sampMat.copy()
-                # Initialize Ntilde and Ytilde
-                Ntilde = np.zeros(shape=priordatadict['N'].shape)
-                Ytilde = Ntilde.copy()
-                while np.sum(TNsamps) > 0.: # Generate new data set
-                    # Go to first non-empty row of TN samps
-                    i, j = 0, 0
-                    while np.sum(TNsamps[i]) == 0:
-                        i += 1
-                    if type[0] == 'trace':
-                        # Go to first non-empty column of this row
-                        while TNsamps[i][j] == 0:
-                            j += 1
-                        TNsamps[i][j] -= 1
-                    if type[0] == 'test node':
-                        # Pick a supply node according to Qest
-                        j = choice([i for i in range(numSN)], p=type[1][i] / np.sum(type[1][i]).tolist())
-                        TNsamps[i] -= 1
-                    # Generate test result
-                    currTNrate = currpriordraw[numSN + i]
-                    currSNrate = currpriordraw[j]
-                    currrealrate = currTNrate + (1 - currTNrate) * currSNrate  # z_star for this sample
-                    currposrate = s * currrealrate + (1 - r) * (1 - currrealrate)  # z for this sample
-                    result = np.random.binomial(1, p=currposrate)
-                    Ntilde[i, j] += 1
-                    Ytilde[i, j] += result
-
-                # Use new data to get a weight for the current prior draw
-                currwt = 1.
-                for currTN in range(numTN):
-                    for currSN in range(numSN):
-                        currz = zProbTr(currTN,currSN,numSN,currpriordraw,sens=s,spec=r)
-                        currn, curry = int(Ntilde[currTN,currSN]), int(Ytilde[currTN,currSN])
-                        term1 = (currz**curry) * ((1-currz)**(currn-Ytilde[currTN,currSN])) * comb(currn, curry)
-                        term2 = np.exp(methods.Tracked_LogPost(sps.logit(currpriordraw),priordatadict['N'],priordatadict['Y'],
-                                                        priordatadict['diagSens'],priordatadict['diagSpec'],
-                                                        priordatadict['prior']))
-
-                        currwt = currwt * (term1 * term2)
-
-                wts.append(currwt)
-
-            # Normalize weights; this permits comparison among different methods
-            wtsnorm = [wts[i] / np.sum(wts) for i in range(len(wts))]
-            # Obtain Bayes estimate
-            currest = bayesEstAdapt(priordraws,wtsnorm,lossdict['scoreDict'],printUpdate=False)
-            # Sum the weighted loss under each prior draw
-            sumloss = 0
-            for currsampind, currsamp in enumerate(priordraws):
-                currloss = loss_pms(currest,currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                    lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
-                sumloss += currloss * wtsnorm[currsampind]
-            lossveclist.append(sumloss)  # Add the loss vector for this design
-            if printUpdate == True:
-                print(designnames[designind] + ' complete')
-        # END ELIF FOR WEIGHTS
-
-        elif method == 'weights2': # Weight each prior draw by the likelihood of a new data set
-            ###### ONLY ONE TRACE ALLOWED ######
-            TNsamps = sampMat.copy()
-            TNind,SNind = 0,0
-            if np.sum(TNsamps) > 0:
-                while np.sum(TNsamps[TNind]) == 0:
-                    TNind += 1
-                while np.sum(TNsamps[:,SNind]) == 0:
-                    SNind += 1
-            Ntilde = np.zeros(shape=priordatadict['N'].shape)
-            Ntilde[TNind,SNind] += numtests
-            sumloss = 0
-            for dtilde in range(numtests+1):
-                wts = []
-                Ytilde = np.zeros(shape=priordatadict['N'].shape)
-                Ytilde[TNind,SNind] += dtilde
-                for currpriordraw in priordraws:
-                    # Use new data to get a weight for the current prior draw
-                    currz = zProbTr(TNind,SNind,numSN,currpriordraw,sens=s,spec=r)
-                    currwt = (currz**dtilde) * ((1-currz)**(numtests-dtilde)) * comb(numtests, dtilde)
-                    wts.append(currwt)
-
-                # Obtain Bayes estimate
-                currest = bayesEstAdapt(priordraws,wts,lossdict['scoreDict'],printUpdate=False)
-                # Sum the weighted loss under each prior draw
-                for currsampind, currsamp in enumerate(priordraws):
-                    currloss = loss_pms(currest,currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
-                    sumloss += currloss * wts[currsampind]
-            lossveclist.append(sumloss / len(priordraws))  # Add the loss vector for this design
-            if printUpdate == True:
-                print(designnames[designind] + ' complete')
-        # END ELIF FOR WEIGHTS2
-
-        elif method == 'weights1': # Weight each prior draw by the likelihood of a new data set
+        elif method == 'weights1path': # Weight each prior draw by the likelihood of a new data set
             Ntilde = sampMat.copy()
             sumloss = 0
-            if type[0] == 'trace':
-                Yset = possibleYSets(Ntilde)
-            else: # node sampling
-                Yset = possibleYSets(Ntilde, Q)
+            Yset = possibleYSets(Ntilde)
             for Ytilde in Yset:
                 wts = []
                 for currpriordraw in priordraws:
                     # Use current new data to get a weight for the current prior draw
                     currwt=1.0
-                    if type[0] == 'trace':
-                        for TNind in range(numTN):
-                            for SNind in range(numSN):
-                                curry, currn = int(Ytilde[TNind][SNind]), int(Ntilde[TNind][SNind])
-                                currz = zProbTr(TNind,SNind,numSN,currpriordraw,sens=s,spec=r)
-                                currwt = currwt * (currz**curry) * ((1-currz)**(currn-curry)) * comb(currn, curry)
-                        wts.append(currwt) # Add weight for this gamma draw
-                    else: # node sampling
-                        for TNind in range(numTN):
-                            for SNind in range(numSN):
-                                curry, currn = int(Ytilde[TNind][SNind]), int(Ntilde[TNind][SNind])
-                                currz = zProbTr(TNind, SNind, numSN, currpriordraw, sens=s, spec=r)
-                                currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry))*comb(currn,curry)
+                    for TNind in range(numTN):
+                        for SNind in range(numSN):
+                            curry, currn = int(Ytilde[TNind][SNind]), int(Ntilde[TNind][SNind])
+                            currz = zProbTr(TNind,SNind,numSN,currpriordraw,sens=s,spec=r)
+                            currwt = currwt * (currz**curry) * ((1-currz)**(currn-curry)) * comb(currn, curry)
+                    wts.append(currwt) # Add weight for this gamma draw
 
-                        #todo: NEED TO DO FOR NODE SAMPLING
-                        pass
                 # Obtain Bayes estimate
                 currest = bayesEstAdapt(priordraws,wts,lossdict['scoreDict'],printUpdate=False)
                 # Sum the weighted loss under each prior draw
@@ -776,78 +670,62 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             lossveclist.append(sumloss / len(priordraws))  # Add the loss vector for this design
             if printUpdate == True:
                 print(designnames[designind] + ' complete')
-        # END ELIF FOR WEIGHTS1
+        # END ELIF FOR WEIGHTS1PATH
 
-        elif method == 'approx': # We are using approximation; use expected value of data
-            # todo: REST OF SECTION NEEDS TO BE ADAPTED FOR UNTRACKED
-            postDensWts = []  # Initialize our weights for each vector of SFP rates
-            for currdraw in priordatadict['postSamples']: #Iterate through each prior draw
-                '''
-                currWt = 0
-                for currTN in range(numTN):
-                    for currSN in range(numSN):
-                        currzProb = zProbTr(currTN,currSN,numSN,currdraw,priordatadict['diagSens'],priordatadict['diagSpec'])
-                        currzTerm = np.log(currzProb)*currzProb + np.log(1-currzProb)*(1-currzProb)
-                        if type[0] == 'trace':
-                            currTerm = sampMat[currTN][currSN]*currzTerm
-                        elif type[0] == 'test node':
-                            currTerm = sampMat[currTN]*type[1][currTN][currSN]*currzTerm
-                        currWt += currTerm
-                postDensWts.append(np.exp(currWt))  # Want the likelihood; currWt signifies the log-likelihood
-                '''
-                '''
-                currWt = 1
-                for currTN in range(numTN):
-                    for currSN in range(numSN):
-                        currzProb = zProbTr(currTN, currSN, numSN, currdraw, priordatadict['diagSens'],
-                                            priordatadict['diagSpec'])
-                        currzTerm = (currzProb**currzProb)*((1-currzProb)**(1-currzProb))
-                        if type[0] == 'trace':
-                            currTerm =  currzTerm**(sampMat[currTN][currSN])
-                        elif type[0] == 'test node':
-                            currTerm =  currzTerm**(sampMat[currTN] * type[1][currTN][currSN])
-                        currWt = currWt*currTerm
-                '''
-                currWt = 1
-                for currTN in range(numTN):
-                    for currSN in range(numSN):
-                        currzProb = zProbTr(currTN, currSN, numSN, currdraw, priordatadict['diagSens'],
-                                            priordatadict['diagSpec'])
-                        if type[0] == 'trace':
-                            currN = sampMat[currTN][currSN]
-                            currY = currzProb * currN
-                        elif type[0] == 'test node':
-                            roundRow = roundAlg(type[1][currTN],sampMat[currTN])
-                            currN = roundRow[currSN]
-                            currY = currzProb * currN
-                        currYflr, currYceil = math.floor(currY), math.ceil(currY)
-                        yRem = currY - currYflr
-                        flrTerm = (currzProb ** currYflr) * ((1 - currzProb) ** (currN - currYflr)) * comb(int(currN), currYflr)
-                        ceilTerm = (currzProb ** currYceil) * ((1 - currzProb) ** (currN - currYceil)) * comb(int(currN), currYceil)
-                        currTerm = (1-yRem) * flrTerm + (yRem) * ceilTerm
-                        currWt = currWt * currTerm
-
-                postDensWts.append((currWt)) # Want the likelihood
-
-            # Nomralize the weights to sum to the number of prior draws
-            postWtsSum = np.sum(postDensWts)
-            postDensWts = [postDensWts[i]*len(priordatadict['postSamples'])/postWtsSum for i in range(len(postDensWts))]
-            # Get the Bayes estimate
-            currEst = bayesEstAdapt(priordatadict['postSamples'], postDensWts, lossdict['scoreDict'],printUpdate=printUpdate)
-            #currEst = bayesEst(priordatadict['postSamples'], lossdict['scoreDict'])
-            # Now average the loss across prior draws
-            sumloss = 0
-            for currdrawind, currdraw in enumerate(priordatadict['postSamples']):
-                currloss = postDensWts[currdrawind] * loss_pms(currEst, currdraw, lossdict['scoreFunc'],
-                                                               lossdict['scoreDict'], lossdict['riskFunc'],
-                                                               lossdict['riskDict'], lossdict['marketVec'])
-                sumloss += currloss
-            avgloss = sumloss/len(priordatadict['postSamples'])
-            lossveclist.append(avgloss)
-            if printUpdate==True:
+        elif method == 'weights1node': # Weight each prior draw by the likelihood of a new data set
+            #IMPORTANT!!! CAN ONLY HANDLE DESIGNS WITH 1 TEST NODE
+            #todo: NEEDS TO BE DONE
+            Ntilde = sampMat.copy()
+            sampNodeInd = 0
+            for currind in range(numTN):
+                if Ntilde[currind] > 0:
+                    sampNodeInd = currind
+            Ntotal = int(Ntilde[sampNodeInd])
+            NvecSet = nVecs(numSN,Ntotal)
+            # Remove any Nset members that have positive tests at supply nodes with no sourcing probability
+            removeInds = [j for j in range(numSN) if Q[sampNodeInd][j]==0.]
+            if len(removeInds) > 0:
+                for currRemoveInd in removeInds:
+                    NvecSet = [item for item in NvecSet if item[currRemoveInd]==0]
+            # Iterate through each possible data set
+            NvecProbs = [] # Initialize a list capturing the probability of each data set
+            NvecLosses = [] # Initialize a list for the loss under each N vector
+            for Nvec in NvecSet:
+                currNprob=math.factorial(Ntotal) # Initialize with n!
+                for currSN in range(numSN):
+                    Qab, Nab = Q[sampNodeInd][currSN], Nvec[currSN]
+                    currNprob = currNprob * (Qab**Nab) / (math.factorial(Nab))
+                NvecProbs.append(currNprob)
+                # Define the possible data results for the current Nvec
+                Yset = possibleYSets(np.array(Nvec).reshape(1,numSN))
+                Yset = [i[0] for i in Yset]
+                sumloss = 0.
+                for Ytilde in Yset:
+                    wts = []
+                    for currpriordraw in priordraws:
+                        currwt = 1.0
+                        for SNind in range(numSN):
+                            curry, currn = int(Ytilde[SNind]), int(Nvec[SNind])
+                            currz = zProbTr(sampNodeInd,SNind,numSN,currpriordraw,sens=s,spec=r)
+                            currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry)) * comb(currn, curry)
+                        wts.append(currwt) # Add weight for this gamma draw
+                    # Get Bayes estimate
+                    currest = bayesEstAdapt(priordraws,wts,lossdict['scoreDict'],printUpdate=False)
+                    # Sum the weighted loss under each prior draw
+                    for currsampind, currsamp in enumerate(priordraws):
+                        currloss = loss_pms(currest, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                            lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                        sumloss += currloss * wts[currsampind]
+                NvecLosses.append(sumloss / len(priordraws))
+            # Weight each Nvec loss by the occurence probability
+            finalLoss = 0.
+            for Nind in range(len(NvecSet)):
+                finalLoss += NvecLosses[Nind] * NvecProbs[Nind]
+            lossveclist.append(finalLoss)
+            if printUpdate == True:
                 print(designnames[designind] + ' complete')
-        # END ELIF FOR APPROXIMATION
-    # END FOR FOR DESIGNS
+        # END ELIF FOR WEIGHTS1NODE
+    # END LOOP FOR DESIGNS
 
     return lossveclist
 
@@ -902,8 +780,8 @@ def GetOptAllocation(U):
     Each row of U should correspond to one test node or trace. U should be 2-dimensional in
     the case of node sampling and 3-dimensional in the case of path sampling.
     '''
-    ''' With 200k prior draws, up to ntilde=50
-Umat = array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
+    ''' With 200k prior draws, up to ntilde=50, design = np.array([[0., 0.], [1., 0.], [0., 0.]])
+Umat = np.array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
          0.15348549, 0.15225739, 0.15110963, 0.1500301 , 0.14900606,
          0.14803931, 0.14712575, 0.14625472, 0.14543112, 0.14464693,
          0.14389572, 0.14317966, 0.1424973 , 0.14184333, 0.14121736,
@@ -963,11 +841,42 @@ Umat = array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
          0.15663087, 0.15656296, 0.15649725, 0.15643284, 0.15637   ,
          0.15630883, 0.15624946, 0.15619138, 0.15613436, 0.15607875,
          0.15602396, 0.15597063, 0.15591828, 0.15586711, 0.15581696]]])
+UmatTN = np.average(Umat,axis=1)
+UmatTN = np.array([[0.16098932, 0.15988504, 0.15885114, 0.1578939 , 0.15698791,
+        0.15614914, 0.15535221, 0.15460475, 0.15389935, 0.15323001,
+        0.15259883, 0.15200226, 0.15143356, 0.15089469, 0.15038052,
+        0.14988949, 0.14942047, 0.14897273, 0.14854354, 0.14813223,
+        0.14773878, 0.14735943, 0.14699538, 0.14664468, 0.14630751,
+        0.14598394, 0.14566938, 0.14536866, 0.14507634, 0.14479455,
+        0.14452149, 0.14425836, 0.14400284, 0.14375697, 0.14351668,
+        0.14328304, 0.14305753, 0.14283781, 0.14262495, 0.14241763,
+        0.14221686, 0.14201988, 0.14182961, 0.14164386, 0.14146254,
+        0.14128568, 0.14111329, 0.14094635, 0.1407817 , 0.14062206],
+       [0.16098932, 0.15942418, 0.15801238, 0.15674382, 0.15557465,
+        0.15450907, 0.15352386, 0.15260862, 0.15176086, 0.15096786,
+        0.15022804, 0.14953912, 0.14888599, 0.14827011, 0.14769226,
+        0.14714331, 0.1466207 , 0.14612412, 0.14565334, 0.14520526,
+        0.1447739 , 0.14436384, 0.14397069, 0.14359301, 0.14323305,
+        0.14288473, 0.14255381, 0.14223315, 0.1419249 , 0.14162679,
+        0.1413399 , 0.1410631 , 0.14079618, 0.14053831, 0.14028649,
+        0.14004326, 0.13980724, 0.13957913, 0.13935681, 0.1391414 ,
+        0.13893259, 0.13873064, 0.13853292, 0.13834253, 0.13815631,
+        0.13797487, 0.13779831, 0.13762559, 0.13745751, 0.1372951 ],
+       [0.16098932, 0.15992573, 0.1589289 , 0.15801375, 0.15714118,
+        0.15633347, 0.15556415, 0.15484367, 0.15416053, 0.15351289,
+        0.15289951, 0.15231622, 0.15176134, 0.15123272, 0.15073032,
+        0.15024955, 0.1497921 , 0.14935545, 0.14893696, 0.14853721,
+        0.14815275, 0.14778513, 0.14743142, 0.14709302, 0.1467665 ,
+        0.14645335, 0.14615059, 0.14586005, 0.14557845, 0.14530735,
+        0.14504505, 0.14479103, 0.14454535, 0.1443066 , 0.144076  ,
+        0.14385214, 0.14363533, 0.143425  , 0.14321937, 0.14302052,
+        0.14282728, 0.14263876, 0.14245588, 0.14227707, 0.14210304,
+        0.14193383, 0.14176844, 0.14160718, 0.1414503 , 0.14129608]])
      '''
     Udim = np.ndim(U)
     if Udim == 2: # Node Sampling
         (numTN, numTests) = U.shape
-        numTests -= 1
+        numTests -= 1 # The first entry of U should denote 0 tests
         # Normalize U so that no data produces no utility
         if U[0][1] > U[0][0]: # We have utility; make into a loss
             #utilNotLoss = True
@@ -977,7 +886,8 @@ Umat = array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
             U = U * -1
             pass
         # Add first element (corresponding to no testing) to all elements of U
-        U = U + (U[0][0]*-1)
+        addElem = U[0][0]*-1
+        U = U + addElem
 
         # Create pw-linear approximation of U for non-integer number of tests
         def Upw(U,node,n):
@@ -992,21 +902,272 @@ Umat = array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
             for i in range(len(x)):
                 retVal += Upw(U,i,x[i])
             return retVal
-        def negVecUpw(x):
+        def negVecUpw(x,U):
             return vecUpw(U,x)*-1
         # Initialize x
         xinit = np.zeros((numTN))
         # Maximize the utility
         bds = spo.Bounds(np.repeat(0,numTN),np.repeat(numTests,numTN))
         linConstraint = spo.LinearConstraint(np.repeat(1,numTN),0,numTests)
-        spoOutput = spo.minimize(negVecUpw,xinit,method='trust-constr',constraints=[linConstraint],
-                                 bounds=bds)
+        spoOutput = spo.minimize(negVecUpw,xinit,args=(U),method='SLSQP',constraints=linConstraint,
+                                 bounds=bds,options={'ftol': 1e-15}) # Reduce tolerance if not getting integer solutions
         sol = spoOutput.x
         maxU = spoOutput.fun * -1
 
-
     return sol, maxU
 
+def allocationExample():
+    '''Use example outputs to create illustration of allocation decision'''
+    Umat = np.array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
+                       0.15348549, 0.15225739, 0.15110963, 0.1500301, 0.14900606,
+                       0.14803931, 0.14712575, 0.14625472, 0.14543112, 0.14464693,
+                       0.14389572, 0.14317966, 0.1424973, 0.14184333, 0.14121736,
+                       0.14061906, 0.14004235, 0.13948944, 0.13895668, 0.13844451,
+                       0.1379546, 0.13747691, 0.13702124, 0.13657725, 0.13615013,
+                       0.13573617, 0.13533675, 0.13494959, 0.13457688, 0.13421297,
+                       0.13385875, 0.13351799, 0.13318551, 0.13286335, 0.13254984,
+                       0.13224531, 0.13194758, 0.13165973, 0.13137863, 0.13110483,
+                       0.13083779, 0.13057652, 0.13032458, 0.13007499, 0.12983474],
+                      [0.16098932, 0.16050359, 0.16004441, 0.15961104, 0.15920019,
+                       0.15881279, 0.15844703, 0.15809987, 0.1577686, 0.15745397,
+                       0.15715835, 0.15687877, 0.1566124, 0.15635826, 0.15611412,
+                       0.15588327, 0.15566128, 0.15544816, 0.15524374, 0.15504709,
+                       0.1548585, 0.15467651, 0.15450132, 0.15433268, 0.1541705,
+                       0.15401328, 0.15386185, 0.15371607, 0.15357544, 0.15343897,
+                       0.15330682, 0.15317997, 0.15305609, 0.15293706, 0.1528204,
+                       0.15270733, 0.15259706, 0.15249011, 0.15238656, 0.15228543,
+                       0.15218841, 0.15209217, 0.15199949, 0.15190909, 0.15182026,
+                       0.15173358, 0.15165006, 0.15156812, 0.15148841, 0.15140938]],
+                     [[0.16098932, 0.15976119, 0.15860766, 0.1575474, 0.15653261,
+                       0.15559973, 0.15471447, 0.15388067, 0.1530916, 0.15234469,
+                       0.15163571, 0.15096929, 0.1503275, 0.14971716, 0.14913831,
+                       0.14858463, 0.14805327, 0.14754521, 0.14705872, 0.14659065,
+                       0.1461412, 0.14570923, 0.14529534, 0.144893, 0.14451055,
+                       0.14413559, 0.14377903, 0.14342948, 0.14309588, 0.14276969,
+                       0.14245412, 0.1421502, 0.14185658, 0.14157105, 0.14129151,
+                       0.14102223, 0.14075931, 0.14050511, 0.14025716, 0.14001543,
+                       0.13978049, 0.13955197, 0.13932882, 0.13911313, 0.13890055,
+                       0.13869456, 0.13849415, 0.13829679, 0.13810486, 0.13791963],
+                      [0.16098932, 0.15908717, 0.15741709, 0.15594023, 0.15461668,
+                       0.1534184, 0.15233326, 0.15133658, 0.15043013, 0.14959103,
+                       0.14882037, 0.14810896, 0.14744448, 0.14682306, 0.14624621,
+                       0.14570199, 0.14518813, 0.14470303, 0.14424797, 0.14381987,
+                       0.1434066, 0.14301845, 0.14264604, 0.14229303, 0.14195554,
+                       0.14163387, 0.14132859, 0.14103681, 0.14075392, 0.14048389,
+                       0.14022569, 0.139976, 0.13973578, 0.13950557, 0.13928147,
+                       0.13906428, 0.13885516, 0.13865315, 0.13845647, 0.13826738,
+                       0.13808469, 0.13790931, 0.13773702, 0.13757194, 0.13741207,
+                       0.13725517, 0.13710246, 0.13695439, 0.13681016, 0.13667057]],
+                     [[0.16098932, 0.15908208, 0.15730035, 0.15567289, 0.15412215,
+                       0.1526926, 0.15133218, 0.15006174, 0.14885946, 0.14772244,
+                       0.14664797, 0.145628, 0.14465938, 0.14373773, 0.14286377,
+                       0.14202867, 0.14123549, 0.14047947, 0.13975659, 0.13906729,
+                       0.13840516, 0.13777321, 0.13716596, 0.13658584, 0.13602695,
+                       0.13549191, 0.13497545, 0.13447982, 0.13400015, 0.13353907,
+                       0.13309363, 0.13266275, 0.13224647, 0.13184206, 0.13145177,
+                       0.13107342, 0.1307077, 0.13035275, 0.1300059, 0.12967103,
+                       0.12934572, 0.12902805, 0.12872038, 0.12841978, 0.12812733,
+                       0.1278437, 0.12756626, 0.12729608, 0.12703349, 0.1267752],
+                      [0.16098932, 0.16076938, 0.16055744, 0.16035461, 0.1601602,
+                       0.15997435, 0.15979612, 0.1596256, 0.15946161, 0.15930334,
+                       0.15915105, 0.15900444, 0.15886331, 0.1587277, 0.15859688,
+                       0.15847044, 0.1583487, 0.15823144, 0.15811732, 0.15800712,
+                       0.15790033, 0.15779705, 0.15769687, 0.15760021, 0.15750605,
+                       0.15741478, 0.15732574, 0.15724029, 0.15715674, 0.15707563,
+                       0.15699647, 0.15691931, 0.15684423, 0.15677114, 0.15670023,
+                       0.15663087, 0.15656296, 0.15649725, 0.15643284, 0.15637,
+                       0.15630883, 0.15624946, 0.15619138, 0.15613436, 0.15607875,
+                       0.15602396, 0.15597063, 0.15591828, 0.15586711, 0.15581696]]])
+    Q = np.array([[0.4881994 , 0.5118006 ], [0.72190074, 0.27809926],[0.48207174, 0.51792826]])
+    i1, i2, i3 = 0.7, 0.1, 0.3
+    Q = np.array([[i1, 1-i1], [i2, 1-i2], [i3, 1-i3]])
+
+    UmatQ = np.zeros((Umat.shape[0],Umat.shape[2]))
+    for i in range(len(Umat)):
+        for j in range(Umat.shape[2]):
+            UmatQ[i][j] = Umat[i][0][j] * Q[i][0] + Umat[i][1][j] * Q[i][1]
+
+    UmatQ1 = UmatQ[:,:41]
+
+    sol,func = GetOptAllocation(UmatQ1)
+    print(sol)
+
+    # Evaluate utility of different allocations
+    def utilgain(U, node, n):
+        if n > U.shape[1] or n < 0:
+            print('n value is outside the feasible range.')
+            return
+        nflr, nceil = int(np.floor(n)), int(np.ceil(n))
+        nrem = n - nflr  # decimal remainder
+        return (U[node][nceil] * (nrem) + U[node][nflr] * (1 - nrem) -U[node][0])*-1
+
+    def vecUpw(U, x):
+        retVal = 0
+        for i in range(len(x)):
+            retVal += utilgain(U, i, x[i])
+        return retVal
+
+    sol1 = np.array([18,16,6])
+    vecUpw(UmatQ,sol1)
+
+    # Plot UmatQ for each test node
+    import matplotlib.patheffects as pe
+    fig, ax = plt.subplots(figsize=(8, 7))
+    plt.plot(UmatQ[0], 'b-',alpha=0.6, linewidth=5,label='Test Node 1',
+                 path_effects=[pe.Stroke(linewidth=7, foreground='b',alpha=0.2), pe.Normal()])
+    plt.plot(UmatQ[1], 'r-', alpha=0.6, linewidth=5, label='Test Node 2',
+             path_effects=[pe.Stroke(linewidth=7, foreground='r', alpha=0.2), pe.Normal()])
+    plt.plot(UmatQ[2], 'g-', alpha=0.6, linewidth=5, label='Test Node 3',
+             path_effects=[pe.Stroke(linewidth=7, foreground='g', alpha=0.2), pe.Normal()])
+    plt.title('Loss under data from different test nodes',
+              fontdict={'fontsize': 20, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Expected loss', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylim([0.125, 0.165])
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    plt.xlabel('Tests', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.legend(loc='upper right',fontsize=16)
+    fig.tight_layout()
+    plt.show()
+    plt.close()
+
+    return
+
+def allocationCaseStudy():
+    '''Allocation using case study data'''
+    # CITIES-MANUFACTURERS
+    rd2_N = np.array([[1., 0., 2., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0.],
+       [0., 1., 3., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [1., 0., 1., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [0., 0., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+       [0., 1., 0., 0., 0., 0., 0., 1., 0., 1., 0., 1., 1.],
+       [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [0., 2., 3., 0., 0., 0., 1., 0., 0., 1., 1., 0., 0.],
+       [0., 2., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 0., 2., 2., 0., 0., 1., 0., 0., 2., 0., 0., 0.],
+       [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [1., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [0., 0., 4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 0., 1., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+       [0., 0., 1., 0., 0., 0., 0., 0., 0., 3., 0., 0., 1.],
+       [0., 3., 4., 1., 1., 0., 0., 4., 0., 5., 0., 0., 2.],
+       [0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
+       [0., 4., 0., 1., 0., 0., 0., 0., 0., 4., 0., 0., 0.],
+       [0., 2., 4., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [1., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 0., 0., 1., 1., 0., 0., 5., 1., 2., 0., 0., 3.],
+       [0., 1., 2., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+       [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 1., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [1., 2., 7., 2., 1., 0., 0., 0., 0., 3., 0., 1., 0.],
+       [1., 0., 3., 1., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+       [0., 0., 6., 0., 0., 0., 1., 1., 6., 1., 0., 0., 1.],
+       [0., 0., 3., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+       [0., 1., 0., 0., 0., 1., 0., 2., 0., 1., 0., 0., 1.],
+       [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+    rd2_Y = np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 3., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 1., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1.],
+           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.],
+           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 1., 2., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+           [0., 0., 3., 1., 1., 0., 0., 2., 0., 0., 0., 0., 2.],
+           [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 3.],
+           [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 2., 2., 1., 0., 0., 0., 0., 0., 0., 1., 0.],
+           [0., 0., 1., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 3., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+           [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 1.],
+           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+
+    # PROVINCES-MANUFACTURERS
+    rd3_N = np.array([[ 1.,  1., 10.,  1.,  3.,  0.,  1.,  6.,  7.,  5.,  0.,  0.,  4.],
+       [ 1.,  1.,  4.,  2.,  0.,  1.,  1.,  2.,  0.,  4.,  0.,  0.,  1.],
+       [ 3., 17., 31.,  4.,  2.,  0.,  1.,  6.,  0., 23.,  1.,  2.,  5.],
+       [ 1.,  1., 15.,  2.,  0.,  0.,  0.,  1.,  0.,  6.,  0.,  0.,  0.]])
+    rd3_Y = np.array([[ 0.,  0.,  7.,  0.,  3.,  0.,  1.,  0.,  1.,  0.,  0.,  0.,  4.],
+       [ 0.,  0.,  2.,  2.,  0.,  1.,  1.,  0.,  0.,  1.,  0.,  0.,  1.],
+       [ 0.,  0., 15.,  3.,  2.,  0.,  0.,  2.,  0.,  1.,  1.,  2.,  5.],
+       [ 0.,  0.,  5.,  2.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
+
+    (numTN, numSN) = rd3_N.shape
+    s,r = 1., 1.,
+    CSdict = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
+                                       numSamples=0,dataType='Tracked',randSeed=2)
+    CSdict['diagSens'] = s
+    CSdict['diagSpec'] = r
+    CSdict = util.GetVectorForms(CSdict)
+    CSdict['N'] = rd3_N
+    CSdict['Y'] = rd3_Y
+    CSdict['prior'] = methods.prior_normal()
+    # MCMC settings
+    CSdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    CSdict['importerNum'] = numSN
+    CSdict['outletNum'] = numTN
+    # Generate posterior draws
+    numdraws = 50000
+    CSdict['numPostSamples'] = numdraws
+    CSdict = methods.GeneratePostSamples(CSdict)
+    # Sourcing-probability matrix
+    CSdict['transMat'] = np.tile(np.sum(CSdict['N'],axis=0)/np.sum(CSdict['N']),(4,1))
+
+    # Utility specification
+    underWt, t = 1., 0.1
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'threshold': t}
+    marketvec = np.ones(numTN+numSN)
+    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+                'marketVec': marketvec}
+
+
+
+    # Node design
+    totalTests = 11
+    Umat = np.zeros((numTN,numSN,totalTests+1)) # Each row corresponds to a test node, each column to a number of tests
+    for currTNind in range(numTN):
+        for currSNind in range(numSN):
+            design = np.zeros((numTN,numSN))
+            design[currTNind][currSNind] = 1.
+            designList, designNames = [design], ['Design 1']
+            for numTest in range(totalTests+1):
+                lossveclist = getDesignUtility(priordatadict=CSdict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                       designnames=designNames, numtests=numTest,
+                                       omeganum=1, type=['node', CSdict['transMat']], method='weights1path',
+                                       numpostdraws=1000, printUpdate=False)
+                Umat[currTNind][currSNind][numTest] = lossveclist[0]
+                print('TN '+str(currTNind)+', SN '+str(currSNind)+', numTest = '+str(numTest) +' done')
+
+    Q = CSdict['transMat']
+    UmatQ = np.zeros((Umat.shape[0], Umat.shape[2]))
+    for i in range(len(Umat)):
+        for j in range(Umat.shape[2]):
+            UmatQ[i][j] = Umat[i][0][j] * Q[i][0] + Umat[i][1][j] * Q[i][1]
+
+    
+
+    sol, func = GetOptAllocation(UmatQ)
+    print(sol)
+
+
+    return
 
 def testApproximation():
     numTN, numSN = 3, 2
@@ -1034,7 +1195,7 @@ def testApproximation():
     exampleDict['outletNum'] = numTN
 
     # Generate posterior draws
-    numdraws = 10000
+    numdraws = 50000
     exampleDict['numPostSamples'] = numdraws
     exampleDict = methods.GeneratePostSamples(exampleDict)
 
@@ -1076,25 +1237,67 @@ def testApproximation():
     # MCMC
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'], randinds=randinds,numpostdraws=1000)
+                                   omeganum=omeganum, type=['path'], randinds=randinds,numpostdraws=1000)
     print(lossveclist)
     # MCMCexpect
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'], randinds=randinds, method='MCMCexpect',
+                                   omeganum=omeganum, type=['path'], randinds=randinds, method='MCMCexpect',
                                    numpostdraws=1000)
     print(lossveclist)
     # APPROXIMATION
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'], method='approx', printUpdate=False)
+                                   omeganum=omeganum, type=['path'], method='approx', printUpdate=False)
     print(lossveclist)
     # WEIGHTS
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'], method='weights3', printUpdate=False)
+                                   omeganum=omeganum, type=['path'], method='weights1path', printUpdate=False)
     print(lossveclist)
 
+    # Node sampling example; ONLY USE SINGLE-NODE DESIGNS
+    design = np.array([0., 1., 0.])
+    numtests = 5
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['node',exampleDict['transMat']], method='MCMC',
+                                   numpostdraws=1000,printUpdate=True)
+    print(lossveclist)
+    '''
+    lossveclist = [[0.1479217305053138, 0.14084809466415085, 0.19228942586836723, 0.1513926702303649, 0.154914290604453, 0.14880778645110954, 0.1458188048481419, 0.147311049218352, 0.16252821816972574, 0.14538552613227212, 0.16215475898072557, 0.20461414492094104, 0.15442966602543431, 0.14791806232589744, 0.14877943353209933, 0.15096074301895857, 0.14990954142013233, 0.14750615635115533, 0.15046452911329908, 0.14484440575096205, 0.15359323910212672, 0.14281387255705968, 0.1452059051392966, 0.20289508289913769, 0.14688942931626645, 0.16581082339540323, 0.14562777480984535, 0.147812394979172, 0.14284414091425504, 0.15434038025076907, 0.14481334773440233, 0.15551891175711657, 0.13235463073932305, 0.1479516296467864, 0.14656046870445663, 0.1402533753140278, 0.15311593130187123, 0.14926214142551245, 0.1812417946995411, 0.15127241250801685, 0.1477984271607804, 0.14057693214949382, 0.15195108920855369, 0.1924987412087236, 0.15444436789414998, 0.1451026594769498, 0.14563162638105243, 0.1456928498139271, 0.15050375247944384, 0.15647167292578865, 0.1488797658669125, 0.14228306894945517, 0.1368217157804952, 0.1600809288959258, 0.1484418591410903, 0.18734031282054986, 0.18919313265702248, 0.14625504676666418, 0.15994129990438488, 0.1542842000112373, 0.15173919525902807, 0.15033048187215345, 0.14461318843904614, 0.14604344228655441, 0.15050915977064988, 0.13423682275897458, 0.15347529527005385, 0.1552861360744961, 0.1475172371159737, 0.15071537996573392, 0.15208395795796503, 0.14540023092025, 0.20344425295631838, 0.2026896440696525, 0.15696445240641366, 0.149726726006842, 0.1420364118284895, 0.16174838029478633, 0.14046530168806223, 0.15030134783657514, 0.16057326290531876, 0.15346674109831163, 0.14137114226526218, 0.1474362291157891, 0.1500514856649408, 0.19805732576085736, 0.150400376429399, 0.1446569628926192, 0.1465217420552684, 0.15540239345904022, 0.1478161510806229, 0.15010809887871, 0.14960469147832126, 0.1435803584141635, 0.1484557372158955, 0.14420619653486777, 0.14361068151734477, 0.14903755212316508, 0.1477490606012085, 0.15283333740010252, 0.1782769537594729, 0.15340835114705104, 0.19133628816851597, 0.14045196015227102, 0.14156735938864098, 0.184791297559425, 0.15480730044909588, 0.15469493222836822, 0.15183770833922774, 0.1439715247169898, 0.18602736330736133, 0.1451864683083161, 0.15827336320123975, 0.15124256244533563, 0.14363936502466362, 0.15295495196316222, 0.14993688431036992, 0.1520090761293855, 0.15735514898723135, 0.15148456290740606, 0.14231544568652638, 0.1432655487032636, 0.1483923613510417, 0.1569148022953203, 0.14914038440487362, 0.15131672759101414, 0.15148457555951733, 0.1542185087141782, 0.1504984539855885, 0.15468412694794065, 0.148736749073621, 0.15904018983593615, 0.1460570882014333, 0.14069738674571883, 0.14412127194821442, 0.14751793740185942, 0.15341015017978543, 0.15237416693378475, 0.14209781448030123, 0.1501339259883911, 0.14578888227908737, 0.15172603345218144, 0.15373296501589315, 0.1477001348420058, 0.15297783757957037, 0.1605458147708352, 0.14691198645974096, 0.16240625143954543, 0.19688829750422188, 0.15092060138316904, 0.1425181799729412, 0.1444645897062611, 0.14968613159781552, 0.18246926464387234, 0.19482147506792433, 0.15364884354422007, 0.1468056078267283, 0.19693533307222197, 0.15733533548048537, 0.14022247982726843, 0.15291913100467486, 0.1925435586942793, 0.15219609954734314, 0.14176260177355782, 0.193113205823978, 0.1425478534265448, 0.14073888500587853, 0.17347794231631308, 0.14967838466761726, 0.14374419982427758, 0.14386981349711486, 0.1522698114436128, 0.1462804344670247, 0.14057772334501395, 0.1565198137440422, 0.14727636719638654, 0.13868293950062843, 0.15069925094211792, 0.1476729445352735, 0.1543956531171222, 0.15225064612530356, 0.14983260424789452, 0.14822202397444603, 0.19133146400673473, 0.15205405251511442, 0.15147396624580864, 0.15333475585936476, 0.14725069099476737, 0.15213301734525242, 0.1436311130653711, 0.1553849380894797, 0.14067100567386273, 0.15697662494931777, 0.14813147249201628, 0.15168838021699174, 0.14085995031712917, 0.14895376227726506, 0.14914654100545321, 0.1534357416986085, 0.1545262282591375]]
+    CIalpha = 0.05
+    z = spstat.norm.ppf(1 - (CIalpha / 2))
+    for lst in lossveclist: # FOR INTERVAL ON MEAN
+        mn = np.mean(lst)
+        sd = np.std(lst)
+        intval = z * (sd) / np.sqrt(len(lst))
+        loperc = (mn-intval)
+        hiperc = (mn+intval)
+        print('['+str(loperc)+', '+str(hiperc)+']')
+    
+    numtests = 5: [0.15187128426182853, 0.15590740997525168]
+    '''
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['node', exampleDict['transMat']], method='weights1node',
+                                   numpostdraws=1000, printUpdate=False)
+    print(lossveclist) # 0.15424065871736511
+    # How does that compare with just using Q with the path-sampling results?
+    design1 = np.array([[0., 0.], [1., 0.], [0., 0.]])
+    design2 = np.array([[0., 0.], [0., 1.], [0., 0.]])
+    lossveclist1 = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=[design1],
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['path'], method='weights1path', printUpdate=False)
+    lossveclist2 = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=[design2],
+                                    designnames=designNames, numtests=numtests,
+                                    omeganum=omeganum, type=['path'], method='weights1path', printUpdate=False)
+    sumloss = (Q[1][0]*lossveclist1[0]) + (Q[1][1]*lossveclist2[0]) # 0.15477929886063535
+
+
+
+
+    # Generating utility along different paths
     numdraws = 100000
     exampleDict['numPostSamples'] = numdraws
     exampleDict = methods.GeneratePostSamples(exampleDict)
@@ -1107,13 +1310,13 @@ def testApproximation():
             for nextn in range(numtests+1):
                 lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                            designnames=designNames, numtests=nextn,
-                                           omeganum=omeganum, type=['trace'], method='weights2', printUpdate=False)
+                                           omeganum=omeganum, type=['path'], method='weights1path', printUpdate=False)
                 print(lossveclist)
                 Umat[currTN][currSN][nextn] = lossveclist[0]
     Umatcopy = Umat.copy()
     Umatcopy = np.reshape(Umatcopy,(currTN*currSN,15))
 
-    '''
+    ''' design = np.array([[0., 0.], [1., 0.], [0., 0.]])
     [0.16139074493480987]
     [0.1596501566793548]
     [0.15802375616532746]
@@ -1479,14 +1682,14 @@ def EvalAlgTiming():
     mcmcstart = time.time()
     lossvec_mcmc = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+                                   omeganum=omeganum, type=['path'],
                                    randinds=randinds, method = 'MCMC')[0]
     mcmcsecs = time.time()-mcmcstart
 
     approxstart = time.time()
     lossvec_approx = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+                                   omeganum=omeganum, type=['path'],
                                    randinds=randinds, method='approx')[0]
     approxsecs = time.time() - approxstart
 
@@ -1649,12 +1852,12 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList, designnames=designNames, numtests=numtests,
-                               omeganum=omeganum, type=['trace'], priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb')), randinds=randinds)
+                               omeganum=omeganum, type=['path'], priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'),'rb')), randinds=randinds)
     plotLossVecs(lossveclist,lvecnames=designNames)
     # APPROXIMATION
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+                                   omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds, method='approx')
     '''
@@ -1695,14 +1898,14 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     #plotLossVecs(lossveclist,lvecnames=designNames)
     # APPROXIMATION
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['trace'],
+                                   omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds, method='approx')
     '''
@@ -1754,7 +1957,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1805,7 +2008,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1829,7 +2032,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1872,7 +2075,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1896,7 +2099,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1939,7 +2142,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -1963,7 +2166,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2006,7 +2209,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2030,7 +2233,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2073,7 +2276,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2097,7 +2300,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2140,7 +2343,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2164,7 +2367,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2208,7 +2411,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2233,7 +2436,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2277,7 +2480,7 @@ def bayesianexample():
     random.seed(35)
     randinds = random.sample(range(0, 1000), 100)
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2302,7 +2505,7 @@ def bayesianexample():
     randinds = random.sample(range(0, 1000), 100)
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     plotLossVecs(lossveclist, lvecnames=designNames)
@@ -2330,7 +2533,7 @@ def bayesianexample():
         print('['+str(loperc)+', '+str(hiperc)+']')
     '''
 
-    ### type='test node', overEstWt=1., rateTarget=0.1 ###
+    ### type='node', overEstWt=1., rateTarget=0.1 ###
     design0 = np.array([0., 0.,0.])
     design1 = np.array([0.,0.,1.])
     design2 = np.array([1 / 3, 2 / 3, 0.])
@@ -2367,7 +2570,7 @@ def bayesianexample():
         Qest = Qlist[scenind]
         lossvec = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                    designnames=designNames, numtests=numtests, omeganum=omeganum,
-                                   type=['test node', Qest],
+                                   type=['node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
         lossveclist.append(lossvec[0][0])
@@ -2397,7 +2600,7 @@ def bayesianexample():
         Qest = Qlist[scenind]
         lossvec = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
                                    designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['test node', Qest],
+                                   omeganum=omeganum, type=['node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
         for i in range(len(designList)):
@@ -2411,7 +2614,7 @@ def bayesianexample():
     plotLossVecs(lossveclist, lvecnames=designNames,plottitle='95% CIs for design utility\n$\delta=1$, $t=0.1$, $n=30$, test node selection')    
     '''
 
-    ### type='test node', overEstWt=1., rateTarget=0.1, KNOWN Q matrix ###
+    ### type='node', overEstWt=1., rateTarget=0.1, KNOWN Q matrix ###
     design0 = np.array([0., 0., 0.])
     design1 = np.array([0., 0., 1.])
     design2 = np.array([1 / 3, 2 / 3, 0.])
@@ -2437,7 +2640,7 @@ def bayesianexample():
     omeganum = 100
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
                                designlist=designList, designnames=designNames, numtests=numtests,
-                               omeganum=omeganum, type=['test node', Qest],
+                               omeganum=omeganum, type=['node', Qest],
                                priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                randinds=randinds)
     '''
@@ -2463,7 +2666,7 @@ def bayesianexample():
     omeganum = 100
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
                                    designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['test node', Qest],
+                                   omeganum=omeganum, type=['node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     '''
@@ -2516,7 +2719,7 @@ def bayesianexample():
     omeganum = 100
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
                                    designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['test node', Qest],
+                                   omeganum=omeganum, type=['node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     '''
@@ -2553,7 +2756,7 @@ def bayesianexample():
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
                                    designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['test node', Qest],
+                                   omeganum=omeganum, type=['node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     '''
@@ -2590,7 +2793,7 @@ def bayesianexample():
 
     lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(),
                                    designlist=designList, designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['test node', Qest],
+                                   omeganum=omeganum, type=['node', Qest],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
     '''
@@ -2629,7 +2832,7 @@ def bayesianexample():
     lossveclist = []
     for numtests in numtestsVec:
         lossvec = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
-                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['trace'],
+                                   designnames=designNames, numtests=numtests, omeganum=omeganum, type=['path'],
                                    priordraws=pickle.load(open(os.path.join(os.getcwd(), 'priordraws'), 'rb')),
                                    randinds=randinds)
         lossveclist.append(lossvec[0])
@@ -2978,7 +3181,7 @@ def checkMCMCexpectation():
     exampleDict = methods.GeneratePostSamples(exampleDict)
 
     design = np.array([[0., 0.], [1., 0.], [0., 0.]])
-    type = ['trace']
+    type = ['path']
     numtests = 10
     sampMat = design * numtests
 
@@ -3002,7 +3205,7 @@ def checkMCMCexpectation():
     # MCMC
     lossveclist1 = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                     designnames=designNames, numtests=numtests,
-                                    omeganum=omeganum, type=['trace'], randinds=randinds, numpostdraws=numdrawspost)
+                                    omeganum=omeganum, type=['path'], randinds=randinds, numpostdraws=numdrawspost)
     # FOR GENERATING 95% INTERVAL ON LOSS
     CIalpha = 0.05
     z = spstat.norm.ppf(1 - (CIalpha / 2))
@@ -3016,7 +3219,7 @@ def checkMCMCexpectation():
     # print(lossveclist1)
     '''
     design = np.array([[0., 0.], [1., 0.], [0., 0.]])
-    type = ['trace']
+    type = ['path']
     numtests = 25
     underWt, t = 2., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
@@ -3028,7 +3231,7 @@ def checkMCMCexpectation():
     95% CI: [0.17554819626038604, 0.17656226534126807]
 
     design = np.array([[0., 0.], [1., 0.], [0., 0.]])
-    type = ['trace']
+    type = ['path']
     numtests = 10
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
@@ -3042,7 +3245,7 @@ def checkMCMCexpectation():
     # MCMCexpect
     lossveclist2 = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
                                     designnames=designNames, numtests=numtests,
-                                    omeganum=omeganum, type=['trace'], randinds=randinds, method='MCMCexpect',
+                                    omeganum=omeganum, type=['path'], randinds=randinds, method='MCMCexpect',
                                     numpostdraws=numdrawspost)
     # print(lossveclist2)
     # FOR GENERATING 95% INTERVAL ON LOSS
@@ -3090,7 +3293,7 @@ def checkDistsAlign():
     exampleDict = methods.GeneratePostSamples(exampleDict)
 
     design = np.array([[0., 0.], [1., 0.], [0., 0.]])
-    type = ['trace']
+    type = ['path']
     numtests = 25
     sampMat = design * numtests
     omeganum = 200
@@ -3108,9 +3311,9 @@ def checkDistsAlign():
             for currSN in range(numSN):
                 currzProb = zProbTr(currTN, currSN, numSN, currpriordraw, exampleDict['diagSens'],
                                     exampleDict['diagSpec'])
-                if type[0] == 'trace':
+                if type[0] == 'path':
                     currTerm = sampMat[currTN][currSN] * currzProb
-                elif type[0] == 'test node':
+                elif type[0] == 'node':
                     currTerm = sampMat[currTN] * type[1][currTN][currSN] * currzProb
                 Ytilde[currTN][currSN] = currTerm
 
@@ -3137,9 +3340,9 @@ def checkDistsAlign():
                 currzProb = zProbTr(currTN, currSN, numSN, currdraw, exampleDict['diagSens'],
                                     exampleDict['diagSpec'])
                 currzTerm = (currzProb ** currzProb) * ((1 - currzProb) ** (1 - currzProb))
-                if type[0] == 'trace':
+                if type[0] == 'path':
                     currTerm = currzTerm ** (sampMat[currTN][currSN])
-                elif type[0] == 'test node':
+                elif type[0] == 'node':
                     currTerm = currzTerm ** (sampMat[currTN] * type[1][currTN][currSN])
                 currWt = currWt * currTerm
 
