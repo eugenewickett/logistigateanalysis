@@ -447,26 +447,27 @@ def showScoreAndRiskVals():
     t = 0.2  # Our target
     y1 = ((x + 2 * (0.5 - t)) * (1 - x))+0.1
     fig, ax = plt.subplots(figsize=(8, 7))
-    plt.plot(x, y1,linewidth=3)
+    plt.plot(x, y1,linewidth=4)
 
     gEst = np.linspace(0.001, 0.999, 50)  # gamma_hat
     gStar = 0.4  # gamma_star
     tauvec = [0.1]
     for tau in tauvec: # Check scores
-        newy = [(gStar-gEst[i])*(tau-(1 if gEst[i]<gStar else 0))*-1 for i in range(len(gEst))]
-        plt.plot(gEst,newy,':',linewidth=3)
+        newy = [(gStar-gEst[i])*(tau-(1 if gEst[i]<gStar else 0))+0.5 for i in range(len(gEst))]
+        plt.plot(gEst,newy,':',linewidth=5)
 
     import matplotlib.ticker as mtick
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     plt.title('Values for a selected score and risk',
               fontdict={'fontsize': 20, 'fontname': 'Trebuchet MS'})
-
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
     plt.ylabel('Score/risk value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylim([0.,0.9])
     plt.xlabel('SFP rate', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
 
-    plt.text(0.00, 0.67, 'Parabolic risk', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.text(0.00, 0.37, 'Check score', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.00, 0.655, 'Parabolic risk', fontdict={'fontsize': 15, 'fontname': 'Trebuchet MS'})
+    plt.text(0.00, 0.32, 'Check score', fontdict={'fontsize': 15, 'fontname': 'Trebuchet MS'})
 
     fig.tight_layout()
     plt.show()
@@ -674,7 +675,6 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
 
         elif method == 'weights1node': # Weight each prior draw by the likelihood of a new data set
             #IMPORTANT!!! CAN ONLY HANDLE DESIGNS WITH 1 TEST NODE
-            #todo: NEEDS TO BE DONE
             Ntilde = sampMat.copy()
             sampNodeInd = 0
             for currind in range(numTN):
@@ -1013,19 +1013,19 @@ def allocationExample():
     # Plot UmatQ for each test node
     import matplotlib.patheffects as pe
     fig, ax = plt.subplots(figsize=(8, 7))
-    plt.plot(UmatQ[0], 'b-',alpha=0.6, linewidth=5,label='Test Node 1',
+    plt.plot(UmatQ[0]*-1+0.3, 'b-',alpha=0.6, linewidth=5,label='Test Node 1',
                  path_effects=[pe.Stroke(linewidth=7, foreground='b',alpha=0.2), pe.Normal()])
-    plt.plot(UmatQ[1], 'r-', alpha=0.6, linewidth=5, label='Test Node 2',
+    plt.plot(UmatQ[1]*-1+0.3, 'r-', alpha=0.6, linewidth=5, label='Test Node 2',
              path_effects=[pe.Stroke(linewidth=7, foreground='r', alpha=0.2), pe.Normal()])
-    plt.plot(UmatQ[2], 'g-', alpha=0.6, linewidth=5, label='Test Node 3',
+    plt.plot(UmatQ[2]*-1+0.3, 'g-', alpha=0.6, linewidth=5, label='Test Node 3',
              path_effects=[pe.Stroke(linewidth=7, foreground='g', alpha=0.2), pe.Normal()])
-    plt.title('Loss under data from different test nodes',
+    plt.title('Utility under data from different test nodes',
               fontdict={'fontsize': 20, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Expected loss', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Expected utility', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.ylim([0.125, 0.165])
     ax.tick_params(axis='both', which='major', labelsize=12)
     plt.xlabel('Tests', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
-    plt.legend(loc='upper right',fontsize=16)
+    plt.legend(loc='lower right',fontsize=16)
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -1140,7 +1140,7 @@ def allocationCaseStudy():
 
 
     # Node design
-    totalTests = 11
+    totalTests = 10
     Umat = np.zeros((numTN,numSN,totalTests+1)) # Each row corresponds to a test node, each column to a number of tests
     for currTNind in range(numTN):
         for currSNind in range(numSN):
@@ -1161,7 +1161,7 @@ def allocationCaseStudy():
         for j in range(Umat.shape[2]):
             UmatQ[i][j] = Umat[i][0][j] * Q[i][0] + Umat[i][1][j] * Q[i][1]
 
-    
+
 
     sol, func = GetOptAllocation(UmatQ)
     print(sol)
