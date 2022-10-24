@@ -491,7 +491,7 @@ def writeObjToPickle(obj, objname='pickleObject'):
 
 def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, designnames=[],
                      type=['path'], priordraws=[], randinds=[], roundAlg=roundDesignLow, method='MCMC',
-                     printUpdate=True, numpostdraws=0):
+                     printUpdate=True, numpostdraws=0, numNdraws=0, numYdraws=1):
     '''
     Produces a list of loss vectors for entered design choices under a given data set and specified loss. Each loss
         vector contains omeganum Monte Carlo integration iterations
@@ -681,6 +681,8 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                 if Ntilde[currind] > 0:
                     sampNodeInd = currind
             Ntotal = int(Ntilde[sampNodeInd])
+            if printUpdate==True:
+                print('Generating possible N sets...')
             NvecSet = nVecs(numSN,Ntotal)
             # Remove any Nset members that have positive tests at supply nodes with no sourcing probability
             removeInds = [j for j in range(numSN) if Q[sampNodeInd][j]==0.]
@@ -691,6 +693,8 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             NvecProbs = [] # Initialize a list capturing the probability of each data set
             NvecLosses = [] # Initialize a list for the loss under each N vector
             for Nvec in NvecSet:
+                if printUpdate == True:
+                    print('Looking at N set: ' + str(Nvec))
                 currNprob=math.factorial(Ntotal) # Initialize with n!
                 for currSN in range(numSN):
                     Qab, Nab = Q[sampNodeInd][currSN], Nvec[currSN]
@@ -725,6 +729,122 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             if printUpdate == True:
                 print(designnames[designind] + ' complete')
         # END ELIF FOR WEIGHTS1NODE
+
+        elif method == 'weights2node': # Weight each prior draw by the likelihood of a new data set
+            # Differs from 'weights1node' in that rather than enumerate every possible data set, numdatadraws data
+            #   sets are drawn
+            #IMPORTANT!!! CAN ONLY HANDLE DESIGNS WITH 1 TEST NODE
+            Ntilde = sampMat.copy()
+            sampNodeInd = 0
+            for currind in range(numTN):
+                if Ntilde[currind] > 0:
+                    sampNodeInd = currind
+            Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
+            # Initialize NvecSet with numdatadraws different data sets
+            NvecSet = []
+            for i in range(numNdraws):
+                sampSNvec = choice([i for i in range(numSN)], size=Ntotal, p=Qvec) # Sample according to the sourcing probabilities
+                sampSNvecSums = [sampSNvec.tolist().count(j) for j in range(numSN)] # Consolidate samples by supply node
+                NvecSet.append(sampSNvecSums)
+            NvecLosses = []  # Initialize a list for the loss under each N vector
+            for Nvecind, Nvec in enumerate(NvecSet):
+                ''' CODE FOR DOING MULTIPLE Y REALIZATIONS UNDER EACH NVEC
+                YvecSet = [] #Initialize a list of possible data outcomes
+                if numYdraws > len(priordraws):
+                    print('numYdraws exceeds the number of prior draws')
+                    return
+                priorIndsForY = random.sample(range(len(priordraws)), numYdraws)  # Grab numYdraws gammas from prior
+                for i in range(numYdraws):
+                    zVec = [zProbTr(sampNodeInd, sn, numSN, priordraws[priorIndsForY[i]], sens=s, spec=r) for sn in range(numSN)]
+                    ySNvec = [choice([j for j in range(Nvec[sn])],p=zVec[sn]) for sn in range(numSN)]
+                    YvecSet.append(ySNvec)
+                '''
+                randprior = priordraws[random.sample(range(len(priordraws)),k=1)][0]
+                zVec = [zProbTr(sampNodeInd, sn, numSN, randprior, sens=s, spec=r) for sn in range(numSN)]
+                Yvec = [np.random.binomial(Nvec[sn],zVec[sn]) for sn in range(numSN)]
+                sumloss = 0.
+                wts = []
+                for currpriordraw in priordraws: # Get weights for each prior draw
+                    currwt = 1.0
+                    for SNind in range(numSN):
+                        curry, currn = int(Yvec[SNind]), int(Nvec[SNind])
+                        currz = zProbTr(sampNodeInd, SNind, numSN, currpriordraw, sens=s, spec=r)
+                        currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry)) * comb(currn, curry)
+                    wts.append(currwt)  # Add weight for this gamma draw
+                # Normalize weights to sum to number of prior draws
+                currWtsSum = np.sum(wts)
+                wts = [wts[i]*len(priordraws) / currWtsSum for i in range(len(priordraws))]
+                # Get Bayes estimate
+                currest = bayesEstAdapt(priordraws, wts, lossdict['scoreDict'], printUpdate=False)
+                # Sum the weighted loss under each prior draw
+                for currsampind, currsamp in enumerate(priordraws):
+                    currloss = loss_pms(currest, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                    sumloss += currloss * wts[currsampind]
+                NvecLosses.append(sumloss / len(priordraws))
+                if printUpdate == True and Nvecind % 5 == 0:
+                    print('Finished Nvecind of '+str(Nvecind))
+            currlossvec.append(np.average(NvecLosses))
+            lossveclist.append(currlossvec)
+            if printUpdate == True:
+                print(designnames[designind] + ' complete')
+        # END ELIF FOR WEIGHTS2NODE
+
+        elif method == 'weights3node': # Weight each prior draw by the likelihood of a new data set
+            # Differs from 'weights1node' in that rather than enumerate every possible data set, numdatadraws data
+            #   sets are drawn
+            #IMPORTANT!!! CAN ONLY HANDLE DESIGNS WITH 1 TEST NODE
+            Ntilde = sampMat.copy()
+            sampNodeInd = 0
+            for currind in range(numTN):
+                if Ntilde[currind] > 0:
+                    sampNodeInd = currind
+            Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
+            # Initialize NvecSet with numdatadraws different data sets
+            NvecSet = []
+            for i in range(numNdraws):
+                sampSNvec = choice([i for i in range(numSN)], size=Ntotal, p=Qvec) # Sample according to the sourcing probabilities
+                sampSNvecSums = [sampSNvec.tolist().count(j) for j in range(numSN)] # Consolidate samples by supply node
+                NvecSet.append(sampSNvecSums)
+            NvecLosses = []  # Initialize a list for the loss under each N vector
+            for Nvecind, Nvec in enumerate(NvecSet):
+                ''' CODE FOR DOING MULTIPLE Y REALIZATIONS UNDER EACH NVEC
+                YvecSet = [] #Initialize a list of possible data outcomes
+                if numYdraws > len(priordraws):
+                    print('numYdraws exceeds the number of prior draws')
+                    return
+                priorIndsForY = random.sample(range(len(priordraws)), numYdraws)  # Grab numYdraws gammas from prior
+                for i in range(numYdraws):
+                    zVec = [zProbTr(sampNodeInd, sn, numSN, priordraws[priorIndsForY[i]], sens=s, spec=r) for sn in range(numSN)]
+                    ySNvec = [choice([j for j in range(Nvec[sn])],p=zVec[sn]) for sn in range(numSN)]
+                    YvecSet.append(ySNvec)
+                '''
+                Yset = possibleYSets(np.array(Nvec).reshape(1, numSN))
+                Yset = [i[0] for i in Yset]
+                sumloss = 0.
+                for Ytilde in Yset:
+                    wts = []
+                    for currpriordraw in priordraws:
+                        currwt = 1.0
+                        for SNind in range(numSN):
+                            curry, currn = int(Ytilde[SNind]), int(Nvec[SNind])
+                            currz = zProbTr(sampNodeInd, SNind, numSN, currpriordraw, sens=s, spec=r)
+                            currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry)) * comb(currn, curry)
+                        wts.append(currwt)  # Add weight for this gamma draw
+                    # Get Bayes estimate
+                    currest = bayesEstAdapt(priordraws, wts, lossdict['scoreDict'], printUpdate=False)
+                    # Sum the weighted loss under each prior draw
+                    for currsampind, currsamp in enumerate(priordraws):
+                        currloss = loss_pms(currest, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
+                                            lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                        sumloss += currloss * wts[currsampind]
+                NvecLosses.append(sumloss / len(priordraws))
+                if printUpdate == True and Nvecind % 5 == 0:
+                    print('Finished Nvecind of '+str(Nvecind))
+            lossveclist.append(np.average(NvecLosses))
+            if printUpdate == True:
+                print(designnames[designind] + ' complete')
+        # END ELIF FOR WEIGHTS3NODE
     # END LOOP FOR DESIGNS
 
     return lossveclist
@@ -1259,11 +1379,30 @@ def testApproximation():
     # Node sampling example; ONLY USE SINGLE-NODE DESIGNS
     design = np.array([0., 1., 0.])
     numtests = 5
-    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=designList,
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=[design],
                                    designnames=designNames, numtests=numtests,
-                                   omeganum=omeganum, type=['node',exampleDict['transMat']], method='MCMC',
+                                   omeganum=omeganum, type=['node',exampleDict['transMat']], method='weights1node',
                                    numpostdraws=1000,printUpdate=True)
-    print(lossveclist)
+    print(lossveclist) # [0.15452505205853423]
+
+    # Node sampling, pt. 2; ONLY USE SINGLE-NODE DESIGNS
+    design = np.array([0., 1., 0.])
+    numtests = 5
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=[design],
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['node', exampleDict['transMat']], method='weights2node',
+                                   numNdraws=200, printUpdate=True)
+    print(lossveclist) # [[0.15521162653827367]]
+
+    # DEBUGGING; 'weights3node'
+    design = np.array([0., 1., 0.])
+    numtests = 5
+    lossveclist = getDesignUtility(priordatadict=exampleDict.copy(), lossdict=lossDict.copy(), designlist=[design],
+                                   designnames=designNames, numtests=numtests,
+                                   omeganum=omeganum, type=['node', exampleDict['transMat']], method='weights3node',
+                                   numNdraws=10, printUpdate=True)
+    print(lossveclist) # [[0.1545609615470162]]
+
     '''
     lossveclist = [[0.1479217305053138, 0.14084809466415085, 0.19228942586836723, 0.1513926702303649, 0.154914290604453, 0.14880778645110954, 0.1458188048481419, 0.147311049218352, 0.16252821816972574, 0.14538552613227212, 0.16215475898072557, 0.20461414492094104, 0.15442966602543431, 0.14791806232589744, 0.14877943353209933, 0.15096074301895857, 0.14990954142013233, 0.14750615635115533, 0.15046452911329908, 0.14484440575096205, 0.15359323910212672, 0.14281387255705968, 0.1452059051392966, 0.20289508289913769, 0.14688942931626645, 0.16581082339540323, 0.14562777480984535, 0.147812394979172, 0.14284414091425504, 0.15434038025076907, 0.14481334773440233, 0.15551891175711657, 0.13235463073932305, 0.1479516296467864, 0.14656046870445663, 0.1402533753140278, 0.15311593130187123, 0.14926214142551245, 0.1812417946995411, 0.15127241250801685, 0.1477984271607804, 0.14057693214949382, 0.15195108920855369, 0.1924987412087236, 0.15444436789414998, 0.1451026594769498, 0.14563162638105243, 0.1456928498139271, 0.15050375247944384, 0.15647167292578865, 0.1488797658669125, 0.14228306894945517, 0.1368217157804952, 0.1600809288959258, 0.1484418591410903, 0.18734031282054986, 0.18919313265702248, 0.14625504676666418, 0.15994129990438488, 0.1542842000112373, 0.15173919525902807, 0.15033048187215345, 0.14461318843904614, 0.14604344228655441, 0.15050915977064988, 0.13423682275897458, 0.15347529527005385, 0.1552861360744961, 0.1475172371159737, 0.15071537996573392, 0.15208395795796503, 0.14540023092025, 0.20344425295631838, 0.2026896440696525, 0.15696445240641366, 0.149726726006842, 0.1420364118284895, 0.16174838029478633, 0.14046530168806223, 0.15030134783657514, 0.16057326290531876, 0.15346674109831163, 0.14137114226526218, 0.1474362291157891, 0.1500514856649408, 0.19805732576085736, 0.150400376429399, 0.1446569628926192, 0.1465217420552684, 0.15540239345904022, 0.1478161510806229, 0.15010809887871, 0.14960469147832126, 0.1435803584141635, 0.1484557372158955, 0.14420619653486777, 0.14361068151734477, 0.14903755212316508, 0.1477490606012085, 0.15283333740010252, 0.1782769537594729, 0.15340835114705104, 0.19133628816851597, 0.14045196015227102, 0.14156735938864098, 0.184791297559425, 0.15480730044909588, 0.15469493222836822, 0.15183770833922774, 0.1439715247169898, 0.18602736330736133, 0.1451864683083161, 0.15827336320123975, 0.15124256244533563, 0.14363936502466362, 0.15295495196316222, 0.14993688431036992, 0.1520090761293855, 0.15735514898723135, 0.15148456290740606, 0.14231544568652638, 0.1432655487032636, 0.1483923613510417, 0.1569148022953203, 0.14914038440487362, 0.15131672759101414, 0.15148457555951733, 0.1542185087141782, 0.1504984539855885, 0.15468412694794065, 0.148736749073621, 0.15904018983593615, 0.1460570882014333, 0.14069738674571883, 0.14412127194821442, 0.14751793740185942, 0.15341015017978543, 0.15237416693378475, 0.14209781448030123, 0.1501339259883911, 0.14578888227908737, 0.15172603345218144, 0.15373296501589315, 0.1477001348420058, 0.15297783757957037, 0.1605458147708352, 0.14691198645974096, 0.16240625143954543, 0.19688829750422188, 0.15092060138316904, 0.1425181799729412, 0.1444645897062611, 0.14968613159781552, 0.18246926464387234, 0.19482147506792433, 0.15364884354422007, 0.1468056078267283, 0.19693533307222197, 0.15733533548048537, 0.14022247982726843, 0.15291913100467486, 0.1925435586942793, 0.15219609954734314, 0.14176260177355782, 0.193113205823978, 0.1425478534265448, 0.14073888500587853, 0.17347794231631308, 0.14967838466761726, 0.14374419982427758, 0.14386981349711486, 0.1522698114436128, 0.1462804344670247, 0.14057772334501395, 0.1565198137440422, 0.14727636719638654, 0.13868293950062843, 0.15069925094211792, 0.1476729445352735, 0.1543956531171222, 0.15225064612530356, 0.14983260424789452, 0.14822202397444603, 0.19133146400673473, 0.15205405251511442, 0.15147396624580864, 0.15333475585936476, 0.14725069099476737, 0.15213301734525242, 0.1436311130653711, 0.1553849380894797, 0.14067100567386273, 0.15697662494931777, 0.14813147249201628, 0.15168838021699174, 0.14085995031712917, 0.14895376227726506, 0.14914654100545321, 0.1534357416986085, 0.1545262282591375]]
     CIalpha = 0.05
