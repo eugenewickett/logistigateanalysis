@@ -743,8 +743,8 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             # Initialize NvecSet with numdatadraws different data sets
             NvecSet = []
             for i in range(numNdraws):
-                sampSNvec = choice([i for i in range(numSN)], size=Ntotal, p=Qvec) # Sample according to the sourcing probabilities
-                sampSNvecSums = [sampSNvec.tolist().count(j) for j in range(numSN)] # Consolidate samples by supply node
+                sampSNvec = choice([j for j in range(numSN)], size=Ntotal, p=Qvec) # Sample according to the sourcing probabilities
+                sampSNvecSums = np.array([sampSNvec.tolist().count(j) for j in range(numSN)]) # Consolidate samples by supply node
                 NvecSet.append(sampSNvecSums)
             NvecLosses = []  # Initialize a list for the loss under each N vector
             for Nvecind, Nvec in enumerate(NvecSet):
@@ -761,22 +761,17 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                 '''
                 randprior = priordraws[random.sample(range(len(priordraws)),k=1)][0]
                 zVec = [zProbTr(sampNodeInd, sn, numSN, randprior, sens=s, spec=r) for sn in range(numSN)]
-                Yvec = [np.random.binomial(Nvec[sn],zVec[sn]) for sn in range(numSN)]
-                sumloss = 0.
-                wts = []
-                for currpriordraw in priordraws: # Get weights for each prior draw
-                    currwt = 1.0
-                    for SNind in range(numSN):
-                        curry, currn = int(Yvec[SNind]), int(Nvec[SNind])
-                        currz = zProbTr(sampNodeInd, SNind, numSN, currpriordraw, sens=s, spec=r)
-                        currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry)) * comb(currn, curry)
-                    wts.append(currwt)  # Add weight for this gamma draw
+                Yvec = np.array([np.random.binomial(Nvec[sn],zVec[sn]) for sn in range(numSN)])
+                # Get weights for each prior draw
+                zMat = zProbTrVec(numSN,priordraws,sens=s,spec=r)[:,sampNodeInd,:]
+                wts = np.prod((zMat**Yvec)*((1-zMat)**(Nvec-Yvec))*sps.comb(Nvec,Yvec),axis=1)
                 # Normalize weights to sum to number of prior draws
                 currWtsSum = np.sum(wts)
-                wts = [wts[i]*len(priordraws) / currWtsSum for i in range(len(priordraws))]
+                wts = wts*len(priordraws)/currWtsSum
                 # Get Bayes estimate
                 currest = bayesEstAdapt(priordraws, wts, lossdict['scoreDict'], printUpdate=False)
                 # Sum the weighted loss under each prior draw
+                sumloss = 0.
                 for currsampind, currsamp in enumerate(priordraws):
                     currloss = loss_pms(currest, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
                                         lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
@@ -1046,6 +1041,15 @@ def zProbTr(tnInd, snInd, snNum, gammaVec, sens=1., spec=1.):
     '''Provides consolidated SFP probability for the entered TN, SN indices; gammaVec should start with SN rates'''
     zStar = gammaVec[snNum+tnInd]+(1-gammaVec[snNum+tnInd])*gammaVec[snInd]
     return sens*zStar+(1-spec)*zStar
+
+def zProbTrVec(snNum, gammaMat, sens=1., spec=1.):
+    '''Provides consolidated SFP probability for the entered TN, SN indices; gammaVec should start with SN rates'''
+    th, py = gammaMat[:, :snNum], gammaMat[:, snNum:]
+    n, m, k = len(gammaMat[0])-snNum, snNum, gammaMat.shape[0]
+    zMat = np.reshape(np.tile(th, (n)), (k, n, m)) + np.reshape(np.tile(1 - th, (n)), (k, n, m)) * \
+           np.transpose(np.reshape(np.tile(py, (m)), (k, m, n)), (0, 2, 1))
+    # each term is a k-by-n-by-m array
+    return sens * zMat + (1 - spec) * (1 - zMat)
 
 def GetOptAllocation(U):
     '''
@@ -1462,7 +1466,7 @@ def allocationCaseStudy():
     CSdict3['importerNum'] = numSN
     CSdict3['outletNum'] = numTN
     # Generate posterior draws
-    numdraws = 20000 # Evaluate choice here
+    numdraws = 50000 # Evaluate choice here
     CSdict3['numPostSamples'] = numdraws
     CSdict3 = methods.GeneratePostSamples(CSdict3)
     # Sourcing-probability matrix; EVALUATE CHOICE HERE
@@ -1476,10 +1480,33 @@ def allocationCaseStudy():
     lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
 
+    #####################
+    # Check timing improvement after vectorizing
+    start = time.time()
+    design = np.array([0.,1.,0.,0.])
+    Ndraws = 1
+    numTest = 20
+    lossveclist = getDesignUtility(priordatadict=CSdict3.copy(), lossdict=lossDict.copy(), designlist=[design],
+                                   numtests=numTest, omeganum=1, type=['node', CSdict3['transMat']],
+                                   method='weightsNodeDraw', printUpdate=True, numNdraws=Ndraws)
+    print('Loss: '+str(lossveclist[0]))
+    print('Time: '+str(time.time()-start))
+
+    wts = []
+    for currpriordraw in gammaMat:  # Get weights for each prior draw
+        currwt = 1.0
+        for SNind in range(numSN):
+            curry, currn = int(Yvec[SNind]), int(Nvec[SNind])
+            currz = zProbTr(sampNodeInd, SNind, numSN, currpriordraw, sens=s, spec=r)
+            currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry)) * comb(currn, curry)
+        wts.append(currwt)
+
+        #####################
+
     # Node design
     totalTests = 100
     interval = 10
-    Ndraws = 100
+    Ndraws = 10
     Umat = np.zeros((numTN,int(totalTests/interval)+1)) # Each row corresponds to a test node, each column to a number of tests
     timesCS3 = []
     for currTNind in range(numTN):
@@ -1498,11 +1525,7 @@ def allocationCaseStudy():
     '''
     *** |\Gamma|=20k,M=50 ***
     timesCS3 = [105.91748285293579, 135.3059422969818, 139.53473544120789, 149.64654564857483, 156.75498580932617, 145.7229299545288, 160.2194368839264, 150.3439803123474, 147.23107814788818, 148.58909559249878, 163.7333037853241, 157.5314040184021, 118.7376766204834, 98.95074486732483, 98.57726192474365, 100.13309693336487, 100.51112079620361, 100.08592343330383, 98.67196726799011, 98.84953260421753, 98.53736805915833, 99.20558142662048, 143.64247608184814, 131.75752091407776, 138.7707920074463, 145.45087790489197, 146.461439371109, 298.30589509010315, 558.820209980011, 524.7700266838074, 495.8268766403198, 501.726012468338, 156.93691611289978, 107.28574919700623, 107.79849624633789, 110.79569339752197, 118.02573823928833, 134.21507596969604, 145.73090744018555, 150.3717167377472, 141.31466603279114, 143.83355975151062, 138.3009569644928, 143.93805861473083, 143.82328343391418, 139.48495650291443, 141.41061162948608, 140.62416529655457, 145.6337854862213, 144.45143055915833, 145.55410718917847, 150.37243485450745, 147.25791478157043, 143.2146496772766, 148.20952200889587, 133.53133845329285, 115.49643683433533, 109.12407493591309, 151.17412090301514, 160.64856553077698, 157.80044984817505, 159.5082883834839, 151.3313694000244, 148.2728066444397, 127.52445816993713, 140.93992829322815, 146.29556322097778, 133.96031713485718, 143.57240200042725, 141.73860144615173, 144.75994062423706, 150.13053154945374, 145.58882021903992, 145.71080875396729, 145.73229789733887, 142.23303985595703, 121.01296806335449, 134.81388425827026, 147.6807632446289, 146.06766080856323, 147.0434513092041, 146.9042522907257, 149.2964644432068, 142.5600152015686]
-    plt.plot(timesCS3)
-    plt.ylim([0,600])
-    plt.show()
-    np.average(timesCS3)
-    
+    np.average(timesCS3) = 157s
     Umat = array([[0.98659092, 0.98435789, 0.98532699, 0.98314307, 0.98129772,
         0.98137199, 0.97916887, 0.97770051, 0.97187357, 0.96848193,
         0.97445035, 0.97058591, 0.97384335, 0.96683937, 0.96158667,
@@ -1525,8 +1548,9 @@ def allocationCaseStudy():
         0.95285571]])
     print(sol): [1, 15, 4, 0]
     
-    *** |\Gamma|=20k,M=100 ***
-    timesCS3
+    *** |\Gamma|=20k,M=100, interval=10 ***
+    timesCS3 = [195.36161613464355, 184.09346461296082, 178.8359339237213, 180.05118489265442, 199.1473844051361, 206.9551088809967, 197.84978485107422, 196.25951600074768, 176.93201398849487, 179.9887797832489, 171.53023958206177, 166.00281476974487, 189.03927278518677, 207.68692016601562, 212.2495515346527, 209.4464030265808, 205.49637937545776, 173.41308403015137, 174.019593000412, 176.96291756629944, 180.43703413009644, 177.32192659378052, 170.75574731826782, 175.2253930568695, 185.90557670593262, 181.03219151496887, 181.0628080368042, 176.8497335910797, 185.8476254940033, 216.12358617782593, 281.6818344593048, 359.7568712234497, 253.5883650779724, 205.6299114227295, 228.60847187042236, 236.3867952823639, 224.27204132080078, 213.74841690063477, 209.38239693641663, 208.5648159980774, 214.74888277053833, 228.43085765838623, 217.83722615242004, 215.02551126480103]
+    np.average(timesCS3) = 202s
     Umat=array([[0.98659092, 0.96847479, 0.95638033, 0.93587908, 0.92214313,
         0.91480218, 0.904931  , 0.8867622 , 0.88736637, 0.86717298,
         0.86357414],
@@ -1541,6 +1565,10 @@ def allocationCaseStudy():
         0.85445234]])
     print(sol): [3, 3, 2, 2]
     
+    *** |\Gamma|=20k,M=150, interval=10 ***
+    timesCS3 =
+    Umat =
+    
     
     '''
     plt.plot(timesCS3)
@@ -1552,7 +1580,7 @@ def allocationCaseStudy():
         plt.plot(Umat[tnind],label='TN '+str(tnind+1))
     plt.legend()
     plt.ylim([0.7,1.1])
-    plt.title('$|\Gamma|=20000,M=100$')
+    plt.title('$|\Gamma|=200000,M=1$')
     plt.show()
 
     sol, func = GetOptAllocation(Umat)
