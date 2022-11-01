@@ -23,6 +23,9 @@ import time
 import math
 from math import comb
 
+# Define computation variables
+tol = 1e-8
+
 def balancedesign(N,ntilde):
     '''
     Uses matrix of original batch (N) and next batch (ntilde) to return a balanced design where the target is an even
@@ -223,7 +226,7 @@ def marginalshannoninfo(datadict):
     shannonMat=shannonMat/len(postSamps)
     return shannonMat
 
-def risk_parabolic(SFPratevec, paramDict={'threshold': 0.5}):
+def risk_parabolic(SFPratevec, paramDict={'threshold': 0.5}): #### OBSOLETE; REMOVE LATER
     '''Parabolic risk term for vector of SFP rates. Threshold is the top of the parabola. '''
     riskvec = np.empty((len(SFPratevec)))
     for ind in range(len(SFPratevec)):
@@ -235,7 +238,15 @@ def risk_parabolic(SFPratevec, paramDict={'threshold': 0.5}):
         riskvec[ind] = currRisk
     return riskvec
 
-def risk_check(SFPratevec, paramDict={'threshold': 0.5, 'slope': 0.5}):
+def risk_parabolicArr(SFPrateArr, paramDict={'threshold': 0.2}):
+    '''Parabolic risk term for vector of SFP rates. Threshold is the top of the parabola. '''
+    if paramDict['threshold'] <= 0.5:
+        retVal = (SFPrateArr+ 2*(0.5 - paramDict['threshold']))*(1-SFPrateArr)
+    else:
+        retVal = SFPrateArr * (1 - SFPrateArr - 2*(0.5-paramDict['threshold']))
+    return retVal
+
+def risk_check(SFPratevec, paramDict={'threshold': 0.5, 'slope': 0.5}): #### OBSOLETE; REMOVE LATER
     '''Check risk term, which has minus 'slope' to the right of 'threshold' and (1-'slope') to the left of threshold'''
     riskvec = np.empty((len(SFPratevec)))
     for i in range(len(SFPratevec)):
@@ -243,7 +254,11 @@ def risk_check(SFPratevec, paramDict={'threshold': 0.5, 'slope': 0.5}):
                       if SFPratevec[i]<paramDict['threshold'] else 0)))
     return riskvec
 
-def score_diff(est, targ, paramDict):
+def risk_checkArr(SFPrateArr, paramDict={'threshold': 0.5, 'slope': 0.5}):
+    '''Check risk term for an array, which has minus 'slope' to the right of 'threshold' and (1-'slope') to the left of threshold'''
+    return 1 - SFPrateArr*(paramDict['slope']-((1-paramDict['threshold']/SFPrateArr)*np.minimum(np.maximum(paramDict['threshold'] - SFPrateArr, 0),tol)*(1/tol)))
+
+def score_diff(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
     '''
     Returns the difference between vectors est and targ underEstWt, the weight of underestimation error relative to
     overestimation error.
@@ -254,12 +269,21 @@ def score_diff(est, targ, paramDict):
         scorevec[i] = (paramDict['underEstWt']*max(targ[i] - est[i], 0) + max(est[i]-targ[i],0))
     return scorevec
 
-def score_class(est, targ, paramDict):
+def score_diffArr(est, targArr, paramDict):
+    '''
+    Returns array of differences between vector est and array of vectors targArr using underEstWt, the weight of
+    underestimation error relative to overestimation error.
+    paramDict requires keys: underEstWt
+    '''
+    return np.maximum(est-targArr,0) + paramDict['underEstWt']*np.maximum(targArr-est,0)
+
+def score_class(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
     '''
     Returns the difference between classification of vectors est and targ using threshold, based on underEstWt,
     the weight of underestimation error relative to overestimation error.
     paramDict requires keys: threshold, underEstWt
     '''
+
     scorevec = np.empty((len(targ)))
     for i in range(len(targ)):
         estClass = np.array([1 if est[i] >= paramDict['threshold'] else 0 for i in range(len(est))])
@@ -267,7 +291,21 @@ def score_class(est, targ, paramDict):
         scorevec[i] = (paramDict['underEstWt']*max(targClass[i] - estClass[i], 0) + max(estClass[i]-targClass[i],0))
     return scorevec
 
-def score_check(est, targ, paramDict):
+def score_classArr(est, targArr, paramDict):
+    '''
+    Returns the difference between classification of vectors est and targ using threshold, based on underEstWt,
+    the weight of underestimation error relative to overestimation error.
+    paramDict requires keys: threshold, underEstWt
+    '''
+    estClass = (est-paramDict['threshold'])
+    estClass[estClass >= 0.] = 1.
+    estClass[estClass < 0.] = 0.
+    targClass = (targArr - paramDict['threshold'])
+    targClass[targClass >= 0.] = 1.
+    targClass[targClass < 0.] = 0.
+    return score_diffArr(estClass,targClass,paramDict)
+
+def score_check(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
     '''
     Returns a check difference between vectors est and targ using slope, which can be used to weigh underestimation and
     overestimation differently. Slopes less than 0.5 mean underestimation causes a higher loss than overestimation.
@@ -277,6 +315,14 @@ def score_check(est, targ, paramDict):
     for i in range(len(targ)):
         scorevec[i] = (est[i]-targ[i])*(paramDict['slope']- (1 if est[i]<targ[i] else 0))
     return scorevec
+
+def score_checkArr(est, targArr, paramDict):
+    '''
+    Returns a check difference between vectors est and targ using slope, which can be used to weigh underestimation and
+    overestimation differently. Slopes less than 0.5 mean underestimation causes a higher loss than overestimation.
+    paramDict requires keys: slope
+    '''
+    return (est-targArr) * (paramDict['slope'] - np.minimum(np.maximum(targArr-est,0),1e-8)*1e8)
 
 def bayesEst(samps, scoredict):
     '''
@@ -307,16 +353,12 @@ def bayesEstAdapt(samps, wts, scoredict, printUpdate=True):
     scoredict: must have key 'name' and other necessary keys for calculating the associated Bayes estimate
     '''
     # First identify the quantile we need
-    scorename = scoredict['name']
-    if scorename == 'AbsDiff':
-        underEstWt = scoredict['underEstWt']
-        q = underEstWt/(1+underEstWt)
-    elif scorename == 'Check':
-        slope = scoredict['slope']
-        q = 1-slope
-    elif scorename == 'Class':
-        underEstWt = scoredict['underEstWt']
-        q = underEstWt / (1 + underEstWt)
+    if scoredict['name'] == 'AbsDiff':
+        q =  scoredict['underEstWt']/(1+ scoredict['underEstWt'])
+    elif scoredict['name'] == 'Check':
+        q = 1-scoredict['slope']
+    elif scoredict['name'] == 'Class':
+        q = scoredict['underEstWt'] / (1 + scoredict['underEstWt'])
     else:
         print('Not a valid score name')
     # Establish the weight-sum target
@@ -353,6 +395,33 @@ def loss_pms(est, targ, score, scoreDict, risk, riskDict, market):
     for i in range(len(targ)):
         currloss += scorevec[i] * riskvec[i] * market[i]
     return currloss
+
+def loss_pmsArr(est, targArr, lossDict):
+    '''
+    Loss/utility function tailored for PMS.
+    est: estimate vector of SFP rates (supply node rates first)
+    targVec: array of SFP-rate vectors; intended to represent a distribution of SFP rates
+    score, risk: score and risk functions with associated parameter dictionaries scoreDict, riskDict,
+        that return vectors
+    market: vector of market weights
+    '''
+    # Retrieve scores
+    if lossDict['scoreDict']['name'] == 'AbsDiff':
+        scoreArr = score_diffArr(est, targArr, lossDict['scoreDict'])
+    elif lossDict['scoreDict']['name'] == 'Check':
+        scoreArr = score_checkArr(est, targArr, lossDict['scoreDict'])
+    elif lossDict['scoreDict']['name'] == 'Class':
+        scoreArr = score_classArr(est, targArr, lossDict['scoreDict'])
+    # Retrieve risks
+    if lossDict['riskDict']['name'] == 'Parabolic':
+        riskArr = risk_parabolicArr(targArr, lossDict['riskDict'])
+    elif lossDict['riskDict']['name'] == 'Check':
+        riskArr = risk_checkArr(targArr, lossDict['riskDict'])
+    # Add a uniform market term if not in the loss dictionary
+    if 'marketVec' not in lossDict.keys():
+        lossDict.update({'marketVec':np.ones(len(est))})
+    # Return sum loss across all nodes
+    return np.sum(scoreArr*riskArr*lossDict['marketVec'],axis=1)
 
 def loss_pms2(est, targ, paramDict):
     '''
@@ -490,7 +559,7 @@ def writeObjToPickle(obj, objname='pickleObject'):
     return
 
 def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, designnames=[],
-                     type=['path'], priordraws=[], randinds=[], roundAlg=roundDesignLow, method='MCMC',
+                     type=['path'], priordraws=[], randinds=[], roundAlg='roundDesignLow', method='MCMC',
                      printUpdate=True, numpostdraws=0, numNdraws=0, numYdraws=1):
     '''
     Produces a list of loss vectors for entered design choices under a given data set and specified loss. Each loss
@@ -534,7 +603,15 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
     for designind, design in enumerate(designlist):
         currlossvec = []
         # Initialize samples to be drawn from traces, per the design
-        sampMat = roundAlg(design, numtests)
+        if roundAlg == 'roundDesignLow':
+            sampMat = roundDesignLow(design, numtests)
+        elif roundAlg == 'roundDesignHigh':
+            sampMat = roundDesignHigh(design, numtests)
+        elif roundAlg == 'balancedesign':
+            sampMat = balancedesign(design, numtests)
+        else:
+            print('Nonvalid rounding function entered')
+            return
 
         if method == 'MCMC':
             for omega in range(omeganum):
@@ -764,19 +841,15 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                 Yvec = np.array([np.random.binomial(Nvec[sn],zVec[sn]) for sn in range(numSN)])
                 # Get weights for each prior draw
                 zMat = zProbTrVec(numSN,priordraws,sens=s,spec=r)[:,sampNodeInd,:]
-                wts = np.prod((zMat**Yvec)*((1-zMat)**(Nvec-Yvec))*sps.comb(Nvec,Yvec),axis=1)
+                wts = np.prod((zMat**Yvec)*((1-zMat)**(Nvec-Yvec))*sps.comb(Nvec,Yvec),axis=1) # VECTORIZED
                 # Normalize weights to sum to number of prior draws
                 currWtsSum = np.sum(wts)
                 wts = wts*len(priordraws)/currWtsSum
                 # Get Bayes estimate
                 currest = bayesEstAdapt(priordraws, wts, lossdict['scoreDict'], printUpdate=False)
                 # Sum the weighted loss under each prior draw
-                sumloss = 0.
-                for currsampind, currsamp in enumerate(priordraws):
-                    currloss = loss_pms(currest, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
-                    sumloss += currloss * wts[currsampind]
-                NvecLosses.append(sumloss / len(priordraws))
+                lossArr = loss_pmsArr(currest,priordraws,lossdict) * wts # VECTORIZED
+                NvecLosses.append(np.average(lossArr))
                 if printUpdate == True and Nvecind % 5 == 0:
                     print('Finished Nvecind of '+str(Nvecind))
             currlossvec.append(np.average(NvecLosses))
@@ -882,9 +955,9 @@ def timingbreakdown():
     # Utility specification
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
 
     Ndraws = 50
@@ -1401,9 +1474,9 @@ def allocationCaseStudy():
     # Utility specification
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
 
     # Node design
@@ -1466,7 +1539,7 @@ def allocationCaseStudy():
     CSdict3['importerNum'] = numSN
     CSdict3['outletNum'] = numTN
     # Generate posterior draws
-    numdraws = 50000 # Evaluate choice here
+    numdraws = 200000 # Evaluate choice here
     CSdict3['numPostSamples'] = numdraws
     CSdict3 = methods.GeneratePostSamples(CSdict3)
     # Sourcing-probability matrix; EVALUATE CHOICE HERE
@@ -1475,33 +1548,21 @@ def allocationCaseStudy():
     # Utility specification
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
-    marketvec = np.ones(numTN+numSN)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
-                'marketVec': marketvec}
+    riskdict = {'name':'Parabolic', 'threshold': t}
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict}
 
     #####################
     # Check timing improvement after vectorizing
     start = time.time()
     design = np.array([0.,1.,0.,0.])
-    Ndraws = 1
+    Ndraws = 10
     numTest = 20
     lossveclist = getDesignUtility(priordatadict=CSdict3.copy(), lossdict=lossDict.copy(), designlist=[design],
                                    numtests=numTest, omeganum=1, type=['node', CSdict3['transMat']],
                                    method='weightsNodeDraw', printUpdate=True, numNdraws=Ndraws)
     print('Loss: '+str(lossveclist[0]))
     print('Time: '+str(time.time()-start))
-
-    wts = []
-    for currpriordraw in gammaMat:  # Get weights for each prior draw
-        currwt = 1.0
-        for SNind in range(numSN):
-            curry, currn = int(Yvec[SNind]), int(Nvec[SNind])
-            currz = zProbTr(sampNodeInd, SNind, numSN, currpriordraw, sens=s, spec=r)
-            currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry)) * comb(currn, curry)
-        wts.append(currwt)
-
-        #####################
+    #####################
 
     # Node design
     totalTests = 100
@@ -1643,9 +1704,9 @@ def testApproximation():
     # Specify the score, risk, market
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design]
     designNames = ['Design 1']
@@ -2107,9 +2168,9 @@ def EvalAlgTiming():
 
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [testdesign1]
     designNames = ['Test Design']
@@ -2280,9 +2341,9 @@ def bayesianexample():
     # Get null first
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt':underWt}
-    riskdict = {'threshold':t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec':marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -2325,9 +2386,9 @@ def bayesianexample():
     # 6 tests for all designs
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4,design5,design6_6]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2384,9 +2445,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4, design5, design6_30]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2436,9 +2497,9 @@ def bayesianexample():
     # Get null first
     underWt, t = 5., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -2459,9 +2520,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 5., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4, design5, design6_30]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2503,9 +2564,9 @@ def bayesianexample():
     # Get null first
     underWt, t = 0.2, 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -2526,9 +2587,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 0.2, 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4, design5, design6_30]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2570,9 +2631,9 @@ def bayesianexample():
     # Get null first
     underWt, t = 1., 0.01
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -2593,9 +2654,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.01
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4, design5, design6_30]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2637,9 +2698,9 @@ def bayesianexample():
     # Get null first
     underWt, t = 1., 0.4
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -2660,9 +2721,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.4
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4, design5, design6_30]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2704,7 +2765,7 @@ def bayesianexample():
     # Get null first
     mScore, t = 0.1, 0.1
     scoredict = {'name': 'Check', 'slope': mScore}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
     lossDict = {'scoreFunc': score_check, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
@@ -2727,7 +2788,7 @@ def bayesianexample():
     # 30 tests for all designs
     mScore, t = 0.1, 0.1
     scoredict = {'name': 'Check', 'slope': mScore}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
     lossDict = {'scoreFunc': score_check, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
@@ -2771,7 +2832,7 @@ def bayesianexample():
     # Get null first
     mScore, t = 0.9, 0.1
     scoredict = {'name': 'Check', 'slope': mScore}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
     lossDict = {'scoreFunc': score_check, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
@@ -2794,7 +2855,7 @@ def bayesianexample():
     # 30 tests for all designs
     mScore, t = 0.9, 0.1
     scoredict = {'name': 'Check', 'slope': mScore}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
     lossDict = {'scoreFunc': score_check, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
@@ -2839,9 +2900,9 @@ def bayesianexample():
     underWt, mRisk = 1., 0.1
     t = 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t, 'slope': mRisk}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': mRisk}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -2863,9 +2924,9 @@ def bayesianexample():
     underWt, mRisk = 1., 0.1
     t = 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t, 'slope': mRisk}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': mRisk}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4, design5, design6_30]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2908,9 +2969,9 @@ def bayesianexample():
     underWt, mRisk = 1., 0.9
     t = 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t, 'slope': mRisk}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': mRisk}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -2932,9 +2993,9 @@ def bayesianexample():
     underWt, mRisk = 1., 0.9
     t = 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t, 'slope': mRisk}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': mRisk}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_check, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3, design4, design5, design6_30]
     designNames = ['Design 1', 'Design 2', 'Design 3', 'Design 4', 'Design 5', 'Design 6']
@@ -2994,9 +3055,9 @@ def bayesianexample():
     # Get null first
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name': 'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -3022,9 +3083,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name': 'Parabolic','threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3]
     designNames = ['Design 1', 'Design 2', 'Design 3']
@@ -3067,9 +3128,9 @@ def bayesianexample():
     # Get null first
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design0]
     designNames = ['Design 0']
@@ -3090,9 +3151,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3]
     designNames = ['Design 1', 'Design 2', 'Design 3']
@@ -3143,9 +3204,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3]
     designNames = ['Design 1', 'Design 2', 'Design 3']
@@ -3181,9 +3242,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3]
     designNames = ['Design 1', 'Design 2', 'Design 3']
@@ -3218,9 +3279,9 @@ def bayesianexample():
     # 30 tests for all designs
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design1, design2, design3]
     designNames = ['Design 1', 'Design 2', 'Design 3']
@@ -3257,9 +3318,9 @@ def bayesianexample():
     underWt, mRisk = 1., 0.9
     t = 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design2]
     designNames = ['Design 2']
@@ -3633,9 +3694,9 @@ def checkMCMCexpectation():
     # Specify the score, risk, market
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'threshold': t}
+    riskdict = {'name':'Parabolic', 'threshold': t}
     marketvec = np.ones(5)
-    lossDict = {'scoreFunc': score_diff, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
+    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
                 'marketVec': marketvec}
     designList = [design]
     designNames = ['Design 1']
