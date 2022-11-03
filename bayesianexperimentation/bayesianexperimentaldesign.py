@@ -726,7 +726,11 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
             Ntilde = sampMat.copy()
             sumloss = 0
             Yset = possibleYSets(Ntilde)
-            for Ytilde in Yset:
+            for Ytilde in Yset: # Enumerating all possible data sets, so DO NOT normalize weights (they will sum to unity)
+                # Get weights for each prior draw
+                zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, :, :]
+                wts = np.prod((zMat ** Ytilde) * ((1 - zMat) ** (Ntilde - Ytilde)) * sps.comb(Ntilde, Ytilde), axis=(1,2))
+                '''
                 wts = []
                 for currpriordraw in priordraws:
                     # Use current new data to get a weight for the current prior draw
@@ -737,14 +741,17 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                             currz = zProbTr(TNind,SNind,numSN,currpriordraw,sens=s,spec=r)
                             currwt = currwt * (currz**curry) * ((1-currz)**(currn-curry)) * comb(currn, curry)
                     wts.append(currwt) # Add weight for this gamma draw
-
+                '''
                 # Obtain Bayes estimate
                 currest = bayesEstAdapt(priordraws,wts,lossdict['scoreDict'],printUpdate=False)
                 # Sum the weighted loss under each prior draw
+                sumloss += np.sum(loss_pmsArr(currest, priordraws, lossdict) * wts)  # VECTORIZED
+                '''
                 for currsampind, currsamp in enumerate(priordraws):
-                    currloss = loss_pms(currest,currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                        lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                    currloss = loss_pms(currest,currsamp, score_diff, lossdict['scoreDict'],
+                                        risk_parabolic, lossdict['riskDict'], lossdict['marketVec'])
                     sumloss += currloss * wts[currsampind]
+                '''
             lossveclist.append(sumloss / len(priordraws))  # Add the loss vector for this design
             if printUpdate == True:
                 print(designnames[designind] + ' complete')
@@ -782,6 +789,10 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                 Yset = [i[0] for i in Yset]
                 sumloss = 0.
                 for Ytilde in Yset:
+
+                    zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
+                    wts = np.prod((zMat ** Ytilde) * ((1 - zMat) ** (Nvec - Ytilde)) * sps.comb(Nvec, Ytilde), axis=1)
+                    '''
                     wts = []
                     for currpriordraw in priordraws:
                         currwt = 1.0
@@ -790,13 +801,17 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum, de
                             currz = zProbTr(sampNodeInd,SNind,numSN,currpriordraw,sens=s,spec=r)
                             currwt = currwt * (currz ** curry) * ((1 - currz) ** (currn - curry)) * comb(currn, curry)
                         wts.append(currwt) # Add weight for this gamma draw
+                    '''
                     # Get Bayes estimate
                     currest = bayesEstAdapt(priordraws,wts,lossdict['scoreDict'],printUpdate=False)
                     # Sum the weighted loss under each prior draw
+                    sumloss += np.sum(loss_pmsArr(currest, priordraws, lossdict) * wts)  # VECTORIZED
+                    '''
                     for currsampind, currsamp in enumerate(priordraws):
-                        currloss = loss_pms(currest, currsamp, lossdict['scoreFunc'], lossdict['scoreDict'],
-                                            lossdict['riskFunc'], lossdict['riskDict'], lossdict['marketVec'])
+                        currloss = loss_pms(currest, currsamp, score_diff, lossdict['scoreDict'],
+                                            risk_parabolic, lossdict['riskDict'], lossdict['marketVec'])
                         sumloss += currloss * wts[currsampind]
+                    '''
                 NvecLosses.append(sumloss / len(priordraws))
             # Weight each Nvec loss by the occurence probability
             finalLoss = 0.
@@ -1384,6 +1399,134 @@ def allocationExample():
 
     return
 
+def exampleSupplyChainForPaper():
+    N = np.array([[6, 11], [12, 6], [2, 13]])
+    Y = np.array([[3, 0], [6, 0], [0, 0]])
+    (numTN, numSN) = N.shape
+    s, r = 1., 1.
+    scDict = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
+                                       numSamples=0, dataType='Tracked', randSeed=2)
+    scDict['diagSens'], scDict['diagSpec'] = s, r
+    scDict = util.GetVectorForms(scDict)
+    scDict['N'], scDict['Y'] = N, Y
+    scDict['prior'] = methods.prior_normal()
+    scDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    scDict['importerNum'], scDict['outletNum'] = numSN, numTN
+    # Generate posterior draws
+    numdraws = 20000  # Evaluate choice here
+    scDict['numPostSamples'] = numdraws
+    scDict = methods.GeneratePostSamples(scDict)
+    # Sourcing-probability matrix; EVALUATE CHOICE HERE
+    scDict['transMat'] = np.tile(np.sum(scDict['N'], axis=0) / np.sum(scDict['N']), (numTN, 1))
+    # Loss specifications
+    underWt, t = 1., 0.1
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'name': 'Parabolic', 'threshold': t}
+    marketvec = np.ones(numTN + numSN)
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    # Path sampling
+    testBudget = 50
+    Umat = np.zeros((numTN, numSN, testBudget + 1))
+    for currTN in range(numTN):
+        for currSN in range(numSN):
+            for currBudget in range(testBudget+1):
+                design = np.zeros((numTN,numSN))
+                design[currTN][currSN] = 1.
+                lossveclist = getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict.copy(), designlist=[design],
+                                       numtests=currBudget, omeganum=1, type=['path'], method='weightsPathEnumerate',
+                                       printUpdate=True, numNdraws=0, numYdraws=1)
+                Umat[currTN][currSN][currBudget] = lossveclist[0]
+            print('TN '+str(currTN)+', SN '+str(currSN)+ ' done')
+    '''
+    numdraws = 20,000
+    Umat = np.array([[[0.16162506, 0.15991211, 0.15827275, 0.15677638, 0.15535571,
+         0.15401869, 0.152782  , 0.15160866, 0.15051908, 0.1494803 ,
+         0.14848468, 0.14755943, 0.14668634, 0.14584074, 0.14504542,
+         0.14427262, 0.14356134, 0.14286261, 0.14220577, 0.14156216,
+         0.14096108, 0.1403832 , 0.13981252, 0.13928642, 0.13875738,
+         0.13826823, 0.13778085, 0.13732111, 0.13687307, 0.13644055,
+         0.13602625, 0.13562136, 0.13522861, 0.13485416, 0.13448627,
+         0.13412522, 0.13378789, 0.13344648, 0.13312428, 0.1328063 ,
+         0.13249883, 0.13220124, 0.13190874, 0.13162695, 0.13135044,
+         0.13107953, 0.13082037, 0.13056134, 0.13031499, 0.13006981,
+         0.12983068],
+        [0.16162506, 0.16114222, 0.1606847 , 0.16023739, 0.15981965,
+         0.15942688, 0.15906732, 0.15871794, 0.15839521, 0.15807584,
+         0.15776852, 0.15748453, 0.15721019, 0.15694651, 0.15669296,
+         0.15644549, 0.15622702, 0.15601769, 0.15581336, 0.15561243,
+         0.15542613, 0.15524249, 0.15506528, 0.15489558, 0.15472803,
+         0.15457274, 0.15442251, 0.15428245, 0.15413381, 0.15399307,
+         0.15386272, 0.15372827, 0.15360059, 0.1534805 , 0.15336298,
+         0.15324937, 0.15313753, 0.15303105, 0.15292499, 0.15282445,
+         0.15272493, 0.15262847, 0.15253223, 0.15244195, 0.15235112,
+         0.15226514, 0.15218265, 0.15210046, 0.15201738, 0.15193807,
+         0.15185731]],
+       [[0.16162506, 0.16039918, 0.15920312, 0.15813527, 0.15710529,
+         0.15613899, 0.15523386, 0.15438288, 0.1535749 , 0.15283355,
+         0.15208957, 0.15142678, 0.15076923, 0.15016084, 0.14955682,
+         0.14900587, 0.14846041, 0.14794435, 0.14746074, 0.1469754 ,
+         0.14653467, 0.14608069, 0.14567311, 0.14525879, 0.14487702,
+         0.14449097, 0.14413674, 0.143782  , 0.143441  , 0.14311049,
+         0.14279929, 0.1424831 , 0.14219066, 0.14189884, 0.14161946,
+         0.14134332, 0.14107797, 0.14082397, 0.14057233, 0.14033045,
+         0.14009118, 0.13985714, 0.1396351 , 0.13941607, 0.13920245,
+         0.13899732, 0.13878876, 0.13859687, 0.13839961, 0.13820959,
+         0.1380264 ],
+        [0.16162506, 0.15965694, 0.15795532, 0.15644765, 0.15510605,
+         0.15389283, 0.15278149, 0.15175933, 0.15084693, 0.15000187,
+         0.14921806, 0.14847411, 0.14780015, 0.14715659, 0.14657833,
+         0.14602292, 0.14550661, 0.14501948, 0.14455305, 0.1441119 ,
+         0.1437004 , 0.14331399, 0.14292539, 0.14257288, 0.14223872,
+         0.14190862, 0.14159347, 0.14128707, 0.14100097, 0.14073701,
+         0.14047307, 0.14022262, 0.13998429, 0.1397534 , 0.13952919,
+         0.13930795, 0.13909404, 0.13888792, 0.13869323, 0.13849927,
+         0.1383122 , 0.13813134, 0.13796419, 0.13779666, 0.13762889,
+         0.13746823, 0.13731706, 0.13716885, 0.13702401, 0.13688405,
+         0.1367474 ]],
+       [[0.16162506, 0.1597037 , 0.15786332, 0.15616067, 0.15458338,
+         0.15307295, 0.15169439, 0.15036916, 0.14912912, 0.14795588,
+         0.14683773, 0.14578936, 0.14480346, 0.14383543, 0.1429532 ,
+         0.14209186, 0.14128021, 0.14049573, 0.13975724, 0.13904795,
+         0.13836947, 0.13773818, 0.13711375, 0.13653459, 0.13595962,
+         0.13542352, 0.13490303, 0.13439241, 0.13391533, 0.13343746,
+         0.13299131, 0.13255724, 0.13213734, 0.13172793, 0.13133902,
+         0.13095301, 0.1305863 , 0.13022417, 0.12987987, 0.12953891,
+         0.1292118 , 0.12889314, 0.12858005, 0.12827771, 0.12798431,
+         0.12769931, 0.12742049, 0.12715035, 0.12688139, 0.12662806,
+         0.12637267],
+        [0.16162506, 0.16141821, 0.16121752, 0.16102516, 0.16084091,
+         0.16066314, 0.16049053, 0.16032283, 0.16016169, 0.16000721,
+         0.1598583 , 0.15971586, 0.1595776 , 0.15944455, 0.15931565,
+         0.15918984, 0.15906974, 0.15895448, 0.15884369, 0.15873447,
+         0.1586296 , 0.15852792, 0.15843087, 0.1583344 , 0.1582425 ,
+         0.15815098, 0.15806166, 0.1579771 , 0.15789548, 0.15781409,
+         0.15773459, 0.15765722, 0.15758191, 0.15750884, 0.15743773,
+         0.15736819, 0.15730118, 0.15723509, 0.15717085, 0.15710882,
+         0.15704757, 0.15698749, 0.15692844, 0.15687106, 0.15681429,
+         0.15675933, 0.15670576, 0.15665457, 0.15660215, 0.15655154,
+         0.15650347]]])
+    '''
+    # Node sampling
+    testBudget = 20
+    interval = 1
+    Umat = np.zeros((numTN, int(testBudget/interval)+1))
+    for currTN in range(numTN):
+        for currBudget in range(0,int(testBudget/interval)+1):
+            design = np.zeros(numTN)
+            design[currTN] = 1.
+            lossveclist = getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict.copy(), designlist=[design],
+                                           numtests=currBudget*interval, omeganum=1, type=['path'],
+                                           method='weightsNodeEnumerate', printUpdate=True, numNdraws=0, numYdraws=1)
+            Umat[currTN][currBudget] = lossveclist[0]
+        print('TN ' + str(currTN) + ' done')
+    '''
+    testBudget=50, interval=10
+    '''
+
+
+
+    return
+
 def allocationCaseStudy():
     '''Allocation using case study data'''
     # CITIES-MANUFACTURERS
@@ -1465,7 +1608,7 @@ def allocationCaseStudy():
     CSdict2['importerNum'] = numSN
     CSdict2['outletNum'] = numTN
     # Generate posterior draws
-    numdraws = 20000  # Evaluate choice here
+    numdraws = 200000  # Evaluate choice here
     CSdict2['numPostSamples'] = numdraws
     CSdict2 = methods.GeneratePostSamples(CSdict2)
     # Sourcing-probability matrix; EVALUATE CHOICE HERE
@@ -1533,7 +1676,7 @@ def allocationCaseStudy():
     CSdict3 = util.GetVectorForms(CSdict3)
     CSdict3['N'] = rd3_N
     CSdict3['Y'] = rd3_Y
-    CSdict3['prior'] = methods.prior_normal() # Evalutate choice here
+    CSdict3['prior'] = methods.prior_normal() # EVALUATE CHOICE HERE
     # MCMC settings
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     CSdict3['importerNum'] = numSN
@@ -1551,7 +1694,7 @@ def allocationCaseStudy():
     riskdict = {'name':'Parabolic', 'threshold': t}
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict}
 
-    #####################
+    '''
     # Check timing improvement after vectorizing
     start = time.time()
     design = np.array([0.,1.,0.,0.])
@@ -1562,28 +1705,113 @@ def allocationCaseStudy():
                                    method='weightsNodeDraw', printUpdate=True, numNdraws=Ndraws)
     print('Loss: '+str(lossveclist[0]))
     print('Time: '+str(time.time()-start))
-    #####################
+    '''
 
     # Node design
-    totalTests = 100
-    interval = 10
-    Ndraws = 10
+    totalTests = 105
+    interval = 15
+    Ndraws = 2000
+    numpriordrawstouse = int(numdraws/Ndraws)
     Umat = np.zeros((numTN,int(totalTests/interval)+1)) # Each row corresponds to a test node, each column to a number of tests
     timesCS3 = []
     for currTNind in range(numTN):
         design = np.zeros((numTN))
         design[currTNind] = 1.
-        for numTest in range(0,totalTests+1,10):
+        for numTest in range(0,totalTests+1,interval):
             newtime = time.time()
-            lossveclist = getDesignUtility(priordatadict=CSdict3.copy(), lossdict=lossDict.copy(), designlist=[design],
+            copydatadict = CSdict3.copy()
+            newranddrawinds = choice([i for i in range(numdraws)],size=numpriordrawstouse,replace=False)
+            copydatadict.update({'postSamples':CSdict3['postSamples'][newranddrawinds]})
+            lossveclist = getDesignUtility(priordatadict=copydatadict, lossdict=lossDict.copy(), designlist=[design],
                                    numtests=numTest, omeganum=1, type=['node', CSdict3['transMat']],
                                    method='weightsNodeDraw', printUpdate=True, numNdraws=Ndraws)
             Umat[currTNind][int(numTest/interval)] = lossveclist[0][0]
             print('TN '+str(currTNind)+', numTest = '+str(numTest) +' done')
             timesCS3.append(time.time()-newtime)
 
+    x=range(0,totalTests+1,interval)
+    for tnind in range(numTN):
+        plt.plot(x,Umat[tnind], label='TN ' + str(tnind + 1))
+    plt.legend()
+    plt.ylim([0.7, 1.1])
+    plt.xlabel('Number of tests')
+    plt.ylabel('Loss')
+    plt.title('$|\Gamma|='+str(numpriordrawstouse)+',M='+str(Ndraws)+'$')
+    plt.show()
 
     '''
+    USE M DATA DRAWS, |\GAMMA|/M NUMBER OF PRIOR DRAWS, with 200,000 STARTING PRIOR DRAWS
+    *** M=2000
+    np.average(timesCS3) = 3.2s
+    Umat = np.array([[0.98067056, 0.95281403, 0.88747143, 0.87229408, 0.82474895, 0.77961922, 0.7335441 , 0.70012848],
+       [0.928117  , 0.97666997, 0.89718666, 0.83336684, 0.80884343, 0.76045173, 0.75539207, 0.70752464],
+       [0.92426472, 0.93498055, 0.91866491, 0.87537977, 0.84113115, 0.78631999, 0.7732971 , 0.72151609],
+       [0.97604988, 0.95225787, 0.8990195 , 0.84358236, 0.82414528, 0.78766326, 0.73601629, 0.6788897 ]])
+    
+    *** M=1000
+    np.average(timesCS3) = 2.9s
+    Umat = np.array([[1.00995903, 0.94548474, 0.92868234, 0.88320227, 0.85690762, 0.8118365 , 0.78940215, 0.74488698],
+       [0.96271731, 0.92090422, 0.89336339, 0.88308491, 0.85906307, 0.81849683, 0.79507968, 0.75711148],
+       [0.95797922, 0.90901738, 0.91852405, 0.90561518, 0.87438846,0.82204204, 0.79477212, 0.76818411],
+       [0.96418335, 0.95387384, 0.91679718, 0.88618606, 0.86940872, 0.8048211 , 0.78843956, 0.75353296]])
+    
+    *** M=500
+    np.average(timesCS3) = 2.8s
+    Umat = np.array([[0.99362292, 0.95391243, 0.93120021, 0.90647519, 0.87824061, 0.85122474, 0.8366233 , 0.792814  ],
+       [0.9708188 , 0.94156565, 0.91948795, 0.89323195, 0.85360336, 0.83281863, 0.80906086, 0.78932969],
+       [0.98270186, 0.96323847, 0.93126781, 0.91658087, 0.89325346, 0.8628445 , 0.83782761, 0.7943723 ],
+       [0.99168905, 0.95116524, 0.92558639, 0.88608729, 0.87762668, 0.84655942, 0.8280769 , 0.78693964]])
+    
+    *** M=100
+    np.average(timesCS3) = 4.0s
+    Umat = np.array([[0.98928832, 0.95981478, 0.94747707, 0.91989105, 0.89526762, 0.88079335, 0.85161295, 0.8356796 ],
+       [0.98217985, 0.94194538, 0.91628185, 0.89429232, 0.87910381, 0.8549943 , 0.84949863, 0.83865939],
+       [0.97379909, 0.96309963, 0.94180062, 0.92293474, 0.89906082, 0.87556083, 0.86272134, 0.85979873],
+       [0.9801429 , 0.96273764, 0.94070239, 0.9076956 , 0.89011939, 0.88247594, 0.86620471, 0.8370418 ]])
+    
+    *** M=40
+    np.average(timesCS3) = 3.8s
+    Umat = np.array([[0.98827473, 0.96222585, 0.93749669, 0.91768836, 0.91434735, 0.87405288, 0.8679729 , 0.85130904],
+       [0.98171074, 0.95025886, 0.92711664, 0.90163004, 0.87941683, 0.86695816, 0.84652245, 0.84667302],
+       [0.98736391, 0.9630785 , 0.93942201, 0.92997019, 0.90717367, 0.88567211, 0.87125627, 0.83158935],
+       [0.98562489, 0.96013251, 0.93678417, 0.90723914, 0.90912313, 0.87558426, 0.86929468, 0.8578291 ]])
+    
+    *** M=20
+    np.average(timesCS3) = 4.6s
+    Umat = np.array([[0.98567279, 0.96517711, 0.93536624, 0.91468124, 0.89842642, 0.87905967, 0.85412436, 0.83762237],
+       [0.98761566, 0.94437578, 0.91093921, 0.89734869, 0.88327318, 0.86192775, 0.87171761, 0.83372981],
+       [0.98279698, 0.96779099, 0.95466612, 0.90741624, 0.9052021 , 0.88289836, 0.87217151, 0.85544163],
+       [0.9825055 , 0.96376463, 0.93683029, 0.90575263, 0.89492454, 0.90356725, 0.8694151 , 0.83251713]])
+    
+    *** M=10
+    np.average(timesCS3) = 4.7s
+    Umat = np.array([[0.98354406, 0.96131958, 0.9474465 , 0.90456119, 0.88409647, 0.89147485, 0.88157298, 0.83549531],
+       [0.98312415, 0.95158531, 0.94153008, 0.90223892, 0.89005113, 0.85903567, 0.85458103, 0.83159513],
+       [0.98479072, 0.97163025, 0.93200528, 0.92386715, 0.90822432, 0.87014174, 0.87669662, 0.85078234],
+       [0.98324395, 0.96461864, 0.95206589, 0.92741522, 0.8800154, 0.89102164, 0.86157707, 0.86832158]])
+        
+    *** M=5
+    np.average(timesCS3) = 6.1s
+    Umat = np.array([[0.98254771, 0.96741051, 0.95268343, 0.91185512, 0.86554361, 0.89955377, 0.85469698, 0.85871549],
+       [0.98532653, 0.9375357 , 0.92812195, 0.92119669, 0.88553952, 0.84955029, 0.8463012 , 0.84301179],
+       [0.98564161, 0.95933298, 0.91836828, 0.94285184, 0.89849704, 0.88418286, 0.86694746, 0.862887  ],
+       [0.98434649, 0.97385737, 0.94038171, 0.9201454 , 0.92690679, 0.86779582, 0.91991901, 0.85347183]])
+    
+    *** M=2
+    np.average(timesCS3) = 8.9s
+    Umat = np.array([[0.98509655, 0.93693119, 0.9707804 , 0.91026216, 0.86900579, 0.87638193, 0.88572094, 0.83479476],
+       [0.98478853, 0.91104233, 0.88604957, 0.92114516, 0.92234763, 0.86605125, 0.81069867, 0.90646071],
+       [0.98550795, 0.9534903 , 0.9551045 , 0.96146545, 0.89636497, 0.89132722, 0.92996513, 0.90897101],
+       [0.9845852 , 0.96369738, 0.93610794, 0.89810616, 0.88341083, 0.88903381, 0.87502481, 0.80356654]])
+    
+    *** M=1
+    np.average(timesCS3) = 11.8s
+    Umat = np.array([[0.98471926, 0.91436823, 0.91024549, 0.91939064, 0.94641962, 0.83221897, 0.78204211, 0.83583445],
+       [0.98471926, 0.95923774, 0.85349458, 0.95443514, 0.88693636, 0.83123622, 0.79673323, 0.82472814],
+       [0.98471926, 1.01116969, 1.00325932, 0.93160029, 0.96946013, 0.96346874, 0.83961313, 0.85954778],
+       [0.98471926, 0.98596089, 0.92874479, 0.9373857 , 0.82003715, 0.9563321 , 0.84101559, 0.82001683]])
+    
+    
     *** |\Gamma|=20k,M=50 ***
     timesCS3 = [105.91748285293579, 135.3059422969818, 139.53473544120789, 149.64654564857483, 156.75498580932617, 145.7229299545288, 160.2194368839264, 150.3439803123474, 147.23107814788818, 148.58909559249878, 163.7333037853241, 157.5314040184021, 118.7376766204834, 98.95074486732483, 98.57726192474365, 100.13309693336487, 100.51112079620361, 100.08592343330383, 98.67196726799011, 98.84953260421753, 98.53736805915833, 99.20558142662048, 143.64247608184814, 131.75752091407776, 138.7707920074463, 145.45087790489197, 146.461439371109, 298.30589509010315, 558.820209980011, 524.7700266838074, 495.8268766403198, 501.726012468338, 156.93691611289978, 107.28574919700623, 107.79849624633789, 110.79569339752197, 118.02573823928833, 134.21507596969604, 145.73090744018555, 150.3717167377472, 141.31466603279114, 143.83355975151062, 138.3009569644928, 143.93805861473083, 143.82328343391418, 139.48495650291443, 141.41061162948608, 140.62416529655457, 145.6337854862213, 144.45143055915833, 145.55410718917847, 150.37243485450745, 147.25791478157043, 143.2146496772766, 148.20952200889587, 133.53133845329285, 115.49643683433533, 109.12407493591309, 151.17412090301514, 160.64856553077698, 157.80044984817505, 159.5082883834839, 151.3313694000244, 148.2728066444397, 127.52445816993713, 140.93992829322815, 146.29556322097778, 133.96031713485718, 143.57240200042725, 141.73860144615173, 144.75994062423706, 150.13053154945374, 145.58882021903992, 145.71080875396729, 145.73229789733887, 142.23303985595703, 121.01296806335449, 134.81388425827026, 147.6807632446289, 146.06766080856323, 147.0434513092041, 146.9042522907257, 149.2964644432068, 142.5600152015686]
     np.average(timesCS3) = 157s
