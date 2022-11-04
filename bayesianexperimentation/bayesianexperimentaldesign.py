@@ -1413,7 +1413,7 @@ def exampleSupplyChainForPaper():
     scDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     scDict['importerNum'], scDict['outletNum'] = numSN, numTN
     # Generate posterior draws
-    numdraws = 20000  # Evaluate choice here
+    numdraws = 200000  # Evaluate choice here
     scDict['numPostSamples'] = numdraws
     scDict = methods.GeneratePostSamples(scDict)
     # Sourcing-probability matrix; EVALUATE CHOICE HERE
@@ -1506,24 +1506,160 @@ def exampleSupplyChainForPaper():
          0.15675933, 0.15670576, 0.15665457, 0.15660215, 0.15655154,
          0.15650347]]])
     '''
-    # Node sampling
+    # Node sampling with enumeration of all data sets
+    Q = np.array([[0.4, 0.6], [0.8, 0.2], [0.5, 0.5]])
+    scDict.update({'transMat': Q})
     testBudget = 20
-    interval = 1
-    Umat = np.zeros((numTN, int(testBudget/interval)+1))
+    interval = 4
+    Umat = np.zeros((numTN, int(testBudget / interval) + 1))
     for currTN in range(numTN):
-        for currBudget in range(0,int(testBudget/interval)+1):
+        for currBudget in range(0, int(testBudget / interval) + 1):
             design = np.zeros(numTN)
             design[currTN] = 1.
             lossveclist = getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict.copy(), designlist=[design],
-                                           numtests=currBudget*interval, omeganum=1, type=['path'],
+                                           numtests=currBudget * interval, omeganum=1, type=['path'],
                                            method='weightsNodeEnumerate', printUpdate=True, numNdraws=0, numYdraws=1)
             Umat[currTN][currBudget] = lossveclist[0]
+            print(lossveclist[0])
         print('TN ' + str(currTN) + ' done')
+
     '''
-    testBudget=50, interval=10
+        testBudget=20, Q=[0.4,0.6] (x3)
+        Umat = np.array([[0.16162506, 0.16065018, 0.15968995, 0.15874968, 0.15783654,
+            0.15694523, 0.15607927, 0.15523647, 0.15441761, 0.1536191 ,
+            0.15284541, 0.15208802, 0.15135014, 0.15062948, 0.14992843,
+            0.14924556, 0.14857741, 0.14792525, 0.14728864, 0.14666678,
+            0.14605892],
+           [0.16162506, 0.15995383, 0.15837397, 0.15688394, 0.15547023,
+            0.15411859, 0.15282618, 0.1515936 , 0.15041543, 0.14928394,
+            0.14820224, 0.14716349, 0.14616401, 0.14519929, 0.14427106,
+            0.14337608, 0.14251185, 0.14167658, 0.1408657 , 0.14008064,
+            0.13932017],
+           [0.16162506, 0.1607324 , 0.15985349, 0.15899326, 0.15815668,
+            0.15733875, 0.15654157, 0.15576492, 0.15500941, 0.15427098,
+            0.1535503 , 0.15284653, 0.15216023, 0.1514901 , 0.1508355 ,
+            0.15019515, 0.1495701 , 0.14895828, 0.14836051, 0.14777539,
+            0.14720368]])
+        testBudget=20, Q=np.array([[0.4,0.6],[0.8,0.2],[0.5,0.5]]), numpriordraws=20k
+        UmatEnum20k = np.array([[0.16162506, 0.16065018, 0.15968995, 0.15874968, 0.15783654,
+            0.15694523, 0.15607927, 0.15523647, 0.15441761, 0.1536191 ,
+            0.15284541, 0.15208802, 0.15135014, 0.15062948, 0.14992843,
+            0.14924556, 0.14857741, 0.14792525, 0.14728864, 0.14666678,
+            0.14605892],
+           [0.16162506, 0.16025073, 0.15889991, 0.15763136, 0.156398  ,
+            0.1552082 , 0.15407315, 0.15297515, 0.15192187, 0.15090448,
+            0.14992187, 0.14897037, 0.1480503 , 0.14716051, 0.14629901,
+            0.14546534, 0.14465472, 0.14386482, 0.14310251, 0.14235804,
+            0.14163317],
+           [0.16162506, 0.16056095, 0.15951714, 0.15850189, 0.15752146,
+            0.15656922, 0.15564662, 0.15475266, 0.15388667, 0.15304442,
+            0.15222653, 0.15143127, 0.15065886, 0.14990763, 0.14917635,
+            0.14846403, 0.14777147, 0.14709593, 0.14643843, 0.1457979 ,
+            0.145174  ]])
+        testBudget=20, Q=np.array([[0.4,0.6],[0.8,0.2],[0.5,0.5]]), numpriordraws=200k
+        UmatEnum = np.array([[0.16116998945702088, 0.15739380829733182, 0.1540141459785618, 0.150977124364397, 
+                            0.148236000492868, 0.1457481020676326],
+                            [0.16116998945702088, 0.15602379027217192, 0.15162167472484903, 0.14779637857008074, 
+                            0.14443163041004733,  0.14143516830183858],
+                            [0.16116998945702088, 0.15711369257508015, 0.1535446063329205, 0., 0., 0.]])
+        '''
+    # Node sampling with data draws
+    testBudget = 20
+    interval = 4
+    M = 1000
+    numpriorstouse = int(numdraws/M)
+    Umat = np.zeros((numTN, int(testBudget / interval) + 1))
+    for currTN in range(numTN):
+        for currBudget in range(0, int(testBudget / interval) + 1):
+            design = np.zeros(numTN)
+            design[currTN] = 1.
+            dictToUse = scDict.copy()
+            randdrawinds = choice(range(len(dictToUse['postSamples'])), size=numpriorstouse, replace=False)
+            dictToUse.update({'postSamples': scDict['postSamples'][randdrawinds]})
+            lossveclist = getDesignUtility(priordatadict=dictToUse, lossdict=lossDict.copy(), designlist=[design],
+                                           numtests=currBudget * interval, omeganum=1, type=['path'],
+                                           method='weightsNodeDraw', printUpdate=False, numNdraws=M, numYdraws=1)
+            Umat[currTN][currBudget] = lossveclist[0][0]
+            print('TN ' + str(currTN) + ', budget of '+ str(currBudget) + ' done')
+    ''' 
+    M=100, |\Gamma|=20k, Q=array([[0.4, 0.6],[0.8, 0.2],[0.5, 0.5]])
+    UmatDraw = np.array([[0.16162506, 0.15987586, 0.15942751, 0.1588006 , 0.15856284,
+        0.15629223, 0.15679014, 0.15807963, 0.15711662, 0.15568468,
+        0.15279675, 0.15204552, 0.15122019, 0.14879258, 0.15136532,
+        0.15030547, 0.14834178, 0.14796502, 0.14506939, 0.14553268,
+        0.14582388],
+       [0.16162506, 0.15951043, 0.15817392, 0.15874987, 0.15731457,
+        0.15354876, 0.15168321, 0.15252185, 0.15192769, 0.14808545,
+        0.15136844, 0.14982353, 0.15179897, 0.14532291, 0.14672466,
+        0.14782781, 0.1425962 , 0.14233633, 0.14521699, 0.144314  ,
+        0.14282381],
+       [0.16162506, 0.16118221, 0.16055612, 0.15955066, 0.15494602,
+        0.15413437, 0.15508566, 0.15616625, 0.1521446 , 0.1513354 ,
+        0.15175568, 0.15402198, 0.14711149, 0.15130659, 0.14690094,
+        0.14820216, 0.14612487, 0.14561699, 0.14410426, 0.14408411,
+        0.14616155]])
+    M=1000, |\Gamma|=20k, Q=array([[0.4, 0.6],[0.8, 0.2],[0.5, 0.5]]), interval=4
+    UmatDraw = np.array([[0.16162506, 0.1582018 , 0.15465051, 0.15090967, 0.1487231 , 0.14502877],
+       [0.16162506, 0.15634112, 0.15124967, 0.14851221, 0.14411071, 0.14276236],
+       [0.16162506, 0.15745589, 0.15423467, 0.1524026 , 0.14720401, 0.14549113]])
+    M=1000, |\Gamma|=200, Q=array([[0.4, 0.6],[0.8, 0.2],[0.5, 0.5]]), interval=4
+    UmatDraw = np.array([[0.16432671, 0.16880861, 0.13605453, 0.14376709, 0.14082714, 0.1408841 ],
+       [0.15960455, 0.15062354, 0.15766825, 0.15001483, 0.14395483, 0.13094868],
+       [0.16306185, 0.16753043, 0.15574705, 0.15247418, 0.13995842, 0.14017979]])
+    *****************
+    *****************
+    M=1000,
+    UmatDraw1000 = np.array([[0.1580026 , 0.14686019, 0.15417703, 0.15009638, 0.13873486, 0.14286519],
+       [0.15904135, 0.15393042, 0.14945228, 0.15747346, 0.14444115, 0.1416594 ],
+       [0.18437353, 0.16153838, 0.15942462, 0.14685183, 0.15066542, 0.1392786 ]])
+    M=200,
+    UmatDraw200 = np.array([[0.16187053, 0.16202998, 0.15307882, 0.14656344, 0.14470785, 0.14229757],
+       [0.15946326, 0.15528552, 0.14870259, 0.14652343, 0.14430842, 0.14228619],
+       [0.15713865, 0.15365344, 0.15504863, 0.15049905, 0.14981157, 0.14042644]])
+    M=100, |\Gamma|=200k/M, interval=4
+    UmatDraw100 = np.array([[0.1620847 , 0.15333765, 0.15352896, 0.14931659, 0.14779341, 0.14838865],
+       [0.15865288, 0.15612394, 0.15138619, 0.14368911, 0.14689854, 0.14641033],
+       [0.16249019, 0.15737397, 0.15846291, 0.1454049 , 0.14652485, 0.14536325]])
+    M=50,
+    UmatDraw50 = np.array([[0.16215145, 0.15838087, 0.15401391, 0.14766459, 0.14864274, 0.14496581],
+       [0.16214603, 0.15532278, 0.15265559, 0.1480391 , 0.14082181, 0.1391966 ],
+       [0.16369567, 0.15692361, 0.15380053, 0.1483534 , 0.14735999, 0.14789328]])
+    M=5,  |\Gamma|=200k/M, interval=4
+    UmatDraw5 = np.array([[0.16233219, 0.15319598, 0.14435542, 0.15578702, 0.18034174, 0.13988446],
+       [0.16143973, 0.1548624 , 0.16723731, 0.13618021, 0.14357954, 0.13104493],
+       [0.16145732, 0.15915816, 0.1522039 , 0.1538992 , 0.13732876, 0.15278485]])
+    M=1
+    UmatDraw1 = np.array([[0.16116999, 0.14766652, 0.13297513, 0.15418132, 0.14472153, 0.14688544],
+       [0.16116999, 0.15242834, 0.15119067, 0.14624652, 0.1381395 , 0.12980331],
+       [0.16116999, 0.17234957, 0.18757387, 0.13158897, 0.14326916, 0.14126285]])
     '''
+    M=1000
+    x1 = range(0, testBudget + 1, interval)
+    x2 = range(0, testBudget + 1, 1)
+    colors=['blue','red','green']
+    for tnind in range(numTN):
+        plt.plot(x1, UmatDraw1000[tnind], '--',color=colors[tnind], label='TN ' + str(tnind + 1))
+        plt.plot(x2, UmatEnum20k[tnind], '-', color=colors[tnind], label='TN ' + str(tnind + 1))
+    plt.legend()
+    plt.ylim([0.13, 0.17])
+    plt.xlabel('Number of tests')
+    plt.ylabel('Loss')
+    plt.title('Comparison with data enumeration\nM='+str(M))
+    plt.show()
 
 
+    x1 = range(0, testBudget + 1, interval)
+    x2 = range(0, testBudget + 1, 1)
+    colors = ['blue', 'red', 'green']
+    for tnind in range(numTN):
+        plt.plot(x2, UmatEnum20k[tnind], '--', color=colors[tnind], label='TN ' + str(tnind + 1))
+        plt.plot(x1, UmatEnum[tnind], '-', color=colors[tnind], label='TN ' + str(tnind + 1))
+    plt.legend()
+    plt.ylim([0.13, 0.17])
+    plt.xlabel('Number of tests')
+    plt.ylabel('Loss')
+    plt.title('Comparing data enumeration for $|\Gamma|\in[20k,200k]$')
+    plt.show()
 
     return
 
