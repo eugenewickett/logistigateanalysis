@@ -598,6 +598,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
     (numTN, numSN) = priordatadict['N'].shape
     Q = priordatadict['transMat'] #May be empty
     s, r = priordatadict['diagSens'], priordatadict['diagSpec']
+    numpriordraws = len(priordraws)
 
     # Loop through each design and generate omeganum loss realizations
     for designind, design in enumerate(designlist):
@@ -851,7 +852,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
                     ySNvec = [choice([j for j in range(Nvec[sn])],p=zVec[sn]) for sn in range(numSN)]
                     YvecSet.append(ySNvec)
                 '''
-                randprior = priordraws[random.sample(range(len(priordraws)),k=1)][0]
+                randprior = priordraws[random.sample(range(numpriordraws),k=1)][0]
                 zVec = [zProbTr(sampNodeInd, sn, numSN, randprior, sens=s, spec=r) for sn in range(numSN)]
                 Yvec = np.array([np.random.binomial(Nvec[sn],zVec[sn]) for sn in range(numSN)])
                 # Get weights for each prior draw
@@ -859,7 +860,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
                 wts = np.prod((zMat**Yvec)*((1-zMat)**(Nvec-Yvec))*sps.comb(Nvec,Yvec),axis=1) # VECTORIZED
                 # Normalize weights to sum to number of prior draws
                 currWtsSum = np.sum(wts)
-                wts = wts*len(priordraws)/currWtsSum
+                wts = wts*numpriordraws/currWtsSum
                 # Get Bayes estimate
                 currest = bayesEstAdapt(priordraws, wts, lossdict['scoreDict'], printUpdate=False)
                 # Sum the weighted loss under each prior draw
@@ -893,8 +894,14 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
 
             zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
-            NMat = np.random.multinomial(Ntotal,Qvec,size=len(priordraws))
+            NMat = np.random.multinomial(Ntotal,Qvec,size=numpriordraws)
             YMat = np.random.binomial(NMat,zMat)
+            bigzMat = np.transpose(np.reshape(np.tile(zMat,numpriordraws),(numpriordraws,numpriordraws,numSN)),axes=(1,0,2))
+            bigNMat = np.reshape(np.tile(NMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
+            bigYMat = np.reshape(np.tile(YMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
+            combNY = np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),(numpriordraws,numpriordraws,numSN))
+            wtsMat = np.prod((bigzMat ** bigYMat) * ((1 - bigzMat) ** (bigNMat - bigYMat)) * combNY, axis=2)
+            
 
 
 
@@ -905,8 +912,8 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
                 Nvec = np.array([NvecByElem.count(j) for j in range(numSN)])
                 Yvec = np.array([np.random.binomial(Nvec[sn], zVec[sn]) for sn in range(numSN)]) #
                 # Get weights for each prior draw in order to get Bayes estimate
-                zMat = zProbTrVec(numSN,priordraws,sens=s,spec=r)[:,sampNodeInd,:]
-                wts = np.prod((zMat**Yvec)*((1-zMat)**(Nvec-Yvec))*sps.comb(Nvec,Yvec),axis=1) # VECTORIZED
+                zMat2 = zProbTrVec(numSN,priordraws,sens=s,spec=r)[:,sampNodeInd,:]
+                wts = np.prod((zMat2**Yvec)*((1-zMat2)**(Nvec-Yvec))*sps.comb(Nvec,Yvec),axis=1) # VECTORIZED
                 wts = wts * len(priordraws) / np.sum(wts) # Normalize to sum to number of prior draws
                 currest = bayesEstAdapt(priordraws, wts, lossdict['scoreDict'], printUpdate=False)
                 currlossvec.append(loss_pmsArr(currest, np.tile(currprior,(1,1)), lossdict)[0])
