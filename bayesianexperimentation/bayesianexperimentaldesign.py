@@ -382,6 +382,37 @@ def bayesEstAdapt(samps, wts, scoredict, printUpdate=True):
 
     return est
 
+def bayesEstAdaptArr(sampsArr, wtsArr, scoredict, printUpdate=True):
+    '''
+    Returns the Bayes estimate for a set of SFP rates, adjusted for weighting of samples, based on the type of score
+        and parameters used
+    scoredict: must have key 'name' and other necessary keys for calculating the associated Bayes estimate
+    '''
+    # First identify the quantile we need
+    if scoredict['name'] == 'AbsDiff':
+        q =  scoredict['underEstWt']/(1+ scoredict['underEstWt'])
+    elif scoredict['name'] == 'Check':
+        q = 1-scoredict['slope']
+    elif scoredict['name'] == 'Class':
+        q = scoredict['underEstWt'] / (1 + scoredict['underEstWt'])
+    else:
+        print('Not a valid score name')
+    # Establish the weight-sum target
+    wtTargArr = q * np.sum(wtsArr,axis=1)
+    numdraws, numnodes = len(sampsArr), len(sampsArr[0])
+    estArr = np.zeros((numdraws,numnodes))
+    for nodeind in range(len(sampsArr[0])):
+        if printUpdate==True:
+            print('start '+str(nodeind)+': '+str(round(time.time())))
+        currRates = sampsArr[:,nodeind] # Rates for current node
+        sortMat = np.stack((wtsArr,np.reshape(np.tile(currRates,numdraws),(numdraws,numdraws))),axis=1)
+        #temp=np.transpose(sortMat,(0,2,1))
+        sortMat2 = np.array([sortMat[i,:,sortMat[i,1,:].argsort()] for i in range(numdraws)])
+        critInds = np.array([np.argmax(np.cumsum(sortMat2[i,:,0])>=wtTargArr[i]) for i in range(numdraws)])
+        estArr[:,nodeind] = np.array([sortMat2[i,critInds[i],1] for i in range(numdraws)])
+
+    return estArr
+
 def loss_pms(est, targ, score, scoreDict, risk, riskDict, market):
     '''
     Loss/utility function tailored for PMS.
@@ -420,6 +451,33 @@ def loss_pmsArr(est, targArr, lossDict):
     # Add a uniform market term if not in the loss dictionary
     if 'marketVec' not in lossDict.keys():
         lossDict.update({'marketVec':np.ones(len(est))})
+    # Return sum loss across all nodes
+    return np.sum(scoreArr*riskArr*lossDict['marketVec'],axis=1)
+
+def loss_pmsArr2(estArr, targArr, lossDict):
+    '''
+    Loss/utility function tailored for PMS.
+    est: array of estimate vectors of SFP rates (supply node rates first)
+    targVec: array of SFP-rate vectors; intended to represent a distribution of SFP rates
+    score, risk: score and risk functions with associated parameter dictionaries scoreDict, riskDict,
+        that return vectors
+    market: vector of market weights
+    '''
+    # Retrieve scores
+    if lossDict['scoreDict']['name'] == 'AbsDiff':
+        scoreArr = score_diffArr(estArr, targArr, lossDict['scoreDict'])
+    elif lossDict['scoreDict']['name'] == 'Check':
+        scoreArr = score_checkArr(estArr, targArr, lossDict['scoreDict'])
+    elif lossDict['scoreDict']['name'] == 'Class':
+        scoreArr = score_classArr(estArr, targArr, lossDict['scoreDict'])
+    # Retrieve risks
+    if lossDict['riskDict']['name'] == 'Parabolic':
+        riskArr = risk_parabolicArr(targArr, lossDict['riskDict'])
+    elif lossDict['riskDict']['name'] == 'Check':
+        riskArr = risk_checkArr(targArr, lossDict['riskDict'])
+    # Add a uniform market term if not in the loss dictionary
+    if 'marketVec' not in lossDict.keys():
+        lossDict.update({'marketVec':np.ones(len(estArr[0]))})
     # Return sum loss across all nodes
     return np.sum(scoreArr*riskArr*lossDict['marketVec'],axis=1)
 
@@ -893,33 +951,42 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
                     sampNodeInd = currind
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
 
+            time1 = time.time()
             zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
+            time2 = time.time()
             NMat = np.random.multinomial(Ntotal,Qvec,size=numpriordraws)
+            time3 = time.time()
             YMat = np.random.binomial(NMat,zMat)
+            time4 = time.time()
             bigzMat = np.transpose(np.reshape(np.tile(zMat,numpriordraws),(numpriordraws,numpriordraws,numSN)),axes=(1,0,2))
+            time5 = time.time()
             bigNMat = np.reshape(np.tile(NMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
+            time6 = time.time()
             bigYMat = np.reshape(np.tile(YMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
+            time7 = time.time()
             combNY = np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),(numpriordraws,numpriordraws,numSN))
+            time8 = time.time()
             wtsMat = np.prod((bigzMat ** bigYMat) * ((1 - bigzMat) ** (bigNMat - bigYMat)) * combNY, axis=2)
-            
+            time9 = time.time()
+            wtsMat = np.divide(wtsMat*numpriordraws,np.reshape(np.tile(np.sum(wtsMat,axis=1),numpriordraws),(numpriordraws,numpriordraws)).T)
+            time10 = time.time()
+            estMat = bayesEstAdaptArr(priordraws,wtsMat,lossdict['scoreDict'],printUpdate=False)
+            time11 = time.time()
+            losses = loss_pmsArr2(estMat,priordraws,lossdict)
+            lossveclist.append([np.average(losses)])
+            time12 = time.time()
 
-
-
-            currlossvec = []
-            for ind, currprior in enumerate(priordraws):
-                zVec = [zProbTr(sampNodeInd, sn, numSN, currprior, sens=s, spec=r) for sn in range(numSN)]
-                NvecByElem = choice([j for j in range(numSN)], size=Ntotal, p=Qvec).tolist()
-                Nvec = np.array([NvecByElem.count(j) for j in range(numSN)])
-                Yvec = np.array([np.random.binomial(Nvec[sn], zVec[sn]) for sn in range(numSN)]) #
-                # Get weights for each prior draw in order to get Bayes estimate
-                zMat2 = zProbTrVec(numSN,priordraws,sens=s,spec=r)[:,sampNodeInd,:]
-                wts = np.prod((zMat2**Yvec)*((1-zMat2)**(Nvec-Yvec))*sps.comb(Nvec,Yvec),axis=1) # VECTORIZED
-                wts = wts * len(priordraws) / np.sum(wts) # Normalize to sum to number of prior draws
-                currest = bayesEstAdapt(priordraws, wts, lossdict['scoreDict'], printUpdate=False)
-                currlossvec.append(loss_pmsArr(currest, np.tile(currprior,(1,1)), lossdict)[0])
-                if ind % 50 == 0:
-                    print('On draw ' + str(ind))
-            lossveclist.append([np.average(currlossvec)])
+            print(round(time2 - time1))
+            print(round(time3 - time2))
+            print(round(time4 - time3))
+            print(round(time5 - time4))
+            print(round(time6 - time5))
+            print(round(time7 - time6))
+            print(round(time8 - time7))
+            print(round(time9 - time8))
+            print(round(time10 - time9))
+            print(round(time11 - time10))
+            print(round(time12 - time11))
             if printUpdate == True:
                 print(designnames[designind] + ' complete')
         # END ELIF FOR WEIGHTSNODEDRAW2
