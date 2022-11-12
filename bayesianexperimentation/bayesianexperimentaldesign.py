@@ -951,42 +951,65 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
                     sampNodeInd = currind
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
 
-            time1 = time.time()
             zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
-            time2 = time.time()
             NMat = np.random.multinomial(Ntotal,Qvec,size=numpriordraws)
-            time3 = time.time()
             YMat = np.random.binomial(NMat,zMat)
-            time4 = time.time()
             bigzMat = np.transpose(np.reshape(np.tile(zMat,numpriordraws),(numpriordraws,numpriordraws,numSN)),axes=(1,0,2))
-            time5 = time.time()
             bigNMat = np.reshape(np.tile(NMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
-            time6 = time.time()
             bigYMat = np.reshape(np.tile(YMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
-            time7 = time.time()
             combNY = np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),(numpriordraws,numpriordraws,numSN))
-            time8 = time.time()
+            time1 = time.time()
+            # wtsMat=... TAKES 76 SECS. FOR 10K DRAWS
             wtsMat = np.prod((bigzMat ** bigYMat) * ((1 - bigzMat) ** (bigNMat - bigYMat)) * combNY, axis=2)
-            time9 = time.time()
+            time2 = time.time()
             wtsMat = np.divide(wtsMat*numpriordraws,np.reshape(np.tile(np.sum(wtsMat,axis=1),numpriordraws),(numpriordraws,numpriordraws)).T)
-            time10 = time.time()
+            time3 = time.time()
+            # estMat=... TAKES 100 SECS. FOR 10K DRAWS
             estMat = bayesEstAdaptArr(priordraws,wtsMat,lossdict['scoreDict'],printUpdate=False)
-            time11 = time.time()
+            time4 = time.time()
             losses = loss_pmsArr2(estMat,priordraws,lossdict)
-            lossveclist.append([np.average(losses)])
-            time12 = time.time()
+            lossveclist.append(np.average(losses))
 
             print(round(time2 - time1))
-            print(round(time3 - time2))
             print(round(time4 - time3))
-            print(round(time5 - time4))
-            print(round(time6 - time5))
-            print(round(time7 - time6))
-            print(round(time8 - time7))
-            print(round(time9 - time8))
-            print(round(time10 - time9))
-            print(round(time11 - time10))
-            print(round(time12 - time11))
+
+            if printUpdate == True:
+                print(designnames[designind] + ' complete')
+        # END ELIF FOR WEIGHTSNODEDRAW2
+
+        elif method == 'weightsNodeDraw3': # Weight each prior draw by the likelihood of a new data set
+            # Differs from 'weightsNodeDraw2' in 3 areas:
+            #   1) Able to use a subset of  in that the Bayes estimate is chosen from the samples
+            #IMPORTANT!!! CAN ONLY HANDLE DESIGNS WITH 1 TEST NODE
+            Ntilde = sampMat.copy()
+            sampNodeInd = 0
+            for currind in range(numTN): # Identify the test node we're analyzing
+                if Ntilde[currind] > 0:
+                    sampNodeInd = currind
+            Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
+
+            zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
+            NMat = np.random.multinomial(Ntotal,Qvec,size=numpriordraws)
+            YMat = np.random.binomial(NMat,zMat)
+            bigzMat = np.transpose(np.reshape(np.tile(zMat,numpriordraws),(numpriordraws,numpriordraws,numSN)),axes=(1,0,2))
+            bigNMat = np.reshape(np.tile(NMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
+            bigYMat = np.reshape(np.tile(YMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
+            combNY = np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),(numpriordraws,numpriordraws,numSN))
+            time1 = time.time()
+            # wtsMat=... TAKES 76 SECS. FOR 10K DRAWS
+            wtsMat = np.prod((bigzMat ** bigYMat) * ((1 - bigzMat) ** (bigNMat - bigYMat)) * combNY, axis=2)
+            time2 = time.time()
+            wtsMat = np.divide(wtsMat*numpriordraws,np.reshape(np.tile(np.sum(wtsMat,axis=1),numpriordraws),(numpriordraws,numpriordraws)).T)
+            time3 = time.time()
+            # estMat=... TAKES 100 SECS. FOR 10K DRAWS
+            estMat = bayesEstAdaptArr(priordraws,wtsMat,lossdict['scoreDict'],printUpdate=False)
+            time4 = time.time()
+            losses = loss_pmsArr2(estMat,priordraws,lossdict)
+            lossveclist.append(np.average(losses))
+
+            print(round(time2 - time1))
+            print(round(time4 - time3))
+
             if printUpdate == True:
                 print(designnames[designind] + ' complete')
         # END ELIF FOR WEIGHTSNODEDRAW2
@@ -1531,7 +1554,7 @@ def exampleSCscratchForAlgDebug():
     scDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     scDict['importerNum'], scDict['outletNum'] = numSN, numTN
     # Generate posterior draws
-    numdraws = 10000  # Evaluate choice here
+    numdraws = 6000  # Evaluate choice here
     scDict['numPostSamples'] = numdraws
     scDict = methods.GeneratePostSamples(scDict)
     # Define a loss dictionary
@@ -1547,8 +1570,36 @@ def exampleSCscratchForAlgDebug():
     Q = np.array([[0.4, 0.6],[0.8, 0.2],[0.5, 0.5]])
     scDict.update({'transMat':Q})
 
-    getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict.copy(), designlist=[design], numtests=Ntests,
-                      method='weightsNodeDraw2', printUpdate=True, numNdraws=100)
+
+    resultArr = np.zeros((4,10))
+    for run in range(9):
+        scDict['numPostSamples'] = 10000
+        scDict = methods.GeneratePostSamples(scDict)
+        print('Prior draws amount of: '+str(10000))
+        res  = getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict.copy(), designlist=[design],
+                         numtests=20, method='weightsNodeDraw2', printUpdate=False)
+        resultArr[3,run] = res[0]
+
+    timesArr = [()/10]
+    # 1000: 0.1s avg.
+    # 4000: 14s
+    # 7000: 50s
+    # 10000: 150s
+    '''
+    resultArr=np.array([[0.14638964, 0.1484343 , 0.14046411, 0.14869244, 0.14333638,
+        0.14628762, 0.14548798, 0.14313576, 0.15024421, 0.14447308],
+       [0.14738599, 0.14381345, 0.14225808, 0.14669578, 0.1450945 ,
+        0.14567533, 0.1439226 , 0.14614024, 0.14199987, 0.14464842],
+       [0.14410364, 0.14761772, 0.14438702, 0.14349538, 0.14557104,
+        0.14497851, 0.14576323, 0.14542397, 0.14650968, 0.14565662],
+       [0.14590605, 0.14425943, 0.14619828, 0.14536332, 0.14542653,
+        0.14500895, 0.14701813, 0.14651643, 0.14694187, 0.14487658 ]])
+    '''
+
+    x = [1000,4000,7000,10000]
+    for i in range(10):
+        plt.plot(x,resultArr[:,i],'bo')
+    plt.show()
 
     return
 
