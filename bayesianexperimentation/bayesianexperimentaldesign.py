@@ -22,6 +22,7 @@ import pickle
 import time
 import math
 from math import comb
+import matplotlib.cm as cm
 
 # Define computation variables
 tol = 1e-8
@@ -246,6 +247,11 @@ def risk_parabolicArr(SFPrateArr, paramDict={'threshold': 0.2}):
         retVal = SFPrateArr * (1 - SFPrateArr - 2*(0.5-paramDict['threshold']))
     return retVal
 
+def risk_parabolicMat(draws,paramDict={'threshold':0.2}):
+    '''Parabolic risk term in matrix form'''
+    retArr = risk_parabolicArr(draws,paramDict)
+    return np.transpose(np.reshape(np.tile(retArr.copy(),len(draws)),(len(draws),len(draws),len(draws[0]))),(1,0,2))
+
 def risk_check(SFPratevec, paramDict={'threshold': 0.5, 'slope': 0.5}): #### OBSOLETE; REMOVE LATER
     '''Check risk term, which has minus 'slope' to the right of 'threshold' and (1-'slope') to the left of threshold'''
     riskvec = np.empty((len(SFPratevec)))
@@ -277,6 +283,18 @@ def score_diffArr(est, targArr, paramDict):
     '''
     return np.maximum(est-targArr,0) + paramDict['underEstWt']*np.maximum(targArr-est,0)
 
+def score_diffMat(draws, paramDict):
+    '''
+    Returns matrix of pair-wise differences for set of SFP-rate draws using underEstWt, the weight of
+    underestimation error relative to overestimation error. Rows correspond to estimates, columns to targets
+    paramDict requires keys: underEstWt
+    '''
+    numdraws = len(draws)
+    numnodes = len(draws[0])
+    drawsEstMat = np.reshape(np.tile(draws.copy(),numdraws),(numdraws,numdraws,numnodes))
+    drawsTargMat = np.transpose(drawsEstMat.copy(),axes=(1,0,2))
+    return np.maximum(drawsEstMat-drawsTargMat,0) + paramDict['underEstWt']*np.maximum(drawsTargMat-drawsEstMat,0)
+
 def score_class(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
     '''
     Returns the difference between classification of vectors est and targ using threshold, based on underEstWt,
@@ -304,6 +322,18 @@ def score_classArr(est, targArr, paramDict):
     targClass[targClass >= 0.] = 1.
     targClass[targClass < 0.] = 0.
     return score_diffArr(estClass,targClass,paramDict)
+
+def score_classMat(draws,paramDict):
+    '''
+    Returns classification loss for each pairwise combination of draws. Rows correspond to estimates, columns to targets
+    '''
+    numdraws, numnodes = len(draws), len(draws[0])
+    drawsClass = draws.copy()
+    drawsClass[drawsClass >= paramDict['threshold']] = 1.
+    drawsClass[drawsClass < paramDict['threshold']] = 0.
+    drawsEstMat = np.reshape(np.tile(drawsClass.copy(),numdraws),(numdraws,numdraws,numnodes))
+    drawsTargMat = np.transpose(drawsEstMat.copy(), axes=(1, 0, 2))
+    return np.maximum(drawsEstMat-drawsTargMat,0) + paramDict['underEstWt']*np.maximum(drawsTargMat-drawsEstMat,0)
 
 def score_check(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
     '''
@@ -481,6 +511,30 @@ def loss_pmsArr2(estArr, targArr, lossDict):
     # Return sum loss across all nodes
     return np.sum(scoreArr*riskArr*lossDict['marketVec'],axis=1)
 
+def lossMatrix(draws,lossdict):
+    '''
+    Returns a matrix of losses associated with each pair of SFP-rate draws according to the specifications of lossdict
+    '''
+    # Get score matrix
+    if lossdict['scoreDict']['name'] == 'AbsDiff':
+        scoreMat = score_diffMat(draws, lossdict['scoreDict'])
+    elif lossdict['scoreDict']['name'] == 'Class':
+        scoreMat = score_classMat(draws, lossdict['scoreDict'])
+    '''
+    elif lossDict['scoreDict']['name'] == 'Check':
+        scoreMat = score_checkMat(draws, lossdict['scoreDict'])
+    '''
+    if lossdict['riskDict']['name'] == 'Parabolic':
+        riskMat = risk_parabolicMat(draws)
+    '''
+    elif lossdict['riskDict']['name'] == 'Check':
+        riskMat = risk_checkMat(draws)
+    '''
+    if 'marketVec' not in lossdict.keys():
+        lossdict.update({'marketVec': np.ones(len(draws[0]))})
+    marketMat = np.reshape(np.tile(lossdict['marketVec'].copy(),(len(draws),len(draws))),(len(draws),len(draws),len(draws[0])))
+    return np.sum(scoreMat*riskMat*marketMat,axis=2)
+
 def loss_pms2(est, targ, paramDict):
     '''
     Loss/utility function tailored for PMS.
@@ -616,49 +670,76 @@ def writeObjToPickle(obj, objname='pickleObject'):
     pickle.dump(obj, open(outputFileName, 'wb'))
     return
 
-def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, designnames=[],
-                     type=['path'], priordraws=[], randinds=[], roundAlg='roundDesignLow', method='MCMC',
-                     printUpdate=True, numpostdraws=0, numNdraws=0, numYdraws=1):
+def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=[], utildict={}):
     '''
     Produces a list of loss vectors for entered design choices under a given data set and specified loss. Each loss
-        vector contains omeganum Monte Carlo integration iterations
+        vector has numdatadraws Monte Carlo iterations
     Designed for use with plotLossVecs() to plot Bayesian risk associated with each design.
     priordatadict: dictionary capturing all prior data. should have posterior draws from initial data set already
     included, with keys identical to those provided by logistigate functions
     lossdict: parameter dictionary to pass to lossfunc
-    estdecision: list for how to form a decision from the posterior samples; one of ['mean'], ['median'], or
-        ['mode', t], where t is the assignment threshold for designating the classification estimate
     designlist: list of sampling probability vectors along all test nodes or traces
     designnames: list of names for the designs
     numtests: how many samples will be obtained under each design
-    omeganum: number of prior draws to use for calculating the Bayesian risk
-    type: list for the type of sample collection described in each design; one of ['path'] (collect along SN-TN trace) or
-        ['node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
-    priordraws: set of prior draws to use for synchronized data collection in different designs
-    randinds: the indices with which to iterate through priordraws for all omeganum loops
-    method: one of 'MCMC', 'MCMCexpec', 'weights' or 'approx'; 'MCMC' completes full MCMC sampling for generating
-        posterior probabilities, 'approx' approximates the posterior probabilities, 'weights1' uses a weighting
-        equivalence while integraing over all possible data outcomes
+    utildict: dictionary of utility calculation parameters, which may include the following:
+        numdatadraws: number of prior draws to use for generating data and calculating utility
+        type: list for the type of sample collection described in each design; one of ['path'] (collect along SN-TN
+            trace) or ['node', Qest] (collect along test nodes, along with the estimate of the sourcing probability matrix)
+        priordraws: set of prior draws to use for synchronized data collection in different designs
+        randinds: the indices with which to iterate through priordraws for all numdatadraws loops
+        method: one of 'MCMC', 'MCMCexpec', 'weights' or 'approx'; 'MCMC' completes full MCMC sampling for generating
+            posterior probabilities, 'approx' approximates the posterior probabilities, 'weights1' uses a weighting
+            equivalence while integraing over all possible data outcomes
     '''
     # Initiate the list to return
     lossveclist = []
-    # Retrieve prior draws if empty
-    if len(priordraws)==0:
+    # Retrieve utility parameters or set defaults
+    if 'priordraws' in utildict:
+        priordraws = utildict['priordraws'].copy()
+    else:
         priordraws = priordatadict['postSamples']
-    if len(randinds)==0:
-        randinds = [i for i in range(omeganum)]
+    if 'method' in utildict:
+        method = utildict['method']
+    else:
+        method = 'MCMC'
+    if 'numdatadraws' in utildict:
+        numdatadraws = utildict['numdatadraws']
+    else:
+        numdatadraws = 1
+    if 'priorindstouse' in utildict:
+        priorindstouse = utildict['priorindstouse'].copy()
+    else:
+        priorindstouse = [i for i in range(numdatadraws)]
     if len(designnames)==0:
         for i in range(len(designlist)):
             designnames.append('Design '+str(i))
-    if numpostdraws == 0:
+    if 'numpostdraws' in utildict:
+        numpostdraws = utildict['numpostdraws']
+    else:
         numpostdraws = priordatadict['numPostSamples']
+    if 'numdrawsforbayes' in utildict:
+        numdrawsforbayes = utildict['numdrawsforbayes']
+    else:
+        numdrawsforbayes = len(priordraws)
+    if 'roundAlg' in utildict:
+        roundAlg = utildict['roundAlg'].copy()
+    else:
+        roundAlg = 'roundDesignLow'
+    if 'type' in utildict:
+        type = utildict['type'].copy()
+    else:
+        type = ['path']
+    if 'printUpdate' in utildict:
+        printUpdate = utildict['printUpdate'].copy()
+    else:
+        printUpdate = True
     # Get key supply-chain elements from priordatadict
     (numTN, numSN) = priordatadict['N'].shape
     Q = priordatadict['transMat'] #May be empty
     s, r = priordatadict['diagSens'], priordatadict['diagSpec']
     numpriordraws = len(priordraws)
 
-    # Loop through each design and generate omeganum loss realizations
+    # Loop through each design and generate loss according to selected method
     for designind, design in enumerate(designlist):
         currlossvec = []
         # Initialize samples to be drawn from traces, per the design
@@ -673,10 +754,10 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
             return
 
         if method == 'MCMC':
-            for omega in range(omeganum):
+            for omega in range(numdatadraws):
                 TNsamps = sampMat.copy()
                 # Grab a draw from the prior
-                currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
+                currpriordraw = priordraws[priorindstouse[omega]]  # [SN rates, TN rates]
 
                 # Initialize Ntilde and Ytilde
                 Ntilde = np.zeros(shape=priordatadict['N'].shape)
@@ -734,9 +815,9 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
         # END IF FOR MCMC
 
         elif method == 'MCMCexpect':
-            for omega in range(omeganum):
+            for omega in range(numdatadraws):
                 # Grab a draw from the prior
-                currpriordraw = priordraws[randinds[omega]]  # [SN rates, TN rates]
+                currpriordraw = priordraws[priorindstouse[omega]]  # [SN rates, TN rates]
 
                 # Initialize Ntilde and Ytilde
                 Ntilde = sampMat.copy()
@@ -893,7 +974,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
             # Initialize NvecSet with numdatadraws different data sets
             NvecSet = []
-            for i in range(numNdraws):
+            for i in range(numdatadraws):
                 sampSNvec = choice([j for j in range(numSN)], size=Ntotal, p=Qvec) # Sample according to the sourcing probabilities
                 sampSNvecSums = np.array([sampSNvec.tolist().count(j) for j in range(numSN)]) # Consolidate samples by supply node
                 NvecSet.append(sampSNvecSums)
@@ -979,7 +1060,9 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
 
         elif method == 'weightsNodeDraw3': # Weight each prior draw by the likelihood of a new data set
             # Differs from 'weightsNodeDraw2' in 3 areas:
-            #   1) Able to use a subset of  in that the Bayes estimate is chosen from the samples
+            #   1) Able to use a subset of prior draws for generating data
+            #   2) Uses log transformation to speed up weight calculation
+            #   3) Uses loss and weight matrices to select Bayes estimate
             #IMPORTANT!!! CAN ONLY HANDLE DESIGNS WITH 1 TEST NODE
             Ntilde = sampMat.copy()
             sampNodeInd = 0
@@ -987,32 +1070,28 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
                 if Ntilde[currind] > 0:
                     sampNodeInd = currind
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
-
-            zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
-            NMat = np.random.multinomial(Ntotal,Qvec,size=numpriordraws)
-            YMat = np.random.binomial(NMat,zMat)
-            bigzMat = np.transpose(np.reshape(np.tile(zMat,numpriordraws),(numpriordraws,numpriordraws,numSN)),axes=(1,0,2))
-            bigNMat = np.reshape(np.tile(NMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
-            bigYMat = np.reshape(np.tile(YMat,numpriordraws), (numpriordraws,numpriordraws,numSN))
-            combNY = np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),(numpriordraws,numpriordraws,numSN))
-            time1 = time.time()
-            # wtsMat=... TAKES 76 SECS. FOR 10K DRAWS
-            wtsMat = np.prod((bigzMat ** bigYMat) * ((1 - bigzMat) ** (bigNMat - bigYMat)) * combNY, axis=2)
-            time2 = time.time()
-            wtsMat = np.divide(wtsMat*numpriordraws,np.reshape(np.tile(np.sum(wtsMat,axis=1),numpriordraws),(numpriordraws,numpriordraws)).T)
-            time3 = time.time()
-            # estMat=... TAKES 100 SECS. FOR 10K DRAWS
-            estMat = bayesEstAdaptArr(priordraws,wtsMat,lossdict['scoreDict'],printUpdate=False)
-            time4 = time.time()
-            losses = loss_pmsArr2(estMat,priordraws,lossdict)
-            lossveclist.append(np.average(losses))
-
-            print(round(time2 - time1))
-            print(round(time4 - time3))
-
-            if printUpdate == True:
-                print(designnames[designind] + ' complete')
-        # END ELIF FOR WEIGHTSNODEDRAW2
+            # Use numdrawsforbayes draws randomly selected from the set of prior draws
+            datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsforbayes, replace=False)
+            zMat2 = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
+            NMat2 = np.random.multinomial(Ntotal,Qvec,size=numdrawsforbayes)
+            YMat2 = np.random.binomial(NMat2, zMat2[datadrawinds])
+            bigzMat2 = np.transpose(np.reshape(np.tile(zMat2, numdrawsforbayes), (numpriordraws, numdrawsforbayes,numSN)),
+                                   axes=(0,1,2))
+            bigNMat2 = np.transpose(np.reshape(np.tile(NMat2, numpriordraws), (numdrawsforbayes,numpriordraws, numSN)),
+                                   axes=(1,0,2))
+            bigYMat2 = np.transpose(np.reshape(np.tile(YMat2, numpriordraws), (numdrawsforbayes, numpriordraws, numSN)),
+                                    axes=(1, 0, 2))
+            combNY2 = np.transpose(np.reshape(np.tile(sps.comb(NMat2, YMat2),numpriordraws),
+                                              (numdrawsforbayes,numpriordraws,numSN)),axes=(1,0,2))
+            wtsMat2 = np.exp(np.sum((bigYMat2*np.log(bigzMat2))+((bigNMat2-bigYMat2)*np.log(1-bigzMat2))+np.log(combNY2),axis=2))
+            # Normalize so that each column sums to 1
+            wtsMat2 = np.divide(wtsMat2 * 1, np.reshape(np.tile(np.sum(wtsMat2, axis=0), numpriordraws),
+                                                                  (numpriordraws, numdrawsforbayes)))
+            #lossMat = lossMatrix(priordraws,lossdict) # MOVE TO INPUT OF LOSSDICT
+            wtLossMat = np.matmul(lossdict['lossMat'],wtsMat2)
+            wtLossMins = wtLossMat.min(axis=0)
+            lossveclist.append(np.average(wtLossMins))
+        # END ELIF FOR WEIGHTSNODEDRAW3
 
         elif method == 'weightsNodeEnumerateY': # Weight each prior draw by the likelihood of a new data set
             # Differs from 'weightsNodeEnumerate' in that only possible data sets (Y) are enumerated, and N is randomly drawn
@@ -1025,7 +1104,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, omeganum=1, 
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
             # Initialize NvecSet with numdatadraws different data sets
             NvecSet = []
-            for i in range(numNdraws):
+            for i in range(numdatadraws):
                 sampSNvec = choice([i for i in range(numSN)], size=Ntotal, p=Qvec) # Sample according to the sourcing probabilities
                 sampSNvecSums = [sampSNvec.tolist().count(j) for j in range(numSN)] # Consolidate samples by supply node
                 NvecSet.append(sampSNvecSums)
@@ -1280,6 +1359,51 @@ def zProbTrVec(snNum, gammaMat, sens=1., spec=1.):
     # each term is a k-by-n-by-m array
     return sens * zMat + (1 - spec) * (1 - zMat)
 
+def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate=True):
+    '''
+    Returns an array of marginal utility estimates for the PMS data contained in scDict.
+    :param testsMax: maximum number of tests at each test node
+    :param testsInt: interval of tests, from zero ot testsMax, by which to calculate estimates
+    :param lossDict: dictionary containing parameters for how the PMS loss is calculated
+    :param utilDict: dictionary of parameters for use with getDesignUtility
+    :return margUtilArr: array of size (number of test nodes) by (testsMax/testsInt + 1)
+    '''
+    (numTN, numSN) = scDict['N'].shape
+    design=np.zeros(numTN)
+    design[0] = 1.
+    # Calculate the loss matrix
+    lossMat = lossMatrix(scDict['postSamples'],lossDict.copy())
+    lossDict.update({'lossMat':lossMat})
+    # Establish a baseline loss for comparison with other losses
+    baseLoss = getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict, designlist=[design],
+                                numtests=0, utildict=utilDict.copy())[0]
+    # Initialize the return array
+    margUtilArr = np.zeros((numTN, int(testMax / testInt) + 1))
+    # Calculate the marginal utility increase under each iteration of tests for each test node
+    for currTN in range(numTN):
+        design = np.zeros(numTN)
+        design[currTN] = 1.
+        for testNum in range(testInt,testMax+1,testInt):
+            if printUpdate == True:
+                print('Calculating for test node '+str(currTN+1)+' under '+str(testNum)+' tests...')
+            margUtilArr[currTN][int(testNum/testInt)] = baseLoss - getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict, designlist=[design],
+                                numtests=testNum, utildict=utilDict)[0]
+    return margUtilArr
+
+def plotMargUtil(margUtilArr,testMax,testInt,al=0.6):
+    '''Produces a plot of an array of marginal utility increases '''
+    x1 = range(0, testMax + 1, testInt)
+    colors = cm.rainbow(np.linspace(0, 1, margUtilArr.shape[0]))
+    for tnind in range(margUtilArr.shape[0]):
+        plt.plot(x1, margUtilArr[tnind], linewidth=4, color=colors[tnind], label='TN ' + str(tnind + 1), alpha=al)
+    plt.legend()
+    plt.ylim([0., margUtilArr.max()*1.1])
+    plt.xlabel('Number of Tests')
+    plt.ylabel('Utility Gain')
+    plt.title('Marginal Utility at Test Nodes')
+    plt.show()
+    return
+
 def GetOptAllocation(U):
     '''
     :param U
@@ -1419,7 +1543,7 @@ UmatTN = np.array([[0.16098932, 0.15988504, 0.15885114, 0.1578939 , 0.15698791,
         linConstraint = spo.LinearConstraint(np.repeat(1,numTN),0,numTests)
         spoOutput = spo.minimize(negVecUpw,xinit,args=(U),method='SLSQP',constraints=linConstraint,
                                  bounds=bds,options={'ftol': 1e-15}) # Reduce tolerance if not getting integer solutions
-        sol = spoOutput.x
+        sol = np.round(spoOutput.x,3)
         maxU = spoOutput.fun * -1
 
     return sol, maxU
@@ -1554,7 +1678,7 @@ def exampleSCscratchForAlgDebug():
     scDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     scDict['importerNum'], scDict['outletNum'] = numSN, numTN
     # Generate posterior draws
-    numdraws = 6000  # Evaluate choice here
+    numdraws = 7000  # Evaluate choice here
     scDict['numPostSamples'] = numdraws
     scDict = methods.GeneratePostSamples(scDict)
     # Define a loss dictionary
@@ -1563,13 +1687,234 @@ def exampleSCscratchForAlgDebug():
     riskdict = {'name': 'Parabolic', 'threshold': t}
     marketvec = np.ones(numTN + numSN)
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    #lossMat = lossMatrix(scDict['postSamples'], lossDict)
+    #lossDict.update({'lossMat':lossMat})
     # Design
     design = np.array([1.,0.,0.])
-    Ntests = 20
+    Ntests = 10
     # Sourcing matrix
     Q = np.array([[0.4, 0.6],[0.8, 0.2],[0.5, 0.5]])
     scDict.update({'transMat':Q})
+    # Utility dictionary
+    utilDict = {'method':'weightsNodeDraw3'}
+    utilDict.update({'numdrawsforbayes':7000})
 
+    plotMargUtil(margUtilArr, testMax, testInt)
+    sol, maxUval = GetOptAllocation(margUtilArr[:,:9])
+    print(sol)
+    ###################################################################################################################
+    ###################################################################################################################
+    ### SET OF RUNS FOR ESTABLISHING NOISE FOR DIFFERENT UTILITY ESTIMATES, UNDER EXAMPLE SC
+    ###################################################################################################################
+    ###################################################################################################################
+    # Get a baseline under 0 tests
+    baselineVec=[]
+    for i in range(25):
+        randinds = choice([i for i in range(numdraws)],size=5000)
+        tempDict=scDict.copy()
+        newdraws=scDict['postSamples'][randinds]
+        tempDict.update({'postSamples':newdraws})
+        lossMat = lossMatrix(tempDict['postSamples'], lossDict)
+        lossDict.update({'lossMat':lossMat})
+        baseUtil = getDesignUtility(priordatadict=tempDict.copy(), lossdict=lossDict.copy(), designlist=[design],
+                           numtests=0, utildict=utilDict.copy())[0]
+        print(baseUtil)
+        baselineVec.append(baseUtil)
+    baseAvg = np.average(baselineVec)
+
+
+    testInt = 5
+    testMax = 100
+    timeArr = np.zeros((numTN, int(testMax / testInt)+1))
+    resArr = np.zeros((numTN,int(testMax/testInt)+1))
+    for desInd in range(numTN):
+        design=np.zeros(numTN)
+        design[desInd]=1.
+        for Ntests in range(0,testMax+1,testInt):
+            time1=time.time()
+            currscDict = scDict.copy()
+            randinds = choice([i for i in range(numdraws)], size=1000)
+            currscDict.update({'postSamples':scDict['postSamples'][randinds]})
+            lossMat = lossMatrix(currscDict['postSamples'], lossDict)
+            lossDict.update({'lossMat': lossMat})
+            res = baseAvg - getDesignUtility(priordatadict=currscDict.copy(), lossdict=lossDict.copy(),
+                                            designlist=[design], numtests=Ntests, utildict=utilDict.copy())[0]
+            timeArr[desInd][int(Ntests/testInt)] = round(time.time()-time1)
+            resArr[desInd][int(Ntests/testInt)] = res
+            print('Design '+str(desInd+1)+', Ntests '+str(Ntests)+' complete; time: '+str(round(time.time()-time1)))
+
+
+    '''
+    for 1000 prior draws:
+    timeArr = np.array([[1., 2., 1., 1., 1., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 1., 0.],
+       [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.,
+        0., 1., 0., 1., 0.],
+       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0.]])
+    resArr1000 = np.array([[ 0.00159311,  0.00418471,  0.0062269 ,  0.00895704,  0.01323657,
+         0.01325995,  0.01839366,  0.02107369,  0.02046441,  0.02249531,
+         0.02347999,  0.02218667,  0.02318638,  0.02614432,  0.02686565,
+         0.02731426,  0.02932006,  0.02803005,  0.03035949,  0.0299379 ,
+         0.03275276],
+       [-0.00699   ,  0.00791442,  0.00880313,  0.01171479,  0.01525231,
+         0.0163157 ,  0.02201907,  0.02193683,  0.02792523,  0.02662289,
+         0.02669167,  0.03019786,  0.029042  ,  0.03088749,  0.03442847,
+         0.03430848,  0.03418094,  0.03888811,  0.03765799,  0.03988821,
+         0.0408746 ],
+       [-0.00017592,  0.00285291,  0.00549835,  0.00843239,  0.01292921,
+         0.01452094,  0.01602438,  0.01568046,  0.02107726,  0.02223076,
+         0.02307271,  0.02589357,  0.02612889,  0.02753352,  0.02761555,
+         0.03111052,  0.03090632,  0.02964345,  0.03179872,  0.03128028,
+         0.03337345]])
+    for 2000 prior draws:
+    timeArr = np.array([[4., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2.,
+        2., 2., 2., 2., 2.],
+       [2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2.,
+        2., 2., 2., 2., 2.],
+       [2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2., 2.,
+        2., 2., 2., 2., 2.]])
+    resArr2000 = np.array([[-0.00167857,  0.00637426,  0.00855596,  0.00976534,  0.01164906,
+         0.01487943,  0.01525576,  0.02073503,  0.0190061 ,  0.02372901,
+         0.02407007,  0.02525577,  0.02435303,  0.02641542,  0.0280954 ,
+         0.02738228,  0.0293965 ,  0.02949504,  0.02941072,  0.03089783,
+         0.03171672],
+       [-0.00170394,  0.00751629,  0.00816319,  0.01271623,  0.01529189,
+         0.01957194,  0.0217479 ,  0.02441013,  0.02636045,  0.02801888,
+         0.02785735,  0.02984962,  0.03238839,  0.03145008,  0.03166865,
+         0.0348702 ,  0.03698629,  0.03704807,  0.03803051,  0.03879708,
+         0.04143042],
+       [-0.00016478,  0.00301231,  0.00660184,  0.00974423,  0.01499728,
+         0.01793905,  0.01796053,  0.01758067,  0.02091836,  0.02299648,
+         0.0233177 ,  0.02370586,  0.02589604,  0.02755232,  0.02709835,
+         0.02663809,  0.03262958,  0.03104109,  0.03216134,  0.03189571,
+         0.03393449]])
+    for 3000 prior draws:
+    timeArr = np.array([[7., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5.,
+        5., 5., 4., 5., 5.],
+       [5., 5., 5., 5., 4., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5.,
+        5., 5., 5., 5., 5.],
+       [4., 5., 5., 5., 5., 5., 5., 5., 5., 7., 6., 5., 5., 5., 5., 5.,
+        5., 5., 5., 5., 5.]])
+    resArr3000 = np.array([[-2.13834334e-03,  7.40874028e-03,  6.65411132e-03,
+         1.01627335e-02,  1.45420624e-02,  1.49715005e-02,
+         1.62628890e-02,  1.71322786e-02,  1.99306632e-02,
+         2.35843040e-02,  2.61979321e-02,  2.45403017e-02,
+         2.61094519e-02,  2.47844136e-02,  2.62445474e-02,
+         2.83188904e-02,  2.84600632e-02,  3.12486701e-02,
+         3.08744364e-02,  3.12662379e-02,  3.24095007e-02],
+       [-6.02671383e-05,  5.39049310e-03,  7.25757319e-03,
+         1.23909949e-02,  1.57591463e-02,  1.94971343e-02,
+         2.20110552e-02,  2.59353171e-02,  2.64166397e-02,
+         2.77745519e-02,  2.92782719e-02,  2.88195519e-02,
+         3.34315880e-02,  3.27045536e-02,  3.44270497e-02,
+         3.71100634e-02,  3.68632695e-02,  3.71862966e-02,
+         3.69599021e-02,  3.83762973e-02,  3.92994635e-02],
+       [ 8.25856064e-04,  5.75927627e-03,  7.49853812e-03,
+         1.19071838e-02,  1.15558762e-02,  1.80925833e-02,
+         1.76435224e-02,  2.18948729e-02,  2.13119948e-02,
+         2.32002908e-02,  2.32411425e-02,  2.62877728e-02,
+         2.50494052e-02,  2.67017512e-02,  2.60101225e-02,
+         3.07262639e-02,  3.04242972e-02,  3.03481937e-02,
+         3.12410146e-02,  3.07281928e-02,  3.28466663e-02]])
+    for 4000 prior draws:
+    timeArr = np.array([[ 9.,  9., 10.,  9.,  9.,  9., 10.,  9.,  9.,  9.,  9.,  9.,  9.,
+         9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.],
+       [ 9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,
+         9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.],
+       [ 9., 10.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.,
+         9.,  9.,  9.,  9.,  9.,  9.,  9.,  9.]])
+    resArr4000 = np.array([[-0.00125006,  0.00455918,  0.00596942,  0.00959156,  0.01385264,
+         0.01497621,  0.01756948,  0.01792961,  0.02150224,  0.0214486 ,
+         0.02383869,  0.02524205,  0.02507577,  0.02716952,  0.02795667,
+         0.02816161,  0.03143439,  0.03021209,  0.03199355,  0.03219852,
+         0.03348309],
+       [-0.00018571,  0.0054182 ,  0.01050196,  0.01241348,  0.01647457,
+         0.01861406,  0.02154789,  0.0227189 ,  0.02665793,  0.02818191,
+         0.02786874,  0.03082077,  0.03237958,  0.03269404,  0.0351905 ,
+         0.03600581,  0.03770573,  0.0373656 ,  0.03679003,  0.03855222,
+         0.03940719],
+       [ 0.00058917,  0.00640784,  0.00936066,  0.01172114,  0.01405519,
+         0.01549102,  0.01862859,  0.02103447,  0.01928631,  0.02261242,
+         0.022648  ,  0.02425976,  0.02635621,  0.02803802,  0.02794364,
+         0.02892531,  0.02974113,  0.03218838,  0.03113268,  0.03289169,
+         0.0323915 ]])
+    for 5000 prior draws:
+    timeArr = np.array([[29., 27., 23., 25., 30., 24., 17., 16., 18., 16., 15., 15., 15.,
+        15., 15., 16., 16., 16., 15., 15., 16.],
+       [15., 15., 15., 16., 16., 16., 16., 16., 24., 19., 20., 24., 17.,
+        16., 16., 17., 20., 19., 17., 16., 19.],
+       [18., 19., 20., 19., 18., 17., 17., 18., 17., 17., 18., 17., 16.,
+        16., 17., 17., 17., 17., 17., 17., 16.]]
+    resArr5000 = np.array([[6.89660644e-05, 4.10008155e-03, 8.05410916e-03, 1.12873831e-02,
+        1.39424080e-02, 1.54226618e-02, 1.73034505e-02, 1.81846310e-02,
+        2.06818379e-02, 2.21695317e-02, 2.46157877e-02, 2.47610638e-02,
+        2.52565608e-02, 2.71944750e-02, 2.86383522e-02, 2.91120950e-02,
+        2.92109740e-02, 3.02115822e-02, 3.22780934e-02, 3.17034442e-02,
+        3.35250549e-02],
+       [1.08889276e-03, 5.91813266e-03, 1.01146011e-02, 1.37066550e-02,
+        1.65180788e-02, 1.93990489e-02, 2.14668000e-02, 2.51308676e-02,
+        2.62939116e-02, 2.81707128e-02, 2.86727950e-02, 3.07502177e-02,
+        3.13708921e-02, 3.32215273e-02, 3.33406986e-02, 3.49946406e-02,
+        3.63782803e-02, 3.72631594e-02, 3.75954257e-02, 3.74843946e-02,
+        3.93600286e-02],
+       [1.69694541e-03, 4.84563878e-03, 7.05934835e-03, 1.14981791e-02,
+        1.32252145e-02, 1.70971635e-02, 1.84716717e-02, 1.94952083e-02,
+        2.16529222e-02, 2.37018257e-02, 2.33494840e-02, 2.63780620e-02,
+        2.61132133e-02, 2.70204491e-02, 2.76134405e-02, 3.04763642e-02,
+        2.96451701e-02, 3.12498391e-02, 3.09408894e-02, 3.34448161e-02,
+        3.28314890e-02]])
+        
+    for 6000 prior draws:
+    timeArr = np.array([[58., 42., 45., 38., 46., 38., 40., 42., 45., 40., 42., 46., 40.,
+        37., 44., 45., 43., 44., 50., 43., 36.],
+       [46., 43., 41., 54., 56., 43., 43., 44., 32., 42., 47., 49., 44.,
+        45., 45., 48., 45., 53., 37., 37., 40.],
+       [55., 48., 40., 48., 44., 39., 58., 47., 41., 51., 36., 49., 52.,
+        43., 42., 39., 35., 42., 43., 40., 39.]])
+    resArr6000 = np.array([[-8.11146826e-05,  4.71066494e-03,  8.17931663e-03,
+         9.71956948e-03,  1.38456486e-02,  1.41687236e-02,
+         1.58361499e-02,  1.87968160e-02,  2.11285718e-02,
+         2.25592396e-02,  2.46750812e-02,  2.38927669e-02,
+         2.58073982e-02,  2.70563219e-02,  2.94438942e-02,
+         3.06479700e-02,  3.09371649e-02,  3.21300696e-02,
+         3.16848311e-02,  3.26015134e-02,  3.28548809e-02],
+       [-2.25461852e-04,  5.46979604e-03,  9.97871659e-03,
+         1.36761718e-02,  1.59532232e-02,  1.86941271e-02,
+         2.16212905e-02,  2.33833771e-02,  2.56299705e-02,
+         2.61149046e-02,  3.01841634e-02,  2.95405078e-02,
+         3.22385126e-02,  3.35873444e-02,  3.38901597e-02,
+         3.52389982e-02,  3.71442180e-02,  3.73916572e-02,
+         3.71822596e-02,  3.82220653e-02,  3.99729121e-02],
+       [ 6.75487014e-04,  3.30214603e-03,  8.31503779e-03,
+         1.26715321e-02,  1.41274677e-02,  1.59647781e-02,
+         1.83714139e-02,  1.95429948e-02,  2.12826167e-02,
+         2.34451664e-02,  2.42501368e-02,  2.52256962e-02,
+         2.57751529e-02,  2.72398996e-02,  2.85090366e-02,
+         2.91266687e-02,  3.10607272e-02,  3.18272571e-02,
+         3.13823792e-02,  3.23414072e-02,  3.27573212e-02]])
+    '''
+    x1 = range(0, testMax + 1, testInt)
+    colors = ['blue', 'red', 'green']
+    al = 0.3
+    for tnind in range(numTN):
+        plt.plot(x1, resArr6000[tnind], linewidth=4, color=colors[tnind], label='TN ' + str(tnind + 1),alpha=al)
+        #plt.plot(x1, resArr5000[tnind], linewidth=3.5, color=colors[tnind], label='TN ' + str(tnind + 1),alpha=al)
+        #plt.plot(x1, resArr4000[tnind], linewidth=3, color=colors[tnind], label='TN ' + str(tnind + 1),alpha=al)
+        #plt.plot(x1, resArr3000[tnind], linewidth=2.5, color=colors[tnind], label='TN ' + str(tnind + 1),alpha=al)
+        #plt.plot(x1, resArr2000[tnind], linewidth=2, color=colors[tnind], label='TN ' + str(tnind + 1),alpha=al)
+        #plt.plot(x1, resArr1000[tnind], linewidth=1.5, color=colors[tnind], label='TN ' + str(tnind + 1),alpha=al)
+    plt.legend()
+    plt.ylim([-0.01, 0.04])
+    plt.xlabel('Number of Tests')
+    plt.ylabel('Utility Gain')
+    plt.title('Use of Loss Matrices of size $6000^2$')
+    plt.show()
+
+    ###################################################################################################################
+    ###################################################################################################################
+    ###################################################################################################################
+    ###################################################################################################################
 
     resultArr = np.zeros((4,10))
     for run in range(9):
