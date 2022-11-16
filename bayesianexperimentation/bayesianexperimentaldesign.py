@@ -247,10 +247,13 @@ def risk_parabolicArr(SFPrateArr, paramDict={'threshold': 0.2}):
         retVal = SFPrateArr * (1 - SFPrateArr - 2*(0.5-paramDict['threshold']))
     return retVal
 
-def risk_parabolicMat(draws,paramDict={'threshold':0.2}):
+def risk_parabolicMat(draws,paramDict={'threshold':0.2}, indsforbayes=[]):
     '''Parabolic risk term in matrix form'''
     retArr = risk_parabolicArr(draws,paramDict)
-    return np.transpose(np.reshape(np.tile(retArr.copy(),len(draws)),(len(draws),len(draws),len(draws[0]))),(1,0,2))
+    if len(indsforbayes) == 0:
+        indsforbayes = np.arange(len(draws))
+    numbayesinds = len(indsforbayes)
+    return np.transpose(np.reshape(np.tile(retArr.copy(),numbayesinds),(len(draws),numbayesinds,len(draws[0]))),(1,0,2))
 
 def risk_check(SFPratevec, paramDict={'threshold': 0.5, 'slope': 0.5}): #### OBSOLETE; REMOVE LATER
     '''Check risk term, which has minus 'slope' to the right of 'threshold' and (1-'slope') to the left of threshold'''
@@ -263,6 +266,14 @@ def risk_check(SFPratevec, paramDict={'threshold': 0.5, 'slope': 0.5}): #### OBS
 def risk_checkArr(SFPrateArr, paramDict={'threshold': 0.5, 'slope': 0.5}):
     '''Check risk term for an array, which has minus 'slope' to the right of 'threshold' and (1-'slope') to the left of threshold'''
     return 1 - SFPrateArr*(paramDict['slope']-((1-paramDict['threshold']/SFPrateArr)*np.minimum(np.maximum(paramDict['threshold'] - SFPrateArr, 0),tol)*(1/tol)))
+
+def risk_checkMat(draws, paramDict={'threshold': 0.5, 'slope': 0.5}, indsforbayes=[]):
+    '''Check risk term for an array, which has minus 'slope' to the right of 'threshold' and (1-'slope') to the left of threshold'''
+    retArr = risk_checkArr(draws,paramDict)
+    if len(indsforbayes) == 0:
+        indsforbayes = np.arange(len(draws))
+    numbayesinds = len(indsforbayes)
+    return np.transpose(np.reshape(np.tile(retArr.copy(),numbayesinds),(len(draws),numbayesinds,len(draws[0]))),(1,0,2))
 
 def score_diff(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
     '''
@@ -283,16 +294,20 @@ def score_diffArr(est, targArr, paramDict):
     '''
     return np.maximum(est-targArr,0) + paramDict['underEstWt']*np.maximum(targArr-est,0)
 
-def score_diffMat(draws, paramDict):
+def score_diffMat(draws, paramDict, indsforbayes=[]):
     '''
     Returns matrix of pair-wise differences for set of SFP-rate draws using underEstWt, the weight of
     underestimation error relative to overestimation error. Rows correspond to estimates, columns to targets
     paramDict requires keys: underEstWt
+    :param indsforbayes: which indices of draws to use as estimates; used for limiting the matrix size
     '''
-    numdraws = len(draws)
-    numnodes = len(draws[0])
-    drawsEstMat = np.reshape(np.tile(draws.copy(),numdraws),(numdraws,numdraws,numnodes))
-    drawsTargMat = np.transpose(drawsEstMat.copy(),axes=(1,0,2))
+    numdraws, numnodes = len(draws), len(draws[0])
+    if len(indsforbayes) == 0:
+        indsforbayes = np.arange(numdraws)
+    numbayesinds = len(indsforbayes)
+    drawsEstMat = np.reshape(np.tile(draws[indsforbayes].copy(),numdraws),(numbayesinds,numdraws,numnodes))
+    drawsTargMat = np.transpose(np.reshape(np.tile(draws.copy(), numbayesinds), (numdraws, numbayesinds, numnodes)),
+                                axes=(1, 0, 2))
     return np.maximum(drawsEstMat-drawsTargMat,0) + paramDict['underEstWt']*np.maximum(drawsTargMat-drawsEstMat,0)
 
 def score_class(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
@@ -323,16 +338,21 @@ def score_classArr(est, targArr, paramDict):
     targClass[targClass < 0.] = 0.
     return score_diffArr(estClass,targClass,paramDict)
 
-def score_classMat(draws,paramDict):
+def score_classMat(draws, paramDict, indsforbayes=[]):
     '''
     Returns classification loss for each pairwise combination of draws. Rows correspond to estimates, columns to targets
+    :param indsforbayes: which indices of draws to use as estimates; used for limiting the matrix size
     '''
     numdraws, numnodes = len(draws), len(draws[0])
     drawsClass = draws.copy()
     drawsClass[drawsClass >= paramDict['threshold']] = 1.
     drawsClass[drawsClass < paramDict['threshold']] = 0.
-    drawsEstMat = np.reshape(np.tile(drawsClass.copy(),numdraws),(numdraws,numdraws,numnodes))
-    drawsTargMat = np.transpose(drawsEstMat.copy(), axes=(1, 0, 2))
+    if len(indsforbayes) == 0:
+        indsforbayes = np.arange(numdraws)
+    numbayesinds = len(indsforbayes)
+    drawsEstMat = np.reshape(np.tile(drawsClass[indsforbayes].copy(),numdraws),(numbayesinds,numdraws,numnodes))
+    drawsTargMat = np.transpose(np.reshape(np.tile(drawsClass.copy(),numbayesinds),(numdraws,numbayesinds,numnodes)),
+                                axes=(1, 0, 2))
     return np.maximum(drawsEstMat-drawsTargMat,0) + paramDict['underEstWt']*np.maximum(drawsTargMat-drawsEstMat,0)
 
 def score_check(est, targ, paramDict): #### OBSOLETE; REMOVE LATER
@@ -353,6 +373,22 @@ def score_checkArr(est, targArr, paramDict):
     paramDict requires keys: slope
     '''
     return (est-targArr) * (paramDict['slope'] - np.minimum(np.maximum(targArr-est,0),1e-8)*1e8)
+
+def score_checkMat(draws, paramDict, indsforbayes=[]):
+    '''
+    Returns a check difference between vectors est and targ using slope, which can be used to weigh underestimation and
+    overestimation differently. Slopes less than 0.5 mean underestimation causes a higher loss than overestimation.
+    :param paramDict requires keys: slope
+    :param indsforbayes: which indices of draws to use as estimates; used for limiting the matrix size
+    '''
+    numdraws, numnodes = len(draws), len(draws[0])
+    if len(indsforbayes) == 0:
+        indsforbayes = np.arange(numdraws)
+    numbayesinds = len(indsforbayes)
+    drawsEstMat = np.reshape(np.tile(draws[indsforbayes].copy(), numdraws), (numbayesinds, numdraws, numnodes))
+    drawsTargMat = np.transpose(np.reshape(np.tile(draws.copy(), numbayesinds), (numdraws, numbayesinds, numnodes)),
+                                axes=(1, 0, 2))
+    return (drawsEstMat-drawsTargMat) * (paramDict['slope'] - np.minimum(np.maximum(drawsTargMat-drawsEstMat,0),tol)*(1/tol))
 
 def bayesEst(samps, scoredict):
     '''
@@ -511,28 +547,30 @@ def loss_pmsArr2(estArr, targArr, lossDict):
     # Return sum loss across all nodes
     return np.sum(scoreArr*riskArr*lossDict['marketVec'],axis=1)
 
-def lossMatrix(draws,lossdict):
+def lossMatrix(draws,lossdict,indsforbayes=[]):
     '''
     Returns a matrix of losses associated with each pair of SFP-rate draws according to the specifications of lossdict
+    :param indsforbayes: which indices of draws to use as estimates; used for limiting the matrix size
     '''
+    if len(indsforbayes) == 0:
+        indsforbayes = np.arange(len(draws))
+    numbayesinds = len(indsforbayes)
     # Get score matrix
     if lossdict['scoreDict']['name'] == 'AbsDiff':
-        scoreMat = score_diffMat(draws, lossdict['scoreDict'])
+        scoreMat = score_diffMat(draws, lossdict['scoreDict'], indsforbayes)
     elif lossdict['scoreDict']['name'] == 'Class':
-        scoreMat = score_classMat(draws, lossdict['scoreDict'])
-    '''
-    elif lossDict['scoreDict']['name'] == 'Check':
-        scoreMat = score_checkMat(draws, lossdict['scoreDict'])
-    '''
+        scoreMat = score_classMat(draws, lossdict['scoreDict'], indsforbayes)
+    elif lossdict['scoreDict']['name'] == 'Check':
+        scoreMat = score_checkMat(draws, lossdict['scoreDict'], indsforbayes)
+    # Get risk matrix
     if lossdict['riskDict']['name'] == 'Parabolic':
-        riskMat = risk_parabolicMat(draws)
-    '''
+        riskMat = risk_parabolicMat(draws, lossdict['riskDict'], indsforbayes)
     elif lossdict['riskDict']['name'] == 'Check':
-        riskMat = risk_checkMat(draws)
-    '''
+        riskMat = risk_checkMat(draws, lossdict['riskDict'], indsforbayes)
+
     if 'marketVec' not in lossdict.keys():
         lossdict.update({'marketVec': np.ones(len(draws[0]))})
-    marketMat = np.reshape(np.tile(lossdict['marketVec'].copy(),(len(draws),len(draws))),(len(draws),len(draws),len(draws[0])))
+    marketMat = np.reshape(np.tile(lossdict['marketVec'].copy(),(numbayesinds,len(draws))),(numbayesinds,len(draws),len(draws[0])))
     return np.sum(scoreMat*riskMat*marketMat,axis=2)
 
 def loss_pms2(est, targ, paramDict):
@@ -717,10 +755,10 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
         numpostdraws = utildict['numpostdraws']
     else:
         numpostdraws = priordatadict['numPostSamples']
-    if 'numdrawsforbayes' in utildict:
-        numdrawsforbayes = utildict['numdrawsforbayes']
+    if 'numdrawsfordata' in utildict:
+        numdrawsfordata = utildict['numdrawsfordata']
     else:
-        numdrawsforbayes = len(priordraws)
+        numdrawsfordata = len(priordraws)
     if 'roundAlg' in utildict:
         roundAlg = utildict['roundAlg'].copy()
     else:
@@ -1070,28 +1108,59 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
                 if Ntilde[currind] > 0:
                     sampNodeInd = currind
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
-            # Use numdrawsforbayes draws randomly selected from the set of prior draws
-            datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsforbayes, replace=False)
-            zMat2 = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
-            NMat2 = np.random.multinomial(Ntotal,Qvec,size=numdrawsforbayes)
-            YMat2 = np.random.binomial(NMat2, zMat2[datadrawinds])
-            bigzMat2 = np.transpose(np.reshape(np.tile(zMat2, numdrawsforbayes), (numpriordraws, numdrawsforbayes,numSN)),
+            # Use numdrawsfordata draws randomly selected from the set of prior draws
+            datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
+            zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
+            NMat = np.random.multinomial(Ntotal,Qvec,size=numdrawsfordata)
+            YMat = np.random.binomial(NMat, zMat[datadrawinds])
+            bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)),
                                    axes=(0,1,2))
-            bigNMat2 = np.transpose(np.reshape(np.tile(NMat2, numpriordraws), (numdrawsforbayes,numpriordraws, numSN)),
+            bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numpriordraws, numSN)),
                                    axes=(1,0,2))
-            bigYMat2 = np.transpose(np.reshape(np.tile(YMat2, numpriordraws), (numdrawsforbayes, numpriordraws, numSN)),
+            bigYMat = np.transpose(np.reshape(np.tile(YMat, numpriordraws), (numdrawsfordata, numpriordraws, numSN)),
                                     axes=(1, 0, 2))
-            combNY2 = np.transpose(np.reshape(np.tile(sps.comb(NMat2, YMat2),numpriordraws),
-                                              (numdrawsforbayes,numpriordraws,numSN)),axes=(1,0,2))
-            wtsMat2 = np.exp(np.sum((bigYMat2*np.log(bigzMat2))+((bigNMat2-bigYMat2)*np.log(1-bigzMat2))+np.log(combNY2),axis=2))
+            combNY = np.transpose(np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),
+                                              (numdrawsfordata,numpriordraws,numSN)),axes=(1,0,2))
+            wtsMat = np.exp(np.sum((bigYMat*np.log(bigzMat))+((bigNMat-bigYMat)*np.log(1-bigzMat))+np.log(combNY),axis=2))
             # Normalize so that each column sums to 1
-            wtsMat2 = np.divide(wtsMat2 * 1, np.reshape(np.tile(np.sum(wtsMat2, axis=0), numpriordraws),
-                                                                  (numpriordraws, numdrawsforbayes)))
+            wtsMat = np.divide(wtsMat * 1, np.reshape(np.tile(np.sum(wtsMat, axis=0), numpriordraws),
+                                                                  (numpriordraws, numdrawsfordata)))
             #lossMat = lossMatrix(priordraws,lossdict) # MOVE TO INPUT OF LOSSDICT
-            wtLossMat = np.matmul(lossdict['lossMat'],wtsMat2)
+            wtLossMat = np.matmul(lossdict['lossMat'],wtsMat)
             wtLossMins = wtLossMat.min(axis=0)
             lossveclist.append(np.average(wtLossMins))
         # END ELIF FOR WEIGHTSNODEDRAW3
+
+        elif method == 'weightsNodeDraw4': # Weight each prior draw by the likelihood of a new data set
+            # Differs from 'weightsNodeDraw3' in that it allows any type of design, not just one test node designs
+            # Use numdrawsfordata draws randomly selected from the set of prior draws
+            datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
+            zMat2 = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, :, :]
+            if sampMat.ndim == 1: # Node sampling
+                NMat2 = np.moveaxis( np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdrawsfordata) for tnInd in range(len(sampMat))]),1,0)
+                YMat2 = np.random.binomial(NMat2, zMat2[datadrawinds])
+            elif sampMat.ndim == 2: # Path sampling
+                NMat2 = np.moveaxis(np.reshape(np.tile(sampMat, numdrawsfordata),(sampMat.shape[0],numdrawsfordata,sampMat.shape[1])),1,0)
+                YMat2 = np.random.binomial(sampMat, zMat2[datadrawinds])
+
+
+            #### RESUME HERE
+            bigzMat2 = np.transpose(np.reshape(np.tile(zMat2, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)),
+                                   axes=(0,1,2))
+            bigNMat2 = np.transpose(np.reshape(np.tile(NMat2, numpriordraws), (numdrawsfordata,numpriordraws, numSN)),
+                                   axes=(1,0,2))
+            bigYMat2 = np.transpose(np.reshape(np.tile(YMat2, numpriordraws), (numdrawsfordata, numpriordraws, numSN)),
+                                    axes=(1, 0, 2))
+            combNY2 = np.transpose(np.reshape(np.tile(sps.comb(NMat2, YMat2),numpriordraws),
+                                              (numdrawsfordata,numpriordraws,numSN)),axes=(1,0,2))
+            wtsMat2 = np.exp(np.sum((bigYMat2*np.log(bigzMat2))+((bigNMat2-bigYMat2)*np.log(1-bigzMat2))+np.log(combNY2),axis=2))
+            # Normalize so that each column sums to 1
+            wtsMat2 = np.divide(wtsMat2 * 1, np.reshape(np.tile(np.sum(wtsMat2, axis=0), numpriordraws),
+                                                                  (numpriordraws, numdrawsfordata)))
+            wtLossMat = np.matmul(lossdict['lossMat'],wtsMat2)
+            wtLossMins = wtLossMat.min(axis=0)
+            lossveclist.append(np.average(wtLossMins))
+        # END ELIF FOR WEIGHTSNODEDRAW4
 
         elif method == 'weightsNodeEnumerateY': # Weight each prior draw by the likelihood of a new data set
             # Differs from 'weightsNodeEnumerate' in that only possible data sets (Y) are enumerated, and N is randomly drawn
@@ -1372,9 +1441,18 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
     design=np.zeros(numTN)
     design[0] = 1.
     # Calculate the loss matrix
-    lossMat = lossMatrix(scDict['postSamples'],lossDict.copy())
-    lossDict.update({'lossMat':lossMat})
+    if 'numdrawsforbayes' in utilDict:
+        indsforbayes = choice(np.arange(len(scDict['postSamples'])),size=utilDict['numdrawsforbayes'],replace=False)
+    else:
+        indsforbayes = np.arange(len(scDict['postSamples']))
+    if utilDict['method']=='weightsNodeDraw3':
+        if printUpdate == True:
+            print('Generating loss matrix of size: '+str(len(scDict['postSamples'])*len(indsforbayes)))
+        lossMat = lossMatrix(scDict['postSamples'],lossDict.copy(),indsforbayes)
+        lossDict.update({'lossMat':lossMat})
     # Establish a baseline loss for comparison with other losses
+    if printUpdate == True:
+        print('Generating baseline utility...')
     baseLoss = getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict, designlist=[design],
                                 numtests=0, utildict=utilDict.copy())[0]
     # Initialize the return array
@@ -1390,7 +1468,7 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
                                 numtests=testNum, utildict=utilDict)[0]
     return margUtilArr
 
-def plotMargUtil(margUtilArr,testMax,testInt,al=0.6):
+def plotMargUtil(margUtilArr,testMax,testInt,al=0.6,titleStr=''):
     '''Produces a plot of an array of marginal utility increases '''
     x1 = range(0, testMax + 1, testInt)
     colors = cm.rainbow(np.linspace(0, 1, margUtilArr.shape[0]))
@@ -1400,7 +1478,7 @@ def plotMargUtil(margUtilArr,testMax,testInt,al=0.6):
     plt.ylim([0., margUtilArr.max()*1.1])
     plt.xlabel('Number of Tests')
     plt.ylabel('Utility Gain')
-    plt.title('Marginal Utility at Test Nodes')
+    plt.title('Marginal Utility at Test Nodes\n'+titleStr)
     plt.show()
     return
 
@@ -1678,7 +1756,7 @@ def exampleSCscratchForAlgDebug():
     scDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     scDict['importerNum'], scDict['outletNum'] = numSN, numTN
     # Generate posterior draws
-    numdraws = 7000  # Evaluate choice here
+    numdraws = 80000  # Evaluate choice here
     scDict['numPostSamples'] = numdraws
     scDict = methods.GeneratePostSamples(scDict)
     # Define a loss dictionary
@@ -1691,17 +1769,29 @@ def exampleSCscratchForAlgDebug():
     #lossDict.update({'lossMat':lossMat})
     # Design
     design = np.array([1.,0.,0.])
-    Ntests = 10
     # Sourcing matrix
     Q = np.array([[0.4, 0.6],[0.8, 0.2],[0.5, 0.5]])
     scDict.update({'transMat':Q})
     # Utility dictionary
-    utilDict = {'method':'weightsNodeDraw3'}
-    utilDict.update({'numdrawsforbayes':7000})
+    numbayesdraws = 6250
+    utilDict = {'method':'weightsNodeDraw4'}
+    utilDict.update({'numdrawsfordata':6400})
+    utilDict.update({'numdrawsforbayes':numbayesdraws})
+    testMax, testInt = 60, 20
+    numdrawstouse = int(40000000/numbayesdraws)
+    scDictTemp = scDict.copy()
+    scDictTemp.update({'postSamples':scDict['postSamples'][choice(np.arange(numdraws),size=numdrawstouse,replace=False)],
+                       'numPostSamples':numdrawstouse})
 
-    plotMargUtil(margUtilArr, testMax, testInt)
-    sol, maxUval = GetOptAllocation(margUtilArr[:,:9])
+    margUtilArr = GetMargUtilAtNodes(scDictTemp, testMax, testInt, lossDict, utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, titleStr='Number of draws for selecting Bayes estimate: '+str(numbayesdraws))
+    sol, maxUval = GetOptAllocation(margUtilArr)
     print(sol)
+
+
+
+
+
     ###################################################################################################################
     ###################################################################################################################
     ### SET OF RUNS FOR ESTABLISHING NOISE FOR DIFFERENT UTILITY ESTIMATES, UNDER EXAMPLE SC
