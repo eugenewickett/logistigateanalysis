@@ -1503,18 +1503,26 @@ def GetMargUtilForDesigns(designList, scDict, testMax, testInt, lossDict, utilDi
                                 numtests=testNum, utildict=utilDict)[0]
     return margUtilArr
 
-def plotMargUtil(margUtilArr,testMax,testInt,al=0.6,titleStr=''):
+def plotMargUtil(margUtilArr,testMax,testInt,al=0.6,titleStr='',colors=[],dashes=[],labels=[]):
     '''Produces a plot of an array of marginal utility increases '''
     x1 = range(0, testMax + 1, testInt)
-    colors = cm.rainbow(np.linspace(0, 1, margUtilArr.shape[0]))
-    for tnind in range(margUtilArr.shape[0]):
-        plt.plot(x1, margUtilArr[tnind], linewidth=4, color=colors[tnind], label='Design ' + str(tnind + 1), alpha=al)
+    if len(colors) == 0:
+        colors = cm.rainbow(np.linspace(0, 1, margUtilArr.shape[0]))
+    if len(dashes) == 0:
+        dashes = [[1,desind] for desind in range(margUtilArr.shape[0])]
+    if len(labels) == 0:
+        labels = ['Design '+str(desind+1) for desind in range(margUtilArr.shape[0])]
+    for desind in range(margUtilArr.shape[0]):
+        plt.plot(x1, margUtilArr[desind], dashes=dashes[desind], linewidth=2.5, color=colors[desind],
+                 label=labels[desind], alpha=al)
     plt.legend()
     plt.ylim([0., margUtilArr.max()*1.1])
     plt.xlabel('Number of Tests')
     plt.ylabel('Utility Gain')
-    plt.title('Marginal Utility at Test Nodes\n'+titleStr)
+    plt.title('Marginal Utility with Increasing Tests\n'+titleStr)
+    plt.savefig('MARGUTILPLOT.png')
     plt.show()
+    plt.close()
     return
 
 def GetOptAllocation(U):
@@ -2117,29 +2125,77 @@ def exampleSupplyChainForPaper():
     # todo: EVALUATE HERE
     design1 = np.array([[0., 0.],[0., 0.],[1., 0.]])
     design2 = np.array([[1/6, 1/6], [1/6, 1/6], [1/6, 1/6]])
-    design3 = np.array([[1/3, 0.], [1/3, 1/3], [0., 0.]])
+    design3 = np.array([[1/3., 0.], [1/3, 1/3], [0., 0.]])
+
 
     testMax, testInt = 120, 12
     numdrawstouse = int(25000000 / numbayesdraws)
 
+    ### INITIAL BASELINE RUN ###
     scDictTemp = scDict.copy()
     scDictTemp.update(
         {'postSamples': scDict['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)],
          'numPostSamples': numdrawstouse})
     margUtilArr = GetMargUtilForDesigns([design1,design2,design3],scDictTemp, testMax, testInt, lossDict,
                                         utilDict, printUpdate=True)
-    plotMargUtil(margUtilArr, testMax, testInt)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue','red','green'],labels=['Focused', 'Balanced', 'Adapted'])
     '''
-    array([[0.        , 0.0145149 , 0.02287273, 0.02812165, 0.03168771,
+    margUtilArr = np.array([[0.        , 0.0145149 , 0.02287273, 0.02812165, 0.03168771,
         0.03450546, 0.03635892, 0.03834322, 0.03957304, 0.04066051,
         0.04168961],
        [0.        , 0.01255562, 0.02198114, 0.02966379, 0.03586405,
-        0.0408792 , 0.04568903, 0.0493647 , 0.05320499, 0.05538425,
+        0.0408792 , 0.04568903, 0.0493647 , 0.05320499, 0.05588425,
         0.05842857],
        [0.        , 0.01547988, 0.0255074 , 0.03283877, 0.03766472,
-        0.04257282, 0.0457909 , 0.04891098, 0.05159486, 0.05323978,
-        0.05547674]])
+        0.04257282, 0.0457909 , 0.04891098, 0.05159486, 0.05353978,
+        0.05547674],])
     '''
+
+    ### CHANGE LOSS PARAMETERS RUNS ###
+    lossDict['scoreDict'].update({'underEstWt':5.})
+    margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'])
+    '''
+    margUtilArr = np.array([[0.        , 0.03756175, 0.05349014, 0.06336716, 0.07060332,
+        0.07606237, 0.08057072, 0.08360255, 0.08645517, 0.08902742,
+        0.09101895],
+       [0.        , 0.03872294, 0.06678149, 0.08694082, 0.10359088,
+        0.11726024, 0.12808278, 0.13977096, 0.1484248 , 0.1567367 ,
+        0.1637534 ],
+       [0.        , 0.0454264 , 0.07064019, 0.0886928 , 0.10114694,
+        0.11162508, 0.1215812 , 0.12834136, 0.13454905, 0.13968609,
+        0.14433733]])
+    '''
+    ### CHANGE LOSS
+    lossDict['scoreDict'].update({'underEstWt': 0.1})
+    margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'])
+    '''
+    margUtilArr = np.array([[0.        , 0.00235907, 0.00351744, 0.00421243, 0.0047301 ,
+        0.0051016 , 0.00536873, 0.00560637, 0.00576074, 0.00593267,
+        0.00606755],
+       [0.        , 0.00136474, 0.00239811, 0.0031155 , 0.00367865,
+        0.0041841 , 0.00458842, 0.00491808, 0.00526702, 0.00549028,
+        0.00573057],
+       [0.        , 0.00163834, 0.00270732, 0.00348208, 0.00408013,
+        0.00458155, 0.00492762, 0.00525975, 0.00550293, 0.00578468,
+        0.005978  ]])
+    '''
+    ### CHANGE RISK
+    lossDict['scoreDict'].update({'underEstWt': 1.})
+    lossDict['riskDict'].update({'name':'Check','slope':0.3,'threshold':0.8})
+    margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'])
+    '''
+    margUtilArr = np.
+    '''
+
 
 
 
