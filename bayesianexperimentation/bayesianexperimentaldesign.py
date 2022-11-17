@@ -1138,25 +1138,23 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             zMat2 = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, :, :]
             if sampMat.ndim == 1: # Node sampling
                 NMat2 = np.moveaxis( np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdrawsfordata) for tnInd in range(len(sampMat))]),1,0)
-                YMat2 = np.random.binomial(NMat2, zMat2[datadrawinds])
+                YMat2 = np.random.binomial(NMat2.astype(int), zMat2[datadrawinds])
             elif sampMat.ndim == 2: # Path sampling
-                NMat2 = np.moveaxis(np.reshape(np.tile(sampMat, numdrawsfordata),(sampMat.shape[0],numdrawsfordata,sampMat.shape[1])),1,0)
-                YMat2 = np.random.binomial(sampMat, zMat2[datadrawinds])
-
-
-            #### RESUME HERE
-            bigzMat2 = np.transpose(np.reshape(np.tile(zMat2, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)),
-                                   axes=(0,1,2))
-            bigNMat2 = np.transpose(np.reshape(np.tile(NMat2, numpriordraws), (numdrawsfordata,numpriordraws, numSN)),
-                                   axes=(1,0,2))
-            bigYMat2 = np.transpose(np.reshape(np.tile(YMat2, numpriordraws), (numdrawsfordata, numpriordraws, numSN)),
-                                    axes=(1, 0, 2))
+                NMat2 = np.moveaxis(np.reshape(np.tile(sampMat, numdrawsfordata),(numTN,numdrawsfordata,numSN)),1,0)
+                YMat2 = np.random.binomial(NMat2.astype(int), zMat2[datadrawinds])
+            bigZMat2 = np.transpose(np.reshape(np.tile(zMat2, numdrawsfordata), (numpriordraws, numTN, numdrawsfordata, numSN)),
+                                   axes=(0,2,1,3))
+            bigNMat2 = np.transpose(np.reshape(np.tile(NMat2, numpriordraws), (numdrawsfordata,numTN, numpriordraws, numSN)),
+                                   axes=(2,0,1,3))
+            bigYMat2 = np.transpose(np.reshape(np.tile(YMat2, numpriordraws),
+                                    (numdrawsfordata, numTN, numpriordraws, numSN)), axes=(2, 0, 1, 3))
             combNY2 = np.transpose(np.reshape(np.tile(sps.comb(NMat2, YMat2),numpriordraws),
-                                              (numdrawsfordata,numpriordraws,numSN)),axes=(1,0,2))
-            wtsMat2 = np.exp(np.sum((bigYMat2*np.log(bigzMat2))+((bigNMat2-bigYMat2)*np.log(1-bigzMat2))+np.log(combNY2),axis=2))
+                                              (numdrawsfordata,numTN, numpriordraws,numSN)),axes=(2,0,1,3))
+            wtsMat2 = np.exp(np.sum((bigYMat2 * np.log(bigZMat2)) + ((bigNMat2 - bigYMat2) * np.log(1 - bigZMat2))
+                                    + np.log(combNY2), axis=(2,3)))
             # Normalize so that each column sums to 1
             wtsMat2 = np.divide(wtsMat2 * 1, np.reshape(np.tile(np.sum(wtsMat2, axis=0), numpriordraws),
-                                                                  (numpriordraws, numdrawsfordata)))
+                                                        (numpriordraws, numdrawsfordata)))
             wtLossMat = np.matmul(lossdict['lossMat'],wtsMat2)
             wtLossMins = wtLossMat.min(axis=0)
             lossveclist.append(np.average(wtLossMins))
@@ -1445,7 +1443,7 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
         indsforbayes = choice(np.arange(len(scDict['postSamples'])),size=utilDict['numdrawsforbayes'],replace=False)
     else:
         indsforbayes = np.arange(len(scDict['postSamples']))
-    if utilDict['method']=='weightsNodeDraw3':
+    if utilDict['method']=='weightsNodeDraw3' or utilDict['method']=='weightsNodeDraw4':
         if printUpdate == True:
             print('Generating loss matrix of size: '+str(len(scDict['postSamples'])*len(indsforbayes)))
         lossMat = lossMatrix(scDict['postSamples'],lossDict.copy(),indsforbayes)
@@ -1468,12 +1466,49 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
                                 numtests=testNum, utildict=utilDict)[0]
     return margUtilArr
 
+def GetMargUtilForDesigns(designList, scDict, testMax, testInt, lossDict, utilDict, printUpdate=True):
+    '''
+    Returns an array of marginal utility estimates for the PMS data contained in scDict.
+    :param testsMax: maximum number of tests at each test node
+    :param testsInt: interval of tests, from zero ot testsMax, by which to calculate estimates
+    :param lossDict: dictionary containing parameters for how the PMS loss is calculated
+    :param utilDict: dictionary of parameters for use with getDesignUtility
+    :return margUtilArr: array of size (number of test nodes) by (testsMax/testsInt + 1)
+    '''
+    (numTN, numSN) = scDict['N'].shape
+    # Calculate the loss matrix
+    if 'numdrawsforbayes' in utilDict:
+        indsforbayes = choice(np.arange(len(scDict['postSamples'])),size=utilDict['numdrawsforbayes'],replace=False)
+    else:
+        indsforbayes = np.arange(len(scDict['postSamples']))
+    if utilDict['method']=='weightsNodeDraw3' or utilDict['method']=='weightsNodeDraw4':
+        if printUpdate == True:
+            print('Generating loss matrix of size: '+str(len(scDict['postSamples'])*len(indsforbayes)))
+        lossMat = lossMatrix(scDict['postSamples'],lossDict.copy(),indsforbayes)
+        lossDict.update({'lossMat':lossMat})
+    # Establish a baseline loss for comparison with other losses
+    if printUpdate == True:
+        print('Generating baseline utility...')
+    baseLoss = getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict, designlist=[designList[0]],
+                                numtests=0, utildict=utilDict.copy())[0]
+    # Initialize the return array
+    margUtilArr = np.zeros((numTN, int(testMax / testInt) + 1))
+    # Calculate the marginal utility increase under each iteration of tests for each test node
+    for designind in range(len(designList)):
+        design = designList[designind]
+        for testNum in range(testInt,testMax+1,testInt):
+            if printUpdate == True:
+                print('Calculating for design '+str(designind+1)+' under '+str(testNum)+' tests...')
+            margUtilArr[designind][int(testNum/testInt)] = baseLoss - getDesignUtility(priordatadict=scDict.copy(), lossdict=lossDict, designlist=[design],
+                                numtests=testNum, utildict=utilDict)[0]
+    return margUtilArr
+
 def plotMargUtil(margUtilArr,testMax,testInt,al=0.6,titleStr=''):
     '''Produces a plot of an array of marginal utility increases '''
     x1 = range(0, testMax + 1, testInt)
     colors = cm.rainbow(np.linspace(0, 1, margUtilArr.shape[0]))
     for tnind in range(margUtilArr.shape[0]):
-        plt.plot(x1, margUtilArr[tnind], linewidth=4, color=colors[tnind], label='TN ' + str(tnind + 1), alpha=al)
+        plt.plot(x1, margUtilArr[tnind], linewidth=4, color=colors[tnind], label='Design ' + str(tnind + 1), alpha=al)
     plt.legend()
     plt.ylim([0., margUtilArr.max()*1.1])
     plt.xlabel('Number of Tests')
@@ -1774,11 +1809,13 @@ def exampleSCscratchForAlgDebug():
     scDict.update({'transMat':Q})
     # Utility dictionary
     numbayesdraws = 6250
-    utilDict = {'method':'weightsNodeDraw4'}
+    utilDict = {'method':'weightsNodeDraw3'}
     utilDict.update({'numdrawsfordata':6400})
     utilDict.update({'numdrawsforbayes':numbayesdraws})
-    testMax, testInt = 60, 20
+
+    testMax, testInt = 100, 10
     numdrawstouse = int(40000000/numbayesdraws)
+
     scDictTemp = scDict.copy()
     scDictTemp.update({'postSamples':scDict['postSamples'][choice(np.arange(numdraws),size=numdrawstouse,replace=False)],
                        'numPostSamples':numdrawstouse})
@@ -2052,18 +2089,74 @@ def exampleSupplyChainForPaper():
     scDict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     scDict['importerNum'], scDict['outletNum'] = numSN, numTN
     # Generate posterior draws
-    numdraws = 200000  # Evaluate choice here
+    numdraws = 50000  # Evaluate choice here
     scDict['numPostSamples'] = numdraws
     scDict = methods.GeneratePostSamples(scDict)
-    # Sourcing-probability matrix; EVALUATE CHOICE HERE
-    scDict['transMat'] = np.tile(np.sum(scDict['N'], axis=0) / np.sum(scDict['N']), (numTN, 1))
-    # Loss specifications
+    # Define a loss dictionary
     underWt, t = 1., 0.1
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
     riskdict = {'name': 'Parabolic', 'threshold': t}
     marketvec = np.ones(numTN + numSN)
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    # Path sampling
+    # lossMat = lossMatrix(scDict['postSamples'], lossDict)
+    # lossDict.update({'lossMat':lossMat})
+
+    # Sourcing matrix
+    #todo: EVALUATE HERE
+    Q = np.array([[0.4, 0.6], [0.8, 0.2], [0.5, 0.5]])
+    scDict.update({'transMat': Q})
+
+    # Utility dictionary
+    numbayesdraws = 4000
+    utilDict = {'method': 'weightsNodeDraw4'}
+    utilDict.update({'numdrawsfordata': 5000})
+    utilDict.update({'numdrawsforbayes': numbayesdraws})
+
+    # PATH SAMPLING
+    # Design
+    # todo: EVALUATE HERE
+    design1 = np.array([[0., 0.],[0., 0.],[1., 0.]])
+    design2 = np.array([[1/6, 1/6], [1/6, 1/6], [1/6, 1/6]])
+    design3 = np.array([[1/3, 0.], [1/3, 1/3], [0., 0.]])
+
+    testMax, testInt = 120, 12
+    numdrawstouse = int(25000000 / numbayesdraws)
+
+    scDictTemp = scDict.copy()
+    scDictTemp.update(
+        {'postSamples': scDict['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)],
+         'numPostSamples': numdrawstouse})
+    margUtilArr = GetMargUtilForDesigns([design1,design2,design3],scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt)
+    '''
+    array([[0.        , 0.0145149 , 0.02287273, 0.02812165, 0.03168771,
+        0.03450546, 0.03635892, 0.03834322, 0.03957304, 0.04066051,
+        0.04168961],
+       [0.        , 0.01255562, 0.02198114, 0.02966379, 0.03586405,
+        0.0408792 , 0.04568903, 0.0493647 , 0.05320499, 0.05538425,
+        0.05842857],
+       [0.        , 0.01547988, 0.0255074 , 0.03283877, 0.03766472,
+        0.04257282, 0.0457909 , 0.04891098, 0.05159486, 0.05323978,
+        0.05547674]])
+    '''
+
+
+
+
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
+    #################################################
     testBudget = 50
     Umat = np.zeros((numTN, numSN, testBudget + 1))
     for currTN in range(numTN):
