@@ -2203,10 +2203,68 @@ def exampleSupplyChainForPaper():
         0.02611785, 0.02830608, 0.02996017, 0.03142522, 0.03250609,
         0.03382749]])
     '''
+    ### ANOTHER RISK CHANGE
+    lossDict['scoreDict'].update({'underEstWt': 1.})
+    lossDict['riskDict'].update({'name': 'Check', 'slope': 0.7, 'threshold': 0.2})
+    margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'])
+    print('Changing risk...')
+    print(margUtilArr)
+    '''
+        margUtilArr = np.
+    '''
+    ### SWITCH TO NODE SAMPLING
+    design1 = np.array([0., 0., 1.])
+    design2 = np.array([1/3, 2/3, 0.])
+    design3 = np.array([1 / 3, 1 / 3, 1/3])
 
+    lossDict['scoreDict'].update({'underEstWt': 1.})
+    lossDict['riskDict'].update({'name': 'Check', 'slope': 0.5, 'threshold': 0.4})
 
+    Q = np.array([[0.4, 0.6], [0.8, 0.2], [0.1, 0.9]])
+    scDictTemp.update({'transMat': Q})
 
+    margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'])
+    print('Node sampling, pt. 1...')
+    print(margUtilArr)
+    '''
+        margUtilArr = np.
+    '''
 
+    ### USE A DIFFERENT Q
+    Q = np.array([[0.7, 0.3], [0.5, 0.5], [0.4, 0.6]])
+    scDictTemp.update({'transMat': Q})
+
+    margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'])
+    print('Node sampling, pt. 2...')
+    print(margUtilArr)
+
+    '''
+        margUtilArr = np.
+    '''
+
+    ### USE A DIFFERENT Q
+    Q = np.array([[0.5, 0.5], [0.2, 0.8], [0.7, 0.3]])
+    scDictTemp.update({'transMat': Q})
+
+    margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
+                                        utilDict, printUpdate=True)
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'])
+    print('Node sampling, pt. 3...')
+    print(margUtilArr)
+
+    '''
+        margUtilArr = np.
+    '''
 
     #################################################
     #################################################
