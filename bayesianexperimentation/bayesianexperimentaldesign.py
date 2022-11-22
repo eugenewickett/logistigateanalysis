@@ -2129,7 +2129,7 @@ def exampleSupplyChainForPaper():
 
 
     testMax, testInt = 120, 12
-    numdrawstouse = int(25000000 / numbayesdraws)
+    numdrawstouse = int(21000000 / numbayesdraws)
 
     ### INITIAL BASELINE RUN ###
     scDictTemp = scDict.copy()
@@ -2167,6 +2167,8 @@ def exampleSupplyChainForPaper():
        [0.        , 0.0454264 , 0.07064019, 0.0886928 , 0.10114694,
         0.11162508, 0.1215812 , 0.12834136, 0.13454905, 0.13968609,
         0.14433733]])
+     plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='AbsDiff Loss with $v=5$')
     '''
     ### CHANGE LOSS
     lossDict['scoreDict'].update({'underEstWt': 0.1})
@@ -2184,6 +2186,8 @@ def exampleSupplyChainForPaper():
        [0.        , 0.00163834, 0.00270732, 0.00348208, 0.00408013,
         0.00458155, 0.00492762, 0.00525975, 0.00550293, 0.00578468,
         0.005978  ]])
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='AbsDiff Loss with $v=0.1$')
     '''
     ### CHANGE RISK
     lossDict['scoreDict'].update({'underEstWt': 1.})
@@ -2202,6 +2206,8 @@ def exampleSupplyChainForPaper():
        [0.        , 0.01005523, 0.01588727, 0.02056157, 0.02362531,
         0.02611785, 0.02830608, 0.02996017, 0.03142522, 0.03250609,
         0.03382749]])
+        plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Check risk with $m=0.3,l=0.8$')
     '''
     ### ANOTHER RISK CHANGE
     lossDict['scoreDict'].update({'underEstWt': 1.})
@@ -2213,7 +2219,14 @@ def exampleSupplyChainForPaper():
     print('Changing risk...')
     print(margUtilArr)
     '''
-        margUtilArr = np.
+        margUtilArr = np.array([[0.,   0.01644265, 0.02460293, 0.03005058, 0.03385032, 0.03658151,
+  0.03873411, 0.04037822, 0.04188317, 0.04310602, 0.04397217],
+ [0.,         0.01293127, 0.02310872, 0.03158224, 0.03728093, 0.04318068,
+  0.04756367, 0.05112691, 0.05484714, 0.05787268, 0.06109766],
+ [0.,         0.01612598, 0.02613085, 0.03420432, 0.04007275, 0.04461071,
+  0.04796965, 0.05104828, 0.05354919, 0.05586449, 0.05775172]])
+  plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Check risk with $m=0.7,l=0.2$')
     '''
     ### SWITCH TO NODE SAMPLING
     design1 = np.array([0., 0., 1.])
@@ -2233,7 +2246,14 @@ def exampleSupplyChainForPaper():
     print('Node sampling, pt. 1...')
     print(margUtilArr)
     '''
-        margUtilArr = np.
+        margUtilArr = np.array([[0.  ,       0.0027877,  0.00586635, 0.00854394, 0.01091177, 0.0128913,
+  0.01444749, 0.0163909,  0.01779935, 0.0191949,  0.02086951],
+ [0.,         0.0114507,  0.02043054, 0.02721899, 0.03256057, 0.03735191,
+  0.04185713, 0.0445113,  0.04816195, 0.05028869, 0.0523396 ],
+ [0.,         0.00868937, 0.01634485, 0.02268964, 0.02784634, 0.03230441,
+  0.036765,   0.03982461, 0.0432108,  0.04605967, 0.04892462]])
+  plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Node sampling with $Q_1$')
     '''
 
     ### USE A DIFFERENT Q
@@ -2248,7 +2268,14 @@ def exampleSupplyChainForPaper():
     print(margUtilArr)
 
     '''
-        margUtilArr = np.
+        margUtilArr = np.array([[0.  ,       0.00789695, 0.01417126, 0.01970823, 0.0238253,  0.02734,
+  0.030068,   0.03258318, 0.03471503, 0.03671753, 0.03811212],
+ [0.,         0.01340148, 0.02357268, 0.03100924, 0.03646409, 0.0409849,
+  0.0453304,  0.04854183, 0.05144865, 0.05394407, 0.05594722],
+ [0.,         0.01192867, 0.02081901, 0.0287546,  0.03455062, 0.03946178,
+  0.04381905, 0.04698497, 0.05024865, 0.05319858, 0.05590313]])
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Node sampling with $Q_2$')
     '''
 
     ### USE A DIFFERENT Q
@@ -2263,7 +2290,14 @@ def exampleSupplyChainForPaper():
     print(margUtilArr)
 
     '''
-        margUtilArr = np.
+        margUtilArr = np.array([[0. ,        0.01204654, 0.02025737, 0.02598926, 0.03022982, 0.03367799,
+  0.03646451, 0.03878462, 0.0407654,  0.0426331,  0.04398041],
+ [0.,         0.01281711, 0.02175156, 0.02822491, 0.03368783, 0.03808503,
+  0.04187413, 0.04466803, 0.04742936, 0.04983957, 0.05220403],
+ [0.,         0.0132374,  0.02254596, 0.03029985, 0.03649045, 0.0411599,
+  0.04573236, 0.04932833, 0.05242475, 0.05530244, 0.05732164]])
+  plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Node sampling with $Q_3$')
     '''
 
     #################################################
