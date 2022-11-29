@@ -1669,6 +1669,31 @@ UmatTN = np.array([[0.16098932, 0.15988504, 0.15885114, 0.1578939 , 0.15698791,
 
     return sol, maxU
 
+
+def plotAlloc(allocArr,paramList,testInt=1,al=0.6,titleStr='',colors=[],dashes=[],labels=[]):
+    '''
+    Produces a plot of an array of allocations relative to the parameters in paramList.
+    allocArr should have numTN rows and |paramList| columns
+    '''
+    if len(colors) == 0:
+        colors = cm.rainbow(np.linspace(0, 1, allocArr.shape[0]))
+    if len(dashes) == 0:
+        dashes = [[1,tnind] for tnind in range(allocArr.shape[0])]
+    if len(labels) == 0:
+        labels = ['Test Node '+str(tnind+1) for tnind in range(allocArr.shape[0])]
+    for tnind in range(allocArr.shape[0]):
+        plt.plot(paramList, allocArr[tnind]*testInt, dashes=dashes[tnind], linewidth=2.5, color=colors[tnind],
+                 label=labels[tnind], alpha=al)
+    plt.legend()
+    plt.ylim([0., allocArr.max()*testInt*1.1])
+    plt.xlabel('Parameter Value')
+    plt.ylabel('Test Node Allocation')
+    plt.title('Test Node Allocation\n'+titleStr)
+    plt.savefig('NODEALLOC.png')
+    plt.show()
+    plt.close()
+    return
+
 def allocationExample():
     '''Use example outputs to create illustration of allocation decision'''
     Umat = np.array([[[0.16098932, 0.15926648, 0.15765788, 0.15617675, 0.15477563,
@@ -2234,9 +2259,9 @@ def exampleSupplyChainForPaper():
     design3 = np.array([1 / 3, 1 / 3, 1/3])
 
     lossDict['scoreDict'].update({'underEstWt': 1.})
-    lossDict['riskDict'].update({'name': 'Check', 'slope': 0.5, 'threshold': 0.4})
+    lossDict['riskDict'].update({'name': 'Parabolic', 'slope': 0.5, 'threshold': 0.2})
 
-    Q = np.array([[0.4, 0.6], [0.8, 0.2], [0.1, 0.9]])
+    Q = np.array([[0.1, 0.9], [0.8, 0.2], [0.05, 0.95]])
     scDictTemp.update({'transMat': Q})
 
     margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
@@ -2246,18 +2271,21 @@ def exampleSupplyChainForPaper():
     print('Node sampling, pt. 1...')
     print(margUtilArr)
     '''
-        margUtilArr = np.array([[0.  ,       0.0027877,  0.00586635, 0.00854394, 0.01091177, 0.0128913,
-  0.01444749, 0.0163909,  0.01779935, 0.0191949,  0.02086951],
- [0.,         0.0114507,  0.02043054, 0.02721899, 0.03256057, 0.03735191,
-  0.04185713, 0.0445113,  0.04816195, 0.05028869, 0.0523396 ],
- [0.,         0.00868937, 0.01634485, 0.02268964, 0.02784634, 0.03230441,
-  0.036765,   0.03982461, 0.0432108,  0.04605967, 0.04892462]])
+    margUtilArr = np.array([[0.        , 0.00184836, 0.00393095, 0.0057281 , 0.00702056,
+        0.00783352, 0.00901581, 0.01029807, 0.01056239, 0.01184937,
+        0.01263652],
+       [0.        , 0.008048  , 0.01560508, 0.02168453, 0.02580308,
+        0.02936781, 0.03256634, 0.03582316, 0.03801726, 0.03989399,
+        0.04210229],
+       [0.        , 0.00595198, 0.01185622, 0.01647211, 0.02071877,
+        0.02423783, 0.02788743, 0.03048632, 0.03273938, 0.03543375,
+        0.03774866]])
   plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
                  labels=['Focused', 'Balanced', 'Adapted'],titleStr='Node sampling with $Q_1$')
     '''
 
     ### USE A DIFFERENT Q
-    Q = np.array([[0.7, 0.3], [0.5, 0.5], [0.4, 0.6]])
+    Q = np.array([[0.2, 0.8], [0.4, 0.6], [0.1, 0.9]])
     scDictTemp.update({'transMat': Q})
 
     margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
@@ -2618,58 +2646,60 @@ def allocationCaseStudy():
            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
 
     (numTN, numSN) = rd2_N.shape
-    s, r = 1., 1.,
+    s, r = 1., 1.
     CSdict2 = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
                                        numSamples=0, dataType='Tracked', randSeed=2)
-    CSdict2['diagSens'] = s
-    CSdict2['diagSpec'] = r
+    CSdict2['diagSens'], CSdict2['diagSpec'] = s, r
     CSdict2 = util.GetVectorForms(CSdict2)
-    CSdict2['N'] = rd2_N
-    CSdict2['Y'] = rd2_Y
-    CSdict2['prior'] = methods.prior_normal()  # Evalutate choice here
-    # MCMC settings
+    CSdict2['N'], CSdict2['Y'] = rd2_N, rd2_Y
+    CSdict2['prior'] = methods.prior_normal()
     CSdict2['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    CSdict2['importerNum'] = numSN
-    CSdict2['outletNum'] = numTN
+    CSdict2['importerNum'], CSdict2['outletNum'] = numSN, numTN
     # Generate posterior draws
-    numdraws = 200000  # Evaluate choice here
+    numdraws = 50000  # Evaluate choice here
     CSdict2['numPostSamples'] = numdraws
     CSdict2 = methods.GeneratePostSamples(CSdict2)
-    # Sourcing-probability matrix; EVALUATE CHOICE HERE
-    CSdict2['transMat'] = np.tile(np.sum(CSdict2['N'], axis=0) / np.sum(CSdict2['N']), (numTN, 1))
 
-    # Utility specification
-    underWt, t = 1., 0.1
+    # Create a normalized sourcing matrix with element minimums
+    elemMin = 0.01
+    normConstant = elemMin/(1-numSN/100) # Only works for numSN<100
+    sourceMatNorm = CSdict2['N']/(np.reshape(np.tile(np.sum(CSdict2['N'],axis=1),numSN),(numSN,numTN)).T)
+    newSourceMat = sourceMatNorm+normConstant
+    newSourceMat = newSourceMat/(np.reshape(np.tile(np.sum(newSourceMat,axis=1),numSN),(numSN,numTN)).T)
+    CSdict2['transMat'] = newSourceMat
+
+    # Loss specification
+    underWt, t = 1., 0.2
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name':'Parabolic', 'threshold': t}
+    riskdict = {'name': 'Parabolic', 'threshold': t}
     marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreFunc': score_diffArr, 'scoreDict': scoredict, 'riskFunc': risk_parabolic, 'riskDict': riskdict,
-                'marketVec': marketvec}
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
 
-    # Node design
-    totalTests = 20
-    Ndraws = 50
-    Umat = np.zeros((numTN, totalTests + 1))  # Each row corresponds to a test node, each column to a number of tests
-    timesCS2 = []
-    for currTNind in range(numTN):
-        newtime = time.time()
-        design = np.zeros((numTN))
-        design[currTNind] = 1.
-        for numTest in range(totalTests + 1):
-            lossveclist = getDesignUtility(priordatadict=CSdict2.copy(), lossdict=lossDict.copy(), designlist=[design],
-                                           numtests=numTest, omeganum=1, type=['node', CSdict2['transMat']],
-                                           method='weightsNodeDraw', printUpdate=True, numNdraws=Ndraws)
-            Umat[currTNind][numTest] = lossveclist[0][0]
-            print('TN ' + str(currTNind) + ', numTest = ' + str(numTest) + ' done')
-            timesCS2.append(time.time() - newtime)
+    # Utility calculation specification
+    numbayesdraws, numdrawsfordata = 3000, 3500
+    utilDict = {'method': 'weightsNodeDraw3'}
+    utilDict.update({'numdrawsfordata': numdrawsfordata})
+    utilDict.update({'numdrawsforbayes': numbayesdraws})
 
-    plt.plot(timesCS2)
-    '''
-    Umat = 
-    '''
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 10, 5
+    numdrawstouse = int(11000000 / numbayesdraws)
 
-    sol, func = GetOptAllocation(Umat)
-    print(sol)
+    # Withdraw a subset of MCMC prior draws
+    dictTemp = CSdict2.copy()
+    dictTemp.update({'postSamples': CSdict2['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)], 'numPostSamples': numdrawstouse})
+
+    # Generate a marginal utility matrix for each parameter adjustment
+    estWts = [0.05,0.1,1,10,20]
+    for currEstWt in estWts:
+        tempLossDict = lossDict.copy()
+        tempLossDict['scoreDict'].update({'underEstWt':currEstWt})
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict, utilDict, printUpdate=True)
+
+
+
+
+
 
     ######################################################################
     ######################################################################
@@ -2687,221 +2717,134 @@ def allocationCaseStudy():
        [ 0.,  0.,  5.,  2.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
 
     # Some summaries
-    TNtesttotals = np.sum(rd3_N, axis=1)
-    TNsfptotals = np.sum(rd3_Y, axis=1)
-    TNrates = np.divide(TNsfptotals,TNtesttotals)
+    #TNtesttotals = np.sum(rd3_N, axis=1)
+    #TNsfptotals = np.sum(rd3_Y, axis=1)
+    #TNrates = np.divide(TNsfptotals,TNtesttotals)
 
     (numTN, numSN) = rd3_N.shape
-    s,r = 1., 1.,
+    s, r = 1., 1.
     CSdict3 = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
-                                       numSamples=0,dataType='Tracked',randSeed=2)
-    CSdict3['diagSens'] = s
-    CSdict3['diagSpec'] = r
+                                        numSamples=0, dataType='Tracked', randSeed=2)
+    CSdict3['diagSens'], CSdict3['diagSpec'] = s, r
     CSdict3 = util.GetVectorForms(CSdict3)
-    CSdict3['N'] = rd3_N
-    CSdict3['Y'] = rd3_Y
-    CSdict3['prior'] = methods.prior_normal() # EVALUATE CHOICE HERE
-    # MCMC settings
+    CSdict3['N'], CSdict3['Y'] = rd3_N, rd3_Y
+    CSdict3['prior'] = methods.prior_normal()
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    CSdict3['importerNum'] = numSN
-    CSdict3['outletNum'] = numTN
+    CSdict3['importerNum'], CSdict3['outletNum'] = numSN, numTN
     # Generate posterior draws
-    numdraws = 200000 # Evaluate choice here
+    numdraws = 50000  # Evaluate choice here
     CSdict3['numPostSamples'] = numdraws
     CSdict3 = methods.GeneratePostSamples(CSdict3)
-    # Sourcing-probability matrix; EVALUATE CHOICE HERE
-    CSdict3['transMat'] = np.tile(np.sum(CSdict3['N'],axis=0)/np.sum(CSdict3['N']),(4,1))
 
-    # Utility specification
-    underWt, t = 1., 0.1
+    # Create a normalized sourcing matrix with element minimums
+    elemMin = 0.01
+    normConstant = elemMin / (1 - numSN / 100)  # Only works for numSN<100
+    sourceMatNorm = CSdict3['N'] / (np.reshape(np.tile(np.sum(CSdict3['N'], axis=1), numSN), (numSN, numTN)).T)
+    newSourceMat = sourceMatNorm + normConstant
+    newSourceMat = newSourceMat / (np.reshape(np.tile(np.sum(newSourceMat, axis=1), numSN), (numSN, numTN)).T)
+    CSdict3['transMat'] = newSourceMat
+
+    # Loss specification
+    underWt, t = 1., 0.2
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name':'Parabolic', 'threshold': t}
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict}
+    riskdict = {'name': 'Parabolic', 'threshold': t}
+    marketvec = np.ones(numTN + numSN)
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
 
-    '''
-    # Check timing improvement after vectorizing
-    start = time.time()
-    design = np.array([0.,1.,0.,0.])
-    Ndraws = 10
-    numTest = 20
-    lossveclist = getDesignUtility(priordatadict=CSdict3.copy(), lossdict=lossDict.copy(), designlist=[design],
-                                   numtests=numTest, omeganum=1, type=['node', CSdict3['transMat']],
-                                   method='weightsNodeDraw', printUpdate=True, numNdraws=Ndraws)
-    print('Loss: '+str(lossveclist[0]))
-    print('Time: '+str(time.time()-start))
-    '''
+    # Utility calculation specification
+    numbayesdraws, numdrawsfordata = 3000, 3100
+    utilDict = {'method': 'weightsNodeDraw3'}
+    utilDict.update({'numdrawsfordata': numdrawsfordata})
+    utilDict.update({'numdrawsforbayes': numbayesdraws})
 
-    # Node design
-    totalTests = 105
-    interval = 15
-    Ndraws = 2000
-    numpriordrawstouse = int(numdraws/Ndraws)
-    Umat = np.zeros((numTN,int(totalTests/interval)+1)) # Each row corresponds to a test node, each column to a number of tests
-    timesCS3 = []
-    for currTNind in range(numTN):
-        design = np.zeros((numTN))
-        design[currTNind] = 1.
-        for numTest in range(0,totalTests+1,interval):
-           # newtime = time.time()
-            copydatadict = CSdict3.copy()
-            newranddrawinds = choice([i for i in range(numdraws)],size=numpriordrawstouse,replace=False)
-            copydatadict.update({'postSamples':CSdict3['postSamples'][newranddrawinds]})
-            #### REMOVE LATER ####
-            bayesdrawinds = choice([i for i in range(numdraws)],size=5000,replace=False)
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 200, 5
+    numdrawstouse = int(10000000 / numbayesdraws)
 
-            lossveclist = getDesignUtility(priordatadict=copydatadict, lossdict=lossDict.copy(), designlist=[design],
-                                           numtests=numTest, omeganum=1, type=['node', CSdict3['transMat']],
-                                           method='weightsNodeDraw', printUpdate=True, numNdraws=Ndraws
-                                           , sampsforevalbayes=CSdict3['postSamples'][bayesdrawinds])
-            Umat[currTNind][int(numTest/interval)] = lossveclist[0][0]
-            print('TN '+str(currTNind)+', numTest = '+str(numTest) +' done')
-           # timesCS3.append(time.time()-newtime)
+    # Withdraw a subset of MCMC prior draws
+    dictTemp = CSdict3.copy()
+    dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)],
+         'numPostSamples': numdrawstouse})
 
-    x=range(0,totalTests+1,interval)
-    for tnind in range(numTN):
-        plt.plot(x,Umat[tnind], label='TN ' + str(tnind + 1))
-    plt.legend()
-    plt.ylim([0.7, 1.1])
-    plt.xlabel('Number of tests')
-    plt.ylabel('Loss')
-    plt.title('$|\Gamma|='+str(numpriordrawstouse)+',M='+str(Ndraws)+'$')
-    plt.show()
+    # Generate a marginal utility matrix for each parameter adjustment
+    utilList = []
+    estWts = [0.05, 0.1, 1, 10, 20]
+    for currEstWt in estWts:
+        tempLossDict = lossDict.copy()
+        tempLossDict['scoreDict'].update({'underEstWt': currEstWt})
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, tempLossDict, utilDict, printUpdate=True)
+        print('Marginal utilities for estimation error weight of '+str(currEstWt)+':')
+        print(currMargUtilMat)
+        utilList.append(currMargUtilMat)
 
-    '''
-    USE M DATA DRAWS, |\GAMMA|/M NUMBER OF PRIOR DRAWS, with 200,000 STARTING PRIOR DRAWS
-    *** M=2000
-    np.average(timesCS3) = 3.2s
-    Umat = np.array([[0.98067056, 0.95281403, 0.88747143, 0.87229408, 0.82474895, 0.77961922, 0.7335441 , 0.70012848],
-       [0.928117  , 0.97666997, 0.89718666, 0.83336684, 0.80884343, 0.76045173, 0.75539207, 0.70752464],
-       [0.92426472, 0.93498055, 0.91866491, 0.87537977, 0.84113115, 0.78631999, 0.7732971 , 0.72151609],
-       [0.97604988, 0.95225787, 0.8990195 , 0.84358236, 0.82414528, 0.78766326, 0.73601629, 0.6788897 ]])
+    ''' GENERATED 29-NOV
+    estWts=0.05
+    currMargUtilMat05 = np.array([[0.   ,      0.00576185, 0.01100239, 0.01385138, 0.01612649, 0.01832296,
+  0.02134625, 0.02360469, 0.02591977, 0.02759011, 0.02943672, 0.03072441,
+  0.03229022, 0.03412024, 0.03612216, 0.03716075, 0.03848029, 0.04080149,
+  0.04264224, 0.04329342, 0.04515046, 0.04712259, 0.04829025, 0.05098432,
+  0.05064744, 0.05347186, 0.05504937, 0.05716478, 0.05754498, 0.0583737,
+  0.06097388, 0.06377641, 0.06392104, 0.064814,   0.06746955, 0.06739904,
+  0.07007328, 0.07115842, 0.07289314, 0.07371235, 0.07394673],
+ [0.,         0.00867514, 0.01466471, 0.01837373, 0.02193253, 0.02513119,
+  0.02804945, 0.03027397, 0.03241935, 0.03483767, 0.03777431, 0.0385565,
+  0.04108989, 0.04302853, 0.04426304, 0.04635703, 0.04745852, 0.04840028,
+  0.05069803, 0.05201403, 0.05311701, 0.05528665, 0.05565639, 0.05811713,
+  0.0580791,  0.05983895, 0.06071548, 0.06337236, 0.06378854, 0.06568773,
+  0.06636505, 0.06757199, 0.06868632, 0.06987256, 0.07178076, 0.07319505,
+  0.07500517, 0.07607656, 0.0778317,  0.07855393, 0.07961158],
+ [0.,         0.00520452, 0.00971953, 0.01364587, 0.0167489,  0.01887599,
+  0.02074921, 0.02279577, 0.02486231, 0.027188,   0.02958499, 0.03168798,
+  0.03248992, 0.0349256,  0.03732637, 0.03856075, 0.03948103, 0.04250011,
+  0.04402039, 0.0454288,  0.04678349, 0.04987723, 0.04908477, 0.0521021,
+  0.05244709, 0.05392834, 0.05454159, 0.05818366, 0.05834053, 0.05826901,
+  0.05985889, 0.06122789, 0.06331188, 0.06395946, 0.06604659, 0.06793778,
+  0.06814556, 0.07063863, 0.07181205, 0.07318194, 0.07335385],
+ [0.,         0.00470894, 0.00823224, 0.01118718, 0.01329261, 0.01528969,
+  0.0172078,  0.01967189, 0.02138792, 0.02241452, 0.02384324, 0.02539123,
+  0.02694012, 0.02759345, 0.02906612, 0.02999236, 0.03186161, 0.03198067,
+  0.03385147, 0.03470381, 0.03668821, 0.03669794, 0.03760487, 0.03879746,
+  0.04012802, 0.04063279, 0.04203949, 0.04217946, 0.04527283, 0.04534564,
+  0.04689576, 0.04743839, 0.04813029, 0.04881674, 0.04941262, 0.05228234,
+  0.05206925, 0.05371661, 0.05391299, 0.05634011, 0.05598143]])
     
-    *** M=1000
-    np.average(timesCS3) = 2.9s
-    Umat = np.array([[1.00995903, 0.94548474, 0.92868234, 0.88320227, 0.85690762, 0.8118365 , 0.78940215, 0.74488698],
-       [0.96271731, 0.92090422, 0.89336339, 0.88308491, 0.85906307, 0.81849683, 0.79507968, 0.75711148],
-       [0.95797922, 0.90901738, 0.91852405, 0.90561518, 0.87438846,0.82204204, 0.79477212, 0.76818411],
-       [0.96418335, 0.95387384, 0.91679718, 0.88618606, 0.86940872, 0.8048211 , 0.78843956, 0.75353296]])
-    
-    *** M=500
-    np.average(timesCS3) = 2.8s
-    Umat = np.array([[0.99362292, 0.95391243, 0.93120021, 0.90647519, 0.87824061, 0.85122474, 0.8366233 , 0.792814  ],
-       [0.9708188 , 0.94156565, 0.91948795, 0.89323195, 0.85360336, 0.83281863, 0.80906086, 0.78932969],
-       [0.98270186, 0.96323847, 0.93126781, 0.91658087, 0.89325346, 0.8628445 , 0.83782761, 0.7943723 ],
-       [0.99168905, 0.95116524, 0.92558639, 0.88608729, 0.87762668, 0.84655942, 0.8280769 , 0.78693964]])
-    
-    *** M=100
-    np.average(timesCS3) = 4.0s
-    Umat = np.array([[0.98928832, 0.95981478, 0.94747707, 0.91989105, 0.89526762, 0.88079335, 0.85161295, 0.8356796 ],
-       [0.98217985, 0.94194538, 0.91628185, 0.89429232, 0.87910381, 0.8549943 , 0.84949863, 0.83865939],
-       [0.97379909, 0.96309963, 0.94180062, 0.92293474, 0.89906082, 0.87556083, 0.86272134, 0.85979873],
-       [0.9801429 , 0.96273764, 0.94070239, 0.9076956 , 0.89011939, 0.88247594, 0.86620471, 0.8370418 ]])
-    
-    *** M=40
-    np.average(timesCS3) = 3.8s
-    Umat = np.array([[0.98827473, 0.96222585, 0.93749669, 0.91768836, 0.91434735, 0.87405288, 0.8679729 , 0.85130904],
-       [0.98171074, 0.95025886, 0.92711664, 0.90163004, 0.87941683, 0.86695816, 0.84652245, 0.84667302],
-       [0.98736391, 0.9630785 , 0.93942201, 0.92997019, 0.90717367, 0.88567211, 0.87125627, 0.83158935],
-       [0.98562489, 0.96013251, 0.93678417, 0.90723914, 0.90912313, 0.87558426, 0.86929468, 0.8578291 ]])
-    
-    *** M=20
-    np.average(timesCS3) = 4.6s
-    Umat = np.array([[0.98567279, 0.96517711, 0.93536624, 0.91468124, 0.89842642, 0.87905967, 0.85412436, 0.83762237],
-       [0.98761566, 0.94437578, 0.91093921, 0.89734869, 0.88327318, 0.86192775, 0.87171761, 0.83372981],
-       [0.98279698, 0.96779099, 0.95466612, 0.90741624, 0.9052021 , 0.88289836, 0.87217151, 0.85544163],
-       [0.9825055 , 0.96376463, 0.93683029, 0.90575263, 0.89492454, 0.90356725, 0.8694151 , 0.83251713]])
-    
-    *** M=10
-    np.average(timesCS3) = 4.7s
-    Umat = np.array([[0.98354406, 0.96131958, 0.9474465 , 0.90456119, 0.88409647, 0.89147485, 0.88157298, 0.83549531],
-       [0.98312415, 0.95158531, 0.94153008, 0.90223892, 0.89005113, 0.85903567, 0.85458103, 0.83159513],
-       [0.98479072, 0.97163025, 0.93200528, 0.92386715, 0.90822432, 0.87014174, 0.87669662, 0.85078234],
-       [0.98324395, 0.96461864, 0.95206589, 0.92741522, 0.8800154, 0.89102164, 0.86157707, 0.86832158]])
-        
-    *** M=5
-    np.average(timesCS3) = 6.1s
-    Umat = np.array([[0.98254771, 0.96741051, 0.95268343, 0.91185512, 0.86554361, 0.89955377, 0.85469698, 0.85871549],
-       [0.98532653, 0.9375357 , 0.92812195, 0.92119669, 0.88553952, 0.84955029, 0.8463012 , 0.84301179],
-       [0.98564161, 0.95933298, 0.91836828, 0.94285184, 0.89849704, 0.88418286, 0.86694746, 0.862887  ],
-       [0.98434649, 0.97385737, 0.94038171, 0.9201454 , 0.92690679, 0.86779582, 0.91991901, 0.85347183]])
-    
-    *** M=2
-    np.average(timesCS3) = 8.9s
-    Umat = np.array([[0.98509655, 0.93693119, 0.9707804 , 0.91026216, 0.86900579, 0.87638193, 0.88572094, 0.83479476],
-       [0.98478853, 0.91104233, 0.88604957, 0.92114516, 0.92234763, 0.86605125, 0.81069867, 0.90646071],
-       [0.98550795, 0.9534903 , 0.9551045 , 0.96146545, 0.89636497, 0.89132722, 0.92996513, 0.90897101],
-       [0.9845852 , 0.96369738, 0.93610794, 0.89810616, 0.88341083, 0.88903381, 0.87502481, 0.80356654]])
-    
-    *** M=1
-    np.average(timesCS3) = 11.8s
-    Umat = np.array([[0.98471926, 0.91436823, 0.91024549, 0.91939064, 0.94641962, 0.83221897, 0.78204211, 0.83583445],
-       [0.98471926, 0.95923774, 0.85349458, 0.95443514, 0.88693636, 0.83123622, 0.79673323, 0.82472814],
-       [0.98471926, 1.01116969, 1.00325932, 0.93160029, 0.96946013, 0.96346874, 0.83961313, 0.85954778],
-       [0.98471926, 0.98596089, 0.92874479, 0.9373857 , 0.82003715, 0.9563321 , 0.84101559, 0.82001683]])
-    
-    
-    *** |\Gamma|=20k,M=50 ***
-    timesCS3 = [105.91748285293579, 135.3059422969818, 139.53473544120789, 149.64654564857483, 156.75498580932617, 145.7229299545288, 160.2194368839264, 150.3439803123474, 147.23107814788818, 148.58909559249878, 163.7333037853241, 157.5314040184021, 118.7376766204834, 98.95074486732483, 98.57726192474365, 100.13309693336487, 100.51112079620361, 100.08592343330383, 98.67196726799011, 98.84953260421753, 98.53736805915833, 99.20558142662048, 143.64247608184814, 131.75752091407776, 138.7707920074463, 145.45087790489197, 146.461439371109, 298.30589509010315, 558.820209980011, 524.7700266838074, 495.8268766403198, 501.726012468338, 156.93691611289978, 107.28574919700623, 107.79849624633789, 110.79569339752197, 118.02573823928833, 134.21507596969604, 145.73090744018555, 150.3717167377472, 141.31466603279114, 143.83355975151062, 138.3009569644928, 143.93805861473083, 143.82328343391418, 139.48495650291443, 141.41061162948608, 140.62416529655457, 145.6337854862213, 144.45143055915833, 145.55410718917847, 150.37243485450745, 147.25791478157043, 143.2146496772766, 148.20952200889587, 133.53133845329285, 115.49643683433533, 109.12407493591309, 151.17412090301514, 160.64856553077698, 157.80044984817505, 159.5082883834839, 151.3313694000244, 148.2728066444397, 127.52445816993713, 140.93992829322815, 146.29556322097778, 133.96031713485718, 143.57240200042725, 141.73860144615173, 144.75994062423706, 150.13053154945374, 145.58882021903992, 145.71080875396729, 145.73229789733887, 142.23303985595703, 121.01296806335449, 134.81388425827026, 147.6807632446289, 146.06766080856323, 147.0434513092041, 146.9042522907257, 149.2964644432068, 142.5600152015686]
-    np.average(timesCS3) = 157s
-    Umat = array([[0.98659092, 0.98435789, 0.98532699, 0.98314307, 0.98129772,
-        0.98137199, 0.97916887, 0.97770051, 0.97187357, 0.96848193,
-        0.97445035, 0.97058591, 0.97384335, 0.96683937, 0.96158667,
-        0.96984381, 0.96077123, 0.96520319, 0.95641225, 0.95406999,
-        0.96091889],
-       [0.98659092, 0.98256808, 0.97940659, 0.97430931, 0.97347314,
-        0.96844948, 0.96841426, 0.96945189, 0.96732297, 0.96562356,
-        0.95752097, 0.95486394, 0.95448491, 0.94386042, 0.94982234,
-        0.9405707 , 0.95104626, 0.94324615, 0.94730013, 0.936786  ,
-        0.93830837],
-       [0.98659092, 0.98471341, 0.98357244, 0.98418671, 0.98080641,
-        0.98018834, 0.97599303, 0.97352732, 0.97830532, 0.98125307,
-        0.96319782, 0.96637849, 0.96873   , 0.96595158, 0.96403784,
-        0.9658987 , 0.96325067, 0.96109487, 0.95795266, 0.96233519,
-        0.9564634 ],
-       [0.98659092, 0.98668339, 0.98266616, 0.98198126, 0.98138409,
-        0.98147752, 0.97673541, 0.97733121, 0.97452152, 0.97683438,
-        0.97441667, 0.9703875 , 0.9632598 , 0.97409112, 0.96787164,
-        0.9665855 , 0.96542834, 0.95864093, 0.96331227, 0.96054582,
-        0.95285571]])
-    print(sol): [1, 15, 4, 0]
-    
-    *** |\Gamma|=20k,M=100, interval=10 ***
-    timesCS3 = [195.36161613464355, 184.09346461296082, 178.8359339237213, 180.05118489265442, 199.1473844051361, 206.9551088809967, 197.84978485107422, 196.25951600074768, 176.93201398849487, 179.9887797832489, 171.53023958206177, 166.00281476974487, 189.03927278518677, 207.68692016601562, 212.2495515346527, 209.4464030265808, 205.49637937545776, 173.41308403015137, 174.019593000412, 176.96291756629944, 180.43703413009644, 177.32192659378052, 170.75574731826782, 175.2253930568695, 185.90557670593262, 181.03219151496887, 181.0628080368042, 176.8497335910797, 185.8476254940033, 216.12358617782593, 281.6818344593048, 359.7568712234497, 253.5883650779724, 205.6299114227295, 228.60847187042236, 236.3867952823639, 224.27204132080078, 213.74841690063477, 209.38239693641663, 208.5648159980774, 214.74888277053833, 228.43085765838623, 217.83722615242004, 215.02551126480103]
-    np.average(timesCS3) = 202s
-    Umat=array([[0.98659092, 0.96847479, 0.95638033, 0.93587908, 0.92214313,
-        0.91480218, 0.904931  , 0.8867622 , 0.88736637, 0.86717298,
-        0.86357414],
-       [0.98659092, 0.96264529, 0.9386604 , 0.92012975, 0.90788151,
-        0.89991065, 0.88193861, 0.87648131, 0.86235389, 0.85293363,
-        0.85667573],
-       [0.98659092, 0.97407214, 0.95236492, 0.95483288, 0.93455143,
-        0.92189687, 0.90334058, 0.89297272, 0.89695444, 0.87222214,
-        0.86837318],
-       [0.98659092, 0.97008114, 0.95516977, 0.94435679, 0.92409844,
-        0.91662676, 0.90344736, 0.89654528, 0.87741522, 0.85978588,
-        0.85445234]])
-    print(sol): [3, 3, 2, 2]
-    
-    *** |\Gamma|=20k,M=150, interval=10 ***
-    timesCS3 =
-    Umat =
-    
-    
-    '''
-    plt.plot(timesCS3)
-    plt.ylim([0,500])
-    plt.title('Computation times (in seconds) for $|\Gamma|=20000,M=100$')
-    plt.show()
-
-    for tnind in range(numTN):
-        plt.plot(Umat[tnind],label='TN '+str(tnind+1))
-    plt.legend()
-    plt.ylim([0.7,1.1])
-    plt.title('$|\Gamma|=200000,M=1$')
-    plt.show()
-
-    sol, func = GetOptAllocation(Umat)
-    print(sol) # [1, 15, 4, 0]
+    estWts=0.1
+    currMargUtilMat01 = np.array([[0.     ,    0.00538566, 0.00982736, 0.01271866, 0.01614273, 0.0187065,
+  0.02148081, 0.02328427, 0.02569313, 0.02816464, 0.02906434, 0.03294419,
+  0.03427416, 0.03554839, 0.03802604, 0.0402396,  0.04201208, 0.04370211,
+  0.04604508, 0.04701197, 0.04917401, 0.05128647, 0.05331882, 0.05470299,
+  0.05646121, 0.05714694, 0.05958611, 0.06187232, 0.06301872, 0.0658529,
+  0.06707725, 0.0679311,  0.07006985, 0.07112333, 0.07314746, 0.07463745,
+  0.07640722, 0.07792824, 0.07936801, 0.08179071, 0.08359132],
+ [0.,         0.00863485, 0.01513486, 0.02022767, 0.02380901, 0.02741131,
+  0.03054472, 0.03335944, 0.0361582,  0.0383826,  0.0406964,  0.04351223,
+  0.04645155, 0.04752101, 0.04992661, 0.05132612, 0.05318971, 0.05547612,
+  0.0578198,  0.05860518, 0.05986239, 0.06267311, 0.06373646, 0.06504439,
+  0.06664858, 0.06771715, 0.06903722, 0.07052199, 0.07237003, 0.07344644,
+  0.07536122, 0.07728796, 0.07783868, 0.07957023, 0.08149631, 0.08212044,
+  0.08420343, 0.08570887, 0.08715367, 0.08829579, 0.09049189],
+ [0.,         0.00601553, 0.01016055, 0.0136719,  0.01637864, 0.01871844,
+  0.02219235, 0.02427686, 0.02598324, 0.02929276, 0.03095159, 0.03322915,
+  0.03583145, 0.03738846, 0.03813133, 0.04155813, 0.04303517, 0.04483378,
+  0.04628292, 0.04860435, 0.0497104,  0.0513058,  0.0536671,  0.05443606,
+  0.05713999, 0.05860847, 0.05964202, 0.06127876, 0.06297694, 0.06418078,
+  0.06574096, 0.06711709, 0.06854069, 0.07014306, 0.07239817, 0.07436774,
+  0.0754217,  0.07728019, 0.07646796, 0.07972664, 0.07962869],
+ [0.,         0.0057881,  0.00910538, 0.01166496, 0.01406586, 0.01629329,
+  0.01788416, 0.01933275, 0.02142486, 0.02387824, 0.02494705, 0.02649628,
+  0.02816281, 0.03051678, 0.03056084, 0.03163437, 0.03419674, 0.03481983,
+  0.03657959, 0.03688013, 0.03884099, 0.0393707,  0.04172191, 0.04238681,
+  0.04320731, 0.04586739, 0.04547022, 0.0469667,  0.0490304,  0.04962204,
+  0.04980033, 0.05208073, 0.05129628, 0.05450986, 0.05484775, 0.05543261,
+  0.05654688, 0.05867876, 0.05898731, 0.06054159, 0.06113953]])
+  
+    estWts=1.
+    currMargUtilMat1 = np.array(
+  '''
+    # Get allocation solutions for different budgets and plot WRT parameter
+    sol05, _ = GetOptAllocation(currMargUtilMat05)
+    sol01, _ = GetOptAllocation(currMargUtilMat01)
+    allocArr = np.vstack((sol05,sol01)).T
 
 
     return
