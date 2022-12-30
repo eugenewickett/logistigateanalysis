@@ -2109,10 +2109,41 @@ def exampleSCscratchForAlgDebug():
     return
 
 def exampleSupplyChainForPaper():
-    N = np.array([[6, 9], [10, 5], [2, 13]])
+
+
+    '''
+    1) N = np.array([[8, 7], [9, 6], [2, 13]])
+    Y = np.array([[3, 0], [4, 1], [0, 0]])
+
+    2) N = np.array([[10, 5], [9, 6], [2, 13]])
+    Y = np.array([[3, 0], [3, 2], [0, 0]]) DEF NOT
+
+    3) N = np.array([[10, 5], [11, 4], [2, 13]])
+    Y = np.array([[3, 0], [4, 1], [0, 0]]) DEF NOT
+
+    4) N = np.array([[5, 10], [8, 7], [3, 12]])
+    Y = np.array([[2, 0], [4, 1], [0, 0]])
+
+    5) N = np.array([[7, 8], [6, 4], [3, 12]])
+    Y = np.array([[3, 0], [3, 1], [0, 0]])
+
+    6) N = np.array([[6, 9], [5, 5], [3, 12]])
+    Y = np.array([[3, 0], [4, 1], [0, 0]]) GOOD ONE; USING THIS 12/30/22
+
+    7) N = np.array([[6, 9], [4, 6], [2, 13]])
+    Y = np.array([[3, 0], [2, 1], [0, 0]]) NOPE
+
+    8) N = np.array([[5, 10], [5, 5], [3, 12]])
+    Y = np.array([[2, 0], [4, 1], [0, 0]]) MAYBE
+
+    9) N = np.array([[8, 7], [5, 5], [3, 12]])
+    Y = np.array([[3, 0], [4, 1], [0, 0]])
+
+    '''
+    N = np.array([[6, 9], [5, 5], [3, 12]])
     Y = np.array([[3, 0], [4, 1], [0, 0]])
     (numTN, numSN) = N.shape
-    s, r = 1., 1.
+    s, r = 0.9, 0.95
     scDict = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
                                        numSamples=0, dataType='Tracked', randSeed=2)
     scDict['diagSens'], scDict['diagSpec'] = s, r
@@ -2163,7 +2194,7 @@ def exampleSupplyChainForPaper():
          'numPostSamples': numdrawstouse})
     margUtilArr = GetMargUtilForDesigns([design1,design2,design3],scDictTemp, testMax, testInt, lossDict,
                                         utilDict, printUpdate=True)
-    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue','red','green'],labels=['Focused', 'Balanced', 'Adapted'])
+    plotMargUtil(margUtilArr, testMax, testInt, colors=['blue','red','green'],labels=['Focused', 'Balanced', 'Adapted'],titleStr='Baseline')
     '''
     margUtilArr = np.array([[0.        , 0.01852929, 0.02953051, 0.03632656, 0.04097865,
         0.04483184, 0.04778626, 0.04974943, 0.05181481, 0.05342801,
@@ -2180,11 +2211,12 @@ def exampleSupplyChainForPaper():
     '''
 
     ### CHANGE LOSS PARAMETERS RUNS ###
-    lossDict['scoreDict'].update({'underEstWt':5.})
+    ### CHANGE SCORE
+    lossDict['scoreDict'].update({'underEstWt':0.1})
     margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
                                         utilDict, printUpdate=True)
     plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
-                 labels=['Focused', 'Balanced', 'Adapted'])
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Absolute Difference Loss with $v=0.1$')
     '''
     margUtilArr = np.array([[0.        , 0.03442348, 0.05774904, 0.07150046, 0.08239403,
         0.08999229, 0.09596104, 0.10124705, 0.10546559, 0.10948336,
@@ -2201,27 +2233,27 @@ def exampleSupplyChainForPaper():
      plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
                  labels=['Focused', 'Balanced', 'Adapted'],titleStr='AbsDiff Loss with $v=5$')
     '''
-    ### CHANGE LOSS
-    lossDict['scoreDict'].update({'underEstWt': 0.2})
+    ### CHANGE SCORE
+    lossDict['scoreDict'].update({'underEstWt': 10})
     margUtilArr = GetMargUtilForDesigns([design1, design2, design3], scDictTemp, testMax, testInt, lossDict,
                                         utilDict, printUpdate=True)
     plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
-                 labels=['Focused', 'Balanced', 'Adapted'])
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Absolute Difference Loss with $v=10.0$')
     '''
-    margUtilArr = np.array([[0.        , 0.0061618 , 0.00951152, 0.01180287, 0.01331707,
-        0.01460648, 0.01545818, 0.01624678, 0.01677136, 0.01742774,
-        0.01775878, 0.01828225, 0.01850621, 0.01876372, 0.01908667,
-        0.01940038],
-       [0.        , 0.00356379, 0.00630727, 0.00827012, 0.0103652 ,
-        0.01225727, 0.0139363 , 0.01513112, 0.01657184, 0.01757065,
-        0.01897108, 0.01961579, 0.02071898, 0.02133125, 0.02211464,
-        0.02278893],
-       [0.        , 0.00383605, 0.00643516, 0.0085795 , 0.01053073,
-        0.01211568, 0.0135415 , 0.014919  , 0.01598923, 0.01689425,
-        0.01784307, 0.01859931, 0.01919649, 0.01990698, 0.02082598,
-        0.02107902]])
+    margUtilArr = np.array([[0.        , 0.01177521, 0.01877912, 0.02330688, 0.02665558,
+        0.02885246, 0.03074545, 0.03212287, 0.03346784, 0.03450285,
+        0.03534546, 0.03624796, 0.03685654, 0.03748401, 0.03815144,
+        0.03858482],
+       [0.        , 0.00750847, 0.0139503 , 0.01925716, 0.02395486,
+        0.0279566 , 0.0317523 , 0.034473  , 0.0371308 , 0.04005024,
+        0.04254084, 0.04450467, 0.04636385, 0.04797034, 0.04966313,
+        0.0513441 ],
+       [0.        , 0.00848525, 0.01493633, 0.02068894, 0.02523883,
+        0.02866932, 0.0318476 , 0.03418757, 0.0368088 , 0.03894729,
+        0.04058064, 0.04239743, 0.04367676, 0.04536978, 0.04679029,
+        0.04789473]])
     plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
-                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='AbsDiff Loss with $v=0.1$')
+                 labels=['Focused', 'Balanced', 'Adapted'],titleStr='Absolute Difference Loss with $v=0.2$')
     '''
     ### CHANGE RISK
     lossDict['scoreDict'].update({'underEstWt': 1.})
@@ -2256,7 +2288,18 @@ def exampleSupplyChainForPaper():
     print('Changing risk...')
     print(margUtilArr)
     '''
-        margUtilArr = np.
+        margUtilArr = np.array([[0.        , 0.01884137, 0.02960931, 0.0366962 , 0.04163603,
+        0.04559034, 0.04837688, 0.05079548, 0.0528123 , 0.05428856,
+        0.05561463, 0.05708946, 0.05809861, 0.05902985, 0.06000696,
+        0.06064484],
+       [0.        , 0.0139597 , 0.02502037, 0.03363636, 0.04132414,
+        0.04816916, 0.05376846, 0.05907572, 0.06363216, 0.06836027,
+        0.07240748, 0.07611202, 0.07871574, 0.08125504, 0.08548939,
+        0.08712606],
+       [0.        , 0.01601467, 0.02719646, 0.0359439 , 0.04226197,
+        0.04882165, 0.05420608, 0.05812892, 0.06207409, 0.06543135,
+        0.06778542, 0.07157584, 0.07330403, 0.07574708, 0.07802823,
+        0.07991837]])
   plotMargUtil(margUtilArr, testMax, testInt, colors=['blue', 'red', 'green'],
                  labels=['Focused', 'Balanced', 'Adapted'],titleStr='Check risk with $m=0.7,l=0.2$')
     '''
