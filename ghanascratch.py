@@ -16,29 +16,157 @@ import os
 import pickle
 import pandas as pd
 
+# New prior class, which enables different prior scales at different nodes
+class prior_laplace_assort:
+    """
+    Defines the class instance of an assortment of Laplace priors, with associated mu (mean)
+    and scale vectors in the logit-transfomed [0,1] range, and the following methods:
+        rand: generate random draws from the distribution
+        lpdf: log-likelihood of a given vector
+        lpdf_jac: Jacobian of the log-likelihood at the given vector
+        lpdf_hess: Hessian of the log-likelihood at the given vector
+    beta inputs may be a Numpy array of vectors
+    """
+    def __init__(self, mu=sps.logit(0.1), scale=np.sqrt(5/2)):
+        self.mu = np.array(mu)
+        self.scale = np.array(scale)
+    def rand(self, n=1):
+        retList = [np.random.laplace]
+        return np.random.laplace(self.mu, self.scale, n)
+    def expitrand(self, n=1): # transformed to [0,1] space
+        return sps.expit(np.random.laplace(self.mu, self.scale, n))
+    def lpdf(self,beta):
+        if beta.ndim == 1: # reshape to 2d
+            beta = np.reshape(beta,(1,-1))
+        lik = np.log(1/(2*self.scale)) - np.sum(np.abs(beta - self.mu)/self.scale,axis=1)
+        return np.squeeze(lik)
+    def lpdf_jac(self,beta):
+        if beta.ndim == 1: # reshape to 2d
+            beta = np.reshape(beta,(1,-1))
+        jac = - (1/self.scale)*np.squeeze(1*(beta>=self.mu) - 1*(beta<=self.mu))
+        return np.squeeze(jac)
+    def lpdf_hess(self,beta):
+        if beta.ndim == 1: # reshape to 2d
+            beta = np.reshape(beta,(1,-1))
+        k,n = len(beta[:,0]),len(beta[0])
+        hess = np.tile(np.zeros(shape=(n,n)),(k,1,1))
+        return np.squeeze(hess)
+
+def GhanaPriorScratch():
+    '''
+    RISK CATEGORIES:
+    Extremely Low Risk
+    Very Low Risk
+    Low Risk
+    Moderate Risk
+    Moderately High Risk
+    High Risk
+    Very High Risk
+    '''
+
+    # Anchor averages
+    avgArr1 = np.array([0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25])
+    numCat = len(avgArr1)
+    var1 = 4.
+    # Move to logit space
+    avgLogitArr1 = sps.logit(avgArr1)
+
+    probsList = []
+    for catInd in range(numCat):
+        priorobj = methods.prior_laplace(mu=avgLogitArr1[catInd],scale=np.sqrt(var1/2))
+        xrange = np.arange(0.001,0.6,0.001)
+        xrangeLogit = sps.logit(xrange)
+        probs = np.exp(np.array([ priorobj.lpdf(np.array([xrangeLogit[i]])).tolist() for i in range(xrangeLogit.shape[0])]))
+        probsList.append(probs)
+
+    # Now plot density lines
+    for currListInd, currList in enumerate(probsList):
+        plt.plot(xrange,currList,label=str(avgArr1[currListInd]))
+    plt.title('Using Laplace priors; variance of '+str(var1))
+    plt.xlabel('SFP rate')
+    plt.ylabel('Density')
+    plt.show()
+
+    # Do again with normal priors
+    avgArr1 = np.array([0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25])
+    numCat = len(avgArr1)
+    var1 = 4.
+    # Move to logit space
+    avgLogitArr1 = sps.logit(avgArr1)
+
+    probsList = []
+    for catInd in range(numCat):
+        priorobj = methods.prior_normal(mu=avgLogitArr1[catInd], var=var1) # normal priors
+        xrange = np.arange(0.001, 0.6, 0.001)
+        xrangeLogit = sps.logit(xrange)
+        probs = np.exp(
+            np.array([priorobj.lpdf(np.array([xrangeLogit[i]])).tolist() for i in range(xrangeLogit.shape[0])]))
+        probsList.append(probs)
+
+    # Now plot density lines
+    for currListInd, currList in enumerate(probsList):
+        plt.plot(xrange, currList, label=str(avgArr1[currListInd]))
+    plt.title('Using Normal priors; variance of '+str(var1))
+    plt.xlabel('SFP rate')
+    plt.ylabel('Density')
+    plt.show()
+
+
+    return
+
 def GhanaInference():
     '''Script for analyzing 2022 Ghana data'''
 
     SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
     filesPath = os.path.join(SCRIPT_DIR, 'uspfiles')
-    GHA_df1 = pd.read_csv(os.path.join(filesPath, 'FACILID_MNFR_MCH.csv'), low_memory=False) # Facilities as test nodes
-    GHAlist_FCLY = GHA_df1.values.tolist()
-    GHA_df2 = pd.read_csv(os.path.join(filesPath, 'CITY_MNFR_MCH.csv'), low_memory=False) # Cities as test nodes
-    GHAlist_CITY = GHA_df2.values.tolist()
+    # DONT use facility for test node
+    #GHA_df1 = pd.read_csv(os.path.join(filesPath, 'FACILID_MNFR_MCH.csv'), low_memory=False) # Facilities as test nodes
+    #GHAlist_FCLY = GHA_df1.values.tolist()
+    #GHA_df2 = pd.read_csv(os.path.join(filesPath, 'CITY_MNFR_MCH.csv'), low_memory=False) # Cities as test nodes
+    #GHAlist_CITY = GHA_df2.values.tolist()
     GHA_df3= pd.read_csv(os.path.join(filesPath, 'PROV_MNFR_MCH.csv'), low_memory=False) # Provinces as test nodes
     GHAlist_PROV = GHA_df3.values.tolist()
-
-    #Change test results to integers
-    for ind in range(len(GHAlist_FCLY)):
-        GHAlist_FCLY[ind][2] = int(GHAlist_FCLY[ind][2])
+    GHA_df4 = pd.read_csv(os.path.join(filesPath, 'PROVADJ_MNFR_MCH.csv'), low_memory=False)  # Provinces as test nodes
+    GHAlist_PROVADJ = GHA_df4.values.tolist()
 
     '''
-    283 observed FACILITIES
-    34 observed CITIES
-    5 observed PROVINCES
-    41 observed MANUFACTURERS
-    16.7% SFP rate (62 of 177 tests)
+    31 observed CITIES (DISTRICTS)
+    4 observed PROVINCES (REGIONS)
+    13 observed MANUFACTURERS
+    35% SFP rate (62 of 177 tests)
+    
+    Total Ghana specifications (from Wikipedia, Jan 2023):
+    261 DISTRICTS (called metropolitan, municipal and district assemblies, MMDAs)
+    16 REGIONS (# MMDAs):
+        Ahafo (6)
+        Ashanti (43)
+        Bono (12)
+        Bono East (11)
+        Central (22)
+        Eastern (33)
+        Greater Accra (29)
+        Northern (16)
+        North East (6)
+        Oti (9)
+        Savannah (7)
+        Upper East (15)
+        Upper West (11)
+        Volta (18)
+        Western (14)
+        Western North (9)
+        
+    The region of Brong-Ahafo was split into Bono, Bono East, and Ahafo in 2018.
+    The five regions contained in the data set (Ahafo, Ashanti, Bono, Central, Eastern) are geographically
+        adjacent.
+    One idea for an additional subset of regions to include, which are close to the original set: 
+        Western; Western North; Greater
     '''
+    # Change Brong-Ahafo into its new regions
+    #len([i for i in GHAlist_PROV if i[0]=='BRONG AHAFO']) # 17 TOTAL
+    for i in GHAlist_PROV:
+        if i[0] == 'BRONG AHAFO':
+            print(i)
+
     # Set MCMC parameters
     numPostSamps = 1000
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -47,6 +175,7 @@ def GhanaInference():
     priorVar = 3.5
 
     # Create a logistigate dictionary and conduct inference
+    '''
     # FACILITIES
     lgDict = util.testresultsfiletotable(GHAlist_FCLY, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
@@ -61,7 +190,6 @@ def GhanaInference():
     outputFileName = os.path.join(filesPath, 'SNintervals_FCLY.csv')
     f = open(outputFileName, 'w', newline='')
     writer = csv.writer(f)
-
 
     writelist = []
     for i in range(lgDict['N'].shape[1]):
@@ -80,8 +208,10 @@ def GhanaInference():
         print(name+': '+str(interval))
 
     f.close()
+    '''
 
-    # CITIES
+    '''
+    # CITIES/DISTRICTS
     lgDict = util.testresultsfiletotable(GHAlist_CITY, csvName=False)
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))  # Check that everything is in line with expectations
@@ -115,6 +245,7 @@ def GhanaInference():
         print(name + ': ' + str(interval))
 
     f.close()
+    '''
 
     # PROVINCES
     lgDict = util.testresultsfiletotable(GHAlist_PROV, csvName=False)
