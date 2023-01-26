@@ -1,3 +1,6 @@
+'''Scratch file for dealing with IDENTIFIABLE Ghana data
+ Data should be organized and anonymized here prior to moving to 'bayesianexperimentaldesign'
+ '''
 
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
@@ -25,12 +28,16 @@ def GhanaInference():
     GHA_df3= pd.read_csv(os.path.join(filesPath, 'PROV_MNFR_MCH.csv'), low_memory=False) # Provinces as test nodes
     GHAlist_PROV = GHA_df3.values.tolist()
 
+    #Change test results to integers
+    for ind in range(len(GHAlist_FCLY)):
+        GHAlist_FCLY[ind][2] = int(GHAlist_FCLY[ind][2])
+
     '''
     283 observed FACILITIES
     34 observed CITIES
     5 observed PROVINCES
     41 observed MANUFACTURERS
-    16.7% SFP rate (63 of 378 tests)
+    16.7% SFP rate (62 of 177 tests)
     '''
     # Set MCMC parameters
     numPostSamps = 1000
