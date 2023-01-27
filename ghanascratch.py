@@ -17,10 +17,10 @@ import pickle
 import pandas as pd
 
 # New prior class, which enables different prior scales at different nodes
-class prior_laplace_assort:
+class prior_normal_assort:
     """
-    Defines the class instance of an assortment of Laplace priors, with associated mu (mean)
-    and scale vectors in the logit-transfomed [0,1] range, and the following methods:
+    Defines the class instance of an assortment of independent normal priors, with associated mu (mean)
+    and scale vectors in the logit-transfomed [0,1] range, and the fllowing methods:
         rand: generate random draws from the distribution
         lpdf: log-likelihood of a given vector
         lpdf_jac: Jacobian of the log-likelihood at the given vector
@@ -52,7 +52,7 @@ class prior_laplace_assort:
         hess = np.tile(np.zeros(shape=(n,n)),(k,1,1))
         return np.squeeze(hess)
 
-def GhanaPriorScratch():
+def DrawPriorDensities():
     '''
     RISK CATEGORIES:
     Extremely Low Risk
