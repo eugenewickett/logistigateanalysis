@@ -1180,13 +1180,13 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             sampNodeInd = 0
             for currind in range(numTN): # Identify the test node we're analyzing
                 if Ntilde[currind] > 0:
-                    sampNodeInd = currind
+                    sampNodeInd = currind # TN of focus
             Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
             # Use numdrawsfordata draws randomly selected from the set of prior draws
             datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
-            zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]
-            NMat = np.random.multinomial(Ntotal,Qvec,size=numdrawsfordata)
-            YMat = np.random.binomial(NMat, zMat[datadrawinds])
+            zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :] # Matrix of SFP probabilities, as a function of SFP rate draws
+            NMat = np.random.multinomial(Ntotal,Qvec,size=numdrawsfordata) # How many samples from each SN
+            YMat = np.random.binomial(NMat, zMat[datadrawinds]) # How many samples were positive
             bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)),
                                    axes=(0,1,2))
             bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numpriordraws, numSN)),
@@ -1199,7 +1199,6 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             # Normalize so that each column sums to 1
             wtsMat = np.divide(wtsMat * 1, np.reshape(np.tile(np.sum(wtsMat, axis=0), numpriordraws),
                                                                   (numpriordraws, numdrawsfordata)))
-            #lossMat = lossMatrix(priordraws,lossdict) # MOVE TO INPUT OF LOSSDICT
             wtLossMat = np.matmul(lossdict['lossMat'],wtsMat)
             wtLossMins = wtLossMat.min(axis=0)
             lossveclist.append(np.average(wtLossMins))
@@ -2863,9 +2862,14 @@ def allocationCaseStudy():
     # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
     priorMean = np.concatenate((SNpriorMean, TNpriorMean))
-    var = 1.
+    var = 2.
     priorCovar = np.diag(np.repeat(var, numSN + numTN))
     priorObj = prior_normal_assort(priorMean, priorCovar)
+
+    ##### REMOVE LATER
+    CSdict3['outletNames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION']
+    CSdict3['importerNames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD', 'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD', 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER', 'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA', 'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
+    ###################
 
     CSdict3['prior'] = priorObj
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -2895,7 +2899,7 @@ def allocationCaseStudy():
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
 
     # Utility calculation specification
-    numbayesdraws, numdrawsfordata = 4000, 4100
+    numbayesdraws, numdrawsfordata = 4300, 4400
     utilDict = {'method': 'weightsNodeDraw3'}
     utilDict.update({'numdrawsfordata': numdrawsfordata})
     utilDict.update({'numdrawsforbayes': numbayesdraws})
@@ -2943,18 +2947,146 @@ def allocationCaseStudy():
 
     currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict.copy(), utilDict, printUpdate=True)
     print(repr(currMargUtilMat))
+    plotMargUtil(currMargUtilMat,testMax,testInt,labels=dictTemp['outletNames'])
+    ''' 
+    27-JAN: 20M-size matrix
+    array([[0.        , 0.01382411, 0.03509122, 0.05644674, 0.08021724,
+        0.0981533 , 0.11837583, 0.13378813, 0.15201457, 0.16607039,
+        0.1890395 ],
+       [0.        , 0.05369293, 0.08530906, 0.10940713, 0.13216917,
+        0.15262812, 0.1690829 , 0.18859085, 0.20300326, 0.22160105,
+        0.23505375],
+       [0.        , 0.0075852 , 0.02118193, 0.03773943, 0.05595021,
+        0.06859172, 0.0851759 , 0.10104509, 0.11828874, 0.13293616,
+        0.14970482],
+       [0.        , 0.00438373, 0.01010972, 0.02116408, 0.03076051,
+        0.0364872 , 0.04364324, 0.05067086, 0.05547825, 0.0640137 ,
+        0.07017396]])
+        
+    27-JAN: 20M-size matrix
+    array([[0.        , 0.03519591, 0.06833296, 0.08901267, 0.11326221,
+        0.13085871, 0.14722871, 0.16911422, 0.18953523, 0.20328779,
+        0.2241951 ],
+       [0.        , 0.06845718, 0.10636202, 0.13185502, 0.15353439,
+        0.1724397 , 0.19047952, 0.21081529, 0.22833501, 0.24133738,
+        0.25981954],
+       [0.        , 0.01759097, 0.04052679, 0.05990323, 0.08244356,
+        0.09711869, 0.112596  , 0.13119418, 0.14658525, 0.16439142,
+        0.17814455],
+       [0.        , 0.00609299, 0.01512992, 0.02802581, 0.03625126,
+        0.04389767, 0.05299263, 0.06146482, 0.06547853, 0.07301859,
+        0.07980577]])
+    '''
 
     # Plot allocation at each test node as the sample budget increase from 10 to 200
     # Allocation array should have TNs correspond to rows, and sample budget correspond to columns
     allocArr = np.zeros((numTN, int(testMax/testInt)))
     utilArr = []
     for ind, currBudget in enumerate(np.arange(testInt,testMax+1,testInt)):
-        currSol, currVal = GetOptAllocation(currMargUtilMat[,:ind+1])
+        currSol, currVal = GetOptAllocation(currMargUtilMat[:,:ind+2])
         allocArr[:, ind] = currSol
         utilArr.append(currVal)
-    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt,testMax+1,testInt)], testInt=20, titleStr='vs. Sample Budget')
+    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt,testMax+1,testInt)], testInt=20, labels=dictTemp['outletNames'], titleStr='vs. Sample Budget')
 
+    ########################
+    ########################
+    ########################
+    # NEXT RUN: ADDING THREE DISTRICTS WITHOUT ANY DATA YET
+    rd3_N = np.array([[1., 1., 10., 1., 3., 0., 1., 6., 7., 5., 0., 0., 4.],
+                      [1., 1., 4., 2., 0., 1., 1., 2., 0., 4., 0., 0., 1.],
+                      [3., 17., 31., 4., 2., 0., 1., 6., 0., 23., 1., 2., 5.],
+                      [1., 1., 15., 2., 0., 0., 0., 1., 0., 6., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+    rd3_Y = np.array([[0., 0., 7., 0., 3., 0., 1., 0., 1., 0., 0., 0., 4.],
+                      [0., 0., 2., 2., 0., 1., 1., 0., 0., 1., 0., 0., 1.],
+                      [0., 0., 15., 3., 2., 0., 0., 2., 0., 1., 1., 2., 5.],
+                      [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
 
+    (numTN, numSN) = rd3_N.shape
+    s, r = 1., 1.
+    CSdict3 = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
+                                        numSamples=0, dataType='Tracked', randSeed=2)
+    CSdict3['diagSens'], CSdict3['diagSpec'] = s, r
+    CSdict3 = util.GetVectorForms(CSdict3)
+    CSdict3['N'], CSdict3['Y'] = rd3_N, rd3_Y
+
+    SNpriorMean = np.repeat(sps.logit(0.1), numSN)
+    # Establish test nodes according to assessment by regulators
+    # REMOVE LATER
+    # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
+    # GREATER ACCRA: Moderately High; Volta: Moderately High; Western: Moderate
+    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.15, 0.1]))
+    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
+    var = 2.
+    priorCovar = np.diag(np.repeat(var, numSN + numTN))
+    priorObj = prior_normal_assort(priorMean, priorCovar)
+
+    ##### REMOVE LATER
+    CSdict3['outletNames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION', 'GREATER ACCRA', 'VOLTA', 'WESTERN']
+    CSdict3['importerNames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD',
+                                'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD',
+                                'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER',
+                                'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA',
+                                'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
+    ###################
+
+    CSdict3['prior'] = priorObj
+    CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    CSdict3['importerNum'], CSdict3['outletNum'] = numSN, numTN
+    # Generate posterior draws
+    numdraws = 50000  # Evaluate choice here
+    CSdict3['numPostSamples'] = numdraws
+    CSdict3 = methods.GeneratePostSamples(CSdict3)
+
+    # Use single boostrap sample from observed supply nodes to establish Q for each new test node
+    numBoot = 50
+    SNprobs = np.sum(CSdict3['N'],axis=0) / np.sum(CSdict3['N'])
+    np.random.seed(33)
+    Qvecs = np.random.multinomial(numBoot, SNprobs, size=3) / numBoot
+    CSdict3['transMat'] = np.vstack((CSdict3['N'][:4] / np.sum(CSdict3['N'][:4], axis=1).reshape(4, 1), Qvecs))
+
+    # Loss specification
+    underWt, t = 5., 0.15
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'name': 'Parabolic', 'threshold': t}
+    marketvec = np.ones(numTN + numSN)
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+
+    # Utility calculation specification
+    numbayesdraws, numdrawsfordata = 4300, 4400
+    utilDict = {'method': 'weightsNodeDraw3'}
+    utilDict.update({'numdrawsfordata': numdrawsfordata})
+    utilDict.update({'numdrawsforbayes': numbayesdraws})
+
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 200, 20
+    numdrawstouse = int(20000000 / numbayesdraws)
+
+    # Withdraw a subset of MCMC prior draws
+    dictTemp = CSdict3.copy()
+    dictTemp.update(
+        {'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)],
+         'numPostSamples': numdrawstouse})
+
+    currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict.copy(), utilDict, printUpdate=True)
+    print(repr(currMargUtilMat))
+    plotMargUtil(currMargUtilMat, testMax, testInt, labels=dictTemp['outletNames'])
+
+    # Plot allocation at each test node as the sample budget increase from 10 to 200
+    # Allocation array should have TNs correspond to rows, and sample budget correspond to columns
+    allocArr = np.zeros((numTN, int(testMax / testInt)))
+    utilArr = []
+    for ind, currBudget in enumerate(np.arange(testInt, testMax + 1, testInt)):
+        currSol, currVal = GetOptAllocation(currMargUtilMat[:, :ind + 2])
+        allocArr[:, ind] = currSol
+        utilArr.append(currVal)
+    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=20,
+              labels=dictTemp['outletNames'], titleStr='vs. Sample Budget')
 
     ''' GENERATED 29-NOV
     estWts=0.05
