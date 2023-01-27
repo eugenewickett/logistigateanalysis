@@ -28,6 +28,41 @@ import matplotlib.cm as cm
 # Define computation variables
 tol = 1e-8
 
+class prior_normal_assort:
+    """
+    Defines the class instance of an assortment of independent normal priors, with associated mu (mean)
+    and scale vectors in the logit-transfomed [0,1] range, and the following methods:
+        rand: generate random draws from the distribution
+        lpdf: log-likelihood of a given vector
+        lpdf_jac: Jacobian of the log-likelihood at the given vector
+        lpdf_hess: Hessian of the log-likelihood at the given vector
+    beta inputs may be a Numpy array of vectors
+    """
+    def __init__(self, mu=sps.logit(0.1), covar=np.array([1.]).reshape((1,1))):
+        self.mu = mu
+        self.covar = covar
+    def rand(self, n=1):
+        return np.random.multivariate_normal(self.mu, self.covar, n)
+    def expitrand(self, n=1): # transformed to [0,1] space
+        return sps.expit(np.random.multivariate_normal(self.mu, self.covar, n))
+    def lpdf(self, beta):
+        if beta.ndim == 1: # reshape to 2d
+            beta = np.reshape(beta,(1,-1))
+        return np.squeeze(spstat.multivariate_normal.logpdf(beta, self.mu, self.covar))
+    def lpdf_jac(self, beta): # ONLY TO BE USED WITH INDEPENDENT NORMALS
+        if beta.ndim == 1:  # reshape to 2d
+            beta = np.reshape(beta, (1, -1))
+        jac = -(1/np.diag(self.covar)) * (beta - self.mu)
+        return np.squeeze(jac)
+    def lpdf_hess(self, beta):
+        if beta.ndim == 1:  # reshape to 2d
+            beta = np.reshape(beta, (1, -1))
+        (k, n) = beta.shape
+        hess = np.tile(np.zeros(shape=(n, n)), (k, 1, 1))
+        for i in range(k):
+            hess[i] = np.diag(-(1 / np.diag(self.covar)))
+        return np.squeeze(hess)
+
 def balancedesign(N,ntilde):
     '''
     Uses matrix of original batch (N) and next batch (ntilde) to return a balanced design where the target is an even
@@ -1485,7 +1520,7 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
     if utilDict['method']=='weightsNodeDraw3' or utilDict['method']=='weightsNodeDraw4':
         if printUpdate == True:
             print('Generating loss matrix of size: '+str(len(scDict['postSamples'])*len(indsforbayes)))
-        lossMat = lossMatrix(scDict['postSamples'],lossDict.copy(),indsforbayes)
+        lossMat = lossMatrixLinearized(scDict['postSamples'],lossDict.copy(),indsforbayes)
         lossDict.update({'lossMat':lossMat})
     # Establish a baseline loss for comparison with other losses
     if printUpdate == True:
@@ -1523,7 +1558,7 @@ def GetMargUtilForDesigns(designList, scDict, testMax, testInt, lossDict, utilDi
     if utilDict['method']=='weightsNodeDraw3' or utilDict['method']=='weightsNodeDraw4':
         if printUpdate == True:
             print('Generating loss matrix of size: '+str(len(scDict['postSamples'])*len(indsforbayes)))
-        lossMat = lossMatrix(scDict['postSamples'],lossDict.copy(),indsforbayes)
+        lossMat = lossMatrixLinearized(scDict['postSamples'],lossDict.copy(),indsforbayes)
         lossDict.update({'lossMat':lossMat})
     # Establish a baseline loss for comparison with other losses
     if printUpdate == True:
@@ -2791,11 +2826,10 @@ def allocationCaseStudy():
         tempLossDict['scoreDict'].update({'underEstWt':currEstWt})
         currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict, utilDict, printUpdate=True)
 
-
-
-
-
-
+    ######################################################################
+    ######################################################################
+    ######################################################################
+    ######################################################################
     ######################################################################
     ######################################################################
     ######################################################################
@@ -2823,7 +2857,17 @@ def allocationCaseStudy():
     CSdict3['diagSens'], CSdict3['diagSpec'] = s, r
     CSdict3 = util.GetVectorForms(CSdict3)
     CSdict3['N'], CSdict3['Y'] = rd3_N, rd3_Y
-    CSdict3['prior'] = methods.prior_normal()
+
+    SNpriorMean = np.repeat(sps.logit(0.1), numSN)
+    # Establish test nodes according to assessment by regulators
+    # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
+    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
+    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
+    var = 1.
+    priorCovar = np.diag(np.repeat(var, numSN + numTN))
+    priorObj = prior_normal_assort(priorMean, priorCovar)
+
+    CSdict3['prior'] = priorObj
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     CSdict3['importerNum'], CSdict3['outletNum'] = numSN, numTN
     # Generate posterior draws
@@ -2831,6 +2875,7 @@ def allocationCaseStudy():
     CSdict3['numPostSamples'] = numdraws
     CSdict3 = methods.GeneratePostSamples(CSdict3)
 
+    '''
     # Create a normalized sourcing matrix with element minimums
     elemMin = 0.01
     normConstant = elemMin / (1 - numSN / 100)  # Only works for numSN<100
@@ -2838,23 +2883,26 @@ def allocationCaseStudy():
     newSourceMat = sourceMatNorm + normConstant
     newSourceMat = newSourceMat / (np.reshape(np.tile(np.sum(newSourceMat, axis=1), numSN), (numSN, numTN)).T)
     CSdict3['transMat'] = newSourceMat
+    '''
+    # Use observed data to form Q
+    CSdict3['transMat'] = CSdict3['N'] / np.sum(CSdict3['N'],axis=1).reshape(4,1)
 
     # Loss specification
-    underWt, t = 1., 0.2
+    underWt, t = 5., 0.15
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
     riskdict = {'name': 'Parabolic', 'threshold': t}
     marketvec = np.ones(numTN + numSN)
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
 
     # Utility calculation specification
-    numbayesdraws, numdrawsfordata = 3000, 3100
+    numbayesdraws, numdrawsfordata = 4000, 4100
     utilDict = {'method': 'weightsNodeDraw3'}
     utilDict.update({'numdrawsfordata': numdrawsfordata})
     utilDict.update({'numdrawsforbayes': numbayesdraws})
 
     # Set limits of data collection and intervals for calculation
-    testMax, testInt = 200, 10
-    numdrawstouse = int(10000000 / numbayesdraws)
+    testMax, testInt = 200, 20
+    numdrawstouse = int(20000000 / numbayesdraws)
 
     # Withdraw a subset of MCMC prior draws
     dictTemp = CSdict3.copy()
@@ -2893,17 +2941,20 @@ def allocationCaseStudy():
     ##############
     '''
 
-    # Generate a marginal utility matrix for each parameter adjustment
-    utilList = []
-    estWts = [0.05, 0.1, 1, 10, 20]
+    currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict.copy(), utilDict, printUpdate=True)
+    print(repr(currMargUtilMat))
 
-    for currEstWt in estWts:
-        tempLossDict = lossDict.copy()
-        tempLossDict['scoreDict'].update({'underEstWt': currEstWt})
-        currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, tempLossDict, utilDict, printUpdate=True)
-        print('Marginal utilities for estimation error weight of '+str(currEstWt)+':')
-        print(repr(currMargUtilMat))
-        utilList.append(currMargUtilMat)
+    # Plot allocation at each test node as the sample budget increase from 10 to 200
+    # Allocation array should have TNs correspond to rows, and sample budget correspond to columns
+    allocArr = np.zeros((numTN, int(testMax/testInt)))
+    utilArr = []
+    for ind, currBudget in enumerate(np.arange(testInt,testMax+1,testInt)):
+        currSol, currVal = GetOptAllocation(currMargUtilMat[,:ind+1])
+        allocArr[:, ind] = currSol
+        utilArr.append(currVal)
+    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt,testMax+1,testInt)], testInt=20, titleStr='vs. Sample Budget')
+
+
 
     ''' GENERATED 29-NOV
     estWts=0.05
@@ -3520,7 +3571,7 @@ def allocationCaseStudy():
     currMargUtilMat20 = (currMargUtilMat20_1 + currMargUtilMat20_2+ currMargUtilMat20_3) / 3
     sol20, val20 = GetOptAllocation(currMargUtilMat20)
 
-    allocArr = np.vstack((sol05,sol01,sol1,sol10,sol20)).T
+    allocArr = np.vstack((sol01,sol1,sol10,sol20)).T
     plotAlloc(allocArr, paramList=[str(i) for i in estWts], testInt=5, titleStr='vs. Underestimation Weight $v$')
 
     plotMargUtil(currMargUtilMat10, 200, 5)
@@ -4158,6 +4209,7 @@ def EvalAlgTiming():
     MCMC time: 4935.137982368469
     approx time: 72.35974860191345
     '''
+    return
 
 def bayesianexample():
     '''

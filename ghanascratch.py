@@ -20,36 +20,36 @@ import pandas as pd
 class prior_normal_assort:
     """
     Defines the class instance of an assortment of independent normal priors, with associated mu (mean)
-    and scale vectors in the logit-transfomed [0,1] range, and the fllowing methods:
+    and scale vectors in the logit-transfomed [0,1] range, and the following methods:
         rand: generate random draws from the distribution
         lpdf: log-likelihood of a given vector
         lpdf_jac: Jacobian of the log-likelihood at the given vector
         lpdf_hess: Hessian of the log-likelihood at the given vector
     beta inputs may be a Numpy array of vectors
     """
-    def __init__(self, mu=sps.logit(0.1), scale=np.sqrt(5/2)):
-        self.mu = np.array(mu)
-        self.scale = np.array(scale)
+    def __init__(self, mu=sps.logit(0.1), covar=np.array([1.]).reshape((1,1))):
+        self.mu = mu
+        self.covar = covar
     def rand(self, n=1):
-        retList = [np.random.laplace]
-        return np.random.laplace(self.mu, self.scale, n)
+        return np.random.multivariate_normal(self.mu, self.covar, n)
     def expitrand(self, n=1): # transformed to [0,1] space
-        return sps.expit(np.random.laplace(self.mu, self.scale, n))
-    def lpdf(self,beta):
+        return sps.expit(np.random.multivariate_normal(self.mu, self.covar, n))
+    def lpdf(self, beta):
         if beta.ndim == 1: # reshape to 2d
             beta = np.reshape(beta,(1,-1))
-        lik = np.log(1/(2*self.scale)) - np.sum(np.abs(beta - self.mu)/self.scale,axis=1)
-        return np.squeeze(lik)
-    def lpdf_jac(self,beta):
-        if beta.ndim == 1: # reshape to 2d
-            beta = np.reshape(beta,(1,-1))
-        jac = - (1/self.scale)*np.squeeze(1*(beta>=self.mu) - 1*(beta<=self.mu))
+        return np.squeeze(spstat.multivariate_normal.logpdf(beta, self.mu, self.covar))
+    def lpdf_jac(self, beta): # ONLY TO BE USED WITH INDEPENDENT NORMALS
+        if beta.ndim == 1:  # reshape to 2d
+            beta = np.reshape(beta, (1, -1))
+        jac = -(1/np.diag(self.covar)) * (beta - self.mu)
         return np.squeeze(jac)
-    def lpdf_hess(self,beta):
-        if beta.ndim == 1: # reshape to 2d
-            beta = np.reshape(beta,(1,-1))
-        k,n = len(beta[:,0]),len(beta[0])
-        hess = np.tile(np.zeros(shape=(n,n)),(k,1,1))
+    def lpdf_hess(self, beta):
+        if beta.ndim == 1:  # reshape to 2d
+            beta = np.reshape(beta, (1, -1))
+        (k, n) = beta.shape
+        hess = np.tile(np.zeros(shape=(n, n)), (k, 1, 1))
+        for i in range(k):
+            hess[i] = np.diag(-(1 / np.diag(self.covar)))
         return np.squeeze(hess)
 
 def DrawPriorDensities():
@@ -112,6 +112,9 @@ def DrawPriorDensities():
     plt.show()
 
 
+    mu = sps.logit(np.array([0.1,0.2,0.25]))
+    covar = np.diag(np.repeat(2.,3))
+
     return
 
 def GhanaInference():
@@ -161,19 +164,9 @@ def GhanaInference():
     One idea for an additional subset of regions to include, which are close to the original set: 
         Western; Western North; Greater
     '''
-    # Change Brong-Ahafo into its new regions
-    #len([i for i in GHAlist_PROV if i[0]=='BRONG AHAFO']) # 17 TOTAL
-    for i in GHAlist_PROV:
-        if i[0] == 'BRONG AHAFO':
-            print(i)
-
     # Set MCMC parameters
-    numPostSamps = 1000
+    numPostSamps = 50000
     MCMCdict = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    # Establish a prior
-    priorMean = -2.5
-    priorVar = 3.5
-
     # Create a logistigate dictionary and conduct inference
     '''
     # FACILITIES
@@ -249,12 +242,28 @@ def GhanaInference():
 
     # PROVINCES
     lgDict = util.testresultsfiletotable(GHAlist_PROV, csvName=False)
+    (numTN, numSN) = lgDict['N'].shape
+    # Test nodes and supply nodes are automatically sorted into alphabetical order
+    # Establish a prior, with SUPPLY NODES FIRST
+    # Anchored means for the seven risk levels are: np.array([0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25]),
+    #       with categories: Extremely Low Risk; Very Low Risk; Low Risk; Moderate Risk; Moderately High Risk
+    #                        High Risk; and Very High Risk
+    # Establish all supply nodes as 'Moderate Risk'; mean rate of 10%
+    SNpriorMean = np.repeat(sps.logit(0.1),numSN)
+    # Establish test nodes according to assessment by regulators
+    # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
+    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
+    priorMean = np.concatenate((SNpriorMean,TNpriorMean))
+    var = 1.
+    priorCovar = np.diag(np.repeat(var,numSN+numTN))
+    priorObj = prior_normal_assort(priorMean,priorCovar)
+
     print('size: ' + str(lgDict['N'].shape) + ', obsvns: ' + str(lgDict['N'].sum()) + ', propor pos: ' + str(
         lgDict['Y'].sum() / lgDict['N'].sum()))  # Check that everything is in line with expectations
-    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
-                   'prior': methods.prior_laplace(mu=priorMean, scale=np.sqrt(priorVar / 2)), 'MCMCdict': MCMCdict})
+    lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps, 'prior': priorObj, 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
     util.plotPostSamples(lgDict, 'int90', subTitleStr=['\nGhana - Province/Manufacturer Analysis', '\nGhana - Province/Manufacturer Analysis'])
+    '''
     # Now print 90% intervals
     import csv
     outputFileName = os.path.join(filesPath, 'SNintervals_PROV.csv')
@@ -281,6 +290,10 @@ def GhanaInference():
         print(name + ': ' + str(interval))
         ###### WRITE TO CSV
     f.close()
+    '''
+
+    # FIRST SET OF RUNS: USE PRIOR VARIANCE OF 2., THEN
+
 
     return
 
