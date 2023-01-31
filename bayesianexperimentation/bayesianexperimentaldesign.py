@@ -1218,21 +1218,15 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             YMat = np.random.binomial(NMat, zMat[datadrawinds]) # How many samples were positive
             tempW = np.zeros(shape=(numpriordraws,numdrawsfordata))
             for nodeInd in range(numSN):
-
-                bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)),
-                                       axes=(0,1,2))
-                bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numpriordraws, numSN)),
-                                       axes=(1,0,2))
-                bigYMat = np.transpose(np.reshape(np.tile(YMat, numpriordraws), (numdrawsfordata, numpriordraws, numSN)),
-                                        axes=(1, 0, 2))
-                combNY = np.transpose(np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),
-                                                  (numdrawsfordata,numpriordraws,numSN)),axes=(1,0,2))
-                tempW += (bigYMat*np.log(bigzMat))+((bigNMat-bigYMat)*np.log(1-bigzMat))+np.log(combNY)
-
-            wtsMat = np.exp(np.sum((bigYMat*np.log(bigzMat))+((bigNMat-bigYMat)*np.log(1-bigzMat))+np.log(combNY),axis=2))
+                # Get zProbs corresponding to current SN
+                bigZtemp = np.transpose(np.reshape(np.tile(zMat[:,nodeInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
+                bigNtemp = np.reshape(np.tile(NMat[:, nodeInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                bigYtemp = np.reshape(np.tile(YMat[:, nodeInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, nodeInd], YMat[:, nodeInd]),numpriordraws), (numpriordraws, numdrawsfordata))
+                tempW += (bigYtemp*np.log(bigZtemp))+((bigNtemp-bigYtemp)*np.log(1-bigZtemp))+np.log(combNYtemp)
+            wtsMat = np.exp(tempW)
             # Normalize so that each column sums to 1
-            wtsMat = np.divide(wtsMat * 1, np.reshape(np.tile(np.sum(wtsMat, axis=0), numpriordraws),
-                                                                  (numpriordraws, numdrawsfordata)))
+            wtsMat = np.divide(wtsMat * 1, np.reshape(np.tile(np.sum(wtsMat, axis=0), numpriordraws), (numpriordraws, numdrawsfordata)))
             wtLossMat = np.matmul(lossdict['lossMat'],wtsMat)
             wtLossMins = wtLossMat.min(axis=0)
             lossveclist.append(np.average(wtLossMins))
@@ -1550,7 +1544,7 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
         indsforbayes = choice(np.arange(len(scDict['postSamples'])),size=utilDict['numdrawsforbayes'],replace=False)
     else:
         indsforbayes = np.arange(len(scDict['postSamples']))
-    if utilDict['method']=='weightsNodeDraw3' or utilDict['method']=='weightsNodeDraw4':
+    if utilDict['method']=='weightsNodeDraw3' or utilDict['method']=='weightsNodeDraw4' or utilDict['method']=='weightsNodeDraw3linear':
         if printUpdate == True:
             print('Generating loss matrix of size: '+str(len(scDict['postSamples'])*len(indsforbayes)))
         lossMat = lossMatrixLinearized(scDict['postSamples'],lossDict.copy(),indsforbayes)
@@ -2933,14 +2927,14 @@ def allocationCaseStudy():
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
 
     # Utility calculation specification
-    numbayesdraws, numdrawsfordata = 2000, 2100
-    utilDict = {'method': 'weightsNodeDraw3'}
+    numbayesdraws, numdrawsfordata = 5000, 5100
+    utilDict = {'method': 'weightsNodeDraw3linear'}
     utilDict.update({'numdrawsfordata': numdrawsfordata})
     utilDict.update({'numdrawsforbayes': numbayesdraws})
 
     # Set limits of data collection and intervals for calculation
-    testMax, testInt = 200, 50
-    numdrawstouse = int(5000000 / numbayesdraws)
+    testMax, testInt = 200, 20
+    numdrawstouse = int(26000000 / numbayesdraws)
 
     # Withdraw a subset of MCMC prior draws
     dictTemp = CSdict3.copy()
@@ -2979,23 +2973,7 @@ def allocationCaseStudy():
     ##############
     '''
 
-    ##### REMOVE LATER
-    desLst = [np.array([1.,0.,0.,0.])]
-    indsforbayes = choice(np.arange(len(dictTemp['postSamples'])), size=utilDict['numdrawsforbayes'], replace=False)
-    lossMat = lossMatrixLinearized(dictTemp['postSamples'], lossDict.copy(), indsforbayes)
-    lossDict.update({'lossMat': lossMat})
-
-    ff = getDesignUtility(priordatadict=dictTemp.copy(), lossdict=lossDict.copy(), designlist=desLst.copy(), numtests=50,utildict=utilDict.copy())
-    print(ff)
-    #getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=[], utildict={})
-
-    start = time.process_time()
-    currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict.copy(), utilDict, printUpdate=True)
-    print(round(time.process_time()-start,1))
-    ##### END REMOVE LATER
-
-
-
+    currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(), printUpdate=True)
     print(repr(currMargUtilMat))
     plotMargUtil(currMargUtilMat,testMax,testInt,labels=dictTemp['outletNames'])
     ''' 
