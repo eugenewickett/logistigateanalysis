@@ -1170,7 +1170,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
                 print(designnames[designind] + ' complete')
         # END ELIF FOR WEIGHTSNODEDRAW2
 
-        elif method == 'weightsNodeDraw3': # Weight each prior draw by the likelihood of a new data set
+        elif method == 'weightsNodeDraw3': # Weight each prior draw by the likelihood of a new data set; NODE SAMPLING
             # Differs from 'weightsNodeDraw2' in 3 areas:
             #   1) Able to use a subset of prior draws for generating data
             #   2) Uses log transformation to speed up weight calculation
@@ -1187,14 +1187,48 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :] # Matrix of SFP probabilities, as a function of SFP rate draws
             NMat = np.random.multinomial(Ntotal,Qvec,size=numdrawsfordata) # How many samples from each SN
             YMat = np.random.binomial(NMat, zMat[datadrawinds]) # How many samples were positive
-            bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)),
-                                   axes=(0,1,2))
-            bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numpriordraws, numSN)),
-                                   axes=(1,0,2))
-            bigYMat = np.transpose(np.reshape(np.tile(YMat, numpriordraws), (numdrawsfordata, numpriordraws, numSN)),
-                                    axes=(1, 0, 2))
-            combNY = np.transpose(np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),
-                                              (numdrawsfordata,numpriordraws,numSN)),axes=(1,0,2))
+            # Replicate zMat for the number of data draws; bigzMat[][j][]=bigzMat[][j'][]
+            bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)), axes=(0,1,2))
+            # Replicate NMat and YMat for the number of base MCMC draws; bigNMat[i][][]=bigNMat[i'][][]
+            bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numpriordraws, numSN)), axes=(1,0,2))
+            bigYMat = np.transpose(np.reshape(np.tile(YMat, numpriordraws), (numdrawsfordata, numpriordraws, numSN)), axes=(1, 0, 2))
+            # Combinatorial for N and Y along each data draw; combNY[i][][]=combNY[i'][][]
+            combNY = np.transpose(np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws), (numdrawsfordata,numpriordraws,numSN)),axes=(1,0,2))
+            wtsMat = np.exp(np.sum((bigYMat*np.log(bigzMat))+((bigNMat-bigYMat)*np.log(1-bigzMat))+np.log(combNY),axis=2))
+            # Normalize so that each column sums to 1
+            wtsMat = np.divide(wtsMat * 1, np.reshape(np.tile(np.sum(wtsMat, axis=0), numpriordraws), (numpriordraws, numdrawsfordata)))
+            wtLossMat = np.matmul(lossdict['lossMat'],wtsMat)
+            wtLossMins = wtLossMat.min(axis=0)
+            lossveclist.append(np.average(wtLossMins))
+        # END ELIF FOR WEIGHTSNODEDRAW3
+
+        elif method == 'weightsNodeDraw3linear': # Weight each prior draw by the likelihood of a new data set; NODE SAMPLING
+            # Differs from 'weightsNodeDraw3' in that the 'big' matrices are NOT vectorized
+            #IMPORTANT!!! CAN ONLY HANDLE DESIGNS WITH 1 TEST NODE
+            Ntilde = sampMat.copy()
+            sampNodeInd = 0
+            for currind in range(numTN): # Identify the test node we're analyzing
+                if Ntilde[currind] > 0:
+                    sampNodeInd = currind # TN of focus
+            Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
+            # Use numdrawsfordata draws randomly selected from the set of prior draws
+            datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
+            zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :] # Matrix of SFP probabilities, as a function of SFP rate draws
+            NMat = np.random.multinomial(Ntotal,Qvec,size=numdrawsfordata) # How many samples from each SN
+            YMat = np.random.binomial(NMat, zMat[datadrawinds]) # How many samples were positive
+            tempW = np.zeros(shape=(numpriordraws,numdrawsfordata))
+            for nodeInd in range(numSN):
+
+                bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)),
+                                       axes=(0,1,2))
+                bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numpriordraws, numSN)),
+                                       axes=(1,0,2))
+                bigYMat = np.transpose(np.reshape(np.tile(YMat, numpriordraws), (numdrawsfordata, numpriordraws, numSN)),
+                                        axes=(1, 0, 2))
+                combNY = np.transpose(np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),
+                                                  (numdrawsfordata,numpriordraws,numSN)),axes=(1,0,2))
+                tempW += (bigYMat*np.log(bigzMat))+((bigNMat-bigYMat)*np.log(1-bigzMat))+np.log(combNY)
+
             wtsMat = np.exp(np.sum((bigYMat*np.log(bigzMat))+((bigNMat-bigYMat)*np.log(1-bigzMat))+np.log(combNY),axis=2))
             # Normalize so that each column sums to 1
             wtsMat = np.divide(wtsMat * 1, np.reshape(np.tile(np.sum(wtsMat, axis=0), numpriordraws),
@@ -1202,9 +1236,9 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             wtLossMat = np.matmul(lossdict['lossMat'],wtsMat)
             wtLossMins = wtLossMat.min(axis=0)
             lossveclist.append(np.average(wtLossMins))
-        # END ELIF FOR WEIGHTSNODEDRAW3
+        # END ELIF FOR WEIGHTSNODEDRAW3LINEAR
 
-        elif method == 'weightsNodeDraw4': # Weight each prior draw by the likelihood of a new data set
+        elif method == 'weightsNodeDraw4': # Weight each prior draw by the likelihood of a new data set; NODE SAMPLING
             # Differs from 'weightsNodeDraw3' in that it allows any type of design, not just one test node designs
             # Use numdrawsfordata draws randomly selected from the set of prior draws
             datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
@@ -2899,14 +2933,14 @@ def allocationCaseStudy():
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
 
     # Utility calculation specification
-    numbayesdraws, numdrawsfordata = 4300, 4400
+    numbayesdraws, numdrawsfordata = 2000, 2100
     utilDict = {'method': 'weightsNodeDraw3'}
     utilDict.update({'numdrawsfordata': numdrawsfordata})
     utilDict.update({'numdrawsforbayes': numbayesdraws})
 
     # Set limits of data collection and intervals for calculation
-    testMax, testInt = 200, 20
-    numdrawstouse = int(20000000 / numbayesdraws)
+    testMax, testInt = 200, 50
+    numdrawstouse = int(5000000 / numbayesdraws)
 
     # Withdraw a subset of MCMC prior draws
     dictTemp = CSdict3.copy()
@@ -2945,7 +2979,23 @@ def allocationCaseStudy():
     ##############
     '''
 
+    ##### REMOVE LATER
+    desLst = [np.array([1.,0.,0.,0.])]
+    indsforbayes = choice(np.arange(len(dictTemp['postSamples'])), size=utilDict['numdrawsforbayes'], replace=False)
+    lossMat = lossMatrixLinearized(dictTemp['postSamples'], lossDict.copy(), indsforbayes)
+    lossDict.update({'lossMat': lossMat})
+
+    ff = getDesignUtility(priordatadict=dictTemp.copy(), lossdict=lossDict.copy(), designlist=desLst.copy(), numtests=50,utildict=utilDict.copy())
+    print(ff)
+    #getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=[], utildict={})
+
+    start = time.process_time()
     currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict.copy(), utilDict, printUpdate=True)
+    print(round(time.process_time()-start,1))
+    ##### END REMOVE LATER
+
+
+
     print(repr(currMargUtilMat))
     plotMargUtil(currMargUtilMat,testMax,testInt,labels=dictTemp['outletNames'])
     ''' 
@@ -2976,6 +3026,19 @@ def allocationCaseStudy():
        [0.        , 0.00609299, 0.01512992, 0.02802581, 0.03625126,
         0.04389767, 0.05299263, 0.06146482, 0.06547853, 0.07301859,
         0.07980577]])
+    27-JAN: 20M-size matrix; textMax=2000, textInt=200
+    array([[0.        , 0.30751156, 0.58195444, 0.87946613, 1.15795486,
+        1.39379838, 1.56733289, 1.7135405 , 1.82994538, 1.90994915,
+        1.98703019],
+       [0.        , 0.40803988, 0.65831671, 0.88029967, 1.11478411,
+        1.30560338, 1.47370116, 1.60454787, 1.71236096, 1.79867166,
+        1.87823169],
+       [0.        , 0.27561311, 0.53735284, 0.82643442, 1.11575235,
+        1.35934567, 1.56291985, 1.70233857, 1.82295706, 1.91547253,
+        2.00134712],
+       [0.        , 0.13944031, 0.2042264 , 0.2612847 , 0.31477593,
+        0.3673215 , 0.42456893, 0.48244246, 0.55365783,        nan,
+               nan]])
     '''
 
     # Plot allocation at each test node as the sample budget increase from 10 to 200
