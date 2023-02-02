@@ -1770,6 +1770,34 @@ UmatTN = np.array([[0.16098932, 0.15988504, 0.15885114, 0.1578939 , 0.15698791,
 
     return sol, maxU
 
+def smoothAllocation(U):
+    '''
+    Provides a 'smooth' allocation across the marginal utilities in U. The values of U should correspond to TNs in the
+    rows and incremental increases in the sampling budget in the columns.
+    The algorithm uses greedy decremental steps from a solver-found solution for the maximum budget to find solutions
+    for smaller budgets.
+    '''
+    (numTN, numTests) = U.shape
+    sol, objVal = GetOptAllocation(U)
+    retArr = np.zeros((numTN, numTests-1)) # First column of U corresponds to no samples
+    objValArr = np.zeros(numTests-1) # For returning the objective vales
+    retArr[:,-1] = sol
+    objValArr[-1] = objVal
+    currSol = sol.copy()
+    bigM = np.max(U)*2 # Set a big M value
+    for k in range(numTests-3,-1,-1): # Indices of return arrays
+        Farr = np.zeros(numTN)+bigM # Initialize all F values at bigM
+        for currTN in range(numTN):
+            if currSol[currTN] > 0: # Eligible to be reduced
+                Farr[currTN] = U[currTN,int(currSol[currTN])] - U[currTN,int(currSol[currTN])-1]
+        # Choose smallest
+        minTNind = np.argmin(Farr)
+        currSol[minTNind] -= 1 # Update our current solution
+        retArr[:, k] = currSol
+        objValArr[k] = objValArr[k+1] - Farr[minTNind]
+
+    return retArr, objValArr
+
 def plotAlloc(allocArr,paramList,testInt=1,al=0.6,titleStr='',colors=[],dashes=[],labels=[]):
     '''
     Produces a plot of an array of allocations relative to the parameters in paramList.
@@ -2738,125 +2766,12 @@ def exampleSupplyChainForPaper():
 
 def allocationCaseStudy():
     '''Allocation using case study data for paper'''
-    # CITIES-MANUFACTURERS
-    rd2_N = np.array([[1., 0., 2., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0.],
-       [0., 1., 3., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [1., 0., 1., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [0., 0., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
-       [0., 1., 0., 0., 0., 0., 0., 1., 0., 1., 0., 1., 1.],
-       [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-       [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [0., 2., 3., 0., 0., 0., 1., 0., 0., 1., 1., 0., 0.],
-       [0., 2., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-       [0., 0., 2., 2., 0., 0., 1., 0., 0., 2., 0., 0., 0.],
-       [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [1., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [0., 0., 4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-       [0., 0., 1., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
-       [0., 0., 1., 0., 0., 0., 0., 0., 0., 3., 0., 0., 1.],
-       [0., 3., 4., 1., 1., 0., 0., 4., 0., 5., 0., 0., 2.],
-       [0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-       [0., 4., 0., 1., 0., 0., 0., 0., 0., 4., 0., 0., 0.],
-       [0., 2., 4., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [1., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-       [0., 0., 0., 1., 1., 0., 0., 5., 1., 2., 0., 0., 3.],
-       [0., 1., 2., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
-       [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-       [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-       [0., 1., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [1., 2., 7., 2., 1., 0., 0., 0., 0., 3., 0., 1., 0.],
-       [1., 0., 3., 1., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-       [0., 0., 6., 0., 0., 0., 1., 1., 6., 1., 0., 0., 1.],
-       [0., 0., 3., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
-       [0., 1., 0., 0., 0., 1., 0., 2., 0., 1., 0., 0., 1.],
-       [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-    rd2_Y = np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 3., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 1., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1.],
-           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.],
-           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 1., 2., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-           [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
-           [0., 0., 3., 1., 1., 0., 0., 2., 0., 0., 0., 0., 2.],
-           [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 3.],
-           [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 2., 2., 1., 0., 0., 0., 0., 0., 0., 1., 0.],
-           [0., 0., 1., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 3., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-           [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 1.],
-           [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-
-    (numTN, numSN) = rd2_N.shape
-    s, r = 1., 1.
-    CSdict2 = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
-                                       numSamples=0, dataType='Tracked', randSeed=2)
-    CSdict2['diagSens'], CSdict2['diagSpec'] = s, r
-    CSdict2 = util.GetVectorForms(CSdict2)
-    CSdict2['N'], CSdict2['Y'] = rd2_N, rd2_Y
-    CSdict2['prior'] = methods.prior_normal()
-    CSdict2['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    CSdict2['importerNum'], CSdict2['outletNum'] = numSN, numTN
-    # Generate posterior draws
-    numdraws = 50000  # Evaluate choice here
-    CSdict2['numPostSamples'] = numdraws
-    CSdict2 = methods.GeneratePostSamples(CSdict2)
-
-    # Create a normalized sourcing matrix with element minimums
-    elemMin = 0.01
-    normConstant = elemMin/(1-numSN/100) # Only works for numSN<100
-    sourceMatNorm = CSdict2['N']/(np.reshape(np.tile(np.sum(CSdict2['N'],axis=1),numSN),(numSN,numTN)).T)
-    newSourceMat = sourceMatNorm+normConstant
-    newSourceMat = newSourceMat/(np.reshape(np.tile(np.sum(newSourceMat,axis=1),numSN),(numSN,numTN)).T)
-    CSdict2['transMat'] = newSourceMat
-
-    # Loss specification
-    underWt, t = 1., 0.2
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Parabolic', 'threshold': t}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-
-    # Utility calculation specification
-    numbayesdraws, numdrawsfordata = 3000, 3500
-    utilDict = {'method': 'weightsNodeDraw3'}
-    utilDict.update({'numdrawsfordata': numdrawsfordata})
-    utilDict.update({'numdrawsforbayes': numbayesdraws})
-
-    # Set limits of data collection and intervals for calculation
-    testMax, testInt = 10, 5
-    numdrawstouse = int(11000000 / numbayesdraws)
-
-    # Withdraw a subset of MCMC prior draws
-    dictTemp = CSdict2.copy()
-    dictTemp.update({'postSamples': CSdict2['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)], 'numPostSamples': numdrawstouse})
-
-    # Generate a marginal utility matrix for each parameter adjustment
-    estWts = [0.05,0.1,1,10,20]
-    for currEstWt in estWts:
-        tempLossDict = lossDict.copy()
-        tempLossDict['scoreDict'].update({'underEstWt':currEstWt})
-        currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict, utilDict, printUpdate=True)
 
     ######################################################################
     ######################################################################
     ######################################################################
     ######################################################################
+    ################ START PROVINCE CODE HERE ############################
     ######################################################################
     ######################################################################
     ######################################################################
@@ -2890,8 +2805,8 @@ def allocationCaseStudy():
     # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
     priorMean = np.concatenate((SNpriorMean, TNpriorMean))
-    var = 2.
-    priorCovar = np.diag(np.repeat(var, numSN + numTN))
+    TNvar, SNvar = 2., 4. # Variances for use with prior
+    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar,numTN)) ))
     priorObj = prior_normal_assort(priorMean, priorCovar)
 
     ##### REMOVE LATER
@@ -2916,6 +2831,11 @@ def allocationCaseStudy():
     newSourceMat = newSourceMat / (np.reshape(np.tile(np.sum(newSourceMat, axis=1), numSN), (numSN, numTN)).T)
     CSdict3['transMat'] = newSourceMat
     '''
+
+    ########################
+    ### RUN 1: INITIAL RUN
+    ########################
+
     # Use observed data to form Q
     CSdict3['transMat'] = CSdict3['N'] / np.sum(CSdict3['N'],axis=1).reshape(4,1)
 
@@ -2940,38 +2860,6 @@ def allocationCaseStudy():
     dictTemp = CSdict3.copy()
     dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)],
          'numPostSamples': numdrawstouse})
-
-    '''
-    ##############
-    ### REMOVE AFTER NEW LOSS MATRIX GENERATION IS FIGURED OUT
-    indsforbayes = choice(np.arange(len(dictTemp['postSamples'])), size=utilDict['numdrawsforbayes'], replace=False)
-
-    origArr, newArr = [], []
-    for runs in range(20):
-        origStart = time.process_time()
-        lossMatOrig = lossMatrix(dictTemp['postSamples'], lossDict.copy(), indsforbayes)
-        origTime = time.process_time() - origStart
-        origArr.append(origTime)
-        newStart = time.process_time()
-        lossMatNew = lossMatrixLinearized(dictTemp['postSamples'], lossDict.copy(), indsforbayes)
-        newTime = time.process_time() - newStart
-        newArr.append(newTime)
-
-        print('OLD STYLE TIME: ' + str(round(origTime, 1)))
-        print('NEW STYLE TIME: ' + str(round(newTime, 1)))
-    #plt.hist(origArr, bins=30)
-    binwidth = 1
-    plt.hist(origArr, bins=range(round(min(origArr)), round(max(origArr)) + binwidth, binwidth))
-    plt.xlim([10,35])
-    plt.show()
-    #plt.hist(newArr,bins=30)
-    plt.hist(newArr, bins=range(round(min(newArr)), round(max(newArr)) + binwidth, binwidth))
-    plt.xlim([10, 35])
-    plt.show()
-
-    ### END REMOVE
-    ##############
-    '''
 
     currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(), printUpdate=True)
     print(repr(currMargUtilMat))
@@ -3030,13 +2918,13 @@ def allocationCaseStudy():
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt,testMax+1,testInt)], testInt=20, labels=dictTemp['outletNames'], titleStr='vs. Sample Budget')
 
     ########################
+    #### NEXT RUN: ADDING FOUR DISTRICTS WITHOUT ANY DATA YET
     ########################
-    ########################
-    # NEXT RUN: ADDING THREE DISTRICTS WITHOUT ANY DATA YET
     rd3_N = np.array([[1., 1., 10., 1., 3., 0., 1., 6., 7., 5., 0., 0., 4.],
                       [1., 1., 4., 2., 0., 1., 1., 2., 0., 4., 0., 0., 1.],
                       [3., 17., 31., 4., 2., 0., 1., 6., 0., 23., 1., 2., 5.],
                       [1., 1., 15., 2., 0., 0., 0., 1., 0., 6., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
@@ -3044,6 +2932,7 @@ def allocationCaseStudy():
                       [0., 0., 2., 2., 0., 1., 1., 0., 0., 1., 0., 0., 1.],
                       [0., 0., 15., 3., 2., 0., 0., 2., 0., 1., 1., 2., 5.],
                       [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
@@ -3060,15 +2949,15 @@ def allocationCaseStudy():
     # Establish test nodes according to assessment by regulators
     # REMOVE LATER
     # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
-    # GREATER ACCRA: Moderately High; Volta: Moderately High; Western: Moderate
-    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.15, 0.1]))
+    # GREATER ACCRA: Moderately High; VOLTA: Moderately High; WESTERN: Moderate; NORTHERN SECTOR: Moderate
+    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
     priorMean = np.concatenate((SNpriorMean, TNpriorMean))
-    var = 2.
-    priorCovar = np.diag(np.repeat(var, numSN + numTN))
+    TNvar, SNvar = 2., 4.
+    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar,numTN)) ))
     priorObj = prior_normal_assort(priorMean, priorCovar)
 
     ##### REMOVE LATER
-    CSdict3['outletNames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION', 'GREATER ACCRA', 'VOLTA', 'WESTERN']
+    CSdict3['outletNames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION', 'GREATER ACCRA', 'NORTHERN SECTOR', 'VOLTA', 'WESTERN']
     CSdict3['importerNames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD',
                                 'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD',
                                 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER',
@@ -3128,6 +3017,8 @@ def allocationCaseStudy():
         utilArr.append(currVal)
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=20,
               labels=dictTemp['outletNames'], titleStr='vs. Sample Budget')
+    # Use smooth allocation function
+    allocArr2, _ = smoothAllocation(currMargUtilMat)
 
     ''' GENERATED 29-NOV
     estWts=0.05
@@ -3731,8 +3622,8 @@ def allocationCaseStudy():
         0.30267934, 0.30951681, 0.32110853, 0.33741482, 0.35765025,
         0.36438221, 0.36676315, 0.39707326, 0.40077812, 0.4001125 ,
         0.40735725]])
-  '''
-    # Get allocation solutions for different budgets and plot WRT parameter
+  
+    # Get allocation solutions for different budgets and plot WRT underEstWt parameter
     currMargUtilMat05 = (currMargUtilMat05_1 + currMargUtilMat05_2 + currMargUtilMat05_3) / 3
     sol05, val05 = GetOptAllocation(currMargUtilMat05)
     currMargUtilMat01 = (currMargUtilMat01_1 + currMargUtilMat01_2 + currMargUtilMat01_3) / 3
@@ -3748,6 +3639,127 @@ def allocationCaseStudy():
     plotAlloc(allocArr, paramList=[str(i) for i in estWts], testInt=5, titleStr='vs. Underestimation Weight $v$')
 
     plotMargUtil(currMargUtilMat10, 200, 5)
+    '''
+
+    return
+
+def allocationCaseStudyCities():
+    # CITIES-MANUFACTURERS
+    rd2_N = np.array([[1., 0., 2., 0., 0., 0., 0., 1., 0., 1., 0., 0., 0.],
+                      [0., 1., 3., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [1., 0., 1., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [0., 0., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+                      [0., 1., 0., 0., 0., 0., 0., 1., 0., 1., 0., 1., 1.],
+                      [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [0., 2., 3., 0., 0., 0., 1., 0., 0., 1., 1., 0., 0.],
+                      [0., 2., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 2., 2., 0., 0., 1., 0., 0., 2., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [1., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [0., 0., 4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 3., 0., 0., 1.],
+                      [0., 3., 4., 1., 1., 0., 0., 4., 0., 5., 0., 0., 2.],
+                      [0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
+                      [0., 4., 0., 1., 0., 0., 0., 0., 0., 4., 0., 0., 0.],
+                      [0., 2., 4., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [1., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 1., 1., 0., 0., 5., 1., 2., 0., 0., 3.],
+                      [0., 1., 2., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 1., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [1., 2., 7., 2., 1., 0., 0., 0., 0., 3., 0., 1., 0.],
+                      [1., 0., 3., 1., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [0., 0., 6., 0., 0., 0., 1., 1., 6., 1., 0., 0., 1.],
+                      [0., 0., 3., 0., 0., 0., 0., 0., 0., 2., 0., 0., 0.],
+                      [0., 1., 0., 0., 0., 1., 0., 2., 0., 1., 0., 0., 1.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+    rd2_Y = np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 3., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1.],
+                      [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 2., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.],
+                      [0., 0., 3., 1., 1., 0., 0., 2., 0., 0., 0., 0., 2.],
+                      [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 3.],
+                      [0., 0., 1., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 2., 2., 1., 0., 0., 0., 0., 0., 0., 1., 0.],
+                      [0., 0., 1., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 3., 0., 0., 0., 1., 0., 0., 0., 0., 0., 1.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+                      [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 1.],
+                      [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+
+    (numTN, numSN) = rd2_N.shape
+    s, r = 1., 1.
+    CSdict2 = util.generateRandDataDict(numImp=numSN, numOut=numTN, diagSens=s, diagSpec=r,
+                                        numSamples=0, dataType='Tracked', randSeed=2)
+    CSdict2['diagSens'], CSdict2['diagSpec'] = s, r
+    CSdict2 = util.GetVectorForms(CSdict2)
+    CSdict2['N'], CSdict2['Y'] = rd2_N, rd2_Y
+    CSdict2['prior'] = methods.prior_normal()
+    CSdict2['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    CSdict2['importerNum'], CSdict2['outletNum'] = numSN, numTN
+    # Generate posterior draws
+    numdraws = 50000  # Evaluate choice here
+    CSdict2['numPostSamples'] = numdraws
+    CSdict2 = methods.GeneratePostSamples(CSdict2)
+
+    # Create a normalized sourcing matrix with element minimums
+    elemMin = 0.01
+    normConstant = elemMin / (1 - numSN / 100)  # Only works for numSN<100
+    sourceMatNorm = CSdict2['N'] / (np.reshape(np.tile(np.sum(CSdict2['N'], axis=1), numSN), (numSN, numTN)).T)
+    newSourceMat = sourceMatNorm + normConstant
+    newSourceMat = newSourceMat / (np.reshape(np.tile(np.sum(newSourceMat, axis=1), numSN), (numSN, numTN)).T)
+    CSdict2['transMat'] = newSourceMat
+
+    # Loss specification
+    underWt, t = 1., 0.2
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'name': 'Parabolic', 'threshold': t}
+    marketvec = np.ones(numTN + numSN)
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+
+    # Utility calculation specification
+    numbayesdraws, numdrawsfordata = 3000, 3500
+    utilDict = {'method': 'weightsNodeDraw3'}
+    utilDict.update({'numdrawsfordata': numdrawsfordata})
+    utilDict.update({'numdrawsforbayes': numbayesdraws})
+
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 10, 5
+    numdrawstouse = int(11000000 / numbayesdraws)
+
+    # Withdraw a subset of MCMC prior draws
+    dictTemp = CSdict2.copy()
+    dictTemp.update(
+        {'postSamples': CSdict2['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)],
+         'numPostSamples': numdrawstouse})
+
+    # Generate a marginal utility matrix for each parameter adjustment
+    estWts = [0.05, 0.1, 1, 10, 20]
+    for currEstWt in estWts:
+        tempLossDict = lossDict.copy()
+        tempLossDict['scoreDict'].update({'underEstWt': currEstWt})
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict, utilDict, printUpdate=True)
 
     return
 
@@ -6303,4 +6315,39 @@ def exampleSCscratchForAlgDebug():
         plt.plot(x, resultArr[:, i], 'bo')
     plt.show()
 
+    return
+
+def scratch():
+    '''Place for keeping old code snippets'''
+    '''
+       ##############
+       ### REMOVE AFTER NEW LOSS MATRIX GENERATION IS FIGURED OUT
+       indsforbayes = choice(np.arange(len(dictTemp['postSamples'])), size=utilDict['numdrawsforbayes'], replace=False)
+
+       origArr, newArr = [], []
+       for runs in range(20):
+           origStart = time.process_time()
+           lossMatOrig = lossMatrix(dictTemp['postSamples'], lossDict.copy(), indsforbayes)
+           origTime = time.process_time() - origStart
+           origArr.append(origTime)
+           newStart = time.process_time()
+           lossMatNew = lossMatrixLinearized(dictTemp['postSamples'], lossDict.copy(), indsforbayes)
+           newTime = time.process_time() - newStart
+           newArr.append(newTime)
+
+           print('OLD STYLE TIME: ' + str(round(origTime, 1)))
+           print('NEW STYLE TIME: ' + str(round(newTime, 1)))
+       #plt.hist(origArr, bins=30)
+       binwidth = 1
+       plt.hist(origArr, bins=range(round(min(origArr)), round(max(origArr)) + binwidth, binwidth))
+       plt.xlim([10,35])
+       plt.show()
+       #plt.hist(newArr,bins=30)
+       plt.hist(newArr, bins=range(round(min(newArr)), round(max(newArr)) + binwidth, binwidth))
+       plt.xlim([10, 35])
+       plt.show()
+
+       ### END REMOVE
+       ##############
+    '''
     return
