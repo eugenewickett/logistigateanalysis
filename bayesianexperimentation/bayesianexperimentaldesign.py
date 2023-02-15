@@ -2040,7 +2040,7 @@ UmatTN = np.array([[0.16098932, 0.15988504, 0.15885114, 0.1578939 , 0.15698791,
 
     return sol, maxU
 
-def smoothAllocation(U):
+def smoothAllocationBackward(U):
     '''
     Provides a 'smooth' allocation across the marginal utilities in U. The values of U should correspond to TNs in the
     rows and incremental increases in the sampling budget in the columns.
@@ -2065,6 +2065,33 @@ def smoothAllocation(U):
         currSol[minTNind] -= 1 # Update our current solution
         retArr[:, k] = currSol
         objValArr[k] = objValArr[k+1] - Farr[minTNind]
+
+    return retArr, objValArr
+
+def smoothAllocationForward(U):
+    '''
+    Provides a 'smooth' allocation across the marginal utilities in U. The values of U should correspond to TNs in the
+    rows and incremental increases in the sampling budget in the columns.
+    The algorithm uses greedy decremental steps from a solver-found solution for the maximum budget to find solutions
+    for smaller budgets.
+    '''
+    (numTN, numTests) = U.shape
+    #sol, objVal = GetOptAllocation(U)
+    retArr = np.zeros((numTN, numTests-1)) # First column of U corresponds to no samples
+    objValArr = np.zeros(numTests-1) # For returning the objective vales
+    currSol = np.zeros(numTN)
+    for k in range(0,numTests-1,1):
+        # Choose the direction that produces the highest marginal utility increase
+        Farr = np.zeros(numTN)
+        for tn in range(numTN):
+            Farr[tn] = U[tn, int(currSol[tn])+1] - U[tn, int(currSol[tn])]
+        maxTNind = np.argmax(Farr)
+        currSol[maxTNind] += 1 # Update current solution
+        if k > 0:
+            objValArr[k] = objValArr[k-1] + Farr[maxTNind]
+        else:
+            objValArr[k] = Farr[maxTNind]
+        retArr[:, k] = currSol.copy()
 
     return retArr, objValArr
 
@@ -3200,12 +3227,13 @@ def allocationCaseStudy():
     # todo: ################################
     #todo: REMOVE
     # todo: ################################
-    for setsize in [6000,8000]:
+    for setsize in [10000,15000]:
         print('Set size: '+str(setsize))
         for reps in range(3):
+            print('Replication: '+str(reps))
             setDraws = CSdict1['postSamples'][choice(np.arange(numdraws), size=setsize, replace=False)]
-            utilDict.update({'dataDraws': setDraws})
             lossDict.update({'bayesDraws': setDraws})
+            utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=4000, replace=False)]})
 
             dictTemp.update({'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numdrawstouse,
                                             replace=False)], 'numPostSamples': numdrawstouse})
