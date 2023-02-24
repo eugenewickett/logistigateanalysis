@@ -744,61 +744,30 @@ def lossMatSetBayesDraws(draws, lossdict, bayesdraws):
 
 def addBayesNeighbors(lossdict, masterdraws, targdraws, printUpdate=True):
     '''
-    Adds bEstNeighborNum (in lossdict) closest neighbors in masterdraws of the Bayes estimate as Bayes candidates, and
-    updates lossMat (the loss matrix) in lossdict via the integration/target draws in targdraws.
+    Adds bayesEstNeighborNum (in lossdict) closest neighbors in masterdraws of the Bayes estimate as Bayes candidates,
+    and updates lossMat (the loss matrix) in lossdict via the integration/target draws in targdraws.
     :param bayesdraws: MCMC samples separate from 'draws' that are used to build the loss matrix
     '''
     if printUpdate:
         print('Adding nearest neighbors of best Bayes candidate...')
 
-    initLossMat =
+    # Get best Bayes candidate from current loss matrix
+    bestCand = lossdict['bayesDraws'][np.argmin(np.average(lossdict['lossMat'], axis=1))]
 
+    # Add neighbors of best candidate to set of Bayes draws
+    drawDists = cdist(bestCand.reshape(1, len(targdraws[0])), masterdraws)
+    nieghborInds = np.argpartition(drawDists[0], lossdict['bayesEstNeighborNum'])[:lossdict['bayesEstNeighborNum']]
+    neighborArr = masterdraws[nieghborInds]
 
-    initLossMat = lossMatSetBayesDraws(targDraws, studyLossDict.copy(), initBayesDraws)
-    initLossAvgs = np.average(initLossMat, axis=1)
-    bestCandAvg = np.min(initLossAvgs)
-    bestCandInd = np.argmin(initLossAvgs)
-    bestCand = initBayesDraws[bestCandInd]
-    # Add neighbors of best candidate
-    # M1 = 100 #todo: CONSIDER CHOICE HERE
-    print('Adding neighbors of initial best Bayes estimate...')
-    drawDists = cdist(bestCand.reshape(1, 17), CSdict1['postSamples'])
-    neighInds = np.argpartition(drawDists[0], M1)[:M1]
-    # neighDist = drawDists[0][neighInds]
-    neighArr = CSdict1['postSamples'][neighInds]
-    bayesDraws = np.vstack((initBayesDraws, neighArr))
-    # Check values of resulting loss matrix
-    print('Checking loss matrix for best neighbors...')
-    neighLossMat = lossMatSetBayesDraws(targDraws, studyLossDict.copy(), neighArr)
+    # Update loss matrix
+    templossdict = {'scoreDict': lossdict['scoreDict'], 'riskDict': lossdict['riskDict'], 'marketVec': lossdict['marketVec']}
+    lossMatNeighbors = lossMatSetBayesDraws(targdraws, templossdict, neighborArr)
 
-    # Loop through score, risk, and market for each node of 'draws'
-    (numDraws, numNodes) = targdraws.shape
-    numBayes = bayesdraws.shape[0]
-    retMat = np.zeros((numBayes, targdraws.shape[0]))
+    # Update loss dictionary
+    lossdict.update({'bayesDraws':np.vstack((lossdict['bayesDraws'], neighborArr))})
+    lossdict.update({'lossMat': np.vstack((lossdict['lossMat'],lossMatNeighbors))})
 
-    # Make dummy marketVec if not already available
-    if 'marketVec' not in lossdict.keys():
-        lossdict.update({'marketVec': np.ones(numNodes)})
-    marketVec = lossdict['marketVec']
-
-    for currNodeInd in range(numNodes):
-        currDraws = targdraws[:,currNodeInd].reshape((numDraws,1))
-        currBayesDraws = bayesdraws[:,currNodeInd].reshape((numBayes,1))
-        # Get score matrix
-        if lossdict['scoreDict']['name'] == 'AbsDiff':
-            scoreMat = score_diffMatBayesSet(currDraws, lossdict['scoreDict'], currBayesDraws)
-        elif lossdict['scoreDict']['name'] == 'Class':
-            scoreMat = score_classMatBayesSet(currDraws, lossdict['scoreDict'], currBayesDraws)
-        elif lossdict['scoreDict']['name'] == 'Check':
-            scoreMat = score_checkMatBayesSet(currDraws, lossdict['scoreDict'], currBayesDraws)
-        # Get risk matrix
-        if lossdict['riskDict']['name'] == 'Parabolic':
-            riskMat = risk_parabolicMat(currDraws, lossdict['riskDict'], currBayesDraws)
-        elif lossdict['riskDict']['name'] == 'Check':
-            riskMat = risk_checkMat(currDraws, lossdict['riskDict'], currBayesDraws)
-        retMat += np.sum(scoreMat*riskMat,axis=2)*marketVec[currNodeInd]
-
-    return retMat
+    return lossdict
 
 def loss_pms2(est, targ, paramDict):
     '''
@@ -3843,6 +3812,17 @@ def allocationCaseStudy():
                        fontsize=7)
             plt.ylim([1.9, 2.3])
             plt.show()
+
+
+    # Test add neighbors of Bayes estimates
+    studyLossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    studyLossDict.update({'bayesDraws': initBayesDraws})
+    studyLossDict.update({'lossMat': initLossMat})
+    studyLossDict.update({'bayesEstNeighborNum': 500})
+    newStudyLossDict = addBayesNeighbors(studyLossDict, CSdict1['postSamples'], targDraws)
+    newStudyLossDict['lossMat'].shape
+    newStudyLossDict['bayesDraws'].shape
+
 
     # Now look at effect on estimates away from 0 tests
     repsToDo = 20
