@@ -745,7 +745,7 @@ def lossMatSetBayesDraws(draws, lossdict, bayesdraws):
 def addBayesNeighbors(lossdict, masterdraws, targdraws, printUpdate=True):
     '''
     Adds bayesEstNeighborNum (in lossdict) closest neighbors in masterdraws of the Bayes estimate as Bayes candidates,
-    and updates lossMat (the loss matrix) in lossdict via the integration/target draws in targdraws.
+    and returns new draws and lossMat (the loss matrix) via the integration/target draws in targdraws.
     :param bayesdraws: MCMC samples separate from 'draws' that are used to build the loss matrix
     '''
     if printUpdate:
@@ -763,11 +763,11 @@ def addBayesNeighbors(lossdict, masterdraws, targdraws, printUpdate=True):
     templossdict = {'scoreDict': lossdict['scoreDict'], 'riskDict': lossdict['riskDict'], 'marketVec': lossdict['marketVec']}
     lossMatNeighbors = lossMatSetBayesDraws(targdraws, templossdict, neighborArr)
 
-    # Update loss dictionary
-    lossdict.update({'bayesDraws':np.vstack((lossdict['bayesDraws'], neighborArr))})
-    lossdict.update({'lossMat': np.vstack((lossdict['lossMat'],lossMatNeighbors))})
+    # Update return items
+    bayesdraws = np.vstack((lossdict['bayesDraws'], neighborArr))
+    lossmat = np.vstack((lossdict['lossMat'],lossMatNeighbors))
 
-    return lossdict
+    return bayesdraws, lossmat
 
 def loss_pms2(est, targ, paramDict):
     '''
@@ -1815,7 +1815,8 @@ def zProbTrVec(snNum, gammaMat, sens=1., spec=1.):
     # each term is a k-by-n-by-m array
     return sens * zMat + (1 - spec) * (1 - zMat)
 
-def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate=True):
+def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, addBayesNeighbors=True, masterDraws=[],
+                       printUpdate=True):
     '''
     Returns an array of marginal utility estimates for the PMS data contained in scDict.
     :param testsMax: maximum number of tests at each test node
@@ -1825,8 +1826,8 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
     :return margUtilArr: array of size (number of test nodes) by (testsMax/testsInt + 1)
     '''
     (numTN, numSN) = scDict['N'].shape
-    design=np.zeros(numTN)
-    design[0] = 1.
+    #design=np.zeros(numTN)
+    #design[0] = 1.
     # Calculate the loss matrix
     if 'numdrawsforbayes' in utilDict:
         indsforbayes = choice(np.arange(len(scDict['postSamples'])),size=utilDict['numdrawsforbayes'],replace=False)
@@ -1841,9 +1842,13 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, printUpdate
             if printUpdate == True:
                 print('Generating loss matrix of size: ' + str(len(scDict['postSamples']) * len(indsforbayes)))
             lossMat = lossMatrixLinearized(scDict['postSamples'],lossDict.copy(),indsforbayes)
-        lossDict.update({'lossMat':lossMat})
+        lossDict.update({'lossMat': lossMat})
+        if addBayesNeighbors: # Add nearest neighbors to best Bayes estimate
+            newBayesDraws, newLossMat = addBayesNeighbors(lossDict, masterDraws, scDict['postSamples'])
+            lossDict.update({'bayesDraws':newBayesDraws, 'lossMat':newLossMat})
     if 'lossMat' in lossDict:
         lossMat = lossDict['lossMat'].copy()
+
     # Establish a baseline loss for comparison with other losses; only depends on the loss matrix, as there are no tests
     if printUpdate == True:
         print('Generating baseline utility...')
@@ -3228,7 +3233,8 @@ def allocationCaseStudy():
     riskdict = {'name': 'Parabolic', 'threshold': t}
     marketvec = np.ones(numTN + numSN)
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    lossDict.update({'bayesDraws': setDraws})
+    numBayesNeigh = 1000
+    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum':numBayesNeigh})
 
     # Utility calculation specification
     numDataDraws = 5000
@@ -3245,19 +3251,22 @@ def allocationCaseStudy():
          'numPostSamples': numdrawstouse})
 
     # todo: ################################
-    # todo: REMOVE LATER: STUDY OF CUMULATIVE UTILITY UNDER DIFFERENT RUNS OF DRAWS
+    # todo: REMOVE LATER: STUDY OF CUMULATIVE UTILITY UNDER DIFFERENT RUNS OF DRAWS (UPDATE 23-FEB)
     # todo: ################################
     masterCumUtilList = []
     masterAllocList = []
     for reps in range(20):
         dictTemp.update( {'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numdrawstouse, replace=False)],
              'numPostSamples': numdrawstouse})
-        setDraws = CSdict1['postSamples'][choice(np.arange(numdraws), size=17000, replace=False)]
+        setDraws = CSdict1['postSamples'][choice(np.arange(numdraws), size=10000, replace=False)]
         lossDict.update({'bayesDraws': setDraws})
         utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
         currLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
         lossDict.update({'lossMat':currLossMat})
-        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), 500, 50, lossDict, utilDict, printUpdate=True)
+        newbayesdraws, newlossmat = addBayesNeighbors(lossDict, masterdraws=CSdict1['postSamples'],
+                                                       targdraws=dictTemp['postSamples'])
+        lossDict.update({'lossMat':newlossmat, 'bayesDraws':newbayesdraws})
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), 500, 50, lossDict, utilDict)
         print('Util. Mat '+str(reps)+':')
         print(repr(currMargUtilMat))
         allocArr, objValArr = smoothAllocationForward(currMargUtilMat)
@@ -3268,6 +3277,256 @@ def allocationCaseStudy():
     plotAlloc(allocArr,paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
                       labels=dictTemp['outletNames'])
     '''
+    # AFTER ADDING 1000 BAYES ESTIMATE NEIGHBORS
+    #Util. Mat 0
+    u0 = np.array([[0.        , 0.09318194, 0.15683983, 0.20601028, 0.25212017,
+        0.28835679, 0.3256349 , 0.36189552, 0.39973946, 0.43520777,
+        0.46905717],
+       [0.        , 0.17039448, 0.26211104, 0.32054751, 0.37069345,
+        0.41047831, 0.45092814, 0.4854552 , 0.51868994, 0.54651135,
+        0.5858511 ],
+       [0.        , 0.06085816, 0.1138812 , 0.16347849, 0.20519693,
+        0.24958444, 0.28832474, 0.32568243, 0.36603347, 0.40317446,
+        0.44543277],
+       [0.        , 0.02882107, 0.05094552, 0.06636211, 0.0804752 ,
+        0.09557022, 0.10763333, 0.11903662, 0.13190108, 0.142774  ,
+        0.15036863]])
+    #Util. Mat 1:
+    u1 = np.array([[0.        , 0.10902454, 0.17727219, 0.22542414, 0.26903467,
+        0.31116464, 0.34656966, 0.38485691, 0.42051164, 0.45595792,
+        0.49149031],
+       [0.        , 0.20672765, 0.2954141 , 0.3538176 , 0.40494318,
+        0.44674282, 0.48372035, 0.52244182, 0.55430436, 0.58949629,
+        0.61614297],
+       [0.        , 0.0878942 , 0.1430615 , 0.19359015, 0.23269561,
+        0.27631588, 0.319621  , 0.35877042, 0.39622669, 0.43710931,
+        0.46839162],
+       [0.        , 0.04841737, 0.07682134, 0.09796187, 0.11465986,
+        0.1271576 , 0.14343317, 0.15227299, 0.16424363, 0.17558264,
+        0.182724  ]])
+    #Util. Mat 2:
+    u2 = np.array([[0.        , 0.11771291, 0.18234581, 0.23480408, 0.2790937 ,
+        0.31688547, 0.35009175, 0.38667217, 0.41606442, 0.44989725,
+        0.48561441],
+       [0.        , 0.17810194, 0.27078591, 0.33325569, 0.3813214 ,
+        0.42457043, 0.45970989, 0.49498908, 0.53372568, 0.56394796,
+        0.59266809],
+       [0.        , 0.06589078, 0.12035121, 0.16812155, 0.21419673,
+        0.25664439, 0.29435928, 0.33577368, 0.37852298, 0.41177839,
+        0.44664865],
+       [0.        , 0.04538509, 0.07079717, 0.0904443 , 0.10801285,
+        0.12163598, 0.13454564, 0.14827975, 0.15804266, 0.17127043,
+        0.17704696]])
+    #Util. Mat 3:
+    u3 = np.array([[0.        , 0.13383169, 0.19763136, 0.24830929, 0.28982812,
+        0.32772904, 0.36165472, 0.39888541, 0.42838134, 0.46560507,
+        0.49989456],
+       [0.        , 0.18834477, 0.2773502 , 0.3305479 , 0.38495323,
+        0.42371274, 0.46569413, 0.49921844, 0.53792288, 0.56890193,
+        0.60745012],
+       [0.        , 0.08852089, 0.14392864, 0.19217295, 0.23588149,
+        0.27470035, 0.3146391 , 0.35573843, 0.38976252, 0.43216252,
+        0.46552857],
+       [0.        , 0.06434262, 0.09326846, 0.11498953, 0.13314296,
+        0.14621542, 0.15749648, 0.16942488, 0.17738417, 0.18850021,
+        0.19980964]])
+    #Util. Mat 4:
+    u4 = np.array([[0.        , 0.14210364, 0.20189607, 0.25158109, 0.28792816,
+        0.32388005, 0.35949303, 0.39615933, 0.42926537, 0.46524504,
+        0.49201379],
+       [0.        , 0.18885117, 0.26507046, 0.32227658, 0.37021278,
+        0.40998438, 0.45348677, 0.49054887, 0.52171914, 0.55177016,
+        0.58109656],
+       [0.        , 0.09221643, 0.1433162 , 0.18757532, 0.22961432,
+        0.26636642, 0.31093962, 0.34405777, 0.38573942, 0.41554106,
+        0.45643317],
+       [0.        , 0.07065786, 0.0978935 , 0.11688395, 0.13630937,
+        0.14813995, 0.15869833, 0.17030993, 0.18132352, 0.19278555,
+        0.20056682]])
+    #Util. Mat 5:
+    u5 = np.array([[0.        , 0.09513012, 0.16137482, 0.21128244, 0.25337449,
+        0.29232142, 0.33608926, 0.36636158, 0.40324761, 0.43635132,
+        0.46659541],
+       [0.        , 0.16813375, 0.25460444, 0.31391843, 0.36415313,
+        0.40449545, 0.44142322, 0.48119036, 0.51438242, 0.54481193,
+        0.57834204],
+       [0.        , 0.06455708, 0.11924913, 0.16748556, 0.2133656 ,
+        0.25235048, 0.29904689, 0.33785861, 0.3747855 , 0.41674545,
+        0.45452108],
+       [0.        , 0.03732102, 0.06117504, 0.07787956, 0.09416721,
+        0.10684011, 0.12011297, 0.13206075, 0.14084293, 0.15277235,
+        0.15951335]])
+    #Util. Mat 6:
+    u6 = np.array([[0.        , 0.12427497, 0.18747432, 0.23121436, 0.27283914,
+        0.31098422, 0.34200348, 0.3758745 , 0.41225218, 0.44532821,
+        0.47472773],
+       [0.        , 0.18370508, 0.26255218, 0.32174478, 0.37099941,
+        0.41410293, 0.45157289, 0.48777085, 0.51549007, 0.55336087,
+        0.57619925],
+       [0.        , 0.07967179, 0.13646058, 0.18194801, 0.22475222,
+        0.26738341, 0.30507396, 0.34180388, 0.38216301, 0.41639062,
+        0.45059171],
+       [0.        , 0.05012728, 0.07962702, 0.10007349, 0.11860574,
+        0.13495699, 0.14666703, 0.15890791, 0.16966654, 0.1788996 ,
+        0.18787934]])
+    #Util. Mat 7:
+    u7 = np.array([[0.        , 0.14439304, 0.20788144, 0.25195011, 0.2936717 ,
+        0.32785966, 0.36596298, 0.40028581, 0.42742554, 0.46068702,
+        0.49536313],
+       [0.        , 0.19725153, 0.27857052, 0.33657465, 0.38573943,
+        0.42974562, 0.46609964, 0.50284749, 0.53302298, 0.57003062,
+        0.59933226],
+       [0.        , 0.0926779 , 0.1438717 , 0.19551669, 0.23340126,
+        0.27930091, 0.31539395, 0.35196101, 0.39009541, 0.42896809,
+        0.46220209],
+       [0.        , 0.06394049, 0.09304198, 0.11449039, 0.13070281,
+        0.14617589, 0.15747858, 0.17008887, 0.18008423, 0.18905326,
+        0.20028301]])
+    #Util. Mat 8:
+    u8 = np.array([[0.        , 0.12492762, 0.18835316, 0.23678618, 0.27836435,
+        0.32229743, 0.35653327, 0.39252955, 0.42697868, 0.4623769 ,
+        0.48724312],
+       [0.        , 0.18545638, 0.26878041, 0.32795952, 0.37914293,
+        0.42297715, 0.46377741, 0.4966271 , 0.53159988, 0.56484844,
+        0.59430279],
+       [0.        , 0.0859839 , 0.14157134, 0.19079295, 0.23446247,
+        0.27604029, 0.3181706 , 0.34926354, 0.39391159, 0.4257997 ,
+        0.46413443],
+       [0.        , 0.06099019, 0.09018529, 0.11015763, 0.12682515,
+        0.14336877, 0.15449832, 0.16550018, 0.17755236, 0.1864646 ,
+        0.19553653]])
+    #Util. Mat 9:
+    u9 = np.array([[0.        , 0.13343715, 0.19137686, 0.23566704, 0.27854106,
+        0.31756169, 0.34866286, 0.38318075, 0.41853683, 0.45089341,
+        0.48370243],
+       [0.        , 0.19683119, 0.27661832, 0.33644444, 0.38330309,
+        0.42753865, 0.46747253, 0.50071258, 0.53775337, 0.56711394,
+        0.60188065],
+       [0.        , 0.09113362, 0.14399605, 0.1886667 , 0.23352674,
+        0.27352455, 0.3109274 , 0.35166123, 0.38836184, 0.4272218 ,
+        0.46226291],
+       [0.        , 0.06378375, 0.09173173, 0.11373901, 0.12972805,
+        0.14191972, 0.15575239, 0.16644263, 0.17778598, 0.18761339,
+        0.1970189 ]])
+    #Util. Mat 10:
+    u10 = np.array([[0.        , 0.13824066, 0.19801669, 0.24394503, 0.28525266,
+        0.32480162, 0.35892384, 0.39435964, 0.42934717, 0.46622379,
+        0.49291728],
+       [0.        , 0.19961383, 0.27920446, 0.33900165, 0.38348187,
+        0.42691446, 0.46295939, 0.49694605, 0.53048417, 0.55959331,
+        0.58852759],
+       [0.        , 0.09822297, 0.15471131, 0.20121382, 0.24086155,
+        0.28171747, 0.3213809 , 0.36214077, 0.39874765, 0.43376834,
+        0.46810766],
+       [0.        , 0.06922505, 0.09697289, 0.11757807, 0.13512765,
+        0.14743103, 0.16408265, 0.17387725, 0.18381028, 0.19474324,
+        0.20330495]])
+    #Util. Mat 11:
+    u11 = np.array([[0.        , 0.1261812 , 0.1861662 , 0.23227914, 0.27498267,
+        0.31173   , 0.34842296, 0.38184225, 0.41768212, 0.45062944,
+        0.48051497],
+       [0.        , 0.18864157, 0.27404224, 0.33220758, 0.37866616,
+        0.42013466, 0.4602598 , 0.49457503, 0.52654876, 0.55749865,
+        0.58839629],
+       [0.        , 0.08611486, 0.13521387, 0.17898858, 0.22457063,
+        0.25899915, 0.30210054, 0.33577675, 0.37346342, 0.41186517,
+        0.44930964],
+       [0.        , 0.05759369, 0.08304449, 0.10055295, 0.11974374,
+        0.13350746, 0.14476236, 0.15579229, 0.1679385 , 0.17989026,
+        0.18258475]])
+    #Util. Mat 12:
+    u12 = np.array([[0.        , 0.13880125, 0.19758785, 0.24334605, 0.27791213,
+        0.31845942, 0.35338073, 0.38853398, 0.42206258, 0.4539337 ,
+        0.48293445],
+       [0.        , 0.18943168, 0.27081833, 0.32974836, 0.37644288,
+        0.41329886, 0.4515323 , 0.48813525, 0.52160944, 0.55023973,
+        0.58182497],
+       [0.        , 0.09392396, 0.14609298, 0.19336278, 0.23686738,
+        0.27293015, 0.31283751, 0.34953652, 0.38171049, 0.42254536,
+        0.45487191],
+       [0.        , 0.06525681, 0.09229363, 0.11342074, 0.12733779,
+        0.1416202 , 0.15188284, 0.16352576, 0.17375932, 0.1836812 ,
+        0.19184364]])
+    #Util. Mat 13:
+    u13 = np.array([[0.        , 0.11571925, 0.17419814, 0.22164132, 0.26377471,
+        0.29700495, 0.33536213, 0.37315625, 0.40353316, 0.43920142,
+        0.47723978],
+       [0.        , 0.169416  , 0.25509415, 0.31473149, 0.36501284,
+        0.40942074, 0.44709305, 0.47955368, 0.52116523, 0.5563742 ,
+        0.57967911],
+       [0.        , 0.08383269, 0.13081308, 0.1808108 , 0.21934545,
+        0.25824481, 0.29542262, 0.33738712, 0.37507694, 0.40878123,
+        0.44737403],
+       [0.        , 0.06421071, 0.08945009, 0.10971303, 0.12247959,
+        0.13286029, 0.14432058, 0.15697421, 0.16785864, 0.17473715,
+        0.18577795]])
+    #Util. Mat 14:
+    u14 = np.array([[0.        , 0.13406411, 0.19580211, 0.24243131, 0.27981673,
+        0.32138356, 0.36228804, 0.39362608, 0.42751848, 0.45655849,
+        0.49178652],
+       [0.        , 0.19242351, 0.2794439 , 0.33637411, 0.3858922 ,
+        0.42813449, 0.46749924, 0.50313329, 0.53380805, 0.57072156,
+        0.598099  ],
+       [0.        , 0.08489674, 0.14070046, 0.18961856, 0.23065768,
+        0.27729185, 0.31627771, 0.35334457, 0.3903678 , 0.42713189,
+        0.46214737],
+       [0.        , 0.06406329, 0.09170314, 0.11357239, 0.12981713,
+        0.14394661, 0.15523561, 0.166357  , 0.18260091, 0.18986601,
+        0.19771422]])
+    #Util. Mat 15:
+    u15 = np.array([[0.        , 0.13105664, 0.18427393, 0.22965877, 0.2721545 ,
+        0.30180721, 0.34306448, 0.37950655, 0.41031086, 0.44220049,
+        0.47835503],
+       [0.        , 0.18232189, 0.26568813, 0.32629504, 0.37353811,
+        0.41351581, 0.45470667, 0.48663604, 0.51931482, 0.55261783,
+        0.58296666],
+       [0.        , 0.08106681, 0.1276228 , 0.17135571, 0.21481786,
+        0.25378604, 0.2949085 , 0.33132033, 0.36868768, 0.41006636,
+        0.43982517],
+       [0.        , 0.0610116 , 0.08873849, 0.10403277, 0.12047169,
+        0.13318737, 0.14608111, 0.15570579, 0.16528817, 0.17632703,
+        0.18339536]])
+    #Util. Mat 16:
+    u16 = np.array([[0.        , 0.13417223, 0.19316291, 0.24029808, 0.27756282,
+        0.31388475, 0.35113244, 0.38488531, 0.41827805, 0.44621863,
+        0.47813531],
+       [0.        , 0.19342927, 0.27275892, 0.32956823, 0.37537008,
+        0.4196944 , 0.45607826, 0.48828391, 0.52294557, 0.55401264,
+        0.59073038],
+       [0.        , 0.08950741, 0.14003444, 0.18527905, 0.22743187,
+        0.2671065 , 0.30339293, 0.34166357, 0.38043434, 0.41617077,
+        0.44917029],
+       [0.        , 0.06271191, 0.09122679, 0.1132644 , 0.12798675,
+        0.14269949, 0.15496902, 0.16697246, 0.17656938, 0.18484145,
+        0.19682079]])
+    #Util. Mat 17:
+    u17 = np.array([[0.        , 0.11519473, 0.17812632, 0.22986853, 0.27278689,
+        0.31018338, 0.34782429, 0.38191471, 0.41712402, 0.44929157,
+        0.48372015],
+       [0.        , 0.18067413, 0.26696166, 0.32835369, 0.37465575,
+        0.41952839, 0.45467779, 0.48747033, 0.52558717, 0.55766842,
+        0.58842819],
+       [0.        , 0.07698212, 0.13215377, 0.17944265, 0.21915946,
+        0.26379044, 0.30060085, 0.34127608, 0.37636953, 0.4158058 ,
+        0.45357871],
+       [0.        , 0.05749645, 0.08568224, 0.10555211, 0.12235218,
+        0.13532288, 0.14823957, 0.16094996, 0.16936986, 0.18109101,
+        0.18907248]])
+    #Util. Mat 18:
+    u18 = np.array([[0.        , 0.11453997, 0.17637435, 0.22848548, 0.26793746,
+        0.3095422 , 0.34299379, 0.37659749, 0.4127083 , 0.44364194,
+        0.48374752],
+       [0.        , 0.16835046, 0.25146248, 0.31275939, 0.35885782,
+        0.39884917, 0.43995867, 0.47780227, 0.51053906, 0.53884462,
+        0.56758124],
+       [0.        , 0.06946913, 0.12607635, 0.16908698, 0.20918166,
+        0.25456322, 0.29347345, 0.33139311, 0.36951729, 0.40357873,
+        0.44090973],
+       [0.        , 0.04633363, 0.07255455, 0.09440638, 0.11188878,
+        0.12549598, 0.13785062, 0.14694287, 0.15985728, 0.16944848,
+        0.17683876]])
+    
+    # BEFORE ADDING NEIGHBORS...
     #Util. Mat 0:
     u0 = np.array([[0.        , 0.10280975, 0.16785498, 0.21525999, 0.26070039,
         0.29807581, 0.33969723, 0.38221283, 0.41661454, 0.45396025,
@@ -3646,16 +3905,23 @@ def allocationCaseStudy():
         0.11129508, 0.12426218, 0.13877873, 0.14625532, 0.159994  ,
         0.17122475]])
     uList = [u0, u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11,
-             u12, u13, u14, u15, u16, u17, u18, u19, u20, u21,
+             u12, u13, u14, u15, u16, u17], u18, u19, u20, u21,
              u22, u23, u24, u25, u26, u27, u28]
     '''
     '''
-    tnCurr = 0
+    # Plot utility curves
+    for u in uList:
+        allocArr, objValArr = smoothAllocationForward(u)
+        plt.plot(np.arange(50,550,50),objValArr, linewidth=0.5)
+    plt.title('Cumulative utility of solutions vs. budget\nBayes neighbors included')
+    plt.ylim([0.,0.9])
+    plt.show()
+    
+    # Plot allocations at a specified node
+    tnCurr = 3 # Update this for the node
     pltArr = np.zeros((7,10))
     for u in uList:
         allocArr, objValArr = smoothAllocationForward(u)
-        #plt.plot(np.arange(50,550,50),objValArr, linewidth=0.5)
-        #plt.plot(np.arange(50,550,50),allocArr[tnCurr], linewidth=0.5)
         for elemind, elem in enumerate(allocArr[tnCurr]):
             pltArr[int(elem),elemind] += 1
     pltArr = pltArr / len(uList) * 100
@@ -3665,8 +3931,7 @@ def allocationCaseStudy():
         for colind, col in enumerate(rw):
             if pltArr[rwind,colind] > 0:
                 plt.text((colind+1)*50-10, rwind*50+2,str(int(pltArr[rwind,colind])))
-    plt.title('Cumulative utility of solutions vs. budget')
-    plt.title('Allocation of TN '+str(tnCurr)+ ' vs. budget')
+    plt.title('Allocation of TN '+str(tnCurr)+ ' vs. budget\nBayes neighbors included')
     plt.xlabel('Budget')
     plt.ylabel('Allocation')
     plt.ylim([0,350])
@@ -3813,17 +4078,6 @@ def allocationCaseStudy():
             plt.ylim([1.9, 2.3])
             plt.show()
 
-
-    # Test add neighbors of Bayes estimates
-    studyLossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    studyLossDict.update({'bayesDraws': initBayesDraws})
-    studyLossDict.update({'lossMat': initLossMat})
-    studyLossDict.update({'bayesEstNeighborNum': 500})
-    newStudyLossDict = addBayesNeighbors(studyLossDict, CSdict1['postSamples'], targDraws)
-    newStudyLossDict['lossMat'].shape
-    newStudyLossDict['bayesDraws'].shape
-
-
     # Now look at effect on estimates away from 0 tests
     repsToDo = 20
     design = np.zeros(numTN)
@@ -3908,7 +4162,6 @@ def allocationCaseStudy():
     # todo: ################################
     # todo: END REMOVE LATER: STUDY OF BAYES CANDIDATES
     # todo: ################################
-
 
     # todo: ################################
     # todo: REMOVE LATER: STUDY OF TARGET VS. BAYES DRAWS
