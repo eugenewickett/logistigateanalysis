@@ -1314,7 +1314,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             NMat = np.random.multinomial(Ntotal,Qvec,size=numdrawsfordata) # How many samples from each SN
             YMat = np.random.binomial(NMat, zMat[datadrawinds]) # How many samples were positive
             # Replicate zMat for the number of data draws; bigzMat[][j][]=bigzMat[][j'][]
-            bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata,numSN)), axes=(0,1,2))
+            bigzMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numdrawsfordata, numSN)), axes=(0,1,2))
             # Replicate NMat and YMat for the number of base MCMC draws; bigNMat[i][][]=bigNMat[i'][][]
             bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numpriordraws, numSN)), axes=(1,0,2))
             bigYMat = np.transpose(np.reshape(np.tile(YMat, numpriordraws), (numdrawsfordata, numpriordraws, numSN)), axes=(1, 0, 2))
@@ -1374,31 +1374,32 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
             lossveclist.append(np.average(wtLossMins))
         # END ELIF FOR WEIGHTSNODEDRAW3LINEAR
 
-        elif method == 'weightsNodeDraw4': # Weight each prior draw by the likelihood of a new data set; NODE SAMPLING
+        elif method == 'weightsNodeDraw4': # Weight each prior draw by the likelihood of a new data set
             # Differs from 'weightsNodeDraw3' in that it allows any type of design, not just one test node designs
             # Use numdrawsfordata draws randomly selected from the set of prior draws
             datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
-            zMat2 = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, :, :]
+            zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, :, :]
             if sampMat.ndim == 1: # Node sampling
-                NMat2 = np.moveaxis( np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdrawsfordata) for tnInd in range(len(sampMat))]),1,0)
-                YMat2 = np.random.binomial(NMat2.astype(int), zMat2[datadrawinds])
-            elif sampMat.ndim == 2: # Path sampling
-                NMat2 = np.moveaxis(np.reshape(np.tile(sampMat, numdrawsfordata),(numTN,numdrawsfordata,numSN)),1,0)
-                YMat2 = np.random.binomial(NMat2.astype(int), zMat2[datadrawinds])
-            bigZMat2 = np.transpose(np.reshape(np.tile(zMat2, numdrawsfordata), (numpriordraws, numTN, numdrawsfordata, numSN)),
+                NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdrawsfordata)
+                                              for tnInd in range(len(sampMat))]),1,0)
+                YMat = np.random.binomial(NMat.astype(int), zMat[datadrawinds])
+            elif sampMat.ndim == 2: # Path sampling; todo: NEED TO PROGRAM LATER
+                NMat = np.moveaxis(np.reshape(np.tile(sampMat, numdrawsfordata),(numTN,numdrawsfordata,numSN)),1,0)
+                YMat = np.random.binomial(NMat.astype(int), zMat[datadrawinds])
+            bigZMat = np.transpose(np.reshape(np.tile(zMat, numdrawsfordata), (numpriordraws, numTN, numdrawsfordata, numSN)),
                                    axes=(0,2,1,3))
-            bigNMat2 = np.transpose(np.reshape(np.tile(NMat2, numpriordraws), (numdrawsfordata,numTN, numpriordraws, numSN)),
+            bigNMat = np.transpose(np.reshape(np.tile(NMat, numpriordraws), (numdrawsfordata,numTN, numpriordraws, numSN)),
                                    axes=(2,0,1,3))
-            bigYMat2 = np.transpose(np.reshape(np.tile(YMat2, numpriordraws),
+            bigYMat = np.transpose(np.reshape(np.tile(YMat, numpriordraws),
                                     (numdrawsfordata, numTN, numpriordraws, numSN)), axes=(2, 0, 1, 3))
-            combNY2 = np.transpose(np.reshape(np.tile(sps.comb(NMat2, YMat2),numpriordraws),
+            combNY = np.transpose(np.reshape(np.tile(sps.comb(NMat, YMat),numpriordraws),
                                               (numdrawsfordata,numTN, numpriordraws,numSN)),axes=(2,0,1,3))
-            wtsMat2 = np.exp(np.sum((bigYMat2 * np.log(bigZMat2)) + ((bigNMat2 - bigYMat2) * np.log(1 - bigZMat2))
-                                    + np.log(combNY2), axis=(2,3)))
+            wtsMat = np.exp(np.sum((bigYMat * np.log(bigZMat)) + ((bigNMat - bigYMat) * np.log(1 - bigZMat))
+                                    + np.log(combNY), axis=(2,3)))
             # Normalize so that each column sums to 1
-            wtsMat2 = np.divide(wtsMat2 * 1, np.reshape(np.tile(np.sum(wtsMat2, axis=0), numpriordraws),
+            wtsMat = np.divide(wtsMat * 1, np.reshape(np.tile(np.sum(wtsMat, axis=0), numpriordraws),
                                                         (numpriordraws, numdrawsfordata)))
-            wtLossMat = np.matmul(lossdict['lossMat'],wtsMat2)
+            wtLossMat = np.matmul(lossdict['lossMat'], wtsMat)
             wtLossMins = wtLossMat.min(axis=0)
             lossveclist.append(np.average(wtLossMins))
         # END ELIF FOR WEIGHTSNODEDRAW4
@@ -1406,40 +1407,46 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
         elif method == 'weightsNodeDraw4linear': # Weight each prior draw by the likelihood of a new data set; NODE SAMPLING
             # Can handle multiple-test node designs
             # Differs from 'weightsNodeDraw4' in that the 'big' matrices are NOT vectorized
-            Ntilde = sampMat.copy()
-            sampNodeInd = 0
-            for currind in range(numTN): # Identify the test node we're analyzing
-                if Ntilde[currind] > 0:
-                    sampNodeInd = currind # TN of focus
-            Ntotal, Qvec = int(Ntilde[sampNodeInd]), Q[sampNodeInd]
             if 'dataDraws' in utildict: # Use data draws included in the utility dictionary
                 datadraws = utildict['dataDraws']
-                zMatTarg = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :]  # Matrix of SFP probabilities, as a function of SFP rate draws
-                zMatData = zProbTrVec(numSN, datadraws, sens=s, spec=r)[:, sampNodeInd, :] # Probs. using data draws
-                NMat = np.random.multinomial(Ntotal, Qvec, size=numdrawsfordata)  # How many samples from each SN
-                YMat = np.random.binomial(NMat, zMatData)  # How many samples were positive
+                zMatTarg = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, :, :]  # Matrix of SFP probabilities, as a function of SFP rate draws
+                zMatData = zProbTrVec(numSN, datadraws, sens=s, spec=r)[:, :, :] # Probs. using data draws
+                if sampMat.ndim == 1:  # Node sampling
+                    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdrawsfordata)
+                                                 for tnInd in range(len(sampMat))]), 1, 0)
+                    YMat = np.random.binomial(NMat.astype(int), zMatData)
+                elif sampMat.ndim == 2:  # Path sampling; todo: NEED TO PROGRAM LATER
+                    NMat = np.moveaxis(np.reshape(np.tile(sampMat, numdrawsfordata), (numTN, numdrawsfordata, numSN)), 1, 0)
+                    YMat = np.random.binomial(NMat.astype(int), zMatData)
                 tempW = np.zeros(shape=(numpriordraws, numdrawsfordata))
-                for nodeInd in range(numSN): # Loop through each SN
-                    # Get zProbs corresponding to current SN
-                    bigZtemp = np.transpose(np.reshape(np.tile(zMatTarg[:,nodeInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
-                    bigNtemp = np.reshape(np.tile(NMat[:, nodeInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                    bigYtemp = np.reshape(np.tile(YMat[:, nodeInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                    combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, nodeInd], YMat[:, nodeInd]),numpriordraws), (numpriordraws, numdrawsfordata))
-                    tempW += (bigYtemp*np.log(bigZtemp))+((bigNtemp-bigYtemp)*np.log(1-bigZtemp))+np.log(combNYtemp)
+                for snInd in range(numSN): # Loop through each SN and TN combination
+                    for tnInd in range(numTN):
+                    # Get zProbs corresponding to current SN-TN combo
+                        bigZtemp = np.transpose(np.reshape(np.tile(zMatTarg[:, tnInd, snInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
+                        bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                        bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                        combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]),numpriordraws), (numpriordraws, numdrawsfordata))
+                        tempW += (bigYtemp*np.log(bigZtemp)) + ((bigNtemp-bigYtemp)*np.log(1-bigZtemp)) + np.log(combNYtemp)
 
             else: # Use numdrawsfordata draws randomly selected from the set of prior (target) draws
                 datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
-                zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, sampNodeInd, :] # Matrix of SFP probabilities, as a function of SFP rate draws
-                NMat = np.random.multinomial(Ntotal,Qvec,size=numdrawsfordata) # How many samples from each SN
-                YMat = np.random.binomial(NMat, zMat[datadrawinds]) # How many samples were positive
+                zMat = zProbTrVec(numSN, priordraws, sens=s, spec=r)[:, :, :] # Matrix of SFP probabilities, as a function of SFP rate draws
+                if sampMat.ndim == 1:  # Node sampling
+                    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdrawsfordata)
+                                                 for tnInd in range(len(sampMat))]), 1, 0)
+                    YMat = np.random.binomial(NMat.astype(int), zMat[datadrawinds])
+                elif sampMat.ndim == 2:  # Path sampling; todo: NEED TO PROGRAM LATER
+                    NMat = np.moveaxis(np.reshape(np.tile(sampMat, numdrawsfordata), (numTN, numdrawsfordata, numSN)), 1, 0)
+                    YMat = np.random.binomial(NMat.astype(int), zMat[datadrawinds])
                 tempW = np.zeros(shape=(numpriordraws,numdrawsfordata))
-                for nodeInd in range(numSN): # Loop through each SN
-                    # Get zProbs corresponding to current SN
-                    bigZtemp = np.transpose(np.reshape(np.tile(zMat[:,nodeInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
-                    bigNtemp = np.reshape(np.tile(NMat[:, nodeInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                    bigYtemp = np.reshape(np.tile(YMat[:, nodeInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                    combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, nodeInd], YMat[:, nodeInd]),numpriordraws), (numpriordraws, numdrawsfordata))
-                    tempW += (bigYtemp*np.log(bigZtemp))+((bigNtemp-bigYtemp)*np.log(1-bigZtemp))+np.log(combNYtemp)
+                for snInd in range(numSN): # Loop through each SN and TN combination
+                    for tnInd in range(numTN):
+                    # Get zProbs corresponding to current SN-TN combo
+                        bigZtemp = np.transpose(np.reshape(np.tile(zMat[:, tnInd, snInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
+                        bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                        bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                        combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]),numpriordraws), (numpriordraws, numdrawsfordata))
+                        tempW += (bigYtemp*np.log(bigZtemp)) + ((bigNtemp-bigYtemp)*np.log(1-bigZtemp)) + np.log(combNYtemp)
 
             wtsMat = np.exp(tempW) # Turn weights into likelihoods
             # Normalize so each column sums to 1; the likelihood of each data set is accounted for in the data draws
@@ -1879,7 +1886,8 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, addbayesnei
         indsforbayes = choice(np.arange(len(scDict['postSamples'])),size=utilDict['numdrawsforbayes'],replace=False)
     else:
         indsforbayes = np.arange(len(scDict['postSamples']))
-    if utilDict['method'] in ['weightsNodeDraw3', 'weightsNodeDraw4', 'weightsNodeDraw3linear', 'parallel'] and 'lossMat' not in lossDict:
+    if utilDict['method'] in ['weightsNodeDraw3', 'weightsNodeDraw4', 'weightsNodeDraw3linear',
+                              'weightsNodeDraw4linear' 'parallel'] and 'lossMat' not in lossDict:
         if 'bayesDraws' in lossDict: # Use set bayes draws
             if printUpdate == True:
                 print('Generating loss matrix of size: ' + str(len(scDict['postSamples']) * len(lossDict['bayesDraws'])))
@@ -1901,7 +1909,7 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, addbayesnei
     if printUpdate == True:
         print('Generating baseline loss...')
     baseLoss = (np.sum(lossMat, axis=1) / lossMat.shape[1]).min()
-    print('Baeline loss: '+str(baseLoss))
+    print('Baseline loss: '+str(baseLoss))
     # Initialize the return array
     margUtilArr = np.zeros((numTN, int(testMax / testInt) + 1))
     # Calculate the marginal utility increase under each iteration of tests for each test node
@@ -3519,6 +3527,34 @@ def allocationCaseStudy():
     testMax, testInt = 400, 25
     numtargetdraws = 5100
 
+    # todo: ##################
+    #todo: REMOVE LATER
+    #todo: ##################
+    setDraws = setDraws[:-3000]
+    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
+    dictTemp = CSdict3.copy()
+    dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                  replace=False)], 'numPostSamples': numtargetdraws})
+    templossmat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+    lossDict.update({'lossMat': templossmat})
+
+    design = np.zeros(numTN)
+    design[0] = 1.
+
+    tempUtil = getDesignUtility(priordatadict=dictTemp, lossdict=lossDict.copy(), designlist=[design], numtests=40, utildict=utilDict)
+
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    tempUtil2 = getDesignUtility(priordatadict=dictTemp, lossdict=lossDict.copy(), designlist=[design], numtests=40, utildict=utilDict)
+
+    design = np.zeros(numTN)
+    design[0] = 0.5
+    design[1] = 0.5
+    tempUtil3 = getDesignUtility(priordatadict=dictTemp, lossdict=lossDict.copy(), designlist=[design], numtests=40,
+                                 utildict=utilDict)
+    # todo: ##################
+    #todo: END REMOVE LATER
+    # todo: ##################
+
     # Minimize variance by averaging over multiple runs
     numReps = 5
     utilMatList = []
@@ -3715,7 +3751,7 @@ def allocationCaseStudy():
     numBayesNeigh = 1000
     lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
 
-    numReps = 1
+    numReps = 5
     utilMatList = []
     for rep in range(numReps):
         # Withdraw a subset of MCMC prior draws
@@ -3857,8 +3893,38 @@ def allocationCaseStudy():
         0.14963594, 0.16584995, 0.18445118, 0.20134322, 0.21501877,
         0.23203025, 0.25029618, 0.26084961, 0.27830775, 0.29298651,
         0.30758443, 0.31896436]])
-    
-    
+    array([[0.        , 0.02253842, 0.04582678, 0.06599163, 0.08381357,
+        0.10121117, 0.11654908, 0.13086777, 0.14401761, 0.15886868,
+        0.17297477, 0.18622986, 0.20107231, 0.21197585, 0.228047  ,
+        0.24415409, 0.25629951],
+       [0.        , 0.05990164, 0.10265402, 0.13275371, 0.15743993,
+        0.178667  , 0.19665617, 0.21184522, 0.22933259, 0.24436221,
+        0.25686732, 0.27395478, 0.28442747, 0.29742713, 0.31210056,
+        0.32075466, 0.33629758],
+       [0.        , 0.02463135, 0.04490457, 0.0665653 , 0.08676227,
+        0.10717535, 0.12319598, 0.14087408, 0.15778617, 0.17342873,
+        0.18832025, 0.20411385, 0.22142128, 0.23799641, 0.25002303,
+        0.26143433, 0.2764994 ],
+       [0.        , 0.01416066, 0.02098612, 0.02693828, 0.03085765,
+        0.03630837, 0.03922286, 0.04442989, 0.0465622 , 0.05077254,
+        0.05463501, 0.05669565, 0.05960225, 0.06262577, 0.06603143,
+        0.06911036, 0.07181784],
+       [0.        , 0.06376029, 0.08650738, 0.10525448, 0.12205271,
+        0.13555278, 0.14987   , 0.16202094, 0.17077788, 0.18430164,
+        0.19626322, 0.20771754, 0.21669432, 0.22906811, 0.23955083,
+        0.24877518, 0.26070298],
+       [0.        , 0.04074904, 0.0637406 , 0.07830233, 0.09079709,
+        0.10112039, 0.11053243, 0.12039662, 0.12933975, 0.13893545,
+        0.14751558, 0.15425537, 0.16707243, 0.17190141, 0.1801204 ,
+        0.18988783, 0.1995737 ],
+       [0.        , 0.05751341, 0.08485486, 0.10324754, 0.1177414 ,
+        0.13018222, 0.14105435, 0.14952431, 0.15927795, 0.16680569,
+        0.17454094, 0.18239424, 0.18853387, 0.19682641, 0.20436649,
+        0.21136196, 0.21865343],
+       [0.        , 0.05510189, 0.08567553, 0.10948269, 0.13067635,
+        0.15034416, 0.16741731, 0.18596103, 0.20119344, 0.21914542,
+        0.23372095, 0.24769201, 0.26052596, 0.27754099, 0.293248  ,
+        0.30950988, 0.32007716]])    
     '''
     avgUtilMat = np.average(np.array(utilMatList), axis=0)
     plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta', lineLabels=True,
@@ -3876,84 +3942,242 @@ def allocationCaseStudy():
     #### RUN 4: UNTESTED REGIONS, WITH DIFFERENT SOURCING
     ########################
     # Revert to original loss matrix
-    underWt, t = 5., 0.15
+    underWt, t, checkSlope = 5., 0.15, 0.6
     scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Parabolic', 'threshold': t}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
     marketvec = np.ones(numTN + numSN)
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    lossDict.update({'bayesDraws': setDraws})
+    numBayesNeigh = 1000
+    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
 
     # Change random seed
     np.random.seed(36)
     Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
     CSdict3['transMat'] = np.vstack((CSdict3['N'][:4] / np.sum(CSdict3['N'][:4], axis=1).reshape(4, 1), Qvecs))
 
-    dictTemp = CSdict3.copy()
-    dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numdrawstouse,
-                                                                  replace=False)], 'numPostSamples': numdrawstouse})
-
-    currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
-                                         printUpdate=True)
-    print(repr(currMargUtilMat))
-    plotMargUtil(currMargUtilMat, testMax, testInt, labels=dictTemp['outletNames'],
-                 titleStr='Tested Nodes, $t=0.15$, sourcing change',
-                 colors=cm.rainbow(np.linspace(0., 1., numTN)),
-                 dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)],
-                 utilMax=1.2, lineLabels=True)
-
-    allocArr, objValArr = smoothAllocationForward(currMargUtilMat)
-    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
-              labels=dictTemp['outletNames'], titleStr='Tested Nodes, $t=0.15$, sourcing change',
-              colors=cm.rainbow(np.linspace(0., 1., numTN)),
-              dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)],
-              allocMax=550)
-    '''15-FEB; 17k/5.1/5; max/int=1000/50
-    array([[0.        , 0.05878207, 0.10759729, 0.15303529, 0.19764655,
-        0.23977575, 0.28837972, 0.34330947, 0.38518666, 0.44282683,
-        0.49293588, 0.54352148, 0.58857294, 0.64281593, 0.68263255,
-        0.7308594 , 0.76939756, 0.80425512, 0.85169727, 0.88268933,
-        0.924741  ],
-       [0.        , 0.14088693, 0.20591826, 0.26025587, 0.31585543,
-        0.36564317, 0.41824928, 0.46629836, 0.51779963, 0.56929873,
-        0.60967789, 0.66600786, 0.70764138, 0.75074932, 0.80299459,
-        0.83391144, 0.87668994, 0.92089639, 0.94553213, 0.98722081,
-        1.02884228],
-       [0.        , 0.03895062, 0.0750805 , 0.11205061, 0.152608  ,
-        0.19311433, 0.23875473, 0.29129986, 0.34032904, 0.38520848,
-        0.43535932, 0.49245704, 0.54203962, 0.58587853, 0.63496257,
-        0.69405257, 0.72336464, 0.77957658, 0.8157802 , 0.86648037,
-        0.89778997],
-       [0.        , 0.02876215, 0.04486872, 0.05477978, 0.06632366,
-        0.07669534, 0.08764129, 0.09591957, 0.10725796, 0.1149598 ,
-        0.12473407, 0.1334797 , 0.14273923, 0.15154889, 0.16079932,
-        0.16930353, 0.17715273, 0.18973459, 0.20423315, 0.20914167,
-        0.21718799],
-       [0.        , 0.09696632, 0.12175951, 0.14749567, 0.15990128,
-        0.17846886, 0.19069296, 0.20727266, 0.22180563, 0.24212707,
-        0.25149021, 0.2679473 , 0.28642113, 0.29827331, 0.3137053 ,
-        0.32976709, 0.33951663, 0.35768784, 0.37432436, 0.38942475,
-        0.39838887],
-       [0.        , 0.09379919, 0.1201454 , 0.14261538, 0.16571786,
-        0.18242594, 0.20584553, 0.22859791, 0.25086773, 0.27053657,
-        0.28836666, 0.31142376, 0.34077219, 0.35651402, 0.38312955,
-        0.40439399, 0.41954832, 0.44563652, 0.47845926, 0.49048113,
-        0.51728016],
-       [0.        , 0.09328186, 0.13218   , 0.16343816, 0.19019237,
-        0.21783616, 0.24601737, 0.2752908 , 0.29792104, 0.33116077,
-        0.3607444 , 0.37906763, 0.41125073, 0.44295908, 0.47301915,
-        0.50471093, 0.52332009, 0.54765579, 0.57147023, 0.60979171,
-        0.63434768],
-       [0.        , 0.07025681, 0.09758402, 0.11959239, 0.13682763,
-        0.14904128, 0.1673646 , 0.18300114, 0.1981668 , 0.21293557,
-        0.22389701, 0.23960245, 0.25723668, 0.27309695, 0.28401401,
-        0.30820581, 0.31839034, 0.33506817, 0.34708946, 0.37396325,
-        0.38452959]])
+    numReps = 5
+    utilMatList = []
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict3.copy()
+        dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                      replace=False)],
+                         'numPostSamples': numtargetdraws})
+        # Get marginal utilities at each test node
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
+                                             masterDraws=CSdict3['postSamples'], printUpdate=True)
+        print(repr(currMargUtilMat))
+        utilMatList.append(currMargUtilMat)
+    ''' 26-FEB run
+    array([[0.        , 0.06342488, 0.11253334, 0.15598383, 0.19300273,
+        0.22532176, 0.26032402, 0.29243028, 0.32172509, 0.35521909,
+        0.38757339, 0.41866587, 0.44638392, 0.474248  , 0.50235271,
+        0.54621001, 0.56762347],
+       [0.        , 0.11521622, 0.21167675, 0.27604146, 0.32652296,
+        0.3743411 , 0.41548194, 0.44863393, 0.48342577, 0.52800713,
+        0.55504168, 0.58577062, 0.60970992, 0.64222226, 0.67455126,
+        0.71196101, 0.72962745],
+       [0.        , 0.03848773, 0.08335193, 0.12014171, 0.15930633,
+        0.19251518, 0.23017025, 0.25205892, 0.29141832, 0.32558411,
+        0.35960266, 0.38957964, 0.41665874, 0.45462768, 0.47827744,
+        0.51320523, 0.55116938],
+       [0.        , 0.03355824, 0.05222821, 0.06954997, 0.07881898,
+        0.09431062, 0.1035017 , 0.11312448, 0.12112203, 0.12828888,
+        0.13885502, 0.13968487, 0.15262589, 0.15883433, 0.16601652,
+        0.17446957, 0.17972537],
+       [0.        , 0.14447024, 0.1891102 , 0.21354166, 0.23066242,
+        0.24847394, 0.2640231 , 0.27802114, 0.2949699 , 0.30332631,
+        0.31169932, 0.32584091, 0.33607071, 0.34571279, 0.35566404,
+        0.36433975, 0.37111673],
+       [0.        , 0.12299437, 0.16508771, 0.19579321, 0.21400834,
+        0.23661789, 0.25196057, 0.26510326, 0.2823993 , 0.29740738,
+        0.31291521, 0.32478799, 0.34077103, 0.35268531, 0.36643036,
+        0.37993663, 0.39740256],
+       [0.        , 0.16023753, 0.20359392, 0.23626855, 0.26197072,
+        0.28452106, 0.30401429, 0.32469488, 0.33952983, 0.36217862,
+        0.38348312, 0.39496463, 0.4185703 , 0.42957418, 0.45090292,
+        0.46525396, 0.48660475],
+       [0.        , 0.1510512 , 0.18772471, 0.21385077, 0.22697355,
+        0.24107079, 0.25534092, 0.26580923, 0.27476032, 0.28933864,
+        0.2990433 , 0.29986394, 0.31499522, 0.32544131, 0.32795838,
+        0.33781218, 0.34389711]])
+    array([[0.        , 0.06950138, 0.11676928, 0.16110371, 0.19839483,
+        0.23382936, 0.26789258, 0.29744895, 0.33313093, 0.35877869,
+        0.38710538, 0.42580434, 0.45856479, 0.48437863, 0.52237045,
+        0.54688187, 0.57945576],
+       [0.        , 0.12040646, 0.2085017 , 0.28491373, 0.33238322,
+        0.38061836, 0.41985373, 0.4585274 , 0.49047351, 0.52829038,
+        0.56256506, 0.59289495, 0.62083075, 0.65617796, 0.68645891,
+        0.7300329 , 0.74984668],
+       [0.        , 0.03927855, 0.0820602 , 0.12396756, 0.16335779,
+        0.19549088, 0.23015596, 0.26846456, 0.29438923, 0.33008129,
+        0.35745267, 0.39727988, 0.42622038, 0.4624229 , 0.4913008 ,
+        0.52770854, 0.55736994],
+       [0.        , 0.03295113, 0.05266283, 0.06880476, 0.08216057,
+        0.09471926, 0.10549516, 0.11508638, 0.12376101, 0.13541593,
+        0.14163119, 0.14976475, 0.15725717, 0.16497212, 0.17030687,
+        0.17470095, 0.18195608],
+       [0.        , 0.13103167, 0.17344832, 0.19885566, 0.21937055,
+        0.23844222, 0.25224681, 0.26425242, 0.28089091, 0.28950996,
+        0.30221881, 0.31266201, 0.32167844, 0.33099898, 0.34731285,
+        0.35445807, 0.36194572],
+       [0.        , 0.13245222, 0.17054382, 0.20029426, 0.22201141,
+        0.24112822, 0.25502419, 0.27418787, 0.28924193, 0.30211424,
+        0.31421057, 0.33116834, 0.34153696, 0.35517239, 0.36984991,
+        0.38785046, 0.40185358],
+       [0.        , 0.15718382, 0.2015425 , 0.23060879, 0.25784078,
+        0.2799794 , 0.30559202, 0.32202518, 0.33919601, 0.35738688,
+        0.3756682 , 0.39201527, 0.4116369 , 0.43379972, 0.44713562,
+        0.46783959, 0.47978735],
+       [0.        , 0.16144838, 0.19980289, 0.22388574, 0.23728296,
+        0.2528642 , 0.26881098, 0.27811266, 0.28771911, 0.29933707,
+        0.30635612, 0.31955185, 0.32894844, 0.33334549, 0.34682204,
+        0.35122849, 0.36464807]])
+    Baseline loss: 4.131474637454414
+    array([[0.        , 0.06992964, 0.12305854, 0.16983898, 0.20126854,
+        0.24024016, 0.27288403, 0.30308306, 0.33585152, 0.36663497,
+        0.40196189, 0.42554167, 0.4652952 , 0.49836841, 0.5207045 ,
+        0.55511902, 0.58309859],
+       [0.        , 0.11595798, 0.21086818, 0.2804137 , 0.333846  ,
+        0.38202997, 0.41665206, 0.45646094, 0.49306757, 0.5279055 ,
+        0.56024273, 0.58921733, 0.62088098, 0.65697389, 0.69039672,
+        0.71775587, 0.75825332],
+       [0.        , 0.03830225, 0.07958457, 0.121352  , 0.1576464 ,
+        0.1942119 , 0.22524717, 0.26424655, 0.29567476, 0.33305177,
+        0.36075416, 0.3872941 , 0.41545115, 0.45701148, 0.48777508,
+        0.52597124, 0.5540501 ],
+       [0.        , 0.02863143, 0.04967508, 0.06446528, 0.07726774,
+        0.08854585, 0.10106431, 0.11128776, 0.12130301, 0.13336999,
+        0.13748759, 0.14772899, 0.15395553, 0.15967534, 0.1692034 ,
+        0.17245707, 0.18043414],
+       [0.        , 0.12440739, 0.17005486, 0.19350203, 0.21480907,
+        0.2312539 , 0.24679668, 0.26049999, 0.27243498, 0.28760133,
+        0.29804948, 0.30741911, 0.31812149, 0.32902658, 0.34223857,
+        0.3531243 , 0.36247574],
+       [0.        , 0.12398495, 0.16816815, 0.19891065, 0.21738765,
+        0.2353799 , 0.25433466, 0.26912974, 0.28851597, 0.29931912,
+        0.31548772, 0.32793833, 0.3414698 , 0.35322441, 0.37013005,
+        0.38419083, 0.39856397],
+       [0.        , 0.15832018, 0.20612204, 0.2357047 , 0.26075755,
+        0.28313548, 0.30678205, 0.32435238, 0.34180538, 0.36189429,
+        0.38077326, 0.39849183, 0.4144491 , 0.43417118, 0.44894472,
+        0.46939052, 0.48664242],
+       [0.        , 0.14911459, 0.18962628, 0.21089083, 0.23178047,
+        0.24510567, 0.2573826 , 0.27074669, 0.27824284, 0.29093546,
+        0.30541934, 0.31130034, 0.31937799, 0.3322779 , 0.33659168,
+        0.35107427, 0.35979441]])
+    Baeline loss: 4.1190247883938556
+    array([[0.        , 0.06635515, 0.11701545, 0.15902512, 0.20398889,
+        0.23107864, 0.26384748, 0.29720165, 0.33259652, 0.35998475,
+        0.388657  , 0.42654257, 0.45608488, 0.48583626, 0.51867081,
+        0.53514023, 0.57384077],
+       [0.        , 0.11432371, 0.20514903, 0.2744289 , 0.32533364,
+        0.37505012, 0.41363228, 0.45188319, 0.49388035, 0.52618522,
+        0.55472097, 0.59324739, 0.62352516, 0.65886587, 0.68021428,
+        0.71671603, 0.74023058],
+       [0.        , 0.04023287, 0.08181314, 0.1228723 , 0.15845887,
+        0.19812789, 0.23282098, 0.26542575, 0.29627704, 0.32737207,
+        0.35687185, 0.38915063, 0.42223644, 0.46416206, 0.4830072 ,
+        0.51761282, 0.54493918],
+       [0.        , 0.02929553, 0.0472067 , 0.06498708, 0.07650512,
+        0.08954775, 0.09763298, 0.10921433, 0.11746738, 0.12747691,
+        0.13384512, 0.14612596, 0.14624017, 0.15727086, 0.16653329,
+        0.16855911, 0.18006947],
+       [0.        , 0.12563434, 0.16683407, 0.19336191, 0.21614409,
+        0.23536612, 0.24647454, 0.26040157, 0.27507669, 0.28723945,
+        0.29832207, 0.3079504 , 0.32096381, 0.32888496, 0.34357982,
+        0.35624982, 0.36362404],
+       [0.        , 0.13171872, 0.17579881, 0.20179073, 0.22390216,
+        0.24077638, 0.25828928, 0.27784538, 0.28859765, 0.30814159,
+        0.31665332, 0.33485866, 0.34376183, 0.36268328, 0.37187304,
+        0.38968313, 0.40613925],
+       [0.        , 0.16068195, 0.20666399, 0.23345637, 0.25943571,
+        0.28252817, 0.30177426, 0.32275272, 0.34531802, 0.35683881,
+        0.3797924 , 0.39127199, 0.41076335, 0.43101612, 0.44277256,
+        0.4594659 , 0.4778181 ],
+       [0.        , 0.15933308, 0.20001044, 0.21958057, 0.23596831,
+        0.24633023, 0.26415076, 0.27331528, 0.28115654, 0.29361729,
+        0.30358706, 0.31644327, 0.32630318, 0.32932604, 0.33735493,
+        0.35410229, 0.36064155]])
+    Baeline loss: 4.0953597695255235
+    array([[0.        , 0.06377796, 0.11086538, 0.15374216, 0.18968965,
+        0.22659793, 0.26535678, 0.29080644, 0.32092499, 0.35973639,
+        0.38634763, 0.41598819, 0.44973656, 0.4850769 , 0.50705584,
+        0.5375784 , 0.5672515 ],
+       [0.        , 0.10892226, 0.19582461, 0.26536643, 0.32235667,
+        0.36575835, 0.40701732, 0.44416   , 0.48361649, 0.52047943,
+        0.5465989 , 0.58917529, 0.61357473, 0.6528143 , 0.67852273,
+        0.71758985, 0.7369689 ],
+       [0.        , 0.03910218, 0.08072563, 0.1222797 , 0.15737953,
+        0.18784766, 0.22378919, 0.26187541, 0.28413981, 0.32210717,
+        0.35275938, 0.38520262, 0.41819879, 0.45665957, 0.48660229,
+        0.522747  , 0.55350348],
+       [0.        , 0.02982262, 0.0500242 , 0.06554633, 0.07418368,
+        0.08688331, 0.09856474, 0.10592876, 0.11529644, 0.1257753 ,
+        0.12813688, 0.14008706, 0.14507313, 0.1494174 , 0.1597662 ,
+        0.16828743, 0.1721684 ],
+       [0.        , 0.12285017, 0.16420992, 0.19138986, 0.21150033,
+        0.22864148, 0.24481297, 0.25839671, 0.27072665, 0.28281998,
+        0.2930293 , 0.30201927, 0.31452909, 0.32417768, 0.33866633,
+        0.34641822, 0.3569968 ],
+       [0.        , 0.11944371, 0.16338092, 0.19059628, 0.20838276,
+        0.23277607, 0.24564949, 0.26124567, 0.27772635, 0.29433697,
+        0.30695903, 0.32238778, 0.33628841, 0.34996149, 0.36334503,
+        0.37828031, 0.39350062],
+       [0.        , 0.14697254, 0.19214274, 0.21969661, 0.24689037,
+        0.26787129, 0.29027255, 0.30941674, 0.32491291, 0.35003404,
+        0.3693427 , 0.38585946, 0.39699821, 0.4235947 , 0.43120328,
+        0.44867955, 0.47164839],
+       [0.        , 0.14496796, 0.17799352, 0.20112791, 0.21910825,
+        0.2330221 , 0.24374216, 0.25499054, 0.26455241, 0.27821256,
+        0.29011634, 0.29557313, 0.30771929, 0.31708635, 0.32938053,
+        0.34182325, 0.34733551]])
     '''
+    avgUtilMat = np.average(np.array(utilMatList), axis=0)
+    plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta', lineLabels=True,
+                 titleStr='Untested Nodes (2nd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$', utilMax=np.max(avgUtilMat[:, 1] * 1.1),
+                 colors=cm.rainbow(np.linspace(0, 1., numTN)),
+                 dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
+    allocArr, objValArr = smoothAllocationForward(avgUtilMat)
+    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
+              labels=dictTemp['outletNames'], titleStr='Untested Nodes (2nd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$', allocMax=250,
+              colors=cm.rainbow(np.linspace(0, 1., numTN)),
+              dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
+
 
     # Change random seed
     np.random.seed(52)
     Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
     CSdict3['transMat'] = np.vstack((CSdict3['N'][:4] / np.sum(CSdict3['N'][:4], axis=1).reshape(4, 1), Qvecs))
+
+    numReps = 5
+    utilMatList = []
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict3.copy()
+        dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                      replace=False)],
+                         'numPostSamples': numtargetdraws})
+        # Get marginal utilities at each test node
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
+                                             masterDraws=CSdict3['postSamples'], printUpdate=True)
+        print(repr(currMargUtilMat))
+        utilMatList.append(currMargUtilMat)
+    ''' 26-FEB run
+    
+    '''
+    avgUtilMat = np.average(np.array(utilMatList), axis=0)
+    plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta', lineLabels=True,
+                 titleStr='Untested Nodes (2nd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$',
+                 utilMax=np.max(avgUtilMat[:, 1] * 1.1),
+                 colors=cm.rainbow(np.linspace(0, 1., numTN)),
+                 dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
+    allocArr, objValArr = smoothAllocationForward(avgUtilMat)
+    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
+              labels=dictTemp['outletNames'], titleStr='Untested Nodes (2nd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$',
+              allocMax=250,
+              colors=cm.rainbow(np.linspace(0, 1., numTN)),
+              dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
 
     dictTemp = CSdict3.copy()
     dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numdrawstouse,
