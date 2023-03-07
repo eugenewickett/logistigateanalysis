@@ -240,30 +240,6 @@ def plotLossVecs(lveclist, lvecnames=[], type='CI', CIalpha = 0.05,legendlabel=[
 
     return
 
-def marginalshannoninfo(datadict):
-    '''
-    Takes a PMS data set and returns a matrix of the Shannon information obtained from a marginal test along each trace;
-    for tracked data only
-    '''
-    tnNum, snNum = datadict['N'].shape
-    s, r = datadict['diagSens'], datadict['diagSpec']
-    postSamps = datadict['postSamples']
-
-    shannonMat = np.zeros(shape=(tnNum, snNum))
-
-    for samp in postSamps: # Iterate through each posterior sample
-        for tnInd in range(tnNum):
-            tnRate = samp[tnInd + snNum]
-            for snInd in range(snNum):
-                snRate = samp[snInd]
-                consolRate = tnRate + (1-tnRate)*snRate
-                detectRate = s*consolRate+(1-r)*(1-consolRate)
-                infobit = detectRate*np.log(detectRate) + (1-detectRate)*np.log(detectRate)
-                shannonMat[tnInd,snInd] += infobit
-
-    shannonMat=shannonMat/len(postSamps)
-    return shannonMat
-
 def risk_parabolic(SFPratevec, paramDict={'threshold': 0.5}): #### OBSOLETE; REMOVE LATER
     '''Parabolic risk term for vector of SFP rates. Threshold is the top of the parabola. '''
     riskvec = np.empty((len(SFPratevec)))
@@ -801,22 +777,21 @@ def showRiskVals():
     for tau in tauvec:
         newy = [1 - x[i]*(tau-(1-(t/x[i]) if x[i]<t else 0)) for i in range(len(x))]
         plt.plot(x,newy)
-    plt.plot(x,y1)
+    #plt.plot(x,y1)
     import matplotlib.ticker as mtick
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    plt.title('Values for Parabolic and selected Check risk terms\n$l=30\%$',fontdict={'fontsize':16,'fontname':'Trebuchet MS'})
-    plt.ylabel('Risk term value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.title('Values for selected check risk terms\n$l=30\%$',fontdict={'fontsize':16,'fontname':'Trebuchet MS'})
+    plt.ylabel('Risk value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
     plt.xlabel('SFP rate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.97,'Check, $m=0.05$',fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.84, 'Check, $m=0.2$',fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.675, 'Check, $m=0.4$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.50, 'Check, $m=0.6$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.21, 'Check, $m=0.95$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.00, 0.47, 'Parabolic', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.97,'$m=0.05$',fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.84, '$m=0.2$',fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.675, '$m=0.4$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.50, '$m=0.6$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.21, '$m=0.95$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    #plt.text(0.00, 0.47, 'Parabolic', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
     fig.tight_layout()
     plt.show()
     plt.close()
-
     return
 
 def showScoreVals():
@@ -1421,12 +1396,13 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
                 tempW = np.zeros(shape=(numpriordraws, numdrawsfordata))
                 for snInd in range(numSN): # Loop through each SN and TN combination
                     for tnInd in range(numTN):
-                    # Get zProbs corresponding to current SN-TN combo
-                        bigZtemp = np.transpose(np.reshape(np.tile(zMatTarg[:, tnInd, snInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
-                        bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                        bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                        combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]),numpriordraws), (numpriordraws, numdrawsfordata))
-                        tempW += (bigYtemp*np.log(bigZtemp)) + ((bigNtemp-bigYtemp)*np.log(1-bigZtemp)) + np.log(combNYtemp)
+                        if sampMat[tnInd] > 0:
+                            # Get zProbs corresponding to current SN-TN combo
+                            bigZtemp = np.transpose(np.reshape(np.tile(zMatTarg[:, tnInd, snInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
+                            bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                            bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                            combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]),numpriordraws), (numpriordraws, numdrawsfordata))
+                            tempW += (bigYtemp*np.log(bigZtemp)) + ((bigNtemp-bigYtemp)*np.log(1-bigZtemp)) + np.log(combNYtemp)
 
             else: # Use numdrawsfordata draws randomly selected from the set of prior (target) draws
                 datadrawinds = choice([j for j in range(numpriordraws)], size=numdrawsfordata, replace=False)
@@ -1441,12 +1417,13 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
                 tempW = np.zeros(shape=(numpriordraws,numdrawsfordata))
                 for snInd in range(numSN): # Loop through each SN and TN combination
                     for tnInd in range(numTN):
-                    # Get zProbs corresponding to current SN-TN combo
-                        bigZtemp = np.transpose(np.reshape(np.tile(zMat[:, tnInd, snInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
-                        bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                        bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
-                        combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]),numpriordraws), (numpriordraws, numdrawsfordata))
-                        tempW += (bigYtemp*np.log(bigZtemp)) + ((bigNtemp-bigYtemp)*np.log(1-bigZtemp)) + np.log(combNYtemp)
+                        if sampMat[tnInd] > 0:
+                            # Get zProbs corresponding to current SN-TN combo
+                            bigZtemp = np.transpose(np.reshape(np.tile(zMat[:, tnInd, snInd], numdrawsfordata), (numdrawsfordata, numpriordraws )))
+                            bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                            bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numpriordraws), (numpriordraws, numdrawsfordata))
+                            combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]),numpriordraws), (numpriordraws, numdrawsfordata))
+                            tempW += (bigYtemp*np.log(bigZtemp)) + ((bigNtemp-bigYtemp)*np.log(1-bigZtemp)) + np.log(combNYtemp)
 
             wtsMat = np.exp(tempW) # Turn weights into likelihoods
             # Normalize so each column sums to 1; the likelihood of each data set is accounted for in the data draws
@@ -1868,7 +1845,7 @@ def zProbTrVec(snNum, gammaMat, sens=1., spec=1.):
     # each term is a k-by-n-by-m array
     return sens * zMat + (1 - spec) * (1 - zMat)
 
-def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, addbayesneighbors=True, masterDraws=[],
+def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, baseLoss=-1, addbayesneighbors=True, masterDraws=[],
                        printUpdate=True):
     '''
     Returns an array of marginal utility estimates for the PMS data contained in scDict.
@@ -1905,10 +1882,12 @@ def GetMargUtilAtNodes(scDict, testMax, testInt, lossDict, utilDict, addbayesnei
     print('Bayes draws: ' + str(lossMat.shape[0]))
     print('Target draws: ' + str(lossMat.shape[1]))
     print('Data draws: ' + str(utilDict['dataDraws'].shape[0]))
-    # Establish a baseline loss for comparison with other losses; only depends on the loss matrix, as there are no tests
-    if printUpdate == True:
-        print('Generating baseline loss...')
-    baseLoss = (np.sum(lossMat, axis=1) / lossMat.shape[1]).min()
+    # Establish a baseline loss for comparison with other losses (if not already entered);
+    #   only depends on the loss matrix, as there are no tests
+    if baseLoss < 0:
+        if printUpdate == True:
+            print('Generating baseline loss...')
+        baseLoss = (np.sum(lossMat, axis=1) / lossMat.shape[1]).min()
     print('Baseline loss: '+str(baseLoss))
     # Initialize the return array
     margUtilArr = np.zeros((numTN, int(testMax / testInt) + 1))
@@ -3168,9 +3147,9 @@ def exampleSupplyChainForPaper():
     x1 = range(0, testBudget + 1, interval)
     x2 = range(0, testBudget + 1, 1)
     colors = ['blue', 'red', 'green']
-    for tnind in range(numTN):
-        plt.plot(x2, UmatEnum20k[tnind], '--', color=colors[tnind], label='TN ' + str(tnind + 1))
-        plt.plot(x1, UmatEnum[tnind], '-', color=colors[tnind], label='TN ' + str(tnind + 1))
+    #for tnind in range(numTN):
+    #    plt.plot(x2, UmatEnum20k[tnind], '--', color=colors[tnind], label='TN ' + str(tnind + 1))
+    #    plt.plot(x1, UmatEnum[tnind], '-', color=colors[tnind], label='TN ' + str(tnind + 1))
     plt.legend()
     plt.ylim([0.13, 0.17])
     plt.xlabel('Number of tests')
@@ -3180,9 +3159,17 @@ def exampleSupplyChainForPaper():
 
     return
 
+def priorsElicitedFromRisk():
+    '''Produce chart depicting SFP rate priors, as in paper'''
+    #todo: MAKE THIS
+
+    return
+
 def allocationCaseStudy():
     '''Allocation using case study data for paper'''
     ######################################################################
+    ### RUN 0: EVEN DISTRIBUTION ACROSS (UN)TESTED REGIONS
+
     ### RUN 1: INITIAL RUN WITH TESTED REGIONS ONLY
     ### RUN 2: ADDING UNTESTED REGIONS
     ### RUN 3: UNTESTED REGIONS, SMALLER THRESHOLD (t=0.05)
@@ -3294,14 +3281,157 @@ def allocationCaseStudy():
     numBayesNeigh = 1000
     lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum':numBayesNeigh})
 
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 400, 10
+    numtargetdraws = 5100
+
+
+    # Get some baseline loss evaluations
+    baselineVec = [2.709398099016528, 2.703329257204651, 2.707809157691353, 2.7025562684534807, 2.6946138606017764, 2.6850461615671555, 2.6961345838352972, 2.687338035451674, 2.714262564710539, 2.689296886284921, 2.715116018838946, 2.707465472929334, 2.6969818922581372, 2.699836452703562, 2.6839434746305946, 2.7109897425023264, 2.6935924757175758, 2.701705133615464, 2.6930051237488914, 2.708604037604294, 2.7069195247351066, 2.7034869347191326, 2.7021798163456325, 2.6927832891627475, 2.711603710176408, 2.711271267298105, 2.7022813888426667, 2.697797510692224, 2.694407049043859, 2.6950933849451393, 2.6843963481388333, 2.689449937714166, 2.6867155843240442, 2.6948563166958035, 2.695526029042057, 2.7128049307773936, 2.7107208329435353, 2.7060150983439457, 2.7000577765291798, 2.6942381281832772, 2.688046887826778, 2.675496345304324, 2.6933019003280583, 2.6988376003810144, 2.7062117524792244, 2.701505314322283, 2.686362181819662, 2.6893545864792796, 2.703190002102706, 2.6806120044946167, 2.6966169040659134, 2.722346621834542, 2.697319230271215, 2.710554767684073, 2.7089554980159796, 2.678656909707389, 2.696397999296094, 2.691009115753046, 2.694572461460998, 2.6971654849733766, 2.6923630444758224, 2.69374159558431, 2.7153471046962743, 2.693743643989207, 2.702191278837365, 2.6930966323644014, 2.7016537640451848, 2.708628247702364, 2.6847069830827106, 2.6968602364454517, 2.6893579779656807, 2.7113149511975188, 2.7077613732410373, 2.6695379816944986, 2.696957392336199, 2.695114396089031, 2.6975409182049646, 2.69178702183209, 2.7044286245099203, 2.6999024266051697, 2.684089187857652, 2.7098577878185317, 2.697604274348179, 2.6851418096206947, 2.70514090870063, 2.7057795499071466, 2.692822333294451, 2.6878040796593323, 2.685574792921975, 2.704037294841692, 2.699954166952328, 2.7136440831170385, 2.7026397323250273, 2.693401918779996, 2.703113939405553, 2.713587509172157, 2.6918101807610677, 2.688227360467917, 2.6960949208688025, 2.7203522746362365, 2.692630417190937, 2.6952760356187917, 2.7081862111509407, 2.7168954165566466, 2.7123980371985583, 2.674232179693652, 2.7037379985121364, 2.722520741187778, 2.6945053603499343]
+
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw4linear'}
+
+    for rep in range(500):
+        # Get new target draws
+        dictTemp = CSdict1.copy()
+        dictTemp.update(
+            {'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        # Get new data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict1['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        print('Baseline loss value: '+ str(baseLoss))
+        baselineVec.append(baseLoss)
+        cmsm = np.cumsum(baselineVec) / np.arange(1,len(baselineVec)+1)
+        if np.mod(rep,50) == 0:
+            plt.plot(cmsm)
+            plt.show()
+
+    ####################################
+    ### MARGINAL UTILITY OF EVEN DESIGN
+    ####################################
+    numReps = 5
+    testArr = np.arange(testInt, testMax+testInt, testInt)
+    baseLoss = np.average(baselineVec)
+    objValArr = np.array([0.06752933, 0.1100887 , 0.14689902, 0.17985292, 0.21243662,
+       0.24157123, 0.26723585, 0.28988744, 0.3112647 , 0.33232121,
+       0.35210045, 0.37224994, 0.39063685, 0.40899997, 0.42695671,
+       0.4432828 , 0.45953303, 0.47562594, 0.49127062, 0.50719359,
+       0.52188378, 0.53644973, 0.55113067, 0.56541773, 0.57930278,
+       0.59315281, 0.60661711, 0.62173462, 0.63502188, 0.64829991,
+       0.66108966, 0.67383238, 0.68649196, 0.69943937, 0.71182813,
+       0.72558276, 0.73883917, 0.75226574, 0.76456962, 0.77639771])
+    compArr = np.array([0.06608703, 0.10918208, 0.14564888, 0.16823631, 0.20176407,
+       0.23109409, 0.2562666 , 0.27993395, 0.29635759, 0.31885389,
+       0.34137298, 0.35866341, 0.37829848, 0.39958448, 0.41858327,
+       0.43625741, 0.4541165 , 0.47045005, 0.48927578, 0.5087589 ,
+       0.52489596, 0.54100457, 0.55911708, 0.5703767 , 0.58505754,
+       0.60175276, 0.61859336, 0.63481811, 0.65044908, 0.66455405,
+       0.67861683, 0.69706321, 0.71270969, 0.72197511, 0.73972785,
+       0.75561279, 0.76932698, 0.78129605, 0.79232414, 0.80920382])
+    evenUtilList = [] # For storing utility lists
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict1.copy()
+        dictTemp.update({'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict1['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        utilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = roundDesignLow(np.ones(numTN)/numTN,testArr[compInd]) / testArr[compInd]
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            utilArr[compInd] = currUtil
+        print(utilArr)
+        evenUtilList.append(utilArr)
+        # Update plot
+        plt.plot(testArr, objValArr, alpha=0.2, label='Heuristic')
+        plt.plot(testArr, compArr, alpha=0.2, label='Comprehensive')
+        for tempValInd, tempValArr in enumerate(evenUtilList):
+            plt.plot(testArr, tempValArr, alpha=0.6,label='Uniform '+str(tempValInd))
+        plt.ylim([0, 1.])
+        plt.legend()
+        plt.title('Utility of uniform vs. heuristic allocations\nTested nodes setting')
+        plt.show()
+        plt.close()
+    '''04-MAR
+    evenUtilList = [np.array([0.04572371, 0.06745778, 0.09130296, 0.11608004, 0.14275561,
+       0.16542172, 0.1836398 , 0.21242219, 0.23670947, 0.25731415,
+       0.27735403, 0.29607196, 0.31827982, 0.33897159, 0.35157447,
+       0.3740648 , 0.39630999, 0.41143135, 0.4214093 , 0.444273  ,
+       0.46858332, 0.48341437, 0.49674746, 0.50982074, 0.52998611,
+       0.54488287, 0.56200257, 0.58028888, 0.59771509, 0.61115828,
+       0.62282509, 0.63914324, 0.65720828, 0.66194286, 0.68656468,
+       0.69264168, 0.70635001, 0.7222177 , 0.7371077 , 0.74126441]), np.array([0.05217793, 0.07540038, 0.0981493 , 0.12778504, 0.15309906,
+       0.1726496 , 0.18721262, 0.21850969, 0.23736749, 0.26049755,
+       0.27308735, 0.29894671, 0.31989523, 0.33681855, 0.35932075,
+       0.36984036, 0.39258311, 0.40977405, 0.42924069, 0.44728197,
+       0.46553033, 0.48156375, 0.49974983, 0.51295621, 0.53174994,
+       0.54026532, 0.56338988, 0.57518643, 0.59067993, 0.60493178,
+       0.61907414, 0.63865402, 0.65439319, 0.66095834, 0.67806469,
+       0.69311569, 0.70781647, 0.72448015, 0.73509017, 0.74426227]), np.array([0.05211003, 0.07519161, 0.09844655, 0.12473417, 0.14928059,
+       0.17064918, 0.1880529 , 0.21696121, 0.23840913, 0.2604649 ,
+       0.27923475, 0.29798452, 0.32313821, 0.33948032, 0.35621379,
+       0.3752739 , 0.39878788, 0.41183017, 0.43361369, 0.4447992 ,
+       0.46983429, 0.48540326, 0.50102355, 0.51705329, 0.53896838,
+       0.55229967, 0.56652941, 0.58089991, 0.60172823, 0.61727925,
+       0.63126597, 0.64259815, 0.65692863, 0.67597458, 0.69143249,
+       0.70036548, 0.71805169, 0.72881004, 0.74152175, 0.75409247]), np.array([0.04736484, 0.06980328, 0.09263991, 0.12123992, 0.14673692,
+       0.16850481, 0.18509682, 0.21208587, 0.23329738, 0.25316954,
+       0.27440785, 0.29508032, 0.31471651, 0.33405826, 0.35143644,
+       0.36985993, 0.38743916, 0.4148656 , 0.42911519, 0.44748759,
+       0.46291827, 0.47628319, 0.49543976, 0.50960829, 0.53445432,
+       0.54760703, 0.56369963, 0.57891995, 0.59288841, 0.61057552,
+       0.6167196 , 0.63267355, 0.65316282, 0.66101089, 0.67916855,
+       0.69514751, 0.71156969, 0.71662497, 0.74130015, 0.74777225]), np.array([0.04450608, 0.06942343, 0.09221839, 0.11845092, 0.14613651,
+       0.16422787, 0.18480286, 0.21058301, 0.2351853 , 0.25516512,
+       0.27135668, 0.29782237, 0.31026523, 0.33460415, 0.35286238,
+       0.36948217, 0.39361945, 0.40507431, 0.42633008, 0.44378848,
+       0.46146789, 0.4772715 , 0.50075756, 0.51884374, 0.5350407 ,
+       0.54303064, 0.56107171, 0.5745852 , 0.58942163, 0.60938705,
+       0.61385331, 0.64035432, 0.64947784, 0.67463939, 0.68116318,
+       0.69742902, 0.70649718, 0.72111159, 0.73316348, 0.7458299 ])]
+    avgEvenUtilMat = np.average(np.array(evenUtilList),axis=0)
+    avgEvenUtilMat = np.array([0.04837652, 0.0714553 , 0.09455142, 0.12165802, 0.14760174,
+       0.16829064, 0.185761  , 0.21411239, 0.23619375, 0.25732225,
+       0.27508813, 0.29718118, 0.317259  , 0.33678658, 0.35428157,
+       0.37170423, 0.39374792, 0.4105951 , 0.42794179, 0.44552605,
+       0.46566682, 0.48078721, 0.49874363, 0.51365645, 0.53403989,
+       0.54561711, 0.56333864, 0.57797607, 0.59448666, 0.61066638,
+       0.62074762, 0.63868465, 0.65423415, 0.66690521, 0.68327872,
+       0.69573988, 0.71005701, 0.72264889, 0.73763665, 0.74664426])
+    '''
+
+
+    ################################
+    # NOW USING OUR METHOD
+    ################################
     # Utility calculation specification
     numDataDraws = 5000
     utilDict = {'method': 'weightsNodeDraw3linear'}
-    utilDict.update({'dataDraws':setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
-
-    # Set limits of data collection and intervals for calculation
-    testMax, testInt = 400, 25
-    numtargetdraws = 5100
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
 
     # Minimize variance by averaging over multiple runs
     numReps = 5
@@ -3309,15 +3439,383 @@ def allocationCaseStudy():
     for rep in range(numReps):
         # Withdraw a subset of MCMC prior draws
         dictTemp = CSdict1.copy()
-        dictTemp.update({'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
-             'numPostSamples': numtargetdraws})
+        dictTemp.update({'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)], 'numPostSamples': numtargetdraws})
         # Get marginal utilities at each test node
         currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
-                                            masterDraws = CSdict1['postSamples'], printUpdate=True)
+                                            baseloss=np.average(baselossVec), masterDraws=CSdict1['postSamples'], printUpdate=True)
         print(repr(currMargUtilMat))
         utilMatList.append(currMargUtilMat)
-    ''' 26-FEB run
-    array([[0.        , 0.06652759, 0.10804945, 0.14186319, 0.17480218,
+
+    ''' 03-MAR run
+    #Baseline loss: 2.687338035451674
+    u1 = np.array([[0.        , 0.03381418, 0.04889239, 0.07164703, 0.08554767,
+        0.10087524, 0.11762328, 0.13078671, 0.14398468, 0.15904972,
+        0.16833203, 0.18433553, 0.194816  , 0.20537834, 0.21957624,
+        0.22728949, 0.23687834, 0.24734549, 0.26207452, 0.27281744,
+        0.27573706, 0.28958655, 0.30664748, 0.30862785, 0.32330669,
+        0.33425491, 0.33863627, 0.34729818, 0.36027719, 0.37239192,
+        0.38360465, 0.39122066, 0.40022802, 0.41071872, 0.42058412,
+        0.43409927, 0.4420456 , 0.45370746, 0.4584856 , 0.4678086 , 0.47535341],
+       [0.        , 0.06562442, 0.1090561 , 0.14475715, 0.17662031,
+        0.20592813, 0.2279443 , 0.25392296, 0.27256949, 0.29137298,
+        0.31045476, 0.32501789, 0.34045067, 0.35305801, 0.3717278 ,
+        0.38392732, 0.39817884, 0.40656069, 0.42287674, 0.43767804,
+        0.44389837, 0.45595497, 0.46715996, 0.47924575, 0.48765692,
+        0.50003334, 0.51304373, 0.51550234, 0.535255  , 0.54016442,
+        0.55316595, 0.56247734, 0.57207191, 0.575301  , 0.59123713,
+        0.60106407, 0.61008489, 0.62059293, 0.62704173, 0.63255608, 0.64571169],
+       [0.        , 0.01958782, 0.03644626, 0.05108971, 0.060953  ,
+        0.07956883, 0.08944309, 0.10098917, 0.11441828, 0.12924242,
+        0.14022   , 0.14788505, 0.16429108, 0.17494929, 0.18882882,
+        0.20017855, 0.21072366, 0.22177921, 0.23457705, 0.24476126,
+        0.25452008, 0.26941325, 0.27660432, 0.29053085, 0.3037035 ,
+        0.30953803, 0.32004975, 0.32898218, 0.34309935, 0.35823139,
+        0.36207082, 0.37524613, 0.38601885, 0.39526463, 0.40406   ,
+        0.4147424 , 0.426788  , 0.4380732 , 0.45660602, 0.46283717, 0.47828261],
+       [0.        , 0.01371037, 0.02169895, 0.03135989, 0.03873531,
+        0.04496161, 0.05030342, 0.05496638, 0.05742276, 0.06471013,
+        0.06920053, 0.07474349, 0.07889514, 0.08028838, 0.084984  ,
+        0.08897512, 0.0930474 , 0.09612579, 0.09930806, 0.10293706,
+        0.10443158, 0.10879175, 0.11163792, 0.11393308, 0.11821797,
+        0.12276708, 0.1219348 , 0.12292009, 0.12922227, 0.13296992,
+        0.13548554, 0.13603901, 0.13746969, 0.13841914, 0.14604444,
+        0.14447143, 0.15282724, 0.15082884, 0.15406094, 0.15451915, 0.15785135]])
+    #Baseline loss: 2.714262564710539
+    u2 = np.array([[0.        , 0.03497005, 0.05942737, 0.07303411, 0.09192244,
+        0.11456414, 0.12649401, 0.14070616, 0.15575507, 0.17341574,
+        0.183552  , 0.19677901, 0.20742151, 0.2205246 , 0.23390793,
+        0.24668936, 0.25750769, 0.26327177, 0.27569427, 0.28892473,
+        0.29560616, 0.30827012, 0.31661283, 0.32836424, 0.3437628 ,
+        0.34802925, 0.36027448, 0.36612023, 0.38212188, 0.39275557,
+        0.39517213, 0.402185  , 0.41300601, 0.41785923, 0.43379166,
+        0.44535927, 0.45105755, 0.46310176, 0.47077954, 0.47371326,
+        0.49316799],
+       [0.        , 0.06970572, 0.11157215, 0.15039097, 0.18227233,
+        0.21046188, 0.23638332, 0.25956059, 0.27849149, 0.30339135,
+        0.31798524, 0.33505364, 0.353487  , 0.36663472, 0.38028118,
+        0.39932725, 0.41072467, 0.42029625, 0.43164115, 0.44354946,
+        0.45716676, 0.46742138, 0.47511167, 0.49161851, 0.49763068,
+        0.50884107, 0.51870742, 0.52354604, 0.53403832, 0.54521548,
+        0.5572387 , 0.56270827, 0.57676726, 0.58803573, 0.59266835,
+        0.59707833, 0.60689004, 0.61678616, 0.62390434, 0.63847891,
+        0.64349129],
+       [0.        , 0.0229162 , 0.03853978, 0.05193016, 0.06542529,
+        0.08397629, 0.09753779, 0.10838422, 0.1201915 , 0.13577779,
+        0.15190601, 0.16118503, 0.17216051, 0.18301291, 0.19693852,
+        0.21148396, 0.22188154, 0.23147838, 0.24455268, 0.25590546,
+        0.26600508, 0.2717627 , 0.28347158, 0.29299431, 0.30829604,
+        0.31778955, 0.33291952, 0.33884029, 0.35018494, 0.36451824,
+        0.371844  , 0.38224625, 0.39331717, 0.40129144, 0.41014177,
+        0.41971633, 0.42729013, 0.43855456, 0.45144145, 0.45882326,
+        0.46918039],
+       [0.        , 0.01349016, 0.02430202, 0.03428107, 0.0442265 ,
+        0.05166443, 0.05383112, 0.06254   , 0.06633811, 0.0739406 ,
+        0.07784903, 0.08329838, 0.08699104, 0.09159822, 0.09562373,
+        0.10134011, 0.10306822, 0.10871291, 0.11248603, 0.11504331,
+        0.11755024, 0.12100037, 0.12261509, 0.13012316, 0.13133119,
+        0.13204275, 0.13897866, 0.13877661, 0.14120099, 0.14580381,
+        0.14542057, 0.14984358, 0.15382846, 0.15629194, 0.15822629,
+        0.15760345, 0.16470349, 0.16785979, 0.16717975, 0.17228287,
+        0.17409288]])
+    #Baseline loss: 2.689296886284921
+    u3 = np.array([[0.        , 0.03217666, 0.05454496, 0.07000137, 0.08919115,
+        0.09892891, 0.11844209, 0.13272607, 0.14574586, 0.16037553,
+        0.17326044, 0.18720205, 0.19811291, 0.20978625, 0.21771344,
+        0.23090828, 0.24447574, 0.25214267, 0.26477244, 0.27160553,
+        0.28700821, 0.29746036, 0.30315007, 0.31451097, 0.32679137,
+        0.33346543, 0.34475196, 0.35208486, 0.36408219, 0.36770189,
+        0.3795195 , 0.38852076, 0.40125881, 0.40960934, 0.41690399,
+        0.4224023 , 0.43282684, 0.44342946, 0.45693336, 0.46459373,
+        0.46840599],
+       [0.        , 0.06606157, 0.10662963, 0.13994391, 0.17256133,
+        0.20148793, 0.22738631, 0.24781085, 0.26736063, 0.28893924,
+        0.30504851, 0.32246213, 0.33723791, 0.35256213, 0.36786196,
+        0.3801199 , 0.39479849, 0.40331803, 0.41872063, 0.42530228,
+        0.44194967, 0.45124637, 0.46073603, 0.46897218, 0.48349283,
+        0.49156207, 0.50363843, 0.5147972 , 0.52680246, 0.53345921,
+        0.54146069, 0.54730599, 0.55971651, 0.5692893 , 0.57337657,
+        0.58490349, 0.59602063, 0.59541767, 0.60792745, 0.62052351,
+        0.62591527],
+       [0.        , 0.02151866, 0.0385462 , 0.05053644, 0.06757361,
+        0.07966252, 0.09367119, 0.10511044, 0.11950631, 0.13204761,
+        0.14316453, 0.15634931, 0.1748261 , 0.17658266, 0.19254958,
+        0.20438635, 0.21168622, 0.22557397, 0.23682355, 0.24438976,
+        0.26176525, 0.27134148, 0.27927439, 0.29154772, 0.30161452,
+        0.31076719, 0.32298197, 0.3269133 , 0.34646455, 0.35050804,
+        0.35873285, 0.37215559, 0.38713118, 0.39418104, 0.40067393,
+        0.41225318, 0.4229536 , 0.42657787, 0.44320377, 0.45616485,
+        0.45736395],
+       [0.        , 0.01413797, 0.02430377, 0.03286848, 0.04169521,
+        0.04817187, 0.05489601, 0.0606846 , 0.06515978, 0.07080611,
+        0.07374684, 0.08247929, 0.08488502, 0.09010933, 0.09352314,
+        0.09698735, 0.10030839, 0.10295367, 0.10871778, 0.10894394,
+        0.11508791, 0.11895755, 0.11813819, 0.1222441 , 0.12693512,
+        0.13135671, 0.13070389, 0.13466789, 0.13760025, 0.13878116,
+        0.14045874, 0.14559222, 0.14633474, 0.1471043 , 0.15289217,
+        0.15482047, 0.15794542, 0.15914382, 0.1630259 , 0.16704492,
+        0.16801807]])
+    #Baseline loss: 2.715116018838946
+    u4 = np.array([[0.        , 0.0325365 , 0.05470072, 0.07469588, 0.09391247,
+        0.10825367, 0.12268838, 0.14525979, 0.15736575, 0.17213085,
+        0.18215409, 0.19648606, 0.21076445, 0.21982998, 0.23186386,
+        0.2399131 , 0.25571445, 0.26425271, 0.2779294 , 0.28561181,
+        0.29865871, 0.30837479, 0.3232886 , 0.32897111, 0.33384331,
+        0.34421812, 0.35316648, 0.3704084 , 0.37571845, 0.38557214,
+        0.39496219, 0.40650936, 0.41153815, 0.4230893 , 0.43264129,
+        0.4428486 , 0.45082265, 0.45968899, 0.46583517, 0.47362985,
+        0.48297708],
+       [0.        , 0.06668099, 0.11045463, 0.1480864 , 0.18139132,
+        0.21319829, 0.23850497, 0.25929159, 0.28050262, 0.29828595,
+        0.32130804, 0.33451752, 0.35299896, 0.36656614, 0.38083983,
+        0.39331602, 0.40622374, 0.42197809, 0.43080098, 0.44254115,
+        0.45246654, 0.46582007, 0.47689833, 0.48660914, 0.50172446,
+        0.50878448, 0.51598187, 0.52792866, 0.53112998, 0.54323101,
+        0.55753329, 0.56674507, 0.5715417 , 0.58705809, 0.59384571,
+        0.60652252, 0.61584669, 0.62015887, 0.63124483, 0.63572127,
+        0.64097073],
+       [0.        , 0.01973707, 0.03785697, 0.05350247, 0.0696289 ,
+        0.08108153, 0.09436432, 0.11088767, 0.12345264, 0.13808289,
+        0.14806013, 0.16146069, 0.17542946, 0.1833184 , 0.19600289,
+        0.20792598, 0.2227082 , 0.23087661, 0.24238326, 0.24976448,
+        0.26558365, 0.27948937, 0.28529772, 0.30276899, 0.31115128,
+        0.31536988, 0.33466722, 0.34123921, 0.35348368, 0.36131272,
+        0.37256505, 0.37892785, 0.39281683, 0.40397497, 0.41652438,
+        0.42907429, 0.43063405, 0.43810455, 0.44831032, 0.45951403,
+        0.47398242],
+       [0.        , 0.0132679 , 0.02501091, 0.03487598, 0.04290762,
+        0.04938028, 0.05618879, 0.06087699, 0.06942826, 0.07172955,
+        0.07850955, 0.08293544, 0.08687223, 0.08838409, 0.09686871,
+        0.09708519, 0.10369409, 0.10445644, 0.10819096, 0.11228178,
+        0.11538117, 0.11950248, 0.12338305, 0.12412141, 0.13004839,
+        0.13165359, 0.13408586, 0.13533215, 0.1392339 , 0.1434617 ,
+        0.14346546, 0.14791363, 0.14949524, 0.15197956, 0.15451815,
+        0.1595533 , 0.16210229, 0.16144117, 0.16677945, 0.165585  ,
+        0.17247853]])
+    #Baseline loss: 2.707465472929334
+    u5 = np.array([[0.        , 0.03802251, 0.05577952, 0.07515747, 0.09631855,
+        0.11207857, 0.1268383 , 0.14257986, 0.15852061, 0.16753563,
+        0.18483878, 0.19481907, 0.20867097, 0.21764965, 0.23048507,
+        0.24261217, 0.25541101, 0.26346661, 0.27061423, 0.28681036,
+        0.29536092, 0.30496351, 0.31670165, 0.32768927, 0.33214888,
+        0.34249401, 0.3532127 , 0.36346991, 0.37198073, 0.38125617,
+        0.38675055, 0.39750478, 0.41000226, 0.41519957, 0.42518384,
+        0.43575532, 0.44562834, 0.45517255, 0.46543038, 0.46992816,
+        0.48282195],
+       [0.        , 0.07434772, 0.1162128 , 0.1527846 , 0.18639725,
+        0.21378483, 0.24068398, 0.26272592, 0.28565073, 0.30513598,
+        0.32380665, 0.3403573 , 0.35778891, 0.36961341, 0.38573079,
+        0.39666462, 0.4104986 , 0.4234635 , 0.43570882, 0.44704012,
+        0.45716375, 0.47351788, 0.47964096, 0.49025095, 0.5031259 ,
+        0.51141102, 0.52266125, 0.53302455, 0.53936996, 0.55491221,
+        0.55630522, 0.56556717, 0.57760505, 0.58378396, 0.59362186,
+        0.60403703, 0.61726869, 0.62261566, 0.62754759, 0.64256816,
+        0.64716456],
+       [0.        , 0.02495531, 0.04123844, 0.05760084, 0.07497762,
+        0.08300714, 0.09831918, 0.11444228, 0.12810747, 0.13547972,
+        0.15140161, 0.16351473, 0.17751572, 0.1886538 , 0.19381475,
+        0.21221084, 0.22269585, 0.23303122, 0.24556072, 0.25777065,
+        0.27086579, 0.27885063, 0.28925561, 0.29971935, 0.31129596,
+        0.32351011, 0.33685902, 0.34334765, 0.35017958, 0.36643255,
+        0.37618719, 0.38308701, 0.39552398, 0.40703894, 0.40978441,
+        0.42603496, 0.43991627, 0.44566243, 0.45685412, 0.46613568,
+        0.47320243],
+       [0.        , 0.01659658, 0.02757226, 0.03497932, 0.044994  ,
+        0.05095338, 0.05685652, 0.05909241, 0.06766993, 0.07064366,
+        0.07603973, 0.08407442, 0.08603024, 0.08919746, 0.09272626,
+        0.09873847, 0.10121163, 0.1030452 , 0.11059279, 0.11424254,
+        0.11448714, 0.12032253, 0.12040963, 0.12204335, 0.1248993 ,
+        0.1292293 , 0.1332692 , 0.1373065 , 0.1372989 , 0.14153538,
+        0.14313668, 0.14464154, 0.14590781, 0.15056932, 0.15326234,
+        0.15694311, 0.15828333, 0.16420898, 0.16492145, 0.16660015,
+        0.16762571]])
+    #Baseline loss: 2.6969818922581372
+    u6 = np.array([[0.        , 0.03295697, 0.05809831, 0.07611467, 0.09187706,
+        0.10946207, 0.12624978, 0.13805576, 0.15592683, 0.16602318,
+        0.184845  , 0.19335715, 0.20738537, 0.2185051 , 0.2283092 ,
+        0.24052872, 0.25223671, 0.2590811 , 0.27114158, 0.2826605 ,
+        0.2917023 , 0.30298712, 0.3097769 , 0.32084474, 0.33258111,
+        0.34102054, 0.34849599, 0.3590237 , 0.36937727, 0.37982265,
+        0.38191898, 0.39296582, 0.40473956, 0.41231441, 0.424328  ,
+        0.43040071, 0.43698626, 0.44949032, 0.46250948, 0.46503941,
+        0.47971447],
+       [0.        , 0.06800858, 0.1116218 , 0.14968241, 0.18149011,
+        0.20806541, 0.23556824, 0.25950112, 0.27564843, 0.29566908,
+        0.3154872 , 0.33212038, 0.34678801, 0.36225774, 0.3760642 ,
+        0.38741392, 0.40092895, 0.41447749, 0.42517973, 0.43383698,
+        0.44846921, 0.4587627 , 0.46865796, 0.47843494, 0.48765933,
+        0.50021393, 0.50155458, 0.51402688, 0.5260312 , 0.53483482,
+        0.54645088, 0.55532197, 0.55960915, 0.5702097 , 0.58129799,
+        0.58834631, 0.59870912, 0.60609209, 0.6125416 , 0.62421571,
+        0.62741125],
+       [0.        , 0.0244962 , 0.03890955, 0.05658338, 0.06654557,
+        0.08073172, 0.09260899, 0.10372209, 0.12015544, 0.13482604,
+        0.14671857, 0.15715626, 0.16734017, 0.18468518, 0.19243591,
+        0.20039989, 0.21451161, 0.22253776, 0.23759469, 0.24630682,
+        0.26093107, 0.26368924, 0.27541091, 0.28622295, 0.29706349,
+        0.31102339, 0.32033497, 0.32987239, 0.34004319, 0.34717515,
+        0.36129444, 0.36692008, 0.37854749, 0.38837358, 0.40918533,
+        0.4037701 , 0.42334432, 0.4248    , 0.42970882, 0.44220042,
+        0.45595898],
+       [0.        , 0.0129012 , 0.02458288, 0.03430688, 0.04008925,
+        0.0492997 , 0.05195953, 0.06053528, 0.06597478, 0.07174222,
+        0.07474439, 0.07691318, 0.08446184, 0.08887394, 0.0908231 ,
+        0.09607251, 0.09856174, 0.10071748, 0.10327334, 0.10822822,
+        0.11132427, 0.11686998, 0.1195956 , 0.12027422, 0.12467242,
+        0.12685798, 0.12994743, 0.13138958, 0.13833018, 0.14036498,
+        0.13736663, 0.14407526, 0.1442184 , 0.14781671, 0.15245242,
+        0.15360084, 0.1559459 , 0.15616982, 0.16329599, 0.16300148,
+        0.16287993]])
+    #Baseline loss: 2.699836452703562
+    u7 = np.array([[0.        , 0.03618088, 0.05710023, 0.07609293, 0.09116244,
+        0.11013452, 0.12606511, 0.13987921, 0.15356851, 0.16598327,
+        0.17931878, 0.19158233, 0.20461819, 0.21212879, 0.22604131,
+        0.23457385, 0.24945115, 0.25926887, 0.27122763, 0.27797038,
+        0.28480926, 0.30070604, 0.31266861, 0.31589249, 0.33120895,
+        0.33527872, 0.34474089, 0.35927247, 0.36726443, 0.37999903,
+        0.3867865 , 0.39721488, 0.40322787, 0.41433306, 0.41753092,
+        0.43217967, 0.44111685, 0.44595681, 0.45914747, 0.46960884,
+        0.47431685],
+       [0.        , 0.07009993, 0.11453056, 0.14938011, 0.1818791 ,
+        0.21194883, 0.23872009, 0.26319164, 0.28187591, 0.30184287,
+        0.3186085 , 0.33518825, 0.35216657, 0.3645168 , 0.38026331,
+        0.39261621, 0.40490862, 0.41946497, 0.42993894, 0.44121885,
+        0.45338392, 0.46072658, 0.47522691, 0.4872117 , 0.4946092 ,
+        0.50636449, 0.5163666 , 0.52645861, 0.53473931, 0.54086722,
+        0.55430307, 0.56326202, 0.56803279, 0.57802986, 0.58289044,
+        0.59200926, 0.60595956, 0.61571247, 0.62091865, 0.63039525,
+        0.63752917],
+       [0.        , 0.02165282, 0.03945808, 0.05557099, 0.07066337,
+        0.08278347, 0.09328201, 0.1081656 , 0.12183414, 0.13065274,
+        0.1437516 , 0.15723913, 0.16915372, 0.17675903, 0.19379704,
+        0.20307705, 0.21509398, 0.22841712, 0.23896222, 0.2507756 ,
+        0.26079171, 0.27718902, 0.28496605, 0.28994668, 0.3075422 ,
+        0.31590503, 0.32768651, 0.33576324, 0.34710271, 0.35964396,
+        0.36837035, 0.37874092, 0.38683631, 0.39686436, 0.40872964,
+        0.41699945, 0.42509631, 0.43625957, 0.44901016, 0.45025533,
+        0.46428231],
+       [0.        , 0.01628376, 0.02605514, 0.03565511, 0.04407985,
+        0.05049923, 0.05586089, 0.06404122, 0.06754457, 0.07331627,
+        0.07644883, 0.0851484 , 0.0880254 , 0.09130251, 0.09793291,
+        0.10003109, 0.10358845, 0.10552033, 0.10908235, 0.11265213,
+        0.11457755, 0.1188593 , 0.1246168 , 0.12106374, 0.13048508,
+        0.13343052, 0.13464426, 0.13705737, 0.1420783 , 0.1430393 ,
+        0.14436886, 0.14877127, 0.15259888, 0.15262673, 0.15636611,
+        0.15837127, 0.15896611, 0.16250829, 0.16565774, 0.17028084,
+        0.16719577]])
+    #Baseline loss: 2.6839434746305946
+    u8 = np.array([[0.        , 0.02716832, 0.04813192, 0.06732023, 0.08255517,
+        0.09938527, 0.11665046, 0.12936554, 0.14255595, 0.16050558,
+        0.16895086, 0.18560216, 0.19659736, 0.20855641, 0.22008101,
+        0.2326722 , 0.24076116, 0.25387691, 0.26165986, 0.27301531,
+        0.28544891, 0.29211283, 0.30372624, 0.31048252, 0.32351194,
+        0.33251616, 0.34141326, 0.34776128, 0.35946685, 0.36886699,
+        0.3775428 , 0.389842  , 0.39345516, 0.40156221, 0.41499094,
+        0.42116697, 0.43135562, 0.43542401, 0.44762437, 0.45822565,
+        0.47165307],
+       [0.        , 0.06089427, 0.10041506, 0.13946775, 0.17061986,
+        0.2011299 , 0.22667625, 0.24474318, 0.2668441 , 0.28729062,
+        0.3059424 , 0.32160421, 0.33786662, 0.35167055, 0.36529748,
+        0.37928371, 0.38926903, 0.40225559, 0.41536071, 0.42777422,
+        0.43961246, 0.44997794, 0.46078345, 0.47258645, 0.48239488,
+        0.48922201, 0.50490378, 0.50722446, 0.52152067, 0.53128432,
+        0.53382143, 0.546982  , 0.55853802, 0.56009824, 0.57396463,
+        0.57845096, 0.59461399, 0.60311852, 0.6084538 , 0.61596827,
+        0.62150817],
+       [0.        , 0.01958773, 0.03474512, 0.05053829, 0.06242893,
+        0.08011188, 0.09330603, 0.09947001, 0.11672969, 0.13085139,
+        0.14373726, 0.15425204, 0.16940895, 0.17993563, 0.18906674,
+        0.2018629 , 0.21902754, 0.22328959, 0.23905816, 0.24371005,
+        0.25691622, 0.27230335, 0.28118577, 0.29375023, 0.30252204,
+        0.30833445, 0.32309908, 0.33285343, 0.33980036, 0.35145597,
+        0.35983481, 0.37312436, 0.38295544, 0.39281495, 0.4008939 ,
+        0.4115635 , 0.42507641, 0.43244667, 0.43852349, 0.45889723,
+        0.45329892],
+       [0.        , 0.01248778, 0.02306732, 0.03019092, 0.0343869 ,
+        0.04207425, 0.05079055, 0.05562501, 0.05915459, 0.06524134,
+        0.06759927, 0.07166016, 0.07862058, 0.08183571, 0.08410346,
+        0.08785078, 0.09342022, 0.0941173 , 0.0978975 , 0.10358727,
+        0.10583424, 0.10680998, 0.1121353 , 0.1174296 , 0.11685107,
+        0.12139452, 0.12310671, 0.12595246, 0.12807914, 0.13009139,
+        0.13294827, 0.13743972, 0.13771584, 0.14117946, 0.14341634,
+        0.14672462, 0.15128857, 0.15100532, 0.15532415, 0.1553757 ,
+        0.1561771 ]])
+    #Baseline loss: 2.7109897425023264
+    u9 = np.array([[0.        , 0.03330454, 0.05458128, 0.07249866, 0.09177047,
+        0.10837525, 0.12352349, 0.13561651, 0.15401592, 0.16278403,
+        0.17762109, 0.19210965, 0.20238525, 0.21479131, 0.22627998,
+        0.24193533, 0.24901866, 0.26187968, 0.27289391, 0.27937668,
+        0.29420045, 0.30233465, 0.31133764, 0.32150554, 0.33054672,
+        0.33913134, 0.35045359, 0.35493547, 0.36549149, 0.37876156,
+        0.38753252, 0.39550863, 0.4029012 , 0.4193836 , 0.4205965 ,
+        0.43238114, 0.43791144, 0.45417569, 0.46431641, 0.46967261,
+        0.47102375],
+       [0.        , 0.07031237, 0.11557649, 0.15344141, 0.18708246,
+        0.21693124, 0.2416348 , 0.26533934, 0.28555221, 0.30578077,
+        0.3248855 , 0.3420648 , 0.35596039, 0.3701222 , 0.3850126 ,
+        0.39874657, 0.41086331, 0.42183466, 0.43843668, 0.44747203,
+        0.45708803, 0.46979964, 0.48284386, 0.49111919, 0.49820469,
+        0.51382296, 0.52627209, 0.52695359, 0.54026509, 0.54755896,
+        0.56019992, 0.57073744, 0.58323425, 0.58989872, 0.59366565,
+        0.60151888, 0.61995194, 0.62270854, 0.62908471, 0.63939538,
+        0.64677619],
+       [0.        , 0.02016604, 0.03660387, 0.04978285, 0.06586995,
+        0.0780926 , 0.09158261, 0.10740106, 0.11860408, 0.13543683,
+        0.1508338 , 0.16084291, 0.16278768, 0.18525173, 0.19709137,
+        0.20421922, 0.21838013, 0.2276056 , 0.24175735, 0.25471006,
+        0.26429771, 0.27596263, 0.28648243, 0.30043926, 0.30811457,
+        0.32060355, 0.33207371, 0.34089049, 0.35232422, 0.36065535,
+        0.37339747, 0.38324417, 0.39404745, 0.40169755, 0.41667019,
+        0.42283221, 0.4296666 , 0.43920178, 0.45292629, 0.46372492,
+        0.46754698],
+       [0.        , 0.01366031, 0.02430973, 0.03387637, 0.04263093,
+        0.0525065 , 0.05651443, 0.06458941, 0.06712657, 0.07282833,
+        0.07675269, 0.08365378, 0.09014881, 0.0929696 , 0.09765793,
+        0.09631596, 0.10369959, 0.10513391, 0.1092599 , 0.11524158,
+        0.11586408, 0.12073403, 0.12114319, 0.1264376 , 0.12652605,
+        0.13089297, 0.13253143, 0.13647155, 0.13889385, 0.13964882,
+        0.14580525, 0.14612589, 0.15121586, 0.1532433 , 0.15440839,
+        0.15656086, 0.16133795, 0.16324765, 0.16403082, 0.16939475,
+        0.16829531]])
+    #Baseline loss: 2.6935924757175758
+    u10 = np.array([[0.        , 0.02840841, 0.04884736, 0.06717291, 0.08904528,
+        0.09769191, 0.11440433, 0.12966309, 0.14400896, 0.15651718,
+        0.16804346, 0.17811761, 0.19265734, 0.20240049, 0.21303676,
+        0.22437352, 0.23589798, 0.24798048, 0.26266355, 0.26700646,
+        0.27619932, 0.28826131, 0.29861108, 0.30848436, 0.31891518,
+        0.32489734, 0.33620945, 0.3464114 , 0.3539937 , 0.36476549,
+        0.37307483, 0.38369494, 0.38980159, 0.39943   , 0.40916166,
+        0.41930661, 0.42313017, 0.43485777, 0.44228051, 0.45124138,
+        0.46260666],
+       [0.        , 0.06355774, 0.10481775, 0.14105551, 0.17451312,
+        0.20323684, 0.22931726, 0.25324822, 0.27263222, 0.2909139 ,
+        0.30896504, 0.32660807, 0.34117821, 0.35356453, 0.36866217,
+        0.38310609, 0.39602487, 0.4070508 , 0.41851377, 0.43242415,
+        0.44398976, 0.45319938, 0.46548791, 0.47410652, 0.48364626,
+        0.49319153, 0.50106585, 0.5104076 , 0.52520546, 0.53380008,
+        0.53966906, 0.54929994, 0.56040076, 0.56511088, 0.57870053,
+        0.58725765, 0.59526585, 0.60610319, 0.60408823, 0.61158314,
+        0.6253466 ],
+       [0.        , 0.01915476, 0.03468914, 0.0468002 , 0.0627397 ,
+        0.07629026, 0.08861826, 0.09804856, 0.11116784, 0.124334  ,
+        0.14120368, 0.15170875, 0.16150984, 0.17257359, 0.18638806,
+        0.19961219, 0.20891103, 0.22220022, 0.23001477, 0.24539722,
+        0.2538896 , 0.26720531, 0.27552556, 0.28788624, 0.29851252,
+        0.30635106, 0.3146815 , 0.33098192, 0.33570103, 0.34773439,
+        0.35685353, 0.37312503, 0.37744266, 0.38532813, 0.40193157,
+        0.41093513, 0.4196698 , 0.43142037, 0.43504174, 0.44798422,
+        0.46127904],
+       [0.        , 0.01231448, 0.02237608, 0.03259937, 0.03878675,
+        0.04509479, 0.05065078, 0.05751364, 0.06464391, 0.06857151,
+        0.07021047, 0.07573987, 0.08221676, 0.08340715, 0.09084359,
+        0.09355062, 0.09619943, 0.1000014 , 0.10178198, 0.10333585,
+        0.10891105, 0.11577495, 0.11626523, 0.11965157, 0.11983874,
+        0.12409888, 0.124257  , 0.12930084, 0.12834269, 0.13190522,
+        0.13520947, 0.14117582, 0.1419152 , 0.14193982, 0.1427722 ,
+        0.14629957, 0.15072339, 0.15360594, 0.15435502, 0.15679103,
+        0.15925726]])
+        
+    26-FEB run
+    u1 = np.array([[0.        , 0.06652759, 0.10804945, 0.14186319, 0.17480218,
         0.210076  , 0.23564816, 0.26164862, 0.2848016 , 0.30967332,
         0.33545015, 0.3564292 , 0.37996439, 0.4081341 , 0.41941923,
         0.44840101, 0.46783509],
@@ -3333,7 +3831,7 @@ def allocationCaseStudy():
         0.08567954, 0.09619781, 0.10237955, 0.11061328, 0.11696541,
         0.12388871, 0.13250675, 0.13655426, 0.1460838 , 0.14714921,
         0.15956121, 0.16087637]])
-    array([[0.        , 0.06405272, 0.10158113, 0.14339483, 0.17508683,
+    u2 = np.array([[0.        , 0.06405272, 0.10158113, 0.14339483, 0.17508683,
         0.20247499, 0.23069733, 0.26226263, 0.28554752, 0.30869166,
         0.33480816, 0.35286353, 0.38139199, 0.40226755, 0.42520154,
         0.44719432, 0.4669073 ],
@@ -3349,7 +3847,7 @@ def allocationCaseStudy():
         0.08641805, 0.09520641, 0.10437945, 0.11349623, 0.12206593,
         0.12699187, 0.13426731, 0.14248358, 0.14774082, 0.15283235,
         0.16132864, 0.16714651]])
-    array([[0.        , 0.05837363, 0.10617826, 0.14037623, 0.18107807,
+    u3 = np.array([[0.        , 0.05837363, 0.10617826, 0.14037623, 0.18107807,
         0.20729806, 0.23350863, 0.26277349, 0.28793024, 0.30881261,
         0.33471102, 0.35978186, 0.38364211, 0.40243574, 0.42834316,
         0.45022292, 0.46415138],
@@ -3365,7 +3863,7 @@ def allocationCaseStudy():
         0.08769483, 0.10045237, 0.10879561, 0.11732793, 0.12399853,
         0.12792304, 0.13768871, 0.14306227, 0.14971452, 0.15718243,
         0.16258568, 0.16789939]])
-    array([[0.        , 0.05909741, 0.10646702, 0.14414317, 0.1745522 ,
+    u4 = np.array([[0.        , 0.05909741, 0.10646702, 0.14414317, 0.1745522 ,
         0.20671288, 0.23529763, 0.2645149 , 0.28764923, 0.31685784,
         0.34004281, 0.35970667, 0.38303496, 0.40181509, 0.43166988,
         0.45116567, 0.47412546],
@@ -3381,7 +3879,7 @@ def allocationCaseStudy():
         0.08324658, 0.09347655, 0.10450365, 0.11079978, 0.1177632 ,
         0.12518838, 0.1324126 , 0.14060435, 0.14733104, 0.15387218,
         0.15814928, 0.16509521]])
-    array([[0.        , 0.06837471, 0.11749072, 0.15337173, 0.19224291,
+    u5 = np.array([[0.        , 0.06837471, 0.11749072, 0.15337173, 0.19224291,
         0.22293421, 0.25043874, 0.2740312 , 0.30264009, 0.32280804,
         0.34815199, 0.37650333, 0.39707237, 0.42243258, 0.44210314,
         0.46762499, 0.49592917],
@@ -3397,11 +3895,15 @@ def allocationCaseStudy():
         0.09080367, 0.10342835, 0.10878446, 0.11917103, 0.12640355,
         0.13752458, 0.13910965, 0.14678665, 0.15039673, 0.1619222 ,
         0.16547809, 0.1733049 ]])
-    
+    baselineVec = [2.709398099016528, 2.703329257204651, 2.707809157691353, 2.7025562684534807, 2.6946138606017764,
+                    2.6850461615671555, 2.6961345838352972, 2.687338035451674, 2.714262564710539, 2.689296886284921,
+                    2.715116018838946, 2.707465472929334, 2.6969818922581372, 2.699836452703562, 2.6839434746305946,
+                    2.7109897425023264, 2.6935924757175758]
+    utilMatList = [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10]
     '''
     avgUtilMat = np.average(np.array(utilMatList),axis=0)
     plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta',
-                     titleStr='Tested Nodes, $t=0.15$, $m=0.6$',lineLabels=True, utilMax=0.15,
+                     titleStr='Tested Nodes, $t=0.15$, $m=0.6$',lineLabels=True, utilMax=0.1,
                      colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
     allocArr, objValArr = smoothAllocationForward(avgUtilMat)
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
@@ -3418,6 +3920,139 @@ def allocationCaseStudy():
         allocArr[:, ind] = currSol
         utilArr.append(currVal)
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt,testMax+1,testInt)], testInt=testInt, labels=dictTemp['outletNames'], titleStr='vs. Sample Budget')
+    '''
+
+    # Identify gap between objValArr and  comprehensive utility; need to adjust input for getUtility()
+    baselineVec = [2.709398099016528, 2.703329257204651, 2.707809157691353, 2.7025562684534807, 2.6946138606017764,
+                    2.6850461615671555, 2.6961345838352972, 2.687338035451674, 2.714262564710539, 2.689296886284921,
+                    2.715116018838946, 2.707465472929334, 2.6969818922581372, 2.699836452703562, 2.6839434746305946,
+                    2.7109897425023264, 2.6935924757175758]
+    baseLoss = np.average(baselineVec)
+    designArr = allocArr/np.sum(allocArr, axis=0)
+    testArr = np.arange(testInt,testMax+testInt,testInt)
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    compUtilList = []
+    numReps = 5
+    for rep in range(numReps):
+        dictTemp = CSdict1.copy()
+        dictTemp.update({'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict1['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        compUtilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = designArr[:,compInd]
+            currBudget = testArr[compInd]
+            print('Design: '+str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes], numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: '+str(currUtil))
+            compUtilArr[compInd] = currUtil
+        print(repr(compUtilArr))
+        compUtilList.append(compUtilArr)
+        plt.plot(testArr, objValArr)
+        for tempValArr in compUtilList:
+            plt.plot(testArr, tempValArr, alpha=0.3)
+        plt.ylim([0, 1.])
+        plt.title('Comprehensive utility for allocations via heuristic')
+        plt.show()
+        plt.close()
+    ''' 03-MAR run
+    compUtilList = [array([0.06922406, 0.11118577, 0.14953463, 0.16980805, 0.20418012,
+       0.23308839, 0.25861779, 0.28258252, 0.29723082, 0.32097033,
+       0.34519128, 0.357648  , 0.38170219, 0.39921027, 0.41597609,
+       0.43410224, 0.45524364, 0.46689916, 0.49028929, 0.50601229,
+       0.51990466, 0.53465629, 0.56418775, 0.57155867, 0.57694335,
+       0.59905008, 0.61492693, 0.63461438, 0.6421537 , 0.66645749,
+       0.68072992, 0.68705723, 0.70870802, 0.7168325 , 0.73488094,
+       0.74827317, 0.76564801, 0.77389889, 0.78839225, 0.8056862 ]), array([0.06109684, 0.10564223, 0.14212854, 0.16485361, 0.19648438,
+       0.22475022, 0.2540172 , 0.27561693, 0.29573148, 0.31348075,
+       0.33778533, 0.35610351, 0.3761814 , 0.39730458, 0.41448708,
+       0.43416049, 0.45339615, 0.46621283, 0.48906593, 0.51002108,
+       0.52552723, 0.53570389, 0.56576897, 0.57252527, 0.58669239,
+       0.60260937, 0.62252038, 0.63727434, 0.64979553, 0.65943549,
+       0.6725901 , 0.69950541, 0.71162029, 0.72320356, 0.74700021,
+       0.75917868, 0.76939869, 0.787598  , 0.79598195, 0.80910064]), array([0.08050425, 0.12251867, 0.15738395, 0.17842544, 0.21101875,
+       0.24618336, 0.26494766, 0.2889491 , 0.30635418, 0.33015438,
+       0.3504949 , 0.37062214, 0.39059994, 0.40871621, 0.42708245,
+       0.44700236, 0.46285618, 0.47996026, 0.49469853, 0.51679745,
+       0.52722184, 0.55483432, 0.5606403 , 0.57354907, 0.58470241,
+       0.60558964, 0.62528198, 0.63922873, 0.66011061, 0.67016626,
+       0.68345816, 0.70140077, 0.71574027, 0.72543444, 0.74112763,
+       0.76173424, 0.77107757, 0.78641938, 0.79697256, 0.80823605]), array([0.07914103, 0.12077574, 0.15725376, 0.17883145, 0.21348454,
+       0.2415387 , 0.2681979 , 0.29182073, 0.31033037, 0.32914102,
+       0.34862682, 0.36575084, 0.39056485, 0.40791416, 0.43174505,
+       0.44824337, 0.46019407, 0.47527358, 0.49868776, 0.51761354,
+       0.53394952, 0.54589926, 0.56464283, 0.57900381, 0.59566991,
+       0.61098809, 0.62766702, 0.64516068, 0.65664099, 0.67174032,
+       0.68346598, 0.70452645, 0.72159873, 0.7324451 , 0.7514438 ,
+       0.75828834, 0.77648694, 0.79494773, 0.80219992, 0.81444514]), array([0.06020591, 0.10308569, 0.14181638, 0.16189663, 0.19473007,
+       0.22742161, 0.24892308, 0.27417088, 0.28900144, 0.31626395,
+       0.33511327, 0.35207678, 0.37152038, 0.39381347, 0.41638519,
+       0.43447211, 0.45259572, 0.46635696, 0.48358152, 0.50214682,
+       0.52317327, 0.53032729, 0.55206995, 0.56635036, 0.5816671 ,
+       0.60157098, 0.61618688, 0.62930456, 0.65010515, 0.66056555,
+       0.67416734, 0.6923015 , 0.70957159, 0.72048922, 0.72830345,
+       0.75440023, 0.76770194, 0.77755822, 0.79361878, 0.81840579]), array([0.07763244, 0.11849947, 0.15396233, 0.17716408, 0.21119621,
+       0.23685636, 0.26690042, 0.28798818, 0.30244023, 0.32426803,
+       0.34897034, 0.36413353, 0.38341814, 0.40763123, 0.42187855,
+       0.4408415 , 0.45748451, 0.48012367, 0.49330091, 0.51616032,
+       0.5299876 , 0.54291522, 0.56700836, 0.56998539, 0.59421883,
+       0.60382616, 0.61741806, 0.63120184, 0.65436038, 0.66902341,
+       0.67950802, 0.69964535, 0.72003761, 0.72803834, 0.7438192 ,
+       0.7650546 , 0.78063261, 0.7856272 , 0.79588063, 0.81267439]), array([0.05679484, 0.101599  , 0.13566219, 0.15912353, 0.19331142,
+       0.2231994 , 0.2490854 , 0.27259885, 0.28638437, 0.30959709,
+       0.3305041 , 0.35015224, 0.36605471, 0.38872464, 0.41022006,
+       0.42644573, 0.44871405, 0.45786922, 0.48054119, 0.50199925,
+       0.51563536, 0.53527975, 0.55261881, 0.56547905, 0.57478403,
+       0.59541731, 0.60887202, 0.62775628, 0.63482742, 0.64957573,
+       0.669213  , 0.6961825 , 0.69929165, 0.70656171, 0.73701436,
+       0.74772572, 0.76188633, 0.77498186, 0.78559338, 0.79099879]), array([0.05954922, 0.10295195, 0.13973005, 0.16304183, 0.19730609,
+       0.22200018, 0.24913881, 0.27252216, 0.28866586, 0.3130627 ,
+       0.33823674, 0.35504646, 0.37296344, 0.39206862, 0.4134904 ,
+       0.43113579, 0.44717261, 0.46908357, 0.48567356, 0.50268012,
+       0.52154725, 0.54082831, 0.55350711, 0.56613565, 0.5872086 ,
+       0.59737388, 0.6174764 , 0.63618113, 0.652415  , 0.6668987 ,
+       0.68282357, 0.70120847, 0.71471313, 0.72583868, 0.73798296,
+       0.75908369, 0.76737871, 0.77873522, 0.79336851, 0.81147914]), array([0.05957532, 0.10226265, 0.13904438, 0.16841903, 0.19894978,
+       0.22739892, 0.2508831 , 0.27501238, 0.29187932, 0.31384223,
+       0.34100964, 0.35798555, 0.37042916, 0.39895938, 0.41815257,
+       0.43549066, 0.44969343, 0.47217315, 0.49005255, 0.50804752,
+       0.52733095, 0.5467132 , 0.55552677, 0.56799918, 0.58896192,
+       0.60017545, 0.61831263, 0.63371565, 0.65500567, 0.66144858,
+       0.68107249, 0.70450751, 0.71591305, 0.72602878, 0.74473289,
+       0.753129  , 0.76727865, 0.78055775, 0.79151631, 0.81640878]), array([0.05714639, 0.10329964, 0.13997256, 0.16079946, 0.19697932,
+       0.22850378, 0.25195467, 0.27807782, 0.29555781, 0.31775845,
+       0.33779741, 0.35711505, 0.37955058, 0.40150226, 0.41641523,
+       0.43067986, 0.45381465, 0.47054812, 0.48686658, 0.50611062,
+       0.52468195, 0.5428882 , 0.5551999 , 0.57118053, 0.5797269 ,
+       0.60092663, 0.61727125, 0.63374355, 0.64907641, 0.67022893,
+       0.67913972, 0.68429688, 0.70990259, 0.71487872, 0.73097309,
+       0.74926019, 0.7657803 , 0.77263626, 0.77971713, 0.80460333])]
+    28-FEB run
+    compUtilList = [[0.13434309, 0.21328377, 0.26715053, 0.3284541,  0.37044872, 0.41865441,
+ 0.46946556, 0.51087613, 0.55500662, 0.60400309, 0.6339664,  0.67993556,
+ 0.71523028, 0.74694446, 0.79024731, 0.81076425],
+    [0.13556136, 0.21160706, 0.27215052, 0.3288286,  0.36903289, 0.4200551,
+ 0.46914433, 0.51068251, 0.55048601, 0.59395896, 0.6302803,  0.66795452,
+ 0.71628046, 0.74008885, 0.782305,   0.81367121],
+    [0.13209922, 0.20552549, 0.26296579, 0.32799084, 0.37297182, 0.41653288,
+ 0.46662968, 0.51388607, 0.55295447, 0.59128869, 0.63933957, 0.6701092,
+ 0.71433802, 0.74967193, 0.79143593, 0.81547184],
+    [0.13875307, 0.21576336, 0.27529232, 0.33126799, 0.37274858, 0.42060917,
+ 0.47668325, 0.5122719,  0.55399087, 0.59882742, 0.63778182, 0.67693331,
+ 0.72097068, 0.74794435, 0.79055722, 0.81261298],
+    [0.13392437, 0.21576149, 0.27140288, 0.33026199, 0.37286977, 0.41518429,
+ 0.47082876, 0.5153563,  0.55993262, 0.5935119,  0.63394707, 0.66983684,
+ 0.71499983, 0.73977688, 0.78451439, 0.81638506]]
+    compUtilArr = np.array(compUtilList)
+    compArr = np.average(compUtilArr,axis=0)
     '''
 
     ########################
@@ -3518,42 +4153,73 @@ def allocationCaseStudy():
     numBayesNeigh = 1000
     lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
 
-    # Utility calculation specification
-    numDataDraws = 5000
-    utilDict = {'method': 'weightsNodeDraw3linear'}
-    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
-
     # Set limits of data collection and intervals for calculation
     testMax, testInt = 400, 25
     numtargetdraws = 5100
 
-    # todo: ##################
-    #todo: REMOVE LATER
-    #todo: ##################
-    setDraws = setDraws[:-3000]
-    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
-    dictTemp = CSdict3.copy()
-    dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
-                                                                  replace=False)], 'numPostSamples': numtargetdraws})
-    templossmat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
-    lossDict.update({'lossMat': templossmat})
+    ####################################
+    ### MARGINAL UTILITY OF EVEN DESIGN
+    ####################################
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw4linear'}
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
 
-    design = np.zeros(numTN)
-    design[0] = 1.
+    numReps = 5
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    baselineVec = [4.11753230616674, 4.107263858843767]
+    baseLoss = np.average(baselineVec)
+    objValArr = np.array([0.19010466, 0.3556157 , 0.51510627, 0.64468327, 0.75807608,
+       0.84891198, 0.91809413, 0.98549625, 1.04822431, 1.10973349,
+       1.16849667, 1.22379824, 1.2728498 , 1.32048459, 1.36764696, 1.4124429 ])
+    compArr = np.array([0.20121886, 0.35121707, 0.51007238, 0.66090806, 0.82089693,
+       0.92160765, 1.01003614, 1.0913438 , 1.16640353, 1.24685412,
+       1.31152091, 1.3696987 , 1.43595088, 1.50488954, 1.56470626, 1.59268627])
+    evenUtilList = []  # For storing utility lists
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict3.copy()
+        dictTemp.update(
+            {'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        utilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = roundDesignLow(np.ones(numTN) / numTN, testArr[compInd]) / testArr[compInd]
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            utilArr[compInd] = currUtil
+        print(utilArr)
+        evenUtilList.append(utilArr)
+        # Update plot
+        plt.plot(testArr, objValArr, alpha=0.2, label='Heuristic')
+        plt.plot(testArr, compArr, alpha=0.2, label='Comprehensive')
+        for tempValInd, tempValArr in enumerate(evenUtilList):
+            plt.plot(testArr, tempValArr, alpha=0.6, label='Uniform ' + str(tempValInd))
+        plt.ylim([0, 1.7])
+        plt.legend()
+        plt.title('Utility of uniform vs. heuristic allocations\nUntested nodes setting')
+        plt.show()
+        plt.close()
 
-    tempUtil = getDesignUtility(priordatadict=dictTemp, lossdict=lossDict.copy(), designlist=[design], numtests=40, utildict=utilDict)
-
-    utilDict.update({'method': 'weightsNodeDraw4linear'})
-    tempUtil2 = getDesignUtility(priordatadict=dictTemp, lossdict=lossDict.copy(), designlist=[design], numtests=40, utildict=utilDict)
-
-    design = np.zeros(numTN)
-    design[0] = 0.5
-    design[1] = 0.5
-    tempUtil3 = getDesignUtility(priordatadict=dictTemp, lossdict=lossDict.copy(), designlist=[design], numtests=40,
-                                 utildict=utilDict)
-    # todo: ##################
-    #todo: END REMOVE LATER
-    # todo: ##################
+    ################################
+    # NOW USING OUR METHOD
+    ################################
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw3linear'}
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
 
     # Minimize variance by averaging over multiple runs
     numReps = 5
@@ -3569,7 +4235,7 @@ def allocationCaseStudy():
         print(repr(currMargUtilMat))
         utilMatList.append(currMargUtilMat)
     ''' 26-FEB run
-    array([[0.        , 0.07416325, 0.11876001, 0.16558167, 0.20392835,
+    u1 = np.array([[0.        , 0.07416325, 0.11876001, 0.16558167, 0.20392835,
         0.23617741, 0.26973206, 0.30099162, 0.33382248, 0.36645781,
         0.39696841, 0.42724626, 0.45664465, 0.49123851, 0.51894597,
         0.55250012, 0.58121533],
@@ -3601,7 +4267,7 @@ def allocationCaseStudy():
         0.39443401, 0.43291424, 0.4661782 , 0.50556714, 0.54369035,
         0.57289412, 0.59832823, 0.63402351, 0.67475878, 0.69976909,
         0.73574724, 0.76914023]])
-    array([[0.        , 0.06547307, 0.11558845, 0.16102266, 0.20006403,
+    u2 = np.array([[0.        , 0.06547307, 0.11558845, 0.16102266, 0.20006403,
         0.23547532, 0.26015939, 0.29816515, 0.32073443, 0.35606858,
         0.39365456, 0.41749771, 0.45136891, 0.48537782, 0.51372768,
         0.53640374, 0.57804625],
@@ -3633,7 +4299,7 @@ def allocationCaseStudy():
         0.38979583, 0.42647264, 0.45863866, 0.49370435, 0.52822886,
         0.56417765, 0.59458887, 0.62696962, 0.6694564 , 0.69529741,
         0.72587302, 0.76153574]])
-    array([[0.        , 0.06424242, 0.11234714, 0.15168337, 0.19306484,
+    u3 = np.array([[0.        , 0.06424242, 0.11234714, 0.15168337, 0.19306484,
         0.2273315 , 0.26368017, 0.28085689, 0.32009513, 0.340539  ,
         0.3725265 , 0.40208207, 0.43211212, 0.46730368, 0.49994469,
         0.53420106, 0.55906154],
@@ -3665,7 +4331,7 @@ def allocationCaseStudy():
         0.3826856 , 0.420761  , 0.45191826, 0.48474868, 0.52308104,
         0.55385617, 0.58795831, 0.61952707, 0.65906563, 0.68235346,
         0.72200839, 0.74644746]])
-    array([[0.        , 0.06365932, 0.10950469, 0.1609616 , 0.19461373,
+    u4 = np.array([[0.        , 0.06365932, 0.10950469, 0.1609616 , 0.19461373,
         0.23350729, 0.26615562, 0.29897322, 0.33205368, 0.36145503,
         0.38808835, 0.42039452, 0.44982499, 0.48629484, 0.51176078,
         0.54578547, 0.57577455],
@@ -3697,7 +4363,7 @@ def allocationCaseStudy():
         0.37822993, 0.41454441, 0.45768224, 0.48933383, 0.51907436,
         0.55811461, 0.58746235, 0.62188249, 0.65728346, 0.69222976,
         0.71887982, 0.75337079]])
-    array([[0.        , 0.06947252, 0.11662215, 0.15755282, 0.1942697 ,
+    u5 = np.array([[0.        , 0.06947252, 0.11662215, 0.15755282, 0.1942697 ,
         0.23412758, 0.25974048, 0.29925888, 0.32484991, 0.35407747,
         0.38835253, 0.41989588, 0.44652242, 0.48394223, 0.5157128 ,
         0.5446937 , 0.55898052],
@@ -3729,6 +4395,9 @@ def allocationCaseStudy():
         0.37804435, 0.41493604, 0.4525151 , 0.48808067, 0.52382348,
         0.55639513, 0.58942008, 0.6264908 , 0.65982243, 0.69214791,
         0.72739587, 0.75771954]])
+    Baseline loss: 4.11753230616674
+    Baseline loss: 4.107263858843767
+    utilMatList = [u1, u2, u3, u4, u5]
     '''
     avgUtilMat = np.average(np.array(utilMatList), axis=0)
     plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta',
@@ -3739,6 +4408,61 @@ def allocationCaseStudy():
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
               labels=dictTemp['outletNames'], titleStr='Untested Nodes, $t=0.15$, $m=0.6$', allocMax=250,
               colors=cm.rainbow(np.linspace(0, 1., numTN)), dashes=[[1, 0] for tn in range(4)]+[[1, 1] for tn in range(4)])
+
+    # Identify gap between objValArr and  comprehensive utility; need to adjust input for getUtility()
+    baselineVec = [4.11753230616674, 4.107263858843767]
+    baseLoss = np.average(baselineVec)
+    designArr = allocArr / np.sum(allocArr, axis=0)
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    compUtilList = []
+    numReps = 5
+    for rep in range(numReps):
+        dictTemp = CSdict3.copy()
+        dictTemp.update(
+            {'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        compUtilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = designArr[:, compInd]
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            compUtilArr[compInd] = currUtil
+        print(compUtilArr)
+        compUtilList.append(compUtilArr)
+        plt.plot(testArr, objValArr)
+        for tempValArr in compUtilList:
+            plt.plot(testArr, tempValArr, alpha=0.3)
+        plt.ylim([0, 1.7])
+        plt.title('Comprehensive utility for allocations via heuristic\nUntested nodes')
+        plt.show()
+        plt.close()
+    '''MAR-02 run
+    compUtilList = [array([0.20725389, 0.35772635, 0.51787972, 0.66444122, 0.82472394,
+       0.92601256, 1.0062635 , 1.09633548, 1.17086331, 1.25568171,
+       1.32078246, 1.37566104, 1.44833019, 1.50906131, 1.55561982,
+       1.59109856]), array([0.19920719, 0.3490473 , 0.50746993, 0.65973035, 0.81962126,
+       0.92013935, 1.01129369, 1.08967991, 1.16491694, 1.24391159,
+       1.30843372, 1.36771126, 1.43182445, 1.50349896, 1.56773507,
+       1.59321551]), array([0.19920719, 0.3490473 , 0.50746993, 0.65973035, 0.81962126,
+       0.92013935, 1.01129369, 1.08967991, 1.16491694, 1.24391159,
+       1.30843372, 1.36771126, 1.43182445, 1.50349896, 1.56773507,
+       1.59321551]), array([0.19920719, 0.3490473 , 0.50746993, 0.65973035, 0.81962126,
+       0.92013935, 1.01129369, 1.08967991, 1.16491694, 1.24391159,
+       1.30843372, 1.36771126, 1.43182445, 1.50349896, 1.56773507, 1.59321551])]
+    '''
 
     ########################
     #### RUN 3: UNTESTED REGIONS, WITH DIFFERENT UNDERESTTIMATION PENALTY
@@ -4163,63 +4887,430 @@ def allocationCaseStudy():
                                              masterDraws=CSdict3['postSamples'], printUpdate=True)
         print(repr(currMargUtilMat))
         utilMatList.append(currMargUtilMat)
-    ''' 26-FEB run
-    
+    ''' 28-FEB run
+    Baseline loss: 4.113882932483771
+    array([[0.        , 0.06699379, 0.1159714 , 0.15851727, 0.19397435,
+        0.22967673, 0.26279189, 0.29703273, 0.32639287, 0.35365416,
+        0.38828657, 0.42987245, 0.44599662, 0.48506066, 0.51713737,
+        0.54047321, 0.56675078],
+       [0.        , 0.10661925, 0.202069  , 0.27018295, 0.31966904,
+        0.36494581, 0.4076379 , 0.44703668, 0.48690929, 0.51595965,
+        0.55792699, 0.58232309, 0.62007659, 0.65624676, 0.68441269,
+        0.71613695, 0.74740588],
+       [0.        , 0.03842346, 0.08139256, 0.11749374, 0.15734291,
+        0.19702769, 0.22754345, 0.26110197, 0.28959613, 0.32840599,
+        0.36315383, 0.39193626, 0.42883771, 0.45623139, 0.49142918,
+        0.5302157 , 0.55590694],
+       [0.        , 0.02919521, 0.0493193 , 0.06495757, 0.08062763,
+        0.08947783, 0.10151506, 0.11189929, 0.11960776, 0.12957802,
+        0.1348619 , 0.14716632, 0.15231775, 0.15833747, 0.16619568,
+        0.16809   , 0.17582164],
+       [0.        , 0.16109715, 0.22089617, 0.25869112, 0.28931791,
+        0.32243304, 0.34214565, 0.37069136, 0.38998479, 0.41388807,
+        0.43753307, 0.46245985, 0.48623523, 0.5095278 , 0.52551261,
+        0.54526652, 0.57016085],
+       [0.        , 0.12530487, 0.1706159 , 0.2019597 , 0.228516  ,
+        0.25041533, 0.27030231, 0.287229  , 0.30997954, 0.32490632,
+        0.34298175, 0.35840439, 0.37954279, 0.39365962, 0.40877373,
+        0.43560554, 0.45390102],
+       [0.        , 0.17933485, 0.23588904, 0.27852026, 0.32075157,
+        0.35958588, 0.39558104, 0.42838162, 0.46774204, 0.50006076,
+        0.53563774, 0.56832489, 0.59422096, 0.64138005, 0.67394576,
+        0.70888333, 0.73338437],
+       [0.        , 0.15433794, 0.19944149, 0.23033919, 0.2611819 ,
+        0.28160178, 0.31051752, 0.32824284, 0.35220654, 0.37062927,
+        0.39027418, 0.41046486, 0.42880559, 0.4465083 , 0.46860856,
+        0.48687447, 0.50112443]])
+    Baseline loss: 4.1367483290553295
+    array([[0.        , 0.07763779, 0.13306448, 0.17716794, 0.21833368,
+        0.25392437, 0.28867585, 0.3180759 , 0.34836732, 0.3806975 ,
+        0.40596274, 0.44120721, 0.4706868 , 0.50904901, 0.53275477,
+        0.56885302, 0.59668063],
+       [0.        , 0.1301294 , 0.22580122, 0.29359941, 0.3455947 ,
+        0.39582412, 0.4338324 , 0.47210875, 0.50875202, 0.54601008,
+        0.57291659, 0.60932205, 0.63558903, 0.66857349, 0.70259215,
+        0.73595533, 0.75628105],
+       [0.        , 0.04605261, 0.08985872, 0.13644073, 0.17441507,
+        0.20727073, 0.24956436, 0.27846422, 0.31407325, 0.34846776,
+        0.37666845, 0.41097393, 0.44652576, 0.48085368, 0.51497153,
+        0.54049467, 0.58026138],
+       [0.        , 0.0354273 , 0.06026119, 0.07457054, 0.08927464,
+        0.09849989, 0.11275191, 0.12319386, 0.12909049, 0.13936405,
+        0.14665029, 0.15611456, 0.16660144, 0.16895327, 0.17717346,
+        0.1845739 , 0.19101203],
+       [0.        , 0.16997501, 0.22278787, 0.26374255, 0.29811128,
+        0.32515437, 0.34975272, 0.37583573, 0.39687953, 0.41907634,
+        0.44504931, 0.46407447, 0.48782246, 0.51805223, 0.52798073,
+        0.55772659, 0.57614149],
+       [0.        , 0.13721483, 0.18458207, 0.21556948, 0.2448922 ,
+        0.26463184, 0.28660716, 0.30861199, 0.32335968, 0.34503891,
+        0.36474648, 0.3794336 , 0.39457913, 0.41434163, 0.43192218,
+        0.44836039, 0.46148208],
+       [0.        , 0.18102997, 0.24940522, 0.29585415, 0.33470624,
+        0.37246489, 0.40328308, 0.44215384, 0.48136059, 0.5136878 ,
+        0.54667876, 0.58134717, 0.60811679, 0.64668315, 0.67691133,
+        0.71201987, 0.74051303],
+       [0.        , 0.17115109, 0.21966873, 0.2520177 , 0.2795757 ,
+        0.30601381, 0.32817218, 0.34865865, 0.37409096, 0.38844433,
+        0.41050519, 0.42638119, 0.44675382, 0.46152126, 0.48306331,
+        0.50432708, 0.52249973]])
+    Baseline loss: 4.10990155020606
+    array([[0.        , 0.06915874, 0.11548459, 0.15716271, 0.19102465,
+        0.22646859, 0.26433277, 0.29855684, 0.32817093, 0.36036126,
+        0.38653043, 0.42194576, 0.45042509, 0.48782784, 0.51586142,
+        0.54271207, 0.58132426],
+       [0.        , 0.1172663 , 0.21028709, 0.2791676 , 0.33910239,
+        0.37661092, 0.41597816, 0.45521271, 0.49560516, 0.52264427,
+        0.5610504 , 0.59501962, 0.62631806, 0.65209615, 0.68329687,
+        0.71166072, 0.73795818],
+       [0.        , 0.04853485, 0.08767148, 0.12605879, 0.16942183,
+        0.2037733 , 0.23774545, 0.26951273, 0.30806293, 0.33937293,
+        0.37077418, 0.40349005, 0.43875609, 0.46983336, 0.49734594,
+        0.53496573, 0.56808232],
+       [0.        , 0.03602585, 0.05330196, 0.06967307, 0.08561047,
+        0.09567659, 0.10253485, 0.11849902, 0.12055685, 0.12609672,
+        0.13565522, 0.14770119, 0.15072198, 0.15573818, 0.16721573,
+        0.17354445, 0.18152309],
+       [0.        , 0.16047191, 0.21666652, 0.25402922, 0.28852794,
+        0.31395912, 0.33908703, 0.36580293, 0.38756573, 0.41163401,
+        0.43181803, 0.45215448, 0.47186608, 0.49611075, 0.51228526,
+        0.53705268, 0.55915497],
+       [0.        , 0.1313104 , 0.17597798, 0.20526585, 0.2310999 ,
+        0.25211611, 0.27020757, 0.28966708, 0.304168  , 0.32213235,
+        0.34380217, 0.35899997, 0.37533195, 0.39676689, 0.41227594,
+        0.4312194 , 0.44224318],
+       [0.        , 0.18340856, 0.24357314, 0.28561847, 0.32554787,
+        0.36727859, 0.39842312, 0.43471316, 0.46074516, 0.50149633,
+        0.53488661, 0.57483866, 0.59548446, 0.63896286, 0.66490509,
+        0.707309  , 0.73121289],
+       [0.        , 0.1704159 , 0.21746677, 0.24884732, 0.27305939,
+        0.30078688, 0.32414819, 0.34542426, 0.36304284, 0.37798328,
+        0.39666196, 0.41566254, 0.4361625 , 0.45241693, 0.46600592,
+        0.4892637 , 0.50480483]])
+    Baseline loss: 4.101690135800103
+    array([[0.        , 0.0615991 , 0.1145922 , 0.15718995, 0.1943266 ,
+        0.23251833, 0.26792333, 0.29658506, 0.33012038, 0.36205812,
+        0.39082771, 0.4204699 , 0.45283575, 0.48021819, 0.51461344,
+        0.54946218, 0.57120899],
+       [0.        , 0.11007828, 0.19617576, 0.26514933, 0.3156159 ,
+        0.36449715, 0.40943618, 0.4461906 , 0.47419767, 0.51723282,
+        0.53931751, 0.57993401, 0.61595657, 0.64406238, 0.67492345,
+        0.69829726, 0.73150862],
+       [0.        , 0.03084643, 0.07249122, 0.11061306, 0.14829651,
+        0.18294096, 0.21786631, 0.25114252, 0.27900341, 0.31023305,
+        0.35389083, 0.38357981, 0.4113106 , 0.44005598, 0.47219224,
+        0.50522939, 0.53194423],
+       [0.        , 0.02563488, 0.04461602, 0.06114383, 0.07274952,
+        0.08295237, 0.09518795, 0.10293074, 0.11424164, 0.11576426,
+        0.12985541, 0.13975646, 0.14088284, 0.15244226, 0.15687337,
+        0.1625979 , 0.16892411],
+       [0.        , 0.14600917, 0.20505661, 0.24467617, 0.27538647,
+        0.30168217, 0.33401577, 0.3513361 , 0.37850194, 0.40248905,
+        0.42021275, 0.44627748, 0.46943697, 0.48917356, 0.5133018 ,
+        0.53285204, 0.54413773],
+       [0.        , 0.12071545, 0.16657635, 0.19682894, 0.22342202,
+        0.24253935, 0.26290565, 0.28266975, 0.29951904, 0.31681817,
+        0.33647623, 0.35235813, 0.37287865, 0.39131977, 0.40788571,
+        0.41996219, 0.44250259],
+       [0.        , 0.16583819, 0.22660015, 0.27043437, 0.31024673,
+        0.34699318, 0.38207699, 0.41487224, 0.45347475, 0.48635186,
+        0.51730266, 0.55247353, 0.5973446 , 0.62258445, 0.66288838,
+        0.69864296, 0.72281967],
+       [0.        , 0.14682907, 0.19533344, 0.23005497, 0.25510673,
+        0.27647005, 0.3027405 , 0.32191075, 0.34036883, 0.36338524,
+        0.38083104, 0.40371413, 0.41964142, 0.43597987, 0.45802763,
+        0.47112947, 0.49132597]])
+    Baseline loss: 4.133355193731694
+    array([[0.        , 0.07168396, 0.12233379, 0.16708553, 0.20513181,
+        0.24406807, 0.27528217, 0.30861332, 0.33822815, 0.36267566,
+        0.40025617, 0.42925595, 0.46283004, 0.49758936, 0.52399113,
+        0.55656504, 0.58182796],
+       [0.        , 0.11980404, 0.21161068, 0.27394287, 0.33088586,
+        0.37724552, 0.4201746 , 0.45377008, 0.49101211, 0.52554104,
+        0.56271609, 0.59353823, 0.62828955, 0.66246163, 0.69037542,
+        0.71577174, 0.74310794],
+       [0.        , 0.04732249, 0.09289716, 0.13228397, 0.17426205,
+        0.20567588, 0.24727242, 0.27912471, 0.31144142, 0.33766796,
+        0.37819983, 0.4015563 , 0.44673975, 0.46903536, 0.49931336,
+        0.53030784, 0.57208428],
+       [0.        , 0.0359171 , 0.05714108, 0.07353042, 0.08696311,
+        0.09952446, 0.11184235, 0.12024695, 0.1292492 , 0.13934231,
+        0.14877602, 0.15632652, 0.16019742, 0.16841462, 0.17560743,
+        0.18693951, 0.19252423],
+       [0.        , 0.15802763, 0.21777315, 0.25773384, 0.29191891,
+        0.31638105, 0.34370574, 0.36604208, 0.38745513, 0.41085552,
+        0.44150931, 0.45380394, 0.48284631, 0.50098041, 0.52753077,
+        0.54114461, 0.56708525],
+       [0.        , 0.13333331, 0.1800046 , 0.21119113, 0.23858928,
+        0.25952231, 0.27978912, 0.30036314, 0.31857623, 0.33531132,
+        0.35366338, 0.37098715, 0.3919834 , 0.40632772, 0.422419  ,
+        0.43605184, 0.4603171 ],
+       [0.        , 0.18827099, 0.25329102, 0.29881273, 0.3421666 ,
+        0.37735345, 0.40987354, 0.44657425, 0.4784021 , 0.51332123,
+        0.5540516 , 0.57760717, 0.61399425, 0.64972965, 0.68090041,
+        0.70756752, 0.7470567 ],
+       [0.        , 0.16353821, 0.21134787, 0.2424147 , 0.27513676,
+        0.29472564, 0.32367045, 0.33677075, 0.35946906, 0.38406175,
+        0.39787374, 0.41523524, 0.43162015, 0.45157101, 0.47592813,
+        0.49823023, 0.51586959]])
     '''
     avgUtilMat = np.average(np.array(utilMatList), axis=0)
     plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta', lineLabels=True,
-                 titleStr='Untested Nodes (2nd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$',
+                 titleStr='Untested Nodes (3rd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$',
                  utilMax=np.max(avgUtilMat[:, 1] * 1.1),
                  colors=cm.rainbow(np.linspace(0, 1., numTN)),
                  dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
     allocArr, objValArr = smoothAllocationForward(avgUtilMat)
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
-              labels=dictTemp['outletNames'], titleStr='Untested Nodes (2nd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$',
+              labels=dictTemp['outletNames'], titleStr='Untested Nodes (3rd Sourcing), $t=0.15$, $m=0.6$, $v=5.0$',
               allocMax=250,
               colors=cm.rainbow(np.linspace(0, 1., numTN)),
               dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
 
-    dictTemp = CSdict3.copy()
-    dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numdrawstouse,
-                                                                  replace=False)], 'numPostSamples': numdrawstouse})
+    ########################
+    #### RUN 5: UNTESTED REGIONS, CHANGE PRIOR VARIANCE (TNvar=4.)
+    ########################
+    SNpriorMean = np.repeat(sps.logit(0.1), numSN)
+    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
+    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
+    TNvar, SNvar = 4., 4.
+    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
+    priorObj = prior_normal_assort(priorMean, priorCovar)
 
-    currMargUtilMat = GetMargUtilAtNodes(dictTemp, testMax, testInt, lossDict.copy(), utilDict, printUpdate=True)
-    print(repr(currMargUtilMat))
-    '''2-FEB RUN
-    currMargUtilMat = np.array([[0.00000000e+00, 2.95758584e-02, 6.76162722e-02, 1.09898255e-01,
-        1.50553281e-01, 2.00804371e-01, 2.58286163e-01, 3.21544586e-01,
-        3.90252662e-01, 4.69666611e-01, 5.46661512e-01],
-       [0.00000000e+00, 9.34401064e-02, 1.64627629e-01, 2.19327104e-01,
-        2.76340653e-01, 3.39585295e-01, 3.96060509e-01, 4.64309731e-01,
-        5.32646656e-01, 6.04575858e-01, 6.78936383e-01],
-       [0.00000000e+00, 1.10178351e-02, 3.85193996e-02, 6.82739410e-02,
-        1.07281209e-01, 1.49209684e-01, 2.00234527e-01, 2.62057843e-01,
-        3.22725269e-01, 3.96493047e-01, 4.67619000e-01],
-       [0.00000000e+00, 4.30142650e-04, 6.35629510e-03, 1.38195579e-02,
-        1.92956045e-02, 2.96236813e-02, 3.90553910e-02, 4.88003592e-02,
-        5.84211043e-02, 6.76789119e-02, 7.58537064e-02],
-       [0.00000000e+00, 8.52874126e-02, 1.23933473e-01, 1.56746124e-01,
-        1.94285692e-01, 2.28832067e-01, 2.69259375e-01, 3.09611512e-01,
-        3.51018969e-01, 3.91275193e-01, 4.34383861e-01],
-       [0.00000000e+00, 6.34455955e-02, 9.32561942e-02, 1.18708639e-01,
-        1.40561893e-01, 1.68807664e-01, 1.90076611e-01, 2.21293719e-01,
-        2.59760415e-01, 2.90772891e-01, 3.30395919e-01],
-       [0.00000000e+00, 1.24184018e-01, 1.60479410e-01, 2.02053279e-01,
-        2.44617267e-01, 3.02837965e-01, 3.69327234e-01, 4.44376131e-01,
-        5.19901544e-01, 6.07389812e-01, 6.97807350e-01],
-       [0.00000000e+00, 9.89808446e-02, 1.29936119e-01, 1.58993391e-01,
-        1.83496108e-01, 2.10832124e-01, 2.39992277e-01, 2.73587328e-01,
-        3.06694887e-01, 3.49850132e-01, 3.75479577e-01]])
+    CSdict4 = CSdict3.copy()
+    CSdict4.update({'prior': priorObj})
+    # Generate posterior draws
+    numdraws = 100000  # Evaluate choice here
+    CSdict4['numPostSamples'] = numdraws
+    CSdict4 = methods.GeneratePostSamples(CSdict4)
+
+    # Draws for Bayes estimates and data
+    # setDraws = CSdict4['postSamples'][choice(np.arange(numdraws), size=10000, replace=False)]
+    # np.save('bayesDraws_untestedNodes_TNpriorVar_4', setDraws)
+    setDraws = np.load('bayesDraws_untestedNodes_TNpriorVar_4.npy')
+
+    # Revert to original sourcing
+    numBoot = 44  # Average across each TN in original data set
+    SNprobs = np.sum(CSdict4['N'], axis=0) / np.sum(CSdict4['N'])
+    np.random.seed(33)
+    Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
+    CSdict4['transMat'] = np.vstack((CSdict4['N'][:4] / np.sum(CSdict4['N'][:4], axis=1).reshape(4, 1), Qvecs))
+
+    # Loss specification
+    underWt, t, checkSlope = 5., 0.15, 0.6
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
+    marketvec = np.ones(numTN + numSN)
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    numBayesNeigh = 1000
+    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
+
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw3linear'}
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 400, 25
+    numtargetdraws = 5100
+
+    # Minimize variance by averaging over multiple runs
+    numReps = 2
+    utilMatList = []
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict4.copy()
+        dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                      replace=False)],
+                         'numPostSamples': numtargetdraws})
+        # Get marginal utilities at each test node
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
+                                             masterDraws=CSdict3['postSamples'], printUpdate=True)
+        print(repr(currMargUtilMat))
+        utilMatList.append(currMargUtilMat)
+    ''' 1-MAR run
+    Baseline loss: 4.0214043519483305
+    array([[0.        , 0.03793271, 0.0975227 , 0.14023572, 0.17657201,
+        0.21260292, 0.2417817 , 0.27478317, 0.29908843, 0.33069969,
+        0.35868375, 0.38544155, 0.41217724, 0.43218239, 0.46561163,
+        0.49138811, 0.50834883],
+       [0.        , 0.11014724, 0.18180826, 0.23843989, 0.28313906,
+        0.31860583, 0.34879913, 0.38211509, 0.41420097, 0.43472338,
+        0.47087846, 0.49525619, 0.51656006, 0.54095855, 0.56746109,
+        0.59411501, 0.61740673],
+       [0.        , 0.03630312, 0.07767039, 0.11519532, 0.1477638 ,
+        0.17825946, 0.21090384, 0.23969921, 0.2678175 , 0.29781181,
+        0.31846061, 0.34894536, 0.37590115, 0.40641487, 0.43611536,
+        0.46231066, 0.49034502],
+       [0.        , 0.01572817, 0.03583253, 0.04570234, 0.06126668,
+        0.07388965, 0.08578329, 0.09515134, 0.103422  , 0.113621  ,
+        0.12217329, 0.12715733, 0.13656205, 0.14538581, 0.14941182,
+        0.16031826, 0.16772611],
+       [0.        , 0.09687803, 0.15495   , 0.19536072, 0.22656054,
+        0.2527024 , 0.28104937, 0.30413325, 0.32644242, 0.34749007,
+        0.37387818, 0.39390168, 0.42005161, 0.43323454, 0.45603454,
+        0.48283945, 0.49605552],
+       [0.        , 0.07301419, 0.11639501, 0.1464562 , 0.17162297,
+        0.19959578, 0.21631629, 0.23865151, 0.25377155, 0.27221303,
+        0.29644813, 0.31330243, 0.33419516, 0.34895555, 0.36449575,
+        0.38997085, 0.39827417],
+       [0.        , 0.05595389, 0.11623488, 0.15597316, 0.1867069 ,
+        0.2095426 , 0.23317784, 0.25394072, 0.27157492, 0.28796533,
+        0.3083261 , 0.3174362 , 0.33479948, 0.34745763, 0.36617127,
+        0.3791207 , 0.39239428],
+       [0.        , 0.10515946, 0.16942192, 0.20862571, 0.24763436,
+        0.28609687, 0.32012466, 0.34936547, 0.37540271, 0.40852226,
+        0.43337864, 0.46784577, 0.48960901, 0.51430718, 0.54308069,
+        0.57802294, 0.59496088]])
+    Baseline loss: 4.031271305444517
+    array([[0.        , 0.03456436, 0.08595942, 0.12937758, 0.16349526,
+        0.19788108, 0.22894602, 0.26114285, 0.28775242, 0.31827011,
+        0.34833591, 0.36771515, 0.39441007, 0.41989578, 0.44533401,
+        0.46978693, 0.50094409],
+       [0.        , 0.11270784, 0.18702736, 0.24203131, 0.28859753,
+        0.32304311, 0.36053546, 0.3963228 , 0.41675528, 0.45279168,
+        0.47487701, 0.49602242, 0.52717281, 0.55459754, 0.58217153,
+        0.60629926, 0.6202913 ],
+       [0.        , 0.0356614 , 0.07831821, 0.11226915, 0.14645101,
+        0.17706048, 0.20535605, 0.23073498, 0.26212773, 0.28737211,
+        0.31610651, 0.34792726, 0.37052974, 0.4044838 , 0.42025146,
+        0.44148258, 0.48185855],
+       [0.        , 0.01458624, 0.03666049, 0.04672851, 0.05909809,
+        0.07300818, 0.08453925, 0.09379462, 0.10378903, 0.11143013,
+        0.12516722, 0.13007051, 0.1377435 , 0.14635149, 0.1541034 ,
+        0.15880287, 0.16630892],
+       [0.        , 0.11848661, 0.17956797, 0.2188835 , 0.25235106,
+        0.28469527, 0.30265895, 0.3340571 , 0.35384369, 0.37588317,
+        0.3996563 , 0.42215902, 0.44818985, 0.46169179, 0.49195938,
+        0.50829273, 0.52445185],
+       [0.        , 0.07621015, 0.12015637, 0.15344871, 0.1800823 ,
+        0.20106258, 0.22190089, 0.24327296, 0.25744487, 0.27864285,
+        0.29809408, 0.31081116, 0.32979948, 0.34856281, 0.36492281,
+        0.37824828, 0.39492824],
+       [0.        , 0.07212269, 0.12741135, 0.16706077, 0.199     ,
+        0.2213008 , 0.23860359, 0.2551058 , 0.27972649, 0.29346525,
+        0.31301964, 0.32714251, 0.34280083, 0.35528015, 0.37139957,
+        0.38591508, 0.39751259],
+       [0.        , 0.11252094, 0.17600323, 0.21957516, 0.25173262,
+        0.28923338, 0.31734893, 0.35084379, 0.37827288, 0.40689059,
+        0.44205756, 0.46824336, 0.48935228, 0.50464275, 0.54261861,
+        0.57082551, 0.59272152]])
+    Baseline loss: 4.02705801148647
+    array([[0.        , 0.04183901, 0.09872519, 0.14267494, 0.17794303,
+        0.21730507, 0.24895214, 0.27546459, 0.30560012, 0.33624971,
+        0.3591314 , 0.38976721, 0.41177792, 0.4437399 , 0.46560281,
+        0.49528113, 0.52066051],
+       [0.        , 0.11779884, 0.196656  , 0.25041432, 0.29701933,
+        0.3383463 , 0.36728702, 0.3977475 , 0.42930841, 0.45770918,
+        0.48468499, 0.50765127, 0.54181516, 0.56455943, 0.5810205 ,
+        0.60980206, 0.62579063],
+       [0.        , 0.03984637, 0.08131481, 0.1184929 , 0.15194478,
+        0.18547977, 0.2163908 , 0.24501498, 0.27652067, 0.29431037,
+        0.32269247, 0.35506125, 0.38537319, 0.40281857, 0.43205588,
+        0.46324891, 0.48700369],
+       [0.        , 0.01604002, 0.03096255, 0.04734711, 0.05801783,
+        0.07392728, 0.083285  , 0.09729776, 0.10273542, 0.11544488,
+        0.12075724, 0.13346414, 0.14000226, 0.14705545, 0.15128022,
+        0.15895547, 0.16665774],
+       [0.        , 0.10138742, 0.15655964, 0.20379404, 0.23456758,
+        0.27013298, 0.29735738, 0.32110655, 0.34672609, 0.37434024,
+        0.40885642, 0.42454397, 0.44744223, 0.47751214, 0.49589738,
+        0.51466923, 0.53672971],
+       [0.        , 0.06212756, 0.10866271, 0.13647425, 0.16204449,
+        0.18523223, 0.20819829, 0.22980551, 0.24810467, 0.26839867,
+        0.2842445 , 0.29974925, 0.31928325, 0.3316001 , 0.35924628,
+        0.37517124, 0.38062704],
+       [0.        , 0.07414221, 0.13298187, 0.17172278, 0.20303684,
+        0.22888301, 0.24978525, 0.26994932, 0.28678894, 0.30421759,
+        0.32203081, 0.33856826, 0.35103337, 0.36970237, 0.38453121,
+        0.39484117, 0.40761966],
+       [0.        , 0.10593165, 0.1652733 , 0.21028482, 0.24946361,
+        0.28373632, 0.31969215, 0.34907832, 0.37759466, 0.40550769,
+        0.43802378, 0.46055247, 0.4907089 , 0.51934453, 0.54596399,
+        0.57153097, 0.60014279]])
+    Baseline loss: 4.050654983736966
+    array([[0.        , 0.0503389 , 0.10514802, 0.14430106, 0.18432737,
+        0.21768826, 0.24737261, 0.27788149, 0.31398249, 0.33762123,
+        0.36684986, 0.38645262, 0.42280285, 0.4482256 , 0.4829018 ,
+        0.49393807, 0.51858447],
+       [0.        , 0.12434423, 0.20564763, 0.26392624, 0.30775545,
+        0.34762033, 0.38233397, 0.41155666, 0.43542001, 0.46633982,
+        0.48819307, 0.52421813, 0.55306093, 0.57079252, 0.59707973,
+        0.62084715, 0.64983738],
+       [0.        , 0.04102638, 0.08632864, 0.12979767, 0.15889234,
+        0.18869731, 0.22011909, 0.24918749, 0.27464472, 0.30923895,
+        0.33838644, 0.36038553, 0.38791102, 0.41556789, 0.43929103,
+        0.46739955, 0.49116467],
+       [0.        , 0.01874392, 0.03956203, 0.05125951, 0.06477651,
+        0.07978843, 0.09097239, 0.09858692, 0.11061867, 0.11894391,
+        0.12706572, 0.13557789, 0.14402327, 0.15212529, 0.15710805,
+        0.16616926, 0.16832203],
+       [0.        , 0.12083079, 0.18102995, 0.2203289 , 0.25313487,
+        0.28143789, 0.30812972, 0.32994179, 0.35341066, 0.37400654,
+        0.39668341, 0.41648785, 0.44197482, 0.45505557, 0.47681833,
+        0.50347829, 0.51954772],
+       [0.        , 0.0764068 , 0.12026685, 0.15494201, 0.18457367,
+        0.20606835, 0.23214662, 0.24630038, 0.26831644, 0.28767711,
+        0.30750439, 0.32728145, 0.33943599, 0.3596708 , 0.38001788,
+        0.39380038, 0.41654686],
+       [0.        , 0.0895649 , 0.15355771, 0.19570679, 0.22284077,
+        0.24566189, 0.272571  , 0.28988551, 0.3076301 , 0.32075883,
+        0.33773628, 0.35286592, 0.36952295, 0.38440353, 0.39976476,
+        0.40924241, 0.42789203],
+       [0.        , 0.11653172, 0.17779465, 0.22296173, 0.25657028,
+        0.28953686, 0.32124256, 0.34872738, 0.38125045, 0.41246137,
+        0.43532947, 0.4622529 , 0.49400361, 0.5236068 , 0.55287736,
+        0.5725463 , 0.59710828]])
+    Baseline loss: 4.058987488970401
+    array([[0.        , 0.04881108, 0.1038116 , 0.14251352, 0.18862478,
+        0.21897304, 0.2537164 , 0.2855315 , 0.31384812, 0.34030827,
+        0.36531111, 0.39363951, 0.42243476, 0.44501027, 0.47745746,
+        0.50416062, 0.52335003],
+       [0.        , 0.11890619, 0.20201919, 0.25871049, 0.30424144,
+        0.3459859 , 0.38143365, 0.40914211, 0.44523176, 0.47222948,
+        0.4997218 , 0.52597498, 0.55795081, 0.57414129, 0.61260284,
+        0.63438831, 0.65436588],
+       [0.        , 0.04638658, 0.09147044, 0.13219501, 0.16821819,
+        0.20205262, 0.22863358, 0.25953167, 0.28324771, 0.31685215,
+        0.34652545, 0.37501495, 0.40297748, 0.42466543, 0.45051527,
+        0.48706801, 0.51597592],
+       [0.        , 0.01777656, 0.03876638, 0.053463  , 0.06679002,
+        0.07967621, 0.09426975, 0.10307068, 0.114592  , 0.12619582,
+        0.13113405, 0.13826163, 0.14957753, 0.15699672, 0.16429034,
+        0.16795003, 0.17843357],
+       [0.        , 0.12315892, 0.18189567, 0.21946977, 0.25056909,
+        0.27895616, 0.3113986 , 0.33256155, 0.35784608, 0.3810684 ,
+        0.39741005, 0.4261372 , 0.44428082, 0.47487314, 0.49038922,
+        0.51705992, 0.53215643],
+       [0.        , 0.08543071, 0.13048416, 0.16369985, 0.18897843,
+        0.21155163, 0.23294856, 0.25174591, 0.27481962, 0.29022189,
+        0.31171819, 0.32544697, 0.34597522, 0.36524468, 0.37874784,
+        0.39031777, 0.41773092],
+       [0.        , 0.07779557, 0.13880134, 0.17834417, 0.20471042,
+        0.23264456, 0.25860519, 0.27708009, 0.29270602, 0.31372092,
+        0.32762743, 0.34598792, 0.36049318, 0.3723774 , 0.38909756,
+        0.40282233, 0.42138124],
+       [0.        , 0.12924348, 0.194134  , 0.24590155, 0.280494  ,
+        0.31639443, 0.35250091, 0.37583245, 0.40934335, 0.43675424,
+        0.47317677, 0.4991481 , 0.52375415, 0.55568661, 0.57683864,
+        0.60387282, 0.63033649]])
+    
     '''
-    plotMargUtil(currMargUtilMat, testMax, testInt, labels=dictTemp['outletNames'],
-                 titleStr='R3:Untested Regions w/ Distinct Sourcing (2)', utilMax=1.)
-    # Plot allocation at each test node as the sample budget increase
-    allocArr, _ = smoothAllocation(currMargUtilMat)
+    avgUtilMat = np.average(np.array(utilMatList), axis=0)
+    plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta',
+                 titleStr='Untested Nodes, $t=0.15$, $m=0.6$\nTest Node prior variance of 4', lineLabels=True, utilMax=0.2,
+                 colors=cm.rainbow(np.linspace(0, 1., numTN)),
+                 dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
+    allocArr, objValArr = smoothAllocationForward(avgUtilMat)
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
-              labels=dictTemp['outletNames'], titleStr='vs. Sample Budget')
+              labels=dictTemp['outletNames'], titleStr='Untested Nodes, $t=0.15$, $m=0.6$\nTest Node prior variance of 4', allocMax=250,
+              colors=cm.rainbow(np.linspace(0, 1., numTN)),
+              dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
+
+
 
     ########################
-    #### RUN 4: TESTED REGIONS, NO UNDERESTIMATION PENALTY (underEstWt=1.)
+    #### RUN 5: TESTED REGIONS, NO UNDERESTIMATION PENALTY (underEstWt=1.)
     ########################
     # Reset sourcing probabilities with original seed
     np.random.seed(33)
@@ -4254,9 +5345,6 @@ def allocationCaseStudy():
     ########################
     #### RUN 5: TESTED REGIONS, NO UNDERESTIMATION PENALTY (underEstWt=1.)
     ########################
-
-
-
 
     return
 
