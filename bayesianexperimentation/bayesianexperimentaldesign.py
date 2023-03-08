@@ -1994,6 +1994,107 @@ def plotMargUtil(margUtilArr,testMax,testInt,al=0.6,titleStr='',type='cumulative
     plt.close()
     return
 
+def plotMargUtilGroups(margUtilGroupList,testMax,testInt,al=0.6,titleStr='',type='cumulative',colors=[],dashes=[],labels=[],
+                 utilMax=-1,lineLabels=False):
+    '''Produces a plot of groups of arrays of marginal utility increases
+    :param margUtilGroupList: a list of lists, with each member comprising the utility arrays for each allocation
+    :param type: one of 'cumulative' or 'delta'; cumulative plots show the additive change in utility; delta plos show
+                the marginal change in utility for the next set of testInt tests
+    '''
+
+    fig = plt.figure()
+    if type == 'cumulative':
+        x = range(0, testMax + 1, testInt)
+    elif type == 'delta':
+        x = range(testInt, testMax + 1, testInt)
+
+
+    for margUtilGroup in margUtilGroupList:
+        groupArr = np.array(margUtilGroup)
+        groupAvgArr = np.average(groupArr, axis=0)
+        # Compile error bars
+        stdevs = [np.std(groupArr[:, i]) for i in range(groupArr.shape[1]) ]
+        group05Arr = [groupAvgArr[i] - (1.96*stdevs[i] / np.sqrt(groupArr.shape[0])) for i in range(groupArr.shape[1])]
+        group95Arr = [groupAvgArr[i] + (1.96*stdevs[i] / np.sqrt(groupArr.shape[0])) for i in range(groupArr.shape[1])]
+        lowerr = [groupAvgArr[i] - group05Arr[i] for i in range(groupAvgArr.shape[0])]
+        upperr = [group95Arr[i] - groupAvgArr[i] for i in range(groupAvgArr.shape[0])]
+        err = [lowerr, upperr]
+        plt.errorbar()
+
+
+
+
+
+
+
+    plt.errorbar(x, y, yerr=err, capsize=4, color='orange', ecolor='black', linewidth=3, elinewidth=0.5)
+    plt.ylim(-0.2, 0)
+    plt.xlabel('Batch size', fontsize=12)
+    plt.ylabel('Design utility', fontsize=12)
+    plt.suptitle('Design utility vs. batch size: Design $x_2$\n95% confidence intervals for $|\Omega|=100$',
+                 fontsize=16)
+    fig.tight_layout()
+    plt.show()
+
+    plt.plot(testArr, objValArr, alpha=0.2, label='Heuristic')
+    plt.plot(testArr, compArr, alpha=0.2, label='Comprehensive')
+    for tempValInd, tempValArr in enumerate(evenUtilList):
+        plt.plot(testArr, tempValArr, alpha=0.6, label='Uniform ' + str(tempValInd))
+    plt.ylim([0, 1.])
+    plt.legend()
+    plt.title('Utility of uniform vs. heuristic allocations\nTested nodes setting')
+    plt.show()
+    plt.close()
+
+
+
+    if len(colors) == 0:
+        colors = cm.rainbow(np.linspace(0, 1, margUtilArr.shape[0]))
+    if len(dashes) == 0:
+        dashes = [[1,desind] for desind in range(margUtilArr.shape[0])]
+    if len(labels) == 0:
+        labels = ['Design '+str(desind+1) for desind in range(margUtilArr.shape[0])]
+    if type == 'cumulative':
+        x1 = range(0, testMax + 1, testInt)
+        if utilMax > 0.:
+            yMax = utilMax
+        else:
+            yMax = margUtilArr.max()*1.1
+        for desind in range(margUtilArr.shape[0]):
+            plt.plot(x1, margUtilArr[desind], dashes=dashes[desind], linewidth=2.5, color=colors[desind],
+                     label=labels[desind], alpha=al)
+        if lineLabels:
+            for tnind in range(margUtilArr.shape[0]):
+                plt.text(testMax * 1.01, margUtilArr[tnind, -1], labels[tnind].ljust(15), fontsize=5)
+    elif type == 'delta':
+        x1 = range(testInt, testMax + 1, testInt)
+        deltaArr = np.zeros((margUtilArr.shape[0],margUtilArr.shape[1]-1))
+        for rw in range(deltaArr.shape[0]):
+            for col in range(deltaArr.shape[1]):
+                deltaArr[rw,col] = margUtilArr[rw,col+1]-margUtilArr[rw,col]
+        if utilMax > 0.:
+            yMax = utilMax
+        else:
+            yMax = deltaArr.max()*1.1
+        for desind in range(deltaArr.shape[0]):
+            plt.plot(x1, deltaArr[desind], dashes=dashes[desind], linewidth=2.5, color=colors[desind],
+                     label=labels[desind], alpha=al)
+        if lineLabels:
+            for tnind in range(deltaArr.shape[0]):
+                plt.text(testMax * 1.01, deltaArr[tnind, -1], labels[tnind].ljust(15), fontsize=5)
+    plt.legend()
+    plt.ylim([0., yMax])
+    plt.xlabel('Number of Tests')
+    if type=='delta':
+        plt.ylabel('Marginal Utility Gain')
+    else:
+        plt.ylabel('Utility Gain')
+    plt.title('Marginal Utility with Increasing Tests\n'+titleStr)
+    plt.savefig('MARGUTILPLOT.png')
+    plt.show()
+    plt.close()
+    return
+
 def GetOptAllocation(U):
     '''
     :param U
@@ -4309,7 +4410,28 @@ def allocationCaseStudy():
        0.52018989, 0.5418224 , 0.55684317, 0.57245363, 0.58670926,
        0.60898051, 0.62757192, 0.63987248, 0.65232003, 0.65433092,
        0.67671267, 0.69184994, 0.70314622, 0.72154417, 0.73680664,
-       0.75444832, 0.76425734, 0.7791746 , 0.79497273, 0.81572736])]
+       0.75444832, 0.76425734, 0.7791746 , 0.79497273, 0.81572736]), array([0.06916123, 0.11224119, 0.15130966, 0.18045688, 0.20553613,
+       0.23576509, 0.26395837, 0.28330045, 0.30827545, 0.32758063,
+       0.34852503, 0.36248961, 0.38783045, 0.41011201, 0.42062806,
+       0.44306935, 0.45872192, 0.47506181, 0.49398994, 0.5121839 ,
+       0.52496046, 0.54228571, 0.56410071, 0.58218984, 0.59866133,
+       0.61217048, 0.62985802, 0.63585045, 0.64839744, 0.66792761,
+       0.67836569, 0.70024159, 0.72166626, 0.72013574, 0.74182966,
+       0.75913856, 0.76367343, 0.78554572, 0.80173336, 0.80992595]), array([0.06841162, 0.11201977, 0.14692964, 0.17964043, 0.20592313,
+       0.23606127, 0.25863912, 0.28065231, 0.30119348, 0.32297972,
+       0.33929957, 0.3680277 , 0.38117215, 0.40020677, 0.41684246,
+       0.44047342, 0.45253791, 0.47659085, 0.4926348 , 0.51068393,
+       0.52644478, 0.5426972 , 0.5575165 , 0.5775012 , 0.58898769,
+       0.61081946, 0.6267955 , 0.63782766, 0.65276331, 0.66161211,
+       0.68265427, 0.69545777, 0.71625124, 0.72382473, 0.74379316,
+       0.75932874, 0.7699153 , 0.78020612, 0.79578987, 0.80651336]), array([0.06589343, 0.10640531, 0.14787587, 0.17461108, 0.2009006 ,
+       0.23202503, 0.25756373, 0.28283835, 0.29945652, 0.31967898,
+       0.34199958, 0.36049087, 0.37734315, 0.40304713, 0.41836025,
+       0.43550637, 0.45581079, 0.47106077, 0.49185853, 0.49988479,
+       0.51916258, 0.53912703, 0.55725552, 0.57539589, 0.58847927,
+       0.60587602, 0.62818721, 0.63986376, 0.65189497, 0.65688726,
+       0.67657614, 0.6857093 , 0.70574033, 0.72181716, 0.73383853,
+       0.75253257, 0.76759782, 0.79143964, 0.78939453, 0.81200529])]
         
         compUtilArr = np.array(compUtilList)
         compArr = np.average(compUtilArr,axis=0)
