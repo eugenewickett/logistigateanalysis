@@ -25,6 +25,7 @@ import math
 from math import comb
 import matplotlib.cm as cm
 from scipy.spatial.distance import cdist
+import drs
 
 # Define computation variables
 tol = 1e-8
@@ -2279,6 +2280,28 @@ def plotAlloc(allocArr,paramList,testInt=1,al=0.6,titleStr='',colors=[],dashes=[
     plt.show()
     plt.close()
     return
+
+### COMPASS FUNCTIONS
+
+def intRandVec(d, s, k=1):
+    '''Generate a numpy array of k integer random vectors of dimension d that sum to s'''
+    arrList = np.array([drs.drs(d,s) for i in range(k)])
+    # Now need to round to integer values
+    for kind in range(k):
+        randInds = choice(np.arange(d), size=d, replace=False).tolist()
+    # todo: NOT WRITTEN YET; PAUSED COMPASS 17-MAR
+
+
+    return
+
+def neighborRandVec(x, dist, k=1):
+    '''Generate a numpy array of k integer random vectors within distance dist of x'''
+    retList = []
+    #todo: NOT WRITTEN YET; PAUSED COMPASS 17-MAR
+
+    return np.array(retList)
+
+### END COMPASS FUNCTIONS
 ### INITIALIZE UP TO HERE ###
 
 def syntheticCaseStudy():
@@ -3250,7 +3273,7 @@ def priorsElicitedFromRisk():
 
     return
 
-def caseStudyPlots():
+def caseStudyPlots_Familiar():
     ''' Cleaned up plots for use in case study in paper
     '''
     ##################################
@@ -3719,16 +3742,17 @@ def caseStudyPlots():
     plt.close()
 
     # Utility comparison plot
-    colors = cm.rainbow(np.linspace(0, 0.5, numTN))
-    labels = [tnNames[ind] for ind in range(numTN)]
+    colors = cm.rainbow(np.linspace(0,0.8,3))
+    labels = ['Heuristic', 'Uniform', 'Rudimentary']
     x = range(testInt, testMax + 1, testInt)
-    margUtilGroupList = [heurList, evenUtilList, origUtilList]
+    margUtilGroupList = [compUtilList, evenUtilList, origUtilList]
     utilMax = -1
     for lst in margUtilGroupList:
         currMax = np.amax(np.array(lst))
         if currMax>utilMax:
             utilMax = currMax
     utilMax = utilMax*1.1
+
     _ = plt.figure(figsize=(13, 8))
     for groupInd, margUtilGroup in enumerate(margUtilGroupList):
         groupArr = np.array(margUtilGroup)
@@ -3737,32 +3761,32 @@ def caseStudyPlots():
         stdevs = [np.std(groupArr[:, i]) for i in range(groupArr.shape[1]) ]
         group05Arr = [groupAvgArr[i] - (1.96*stdevs[i] / np.sqrt(groupArr.shape[0])) for i in range(groupArr.shape[1])]
         group95Arr = [groupAvgArr[i] + (1.96*stdevs[i] / np.sqrt(groupArr.shape[0])) for i in range(groupArr.shape[1])]
-        plt.plot(x, groupAvgArr,color=colors[groupInd],linewidth=0.5, alpha=1., label=labels[groupInd]+' 95% CI')
+        plt.plot(x, groupAvgArr,color=colors[groupInd],linewidth=0.7, alpha=1., label=labels[groupInd]+' 95% CI')
         plt.fill_between(x, groupAvgArr, group05Arr, color=colors[groupInd], alpha=0.2)
         plt.fill_between(x, groupAvgArr, group95Arr, color=colors[groupInd], alpha=0.2)
         # Line label
         plt.text(x[-1] * 1.01, groupAvgArr[-1], labels[groupInd].ljust(15), fontsize=10)
     plt.ylim(0,utilMax)
     plt.xlim(0,x[-1]*1.12)
-    leg = plt.legend(loc='upper left')
+    leg = plt.legend(loc='upper left', fontsize=12)
     for legobj in leg.legendHandles:
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget',fontsize=14)
     plt.ylabel('Design Utility',fontsize=14)
-    plt.title('Heuristic Utility vs. Uniform and Rudimentary Allocations\nFamiliar Setting',fontsize=18)
+    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nFamiliar Setting',fontsize=18)
+    # Add text box showing budgetary savings
+    compUtilAvg = np.average(np.array(compUtilList),axis=0)
+    x2, x3 = 130, 156
+    plt.plot([100,x3],[compUtilAvg[9],compUtilAvg[9]],color='black',linestyle='--')
+    iv = 0.015
+    plt.plot([100,100],[compUtilAvg[9]-iv,compUtilAvg[9]+iv],color='black',linestyle='--')
+    plt.plot([x2, x2], [compUtilAvg[9] - iv, compUtilAvg[9] + iv], color='black', linestyle='--')
+    plt.plot([x3, x3], [compUtilAvg[9] - iv, compUtilAvg[9] + iv], color='black', linestyle='--')
+    plt.text(110, compUtilAvg[9] + iv/2, '30', fontsize=13)
+    plt.text(139, compUtilAvg[9] + iv/2, '26', fontsize=13)
     plt.tight_layout()
     plt.show()
     plt.close()
-
-
-
-
-
-
-
-    plotMargUtilGroups([compUtilList, evenUtilList, origUtilList], testMax, testInt,
-                       titleStr='Familiar Setting', labels=['Heuristic', 'Uniform', 'Rudimentary'],
-                       lineLabels=True)
 
     ##################################
     ### END FAMILIAR PLOTS ###
@@ -6288,7 +6312,7 @@ def allocationCaseStudy():
        1.22163501, 1.26004209, 1.25844677, 1.32045081, 1.34090466,
        1.34279745, 1.38799544, 1.39778234, 1.4122447 , 1.44379363,
        1.4545468 , 1.48638373, 1.49276271, 1.52909561, 1.53955685])]
-    numReps = 4
+    numReps = 5
     for rep in range(numReps):
         dictTemp = CSdict3.copy()
         dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
@@ -7070,6 +7094,53 @@ def allocationCaseStudy():
               colors=cm.rainbow(np.linspace(0, 1., numTN)),
               dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
 
+    ###########
+    # Distribution of utility for particular budget at particular untested node, per bootstrap samples of Q
+    ###########
+    sampBudget = 50
+    utilDict.update({'method': 'weightsNodeDraw3linear'})
+    # New Bayes draws
+    setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+    lossDict.update({'bayesDraws': setDraws})
+    dictTemp = CSdict3.copy()
+    dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+         'numPostSamples': numtargetdraws})
+    tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+    tempLossDict = lossDict.copy()
+    tempLossDict.update({'lossMat': tempLossMat})
+    newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                  dictTemp['postSamples'])
+    tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+    baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+    # Get a new set of data draws
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+
+    numReps = 500
+    utilListMat = np.zeros((4,numReps))
+    for rep in range(103,numReps):
+        print('On replication '+str(rep))
+        Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
+        dictTemp['transMat'] = np.vstack((CSdict3['N'][:4] / np.sum(CSdict3['N'][:4], axis=1).reshape(4, 1), Qvecs))
+
+        for tnInd in range(4):
+            print('Test node '+str(tnInd+4))
+            currDes = np.zeros(8)
+            currDes[tnInd+4] = 1.
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=sampBudget, utildict=utilDict)[0]
+            utilListMat[tnInd, rep] = currUtil
+            print(currUtil)
+            if np.mod(rep,50)==0 and rep>0:
+                plt.hist(utilListMat[tnInd,:rep+1],alpha=0.3)
+                plt.show()
+                plt.close()
+
+                plt.boxplot(np.array(utilListMat[:, :rep]).T)
+                plt.ylim([0,0.33])
+                plt.show()
+    #np.save('bootstrapUtilDist', np.array(utilListMat))
+    #utilListMat = np.load('bootstrapUtilDist.npy')
+
     ########################
     #### RUN 5: UNTESTED REGIONS, CHANGE PRIOR VARIANCE (TNvar=4.)
     ########################
@@ -7344,6 +7415,9 @@ def allocationCaseStudy():
     allocArr, _ = smoothAllocation(currMargUtilMat)
     plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
               labels=dictTemp['outletNames'], titleStr='vs. Sample Budget')
+
+
+
 
     ########################
     #### RUN 5: TESTED REGIONS, NO UNDERESTIMATION PENALTY (underEstWt=1.)
