@@ -1435,6 +1435,7 @@ def getDesignUtility(priordatadict, lossdict, designlist, numtests, designnames=
         # END ELIF FOR WEIGHTSNODEDRAW4LINEAR
 
         elif method == 'parallel': # Same as weightsNodeDraw3linear but structured to handle large matrix sizes; NODE SAMPLING
+            # This method handles very large matrices by breaking them into smaller blocks and processing them sequentially
             Ntilde = sampMat.copy()
             sampNodeInd = 0
             for currind in range(numTN):  # Identify the test node we're analyzing
@@ -11156,7 +11157,7 @@ def allocationCaseStudy():
 
     ##############################################
     ##############################################
-    # Choose different sourcing matrix
+    # Choose different sourcing matrix (PART 1)
     ##############################################
     ##############################################
     numBoot = 44  # 44 is average across each TN in original data set
@@ -11348,6 +11349,406 @@ def allocationCaseStudy():
        [0.        , 0.05644706, 0.09179773, 0.11547118, 0.13559609,
         0.15346153, 0.16888484, 0.18211123, 0.19563732, 0.20796317,
         0.21918036]])
+    '''
+    # Find allocation for sample budget
+    allocArr = forwardAllocateWithBudget(avgUtilMat, int(sampBudget / testInt))
+    designArr = allocArr / np.sum(allocArr, axis=0)
+    # Get utility for this allocation at the sample budget
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    compUtilList, unifUtilList, origUtilList = [], [], []
+    numReps = 5
+    for rep in range(numReps):
+        dictTemp = CSdict3.copy()
+        dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                      replace=False)],
+                         'numPostSamples': numtargetdraws})
+        # New Bayes draws
+        setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        currCompUtil = baseLoss - \
+                       getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[designArr],
+                                        numtests=sampBudget, utildict=utilDict)[0]
+        print('Heuristic utility: ' + str(currCompUtil))
+        compUtilList.append(currCompUtil)
+        '''29-MAR
+        compUtilList = [1.064599746043636, 0.9536545767648335, 0.9865412561096165, 0.9978552443129023, 0.9552351708480038]
+        '''
+        # Find the equivalent uniform allocation
+        currUnifUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[unifDes],
+                                                   numtests=sampBudget, utildict=utilDict)[0]
+        print('Uniform utility: ' + str(currUnifUtil))
+        unifUtilList.append([currUnifUtil])
+        unifAdd, contUnif, unifCount = 0, False, 0
+        if currUnifUtil < currCompUtil:
+            contUnif = True
+        while contUnif:
+            unifAdd += testInt
+            print('Adding ' + str(unifAdd) + ' for uniform')
+            currUnifUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict,
+                                                       designlist=[unifDes], numtests=sampBudget + unifAdd,
+                                                       utildict=utilDict)[0]
+            print('New utility: ' + str(currUnifUtil))
+            unifUtilList[rep].append(currUnifUtil)
+            if currUnifUtil > currCompUtil:  # Add 3 evaluations once an evaluation surpasses the compUtil
+                if unifCount < 3:
+                    unifCount += 1
+                else:
+                    contUnif = False
+        '''29-MAR
+        unifUtilList = [[0.9549743557762884, 0.9873513777707177, 1.0227466081244083, 1.0631428216562684, 1.0830365491993126, 1.1084450350859014, 1.14645156537902, 1.1788038702166102], [0.8691320562264298, 0.8953460671990507, 0.9222824838458035, 0.9554848855370683, 0.997959682276413, 1.0030366542207907, 1.0481160529018223], [0.8737240973859528, 0.8949967032607189, 0.9489948206653107, 0.9770327046632632, 1.003670748661889, 1.04314715823682, 1.0709183543181777, 1.1001028024838675], [0.8891646659031762, 0.9231527416342487, 0.9642780133384328, 0.9918191931069571, 1.026738254822006, 1.0565921650310401, 1.0764863382113417, 1.1187187303091464], [0.8389144336375423, 0.8815316156772162, 0.9142323786565725, 0.951583853996596, 0.9937190456377314, 1.0190881352109646, 1.0451843837957924, 1.0668866892556577]]
+        '''
+        # Find the equivalent rudimentary allocation
+        currOrigUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[origDes],
+                                                   numtests=sampBudget, utildict=utilDict)[0]
+        print('Rudimentary utility: ' + str(currOrigUtil))
+        origUtilList.append([currOrigUtil])
+        origAdd, contOrig, origCount = 0, False, 0
+        if currOrigUtil < currCompUtil:
+            contOrig = True
+        while contOrig:
+            origAdd += testInt * 3
+            print('Adding ' + str(origAdd) + ' for rudimentary')
+            currOrigUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict,
+                                                       designlist=[origDes], numtests=sampBudget + origAdd,
+                                                       utildict=utilDict)[0]
+            print('New utility: ' + str(currOrigUtil))
+            origUtilList[rep].append(currOrigUtil)
+            if currOrigUtil > currCompUtil:  # Add 3 evaluations once an evaluation surpasses the compUtil
+                if origCount < 3:
+                    origCount += 1
+                else:
+                    contOrig = False
+        '''29-MAR
+        origUtilList = [[0.42419885610644714, 0.47818372469073633, 0.5513359898512133, 0.609865801667699, 0.6839292870705043, 0.7525565927125584, 0.8019130993834653, 0.8785371366440988, 0.9083136130861007, 0.983182433383404, 1.0337317576019047, 1.093994307128984, 1.1343332966936748, 1.2000530111739929, 1.2215792406303079], [0.3806259012400326, 0.4402077288584265, 0.4926193654495701, 0.5579320361401434, 0.6122678207164238, 0.6886073288895203, 0.7490561356740293, 0.8259547966821974, 0.8559815659152994, 0.9191348628531077, 0.9777246126709391, 1.0028624415231557, 1.0701523914382198, 1.119773700287404], [0.387320858716119, 0.4452092229231761, 0.5083386044940639, 0.5610733935417529, 0.6337826621873401, 0.68428718344044, 0.7501916093155012, 0.8311093331673374, 0.857735134164475, 0.9022789874026689, 0.9674172161532781, 1.0196577489054746, 1.068152283378315, 1.1143383198857033, 1.1745902357928757], [0.39365783186895476, 0.46602091052489447, 0.5268575266700868, 0.5837348809606233, 0.6517942892215904, 0.7138114121372454, 0.7792835398581865, 0.8537970800977059, 0.8871749295717222, 0.9506038657360403, 1.008388042535961, 1.060381170199601, 1.106051149981444, 1.1682900859465666], [0.35066290000566624, 0.4140213797577559, 0.47976198710565265, 0.5508317402980891, 0.5992450756710719, 0.6769196049698181, 0.7163650094732628, 0.8152443341294133, 0.8478467616652323, 0.9072768998424752, 0.9584508619926622, 0.9938665714289852, 1.0625497808922817, 1.1053667242947078]]
+        '''
+    compAvg = np.average(compUtilList)
+    # Locate closest sample point for uniform and rudimentary to compAvg
+    minListLen = np.min([len(i) for i in unifUtilList])
+    unifUtilArr = np.array([i[:minListLen] for i in unifUtilList])
+    unifAvgArr = np.average(unifUtilArr, axis=0)
+    kInd = next(x for x, val in enumerate(unifAvgArr.tolist()) if val > compAvg)
+    unifSampSaved = round((compAvg - unifAvgArr[kInd - 1]) / (unifAvgArr[kInd] - unifAvgArr[kInd - 1]) * testInt) + (
+            kInd - 1) * testInt
+    print(unifSampSaved)
+    '''29-MAR: 31 saved'''
+    # Rudimentary
+    minListLen = np.min([len(i) for i in origUtilList])
+    origUtilArr = np.array([i[:minListLen] for i in origUtilList])
+    origAvgArr = np.average(origUtilArr, axis=0)
+    kInd = next(x for x, val in enumerate(origAvgArr.tolist()) if val > compAvg)
+    origSampSaved = round(
+        (compAvg - origAvgArr[kInd - 1]) / (origAvgArr[kInd] - origAvgArr[kInd - 1]) * testInt * 3) + (
+                            kInd - 1) * testInt * 3
+    print(origSampSaved)
+    '''29-MAR: 302 saved'''
+
+    # Do again for different sample budget
+    sampBudget = 90
+    allocArr = forwardAllocateWithBudget(avgUtilMat, int(sampBudget / testInt))
+    designArr = allocArr / np.sum(allocArr, axis=0)
+    # Get utility for this allocation at the sample budget
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    compUtilList, unifUtilList, origUtilList = [], [], []
+    numReps = 5
+    for rep in range(numReps):
+        dictTemp = CSdict3.copy()
+        dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                      replace=False)],
+                         'numPostSamples': numtargetdraws})
+        # New Bayes draws
+        setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        currCompUtil = baseLoss - \
+                       getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[designArr],
+                                        numtests=sampBudget, utildict=utilDict)[0]
+        print('Heuristic utility: ' + str(currCompUtil))
+        compUtilList.append(currCompUtil)
+        '''29-MAR
+        compUtilList = [0.57517490160261, 0.6021543688185291, 0.6536206889854768, 0.6297070488537075, 0.6206070438104385]
+        '''
+        # Find the equivalent uniform allocation
+        currUnifUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[unifDes],
+                                                   numtests=sampBudget, utildict=utilDict)[0]
+        print('Uniform utility: ' + str(currUnifUtil))
+        unifUtilList.append([currUnifUtil])
+        unifAdd, contUnif, unifCount = 0, False, 0
+        if currUnifUtil < currCompUtil:
+            contUnif = True
+        while contUnif:
+            unifAdd += testInt
+            print('Adding ' + str(unifAdd) + ' for uniform')
+            currUnifUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict,
+                                                       designlist=[unifDes], numtests=sampBudget + unifAdd,
+                                                       utildict=utilDict)[0]
+            print('New utility: ' + str(currUnifUtil))
+            unifUtilList[rep].append(currUnifUtil)
+            if currUnifUtil > currCompUtil:  # Add 3 evaluations once an evaluation surpasses the compUtil
+                if unifCount < 3:
+                    unifCount += 1
+                else:
+                    contUnif = False
+        '''29-MAR
+        unifUtilList = [[0.49459387955501377, 0.5299438485418024, 0.564221743030326, 0.6054462042891195, 0.6437224039033316, 0.6867434256507914, 0.7157441951663488], [0.5072273852052187, 0.545124252703101, 0.5828697272426591, 0.6221137495139626, 0.6677118413726126, 0.7053774367603238, 0.729827780253768], [0.5638673349190548, 0.5998321280454473, 0.6399280979808144, 0.6929064644286149, 0.7242141460846354, 0.7648391417738791, 0.7953049073999789], [0.5412109221417545, 0.5780289648132411, 0.6244859569550103, 0.6665020586464325, 0.7037093261308729, 0.7334005518095208, 0.7768367275285688], [0.5357362988569463, 0.5683018099220463, 0.6127040913733399, 0.6619540943328874, 0.6991463239435958, 0.7330231891021532, 0.7664005608579547]]
+        '''
+        # Find the equivalent rudimentary allocation
+        currOrigUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[origDes],
+                                                   numtests=sampBudget, utildict=utilDict)[0]
+        print('Rudimentary utility: ' + str(currOrigUtil))
+        origUtilList.append([currOrigUtil])
+        origAdd, contOrig, origCount = 0, False, 0
+        if currOrigUtil < currCompUtil:
+            contOrig = True
+        while contOrig:
+            origAdd += testInt * 3
+            print('Adding ' + str(origAdd) + ' for rudimentary')
+            currOrigUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict,
+                                                       designlist=[origDes], numtests=sampBudget + origAdd,
+                                                       utildict=utilDict)[0]
+            print('New utility: ' + str(currOrigUtil))
+            origUtilList[rep].append(currOrigUtil)
+            if currOrigUtil > currCompUtil:  # Add 3 evaluations once an evaluation surpasses the compUtil
+                if origCount < 3:
+                    origCount += 1
+                else:
+                    contOrig = False
+        '''29-MAR
+        origUtilList = [[0.18014099725961774, 0.23173877810048804, 0.2959391074979547, 0.3534971982748365, 0.41142868028012947, 0.47882312271450633, 0.5322204926342247, 0.6073935509866519, 0.6525870280989903, 0.7199608335720948, 0.7915390659525445], [0.18655314788320165, 0.24548971198625358, 0.2989882782664677, 0.3572840442802545, 0.4151576357439164, 0.4782284715130638, 0.5324452997467288, 0.606320127354893, 0.6582370922660306, 0.7259284321237454, 0.8036629000742961], [0.20892500821260196, 0.268011840968831, 0.32754618759712484, 0.38523154787265357, 0.4429631335021056, 0.5025818905297537, 0.5676755721548101, 0.6333083882641994, 0.6917052511743607, 0.7582080966800597, 0.8380240614721557, 0.8657994499036668], [0.20878932748910328, 0.2716911585898987, 0.3306079475278021, 0.39623080488428064, 0.4590071996093714, 0.5292928326868238, 0.5903958920559229, 0.6486254460513594, 0.70356366251076, 0.7887548817395054, 0.8415162644525926], [0.20759767392712103, 0.26874049937375677, 0.3271129644607145, 0.3954219991837391, 0.452320539462276, 0.5118599769741028, 0.5775656070528239, 0.6473513798591966, 0.7075900539225413, 0.7694519357035681, 0.8474473790044947]]
+        '''
+    compAvg = np.average(compUtilList)
+    # Locate closest sample point for uniform and rudimentary to compAvg
+    minListLen = np.min([len(i) for i in unifUtilList])
+    unifUtilArr = np.array([i[:minListLen] for i in unifUtilList])
+    unifAvgArr = np.average(unifUtilArr, axis=0)
+    kInd = next(x for x, val in enumerate(unifAvgArr.tolist()) if val > compAvg)
+    unifSampSaved = round((compAvg - unifAvgArr[kInd - 1]) / (unifAvgArr[kInd] - unifAvgArr[kInd - 1]) * testInt) + (
+            kInd - 1) * testInt
+    print(unifSampSaved)
+    '''29-MAR: 23 saved'''
+    # Rudimentary
+    minListLen = np.min([len(i) for i in origUtilList])
+    origUtilArr = np.array([i[:minListLen] for i in origUtilList])
+    origAvgArr = np.average(origUtilArr, axis=0)
+    kInd = next(x for x, val in enumerate(origAvgArr.tolist()) if val > compAvg)
+    origSampSaved = round(
+        (compAvg - origAvgArr[kInd - 1]) / (origAvgArr[kInd] - origAvgArr[kInd - 1]) * testInt * 3) + (
+                            kInd - 1) * testInt * 3
+    print(origSampSaved)
+    '''29-MAR: 205 saved'''
+
+    ##############################################
+    ##############################################
+    # Choose different sourcing matrix (PART 2)
+    ##############################################
+    ##############################################
+    numBoot = 44  # 44 is average across each TN in original data set
+    SNprobs = np.sum(CSdict3['N'], axis=0) / np.sum(CSdict3['N'])
+    np.random.seed(36)  # Chosen to be "far" from seed 33
+    Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
+    CSdict3['transMat'] = np.vstack((CSdict3['N'][:4] / np.sum(CSdict3['N'][:4], axis=1).reshape(4, 1), Qvecs))
+
+    sampBudget = 180
+    unifDes = np.zeros(numTN) + 1 / numTN
+    origDes = np.sum(rd3_N, axis=1) / np.sum(rd3_N)
+
+    # Use original loss parameters
+    underWt, t, checkSlope = 5., 0.15, 0.6
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
+    marketvec = np.ones(numTN + numSN)
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    numSetDraws, numBayesNeigh = 10000, 1000
+    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+
+    numtargetdraws, numDataDraws = 5100, 5000
+
+    # Find heuristic allocation first
+    utilDict = {'method': 'weightsNodeDraw3linear'}
+
+    numReps = 5
+    utilMatList = []
+    # set testMax to highest expected allocation for any one node
+    testMax, testInt = 100, 10
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict3.copy()
+        dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                      replace=False)],
+                         'numPostSamples': numtargetdraws})
+        # New loss draws
+        setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        # Get new data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        # Get marginal utilities at each test node
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
+                                             masterDraws=CSdict3['postSamples'], printUpdate=True)
+        print(repr(currMargUtilMat))
+        utilMatList.append(currMargUtilMat)
+    '''29-MAR run
+    utilMatList = [array([[0.        , 0.01916123, 0.05181039, 0.07176857, 0.0939536 ,
+        0.11665873, 0.13382754, 0.15307864, 0.16597318, 0.18088208,
+        0.19074497],
+       [0.        , 0.07123407, 0.12863243, 0.17573619, 0.21330149,
+        0.24336048, 0.26885429, 0.29347271, 0.31684328, 0.33613847,
+        0.35288842],
+       [0.        , 0.01293205, 0.02714917, 0.0448176 , 0.0606202 ,
+        0.07777586, 0.09121254, 0.11004615, 0.12385605, 0.14222894,
+        0.15473014],
+       [0.        , 0.00927432, 0.01959722, 0.02707693, 0.03733776,
+        0.04786388, 0.05198462, 0.06052032, 0.06952814, 0.07160066,
+        0.08211004],
+       [0.        , 0.07833316, 0.11676237, 0.14068258, 0.15639652,
+        0.17224677, 0.18558647, 0.19247791, 0.20269915, 0.21059857,
+        0.21839275],
+       [0.        , 0.07954014, 0.11162262, 0.13761391, 0.15862485,
+        0.17156601, 0.18074959, 0.19447891, 0.19964158, 0.20810247,
+        0.22087342],
+       [0.        , 0.05948976, 0.09408648, 0.1169816 , 0.13970638,
+        0.1553303 , 0.16983777, 0.18339059, 0.19326457, 0.20825797,
+        0.21591629],
+       [0.        , 0.04224428, 0.07142509, 0.09397344, 0.11107657,
+        0.12399538, 0.13944983, 0.14960728, 0.15965968, 0.16746126,
+        0.17492618]]), array([[0.        , 0.02444741, 0.04617417, 0.07172455, 0.08809567,
+        0.10640526, 0.12366133, 0.13573863, 0.15604136, 0.17068028,
+        0.18108176],
+       [0.        , 0.04834982, 0.0937102 , 0.13237818, 0.16873718,
+        0.19415305, 0.21981798, 0.24330678, 0.26916736, 0.28552992,
+        0.30819564],
+       [0.        , 0.01205559, 0.0272295 , 0.03830821, 0.05469283,
+        0.06533469, 0.08095158, 0.09126618, 0.10626761, 0.11855323,
+        0.13183308],
+       [0.        , 0.00889473, 0.01812639, 0.02379298, 0.03212082,
+        0.03628557, 0.03975221, 0.04636525, 0.05213653, 0.05516324,
+        0.06090449],
+       [0.        , 0.06774564, 0.09412483, 0.11245624, 0.1295772 ,
+        0.13871881, 0.14940352, 0.16106266, 0.16738117, 0.17591085,
+        0.1827334 ],
+       [0.        , 0.09450995, 0.12544353, 0.14686126, 0.15972911,
+        0.17444362, 0.18053802, 0.19119856, 0.19830664, 0.20612721,
+        0.21666246],
+       [0.        , 0.10812779, 0.13866387, 0.16121653, 0.17872359,
+        0.18995057, 0.20162464, 0.2143453 , 0.22490877, 0.23183825,
+        0.23978482],
+       [0.        , 0.0225108 , 0.05364471, 0.07401074, 0.08804033,
+        0.10184499, 0.11381971, 0.12134715, 0.12895082, 0.1392264 ,
+        0.14832965]]), array([[0.        , 0.03688257, 0.06942722, 0.0986451 , 0.12363724,
+        0.1444222 , 0.16491802, 0.18163413, 0.19939142, 0.2154648 ,
+        0.22861321],
+       [0.        , 0.08937856, 0.15160417, 0.19806662, 0.23075377,
+        0.26489721, 0.29034409, 0.3166018 , 0.3327706 , 0.36072241,
+        0.37969892],
+       [0.        , 0.02690672, 0.04967761, 0.06950713, 0.0916044 ,
+        0.10889991, 0.124801  , 0.14669005, 0.1615694 , 0.1746577 ,
+        0.18871092],
+       [0.        , 0.03062442, 0.05155608, 0.07051583, 0.07987877,
+        0.08958365, 0.1010316 , 0.11037498, 0.11647938, 0.12390895,
+        0.13149895],
+       [0.        , 0.09297744, 0.12973616, 0.14960283, 0.16459473,
+        0.17741971, 0.18859341, 0.19816849, 0.20518692, 0.21591727,
+        0.22236878],
+       [0.        , 0.14898993, 0.18603177, 0.20643587, 0.22636166,
+        0.23868471, 0.25110112, 0.25921092, 0.26612525, 0.2751434 ,
+        0.28523691],
+       [0.        , 0.15388162, 0.18914232, 0.2108138 , 0.22730157,
+        0.24142528, 0.25602512, 0.26850677, 0.27652058, 0.28651353,
+        0.29496382],
+       [0.        , 0.08095088, 0.11642536, 0.14006123, 0.15534911,
+        0.16619867, 0.17887609, 0.19101872, 0.19787496, 0.20937628,
+        0.21415914]]), array([[0.        , 0.03243253, 0.06575737, 0.09349498, 0.11953655,
+        0.13410331, 0.15868973, 0.17560208, 0.1858635 , 0.20315486,
+        0.21967945],
+       [0.        , 0.10655272, 0.17512483, 0.22321035, 0.25985149,
+        0.29820123, 0.3216317 , 0.3461524 , 0.36876506, 0.38861687,
+        0.40573627],
+       [0.        , 0.02600881, 0.0433352 , 0.06602951, 0.08514688,
+        0.104974  , 0.11777774, 0.13787325, 0.14893703, 0.16589559,
+        0.17996964],
+       [0.        , 0.0193368 , 0.03309737, 0.04611571, 0.05906813,
+        0.06521012, 0.0706446 , 0.08101618, 0.08633629, 0.09430748,
+        0.09786254],
+       [0.        , 0.11301499, 0.14623482, 0.1638337 , 0.1783922 ,
+        0.18872453, 0.19643348, 0.20259243, 0.20882419, 0.21730706,
+        0.22295835],
+       [0.        , 0.09439459, 0.13548305, 0.16145378, 0.18008592,
+        0.19477363, 0.20737885, 0.21761525, 0.22488797, 0.23572667,
+        0.24581601],
+       [0.        , 0.10064325, 0.14512173, 0.17226591, 0.19312869,
+        0.20975346, 0.22509739, 0.23678888, 0.24825325, 0.25801498,
+        0.26922433],
+       [0.        , 0.09972989, 0.12831599, 0.14740526, 0.16136355,
+        0.1725875 , 0.1811033 , 0.19155961, 0.19835089, 0.20594329,
+        0.21125719]]), array([[0.        , 0.0229097 , 0.05089532, 0.08127111, 0.10208739,
+        0.12054716, 0.13868818, 0.15410349, 0.17308676, 0.18652009,
+        0.19765686],
+       [0.        , 0.06403967, 0.1229784 , 0.1678825 , 0.20732827,
+        0.24002676, 0.27113397, 0.29435436, 0.31460252, 0.3330429 ,
+        0.35476001],
+       [0.        , 0.01377925, 0.02975483, 0.04715424, 0.06688946,
+        0.0830543 , 0.09715904, 0.11606282, 0.13220583, 0.14400495,
+        0.16309874],
+       [0.        , 0.01039683, 0.02014691, 0.02883477, 0.039243  ,
+        0.04732814, 0.05667218, 0.06329123, 0.07117819, 0.07903692,
+        0.08356246],
+       [0.        , 0.07889522, 0.11359422, 0.13338368, 0.14459998,
+        0.15994707, 0.17256015, 0.18101375, 0.18964728, 0.19610327,
+        0.20386869],
+       [0.        , 0.07526335, 0.11403298, 0.1426148 , 0.15869649,
+        0.17269007, 0.1872962 , 0.19647352, 0.20657374, 0.21679212,
+        0.22413142],
+       [0.        , 0.05585806, 0.09845501, 0.12392014, 0.14571524,
+        0.16248438, 0.17866193, 0.19024707, 0.20156331, 0.20937352,
+        0.22278807],
+       [0.        , 0.035187  , 0.06761368, 0.09059733, 0.11182431,
+        0.12296252, 0.13625382, 0.14775136, 0.15609829, 0.16745415,
+        0.17541087]])]
+    '''
+    # Get average utility matrix
+    avgUtilMat = np.average(np.array(utilMatList), axis=0)
+    '''29-MAR
+    avgUtilMat = np.array([[0.        , 0.02716669, 0.05681289, 0.08338086, 0.10546209,
+        0.12442733, 0.14395696, 0.16003139, 0.17607125, 0.19134042,
+        0.20355525],
+       [0.        , 0.07591097, 0.13441001, 0.17945477, 0.21599444,
+        0.24812775, 0.2743564 , 0.29877761, 0.32042976, 0.34081012,
+        0.36025585],
+       [0.        , 0.01833648, 0.03542926, 0.05316334, 0.07179075,
+        0.08800775, 0.10238038, 0.12038769, 0.13456718, 0.14906808,
+        0.1636685 ],
+       [0.        , 0.01570542, 0.02850479, 0.03926725, 0.0495297 ,
+        0.05725427, 0.06401704, 0.07231359, 0.0791317 , 0.08480345,
+        0.0911877 ],
+       [0.        , 0.08619329, 0.12009048, 0.13999181, 0.15471213,
+        0.16741138, 0.17851541, 0.18706305, 0.19474774, 0.2031674 ,
+        0.21006439],
+       [0.        , 0.09853959, 0.13452279, 0.15899593, 0.17669961,
+        0.19043161, 0.20141275, 0.21179543, 0.21910704, 0.22837837,
+        0.23854405],
+       [0.        , 0.09560009, 0.13309388, 0.1570396 , 0.17691509,
+        0.1917888 , 0.20624937, 0.21865572, 0.2289021 , 0.23879965,
+        0.24853547],
+       [0.        , 0.05612457, 0.08748497, 0.1092096 , 0.12553077,
+        0.13751781, 0.14990055, 0.16025682, 0.16818693, 0.17789228,
+        0.18481661]])
     '''
     # Find allocation for sample budget
     allocArr = forwardAllocateWithBudget(avgUtilMat, int(sampBudget / testInt))
@@ -11573,8 +11974,6 @@ def allocationCaseStudy():
 
 
 
-
-    # Generate new MCMC draws under different prior variance choices
 
 
 
