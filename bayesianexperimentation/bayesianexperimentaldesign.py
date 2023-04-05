@@ -5019,6 +5019,12 @@ def allocationCaseStudy():
     CSdict1['importerNames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD', 'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD', 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER', 'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA', 'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
     #todo: END REMOVE LATER
 
+    # Region catchment proportions
+    TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488])
+    TNcach = TNcach[:4] / np.sum(TNcach[:4])
+    tempQ = CSdict1['N'] / np.sum(CSdict1['N'], axis=1).reshape(4, 1)
+    SNcach = np.matmul(TNcach, tempQ)
+
     CSdict1['prior'] = priorObj
     CSdict1['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     CSdict1['importerNum'], CSdict1['outletNum'] = numSN, numTN
@@ -6474,6 +6480,242 @@ def allocationCaseStudy():
     plotMargUtilGroups([evenUtilList, compUtilList],testMax=testMax,testInt=testInt,
                        titleStr='Familiar Setting', labels=['Uniform', 'Heuristic'],lineLabels=True)
 
+    ##############################################
+    ##############################################
+    # Use market vector that reflects market share
+    ##############################################
+    ##############################################
+
+    # Loss specification
+    underWt, t, checkSlope = 5., 0.15, 0.6
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
+    marketvec = np.concatenate((SNcach, TNcach))
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    numBayesNeigh = 1000
+    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
+
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 400, 10
+    numtargetdraws = 5100
+
+    ####################################
+    ### MARGINAL UTILITY OF EVEN DESIGN
+    ####################################
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw4linear'}
+
+    numReps = 5
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    objValArr = np.array()
+    compArr = np.array()
+    evenUtilList = []  # For storing utility lists
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict1.copy()
+        dictTemp.update(
+            {'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        print('Generating loss matrix...')
+        setDraws = CSdict1['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict1['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        utilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = roundDesignLow(np.ones(numTN) / numTN, testArr[compInd]) / testArr[compInd]
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            utilArr[compInd] = currUtil
+        print(utilArr)
+        evenUtilList.append(utilArr)
+        # Update plot
+        plt.plot(testArr, objValArr, alpha=0.2, label='Heuristic')
+        plt.plot(testArr, compArr, alpha=0.2, label='Comprehensive')
+        for tempValInd, tempValArr in enumerate(evenUtilList):
+            plt.plot(testArr, tempValArr, alpha=0.6, label='Uniform ' + str(tempValInd))
+        plt.ylim([0, 1.])
+        plt.legend()
+        plt.title('Utility of uniform vs. heuristic allocations\nTested nodes setting')
+        plt.show()
+        plt.close()
+        plotMargUtilGroups([evenUtilList], testMax, testInt)
+    '''10-MAR run
+    
+    '''
+    # 07-MAR
+    avgEvenUtilMat = np.array()
+
+    ################################
+    # NOW USING OUR METHOD
+    ################################
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw3linear'}
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+
+    # Minimize variance by averaging over multiple runs
+    utilMatList = []
+    numReps = 5
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict1.copy()
+        dictTemp.update(
+            {'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        # Get some new data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        # Get marginal utilities at each test node
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
+                                             baseLoss=np.average(baselineVec), masterDraws=CSdict1['postSamples'],
+                                             printUpdate=True)
+        print(repr(currMargUtilMat))
+        utilMatList.append(currMargUtilMat)
+
+    '''07-MAR run  
+
+    '''
+    '''
+    utilMatList = [u1, u2, u3, u4, u5]
+    '''
+    avgUtilMat = np.average(np.array(utilMatList), axis=0)
+    plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta',
+                 titleStr='Tested Nodes, $t=0.15$, $m=0.6$', lineLabels=True, utilMax=0.1,
+                 colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
+
+    allocArr, objValArr = smoothAllocationForward(avgUtilMat)
+    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
+              labels=dictTemp['outletNames'], titleStr='Tested Nodes, $t=0.15$, $m=0.6$', allocMax=250,
+              colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
+
+    # Identify comprehensive utility for determined allocation; need to adjust input for getUtility()
+    designArr = allocArr / np.sum(allocArr, axis=0)
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    evenUtilArr = np.average(np.array(evenUtilList), axis=0)
+    compUtilList = [np.array()]
+    numReps = 5
+    for rep in range(numReps):
+        dictTemp = CSdict1.copy()
+        dictTemp.update(
+            {'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        setDraws = CSdict1['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        # Get some new data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict1['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        print('Bayes draws: ' + str(newLossMat.shape[0]))
+        print('Target draws: ' + str(newLossMat.shape[1]))
+        print('Data draws: ' + str(numDataDraws))
+        compUtilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = designArr[:, compInd]
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            compUtilArr[compInd] = currUtil
+        print(repr(compUtilArr))
+        compUtilList.append(compUtilArr)
+        plt.plot(testArr, objValArr, dashes=[1, 3], alpha=0.6, color='blue', label='Heuristic Est.', linewidth=2.)
+        plt.plot(testArr, evenUtilArr, color='red', alpha=0.5, label='Uniform Allocation', linewidth=2.)
+        for tempInd, tempValArr in enumerate(compUtilList):
+            plt.plot(testArr, tempValArr, alpha=0.5, label='Heuristic Allocation ' + str(tempInd))
+        plt.ylim([0, 1.])
+        plt.ylabel('Utility Gain')
+        plt.xlabel('Sampling Budget')
+        plt.legend()
+        plt.title('Comprehensive utility for heuristic allocations')
+        plt.show()
+        plt.close()
+        plotMargUtilGroups([evenUtilList, compUtilList], testMax, testInt)
+    '''11-MAR run
+    compUtilList = []
+    '''
+
+    # Identify utility from repeating original allocation
+    numReps = 5
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    objValArr = np.array()
+    compArr = np.array()
+    evenUtilList = []  # For storing utility lists
+    origUtilList = []
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict1.copy()
+        dictTemp.update(
+            {'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        print('Generating loss matrix...')
+        setDraws = CSdict1['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict1['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        utilArr = np.zeros(testArr.shape)
+        currDes = np.divide(np.sum(rd3_N, axis=1), np.sum(rd3_N))
+        for compInd in range(testArr.shape[0]):
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            utilArr[compInd] = currUtil
+        print(utilArr)
+        origUtilList.append(utilArr)
+        # Update plot
+        plt.plot(testArr, objValArr, alpha=0.2, label='Heuristic')
+        plt.plot(testArr, compArr, alpha=0.2, label='Comprehensive')
+        for tempValInd, tempValArr in enumerate(origUtilList):
+            plt.plot(testArr, tempValArr, alpha=0.6, label='Uniform ' + str(tempValInd))
+        plt.ylim([0, 1.])
+        plt.legend()
+        plt.title('Utility of uniform vs. heuristic allocations\nTested nodes setting')
+        plt.show()
+        plt.close()
+        plotMargUtilGroups([origUtilList], testMax, testInt)
+        plotMargUtilGroups([evenUtilList, compUtilList, origUtilList], testMax, testInt)
+    '''11-MAR run
+    origUtilList = []
+    '''
+
+    ### GENERATE ERROR BARS PLOT FOR UNIFORM AND HEURISTIC UTILITIES
+    plotMargUtilGroups([evenUtilList, compUtilList], testMax=testMax, testInt=testInt,
+                       titleStr='Familiar Setting', labels=['Uniform', 'Heuristic'], lineLabels=True)
+
+
     ########################
     #### RUN 2: ADDING FOUR DISTRICTS WITHOUT ANY DATA YET
     ########################
@@ -6522,6 +6764,15 @@ def allocationCaseStudy():
                                 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER',
                                 'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA',
                                 'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
+
+    # Region catchment proportions
+    TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488, 0.17695, 0.22799, 0.07805, 0.0954])
+    tempQ = CSdict3['N'][:4] / np.sum(CSdict3['N'][:4], axis=1).reshape(4, 1)
+    tempTNcach = TNcach[:4] / np.sum(TNcach[:4])
+    SNcach = np.matmul(tempTNcach,tempQ)
+    # Normalize market weights s.t. sum of TN terms equals sum of SN terms equals number of TNs
+    #TNcach = TNcach * TNcach.shape[0] / TNcach.sum()
+    #SNcach = SNcach * TNcach.sum() / SNcach.sum()
     ###################
 
     CSdict3['prior'] = priorObj
@@ -7851,6 +8102,353 @@ def allocationCaseStudy():
     ### GENERATE ERROR BARS PLOT FOR UNIFORM AND HEURISTIC UTILITIES
     plotMargUtilGroups([compUtilList, evenUtilList, origUtilList],testMax,testInt,
                        titleStr='Exploratory Setting', labels=['Heuristic', 'Uniform', 'Original'], lineLabels=True)
+
+    ##############################################
+    ##############################################
+    # Use market vector that reflects market share
+    ##############################################
+    ##############################################
+
+    # Loss specification
+    underWt, t, checkSlope = 5., 0.15, 0.6
+    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
+    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
+    marketvec = np.concatenate((SNcach,TNcach))
+    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    numBayesNeigh = 1000
+    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
+
+    # Set limits of data collection and intervals for calculation
+    testMax, testInt = 400, 10
+    numtargetdraws = 5100
+
+    ####################################
+    ### MARGINAL UTILITY OF EVEN DESIGN
+    ####################################
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw4linear'}
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+
+    numReps = 5
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    objValArr = np.array()
+    compArr = np.array()
+    evenUtilList = []  # For storing utility lists
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict3.copy()
+        dictTemp.update(
+            {'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        print('Generating loss matrix...')
+        setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        utilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = roundDesignLow(np.ones(numTN) / numTN, testArr[compInd]) / testArr[compInd]
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            utilArr[compInd] = currUtil
+        print(repr(utilArr))
+        evenUtilList.append(utilArr)
+        # Update plot
+        # plt.plot(testArr, objValArr, alpha=0.2, label='Heuristic')
+        # plt.plot(testArr, compArr, alpha=0.2, label='Comprehensive')
+        for tempValInd, tempValArr in enumerate(evenUtilList):
+            plt.plot(testArr, tempValArr, alpha=0.6, label='Uniform ' + str(tempValInd))
+        plt.ylim([0, 1.7])
+        plt.legend()
+        plt.title('Utility of uniform vs. heuristic allocations\nUntested nodes setting')
+        plt.show()
+        plt.close()
+        plotMargUtilGroups([evenUtilList], testMax, testInt)
+    '''4-APR run
+    evenUtilList = [np.array([0.01464967, 0.0229887 , 0.03584062, 0.04179026, 0.04775673,
+       0.05543825, 0.06025951, 0.06475962, 0.06894527, 0.07285823,
+       0.07772007, 0.08107989, 0.08526541, 0.08870335, 0.0918858 ,
+       0.09471104, 0.09881675, 0.10139817, 0.10384348, 0.10754363,
+       0.1094074 , 0.11270981, 0.11473015, 0.11667244, 0.12068755,
+       0.12226979, 0.12450583, 0.12648042, 0.12857005, 0.13127864,
+       0.13321517, 0.13420477, 0.13694135, 0.13838002, 0.13928167,
+       0.14230523, 0.14408117, 0.1456639 , 0.14596233, 0.14952923]),
+       np.array([0.0139362 , 0.0225148 , 0.03599858, 0.04298375, 0.04888883,
+       0.05697708, 0.06121599, 0.06585707, 0.07055392, 0.07428761,
+       0.07974163, 0.08269428, 0.08626072, 0.0906986 , 0.09361123,
+       0.09650964, 0.09964081, 0.10295796, 0.10538408, 0.10810733,
+       0.11172224, 0.11517426, 0.11641704, 0.11874652, 0.12139643,
+       0.12363176, 0.12632997, 0.12897328, 0.13049864, 0.13256257,
+       0.1345099 , 0.13647788, 0.13862263, 0.13865588, 0.14197676,
+       0.14361184, 0.14621618, 0.14602534, 0.14862478, 0.14923932]),
+       np.array([0.00435292, 0.01126734, 0.02350989, 0.02840448, 0.03490569,
+       0.04278814, 0.04656077, 0.05101713, 0.05464589, 0.05870723,
+       0.06378401, 0.06752814, 0.07123129, 0.07541945, 0.07834529,
+       0.0816251 , 0.08434771, 0.08615797, 0.09036328, 0.09306261,
+       0.09515654, 0.09905207, 0.1020731 , 0.10338873, 0.10593409,
+       0.1080212 , 0.11069647, 0.11274256, 0.11442926, 0.11731389,
+       0.1184861 , 0.12066694, 0.12314691, 0.12270003, 0.12544107,
+       0.12773707, 0.13006112, 0.13055797, 0.13159053, 0.13319826]),
+       np.array([0.00923481, 0.01651557, 0.03004286, 0.03602463, 0.04222123,
+       0.0493772 , 0.05358076, 0.05787152, 0.06187306, 0.06536282,
+       0.07055878, 0.07438939, 0.07815394, 0.08227689, 0.0849347 ,
+       0.08769323, 0.09175722, 0.09364522, 0.09720825, 0.1005212 ,
+       0.10303259, 0.10596367, 0.10827563, 0.11047925, 0.11279049,
+       0.11394729, 0.11797724, 0.11974588, 0.12195965, 0.12356092,
+       0.12561642, 0.12684814, 0.12933415, 0.13072326, 0.13249803,
+       0.13492749, 0.13615158, 0.13719615, 0.13913036, 0.14054828]),
+       np.array([0.01439621, 0.02228214, 0.03466415, 0.04154927, 0.04738035,
+       0.05599791, 0.06049649, 0.06468376, 0.06897861, 0.07240472,
+       0.07801586, 0.08221604, 0.08460067, 0.08846472, 0.09218048,
+       0.09564121, 0.09756695, 0.10040465, 0.10381762, 0.10715562,
+       0.10937437, 0.11222642, 0.11426446, 0.11707731, 0.11870296,
+       0.12161138, 0.12412389, 0.12714744, 0.1275714 , 0.13021352,
+       0.13173752, 0.13395222, 0.13763802, 0.13812745, 0.13987455,
+       0.14234941, 0.14319524, 0.14487606, 0.14707328, 0.14659313])
+       ]
+    '''
+
+    ################################
+    # NOW USING OUR METHOD
+    ################################
+    # Utility calculation specification
+    numDataDraws = 5000
+    utilDict = {'method': 'weightsNodeDraw3linear'}
+    utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+
+    # Minimize variance by averaging over multiple runs
+    numReps = 5
+    utilMatList = []
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict3.copy()
+        dictTemp.update({'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws,
+                                                                      replace=False)],
+                         'numPostSamples': numtargetdraws})
+        # New loss draws
+        setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        # Get new data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        # Get marginal utilities at each test node
+        currMargUtilMat = GetMargUtilAtNodes(dictTemp.copy(), testMax, testInt, lossDict.copy(), utilDict.copy(),
+                                             masterDraws=CSdict3['postSamples'], printUpdate=True)
+        print(repr(currMargUtilMat))
+        utilMatList.append(currMargUtilMat)
+    '''5-APR run
+    u1 = np.array([[0.        , 0.00294156, 0.00505353, 0.00622081, 0.00833352,
+        0.01016614, 0.01167477, 0.01308104, 0.01442442, 0.01605372,
+        0.01700349, 0.01872152, 0.01982057, 0.02110486, 0.02251956,
+        0.02300636, 0.0242151 , 0.02536069, 0.0266946 , 0.02797237,
+        0.02888131, 0.0302996 , 0.03178587, 0.03214798, 0.03403775,
+        0.03438991, 0.03600066, 0.03737367, 0.03858834, 0.03999715,
+        0.04146897, 0.04215595, 0.04339687, 0.04421634, 0.04548668,
+        0.04603785, 0.04873142, 0.04920739, 0.0501841 , 0.05102084,
+        0.05196587],
+       [0.        , 0.00491095, 0.00700718, 0.00805448, 0.00934249,
+        0.01009402, 0.01114307, 0.01176502, 0.01242792, 0.01350043,
+        0.01441502, 0.01500855, 0.01611189, 0.01687593, 0.017714  ,
+        0.01877624, 0.01997259, 0.02052398, 0.02163861, 0.02256561,
+        0.02371864, 0.02470197, 0.02566034, 0.02653166, 0.02744203,
+        0.02836392, 0.02931027, 0.03078558, 0.03199085, 0.03363543,
+        0.03489766, 0.03598385, 0.03651481, 0.03774292, 0.03863593,
+        0.04028127, 0.04115285, 0.04313653, 0.04300859, 0.04383249,
+        0.04595533],
+       [0.        , 0.00238291, 0.00344937, 0.00448634, 0.00528027,
+        0.00602451, 0.00700927, 0.00766571, 0.00815682, 0.00926578,
+        0.0096705 , 0.01052858, 0.01131783, 0.01183957, 0.01292317,
+        0.01332831, 0.0145101 , 0.01477779, 0.01612766, 0.01680281,
+        0.01751967, 0.01844222, 0.01975638, 0.02036133, 0.02178071,
+        0.02271226, 0.02333835, 0.02432454, 0.02553437, 0.02646583,
+        0.02742135, 0.0288147 , 0.02921815, 0.03151026, 0.03150182,
+        0.03237576, 0.03412854, 0.03550132, 0.03573409, 0.03703065,
+        0.0383397 ],
+       [0.        , 0.00259007, 0.00424876, 0.00540979, 0.0065792 ,
+        0.00763452, 0.0085711 , 0.00936231, 0.00993063, 0.01070996,
+        0.01137705, 0.01211878, 0.01273082, 0.01330849, 0.01395264,
+        0.01439195, 0.0147341 , 0.01505793, 0.01570199, 0.01603922,
+        0.01639898, 0.01670605, 0.01761948, 0.01780266, 0.01828775,
+        0.01848148, 0.01883935, 0.01899126, 0.01936471, 0.01959431,
+        0.0201425 , 0.02016977, 0.02073374, 0.02096085, 0.02143542,
+        0.02176227, 0.02183575, 0.02243779, 0.02244614, 0.02285064,
+        0.02317446],
+       [0.        , 0.02233237, 0.02885546, 0.0325918 , 0.03527222,
+        0.03737751, 0.03905537, 0.04053635, 0.04178747, 0.04290894,
+        0.04423204, 0.04520843, 0.04602293, 0.04727829, 0.04790469,
+        0.04887675, 0.04983815, 0.05018195, 0.05155552, 0.05217648,
+        0.05308929, 0.05418031, 0.05473924, 0.05529253, 0.05629469,
+        0.05729903, 0.05839222, 0.05897359, 0.05968929, 0.06057427,
+        0.06178252, 0.06178343, 0.06300318, 0.06353017, 0.06476846,
+        0.0653556 , 0.06647302, 0.0671801 , 0.06839626, 0.06839037,
+        0.07039903],
+       [0.        , 0.02247959, 0.03028494, 0.03459138, 0.03819429,
+        0.04058716, 0.04254356, 0.04427986, 0.04610555, 0.04740889,
+        0.04849462, 0.04991845, 0.05083364, 0.05208966, 0.05277805,
+        0.05368482, 0.05501408, 0.05536098, 0.05643717, 0.05777378,
+        0.05849088, 0.05946219, 0.06002456, 0.06100677, 0.06186559,
+        0.06229836, 0.06290462, 0.06428467, 0.06450949, 0.06556034,
+        0.06609305, 0.0669713 , 0.06804497, 0.06858331, 0.06959695,
+        0.07071425, 0.07126606, 0.07151226, 0.0723019 , 0.07321877,
+        0.07382898],
+       [0.        , 0.01267891, 0.01548799, 0.01725044, 0.01879362,
+        0.01989068, 0.02085653, 0.02176546, 0.02294816, 0.02357287,
+        0.02441636, 0.02525693, 0.02589601, 0.02632173, 0.02730554,
+        0.02785034, 0.02858383, 0.02919281, 0.02947804, 0.03044411,
+        0.03128764, 0.03168889, 0.03242975, 0.03294639, 0.03309182,
+        0.03407238, 0.03489403, 0.03541111, 0.03575074, 0.03648439,
+        0.03728957, 0.03769298, 0.03770279, 0.03863778, 0.03977777,
+        0.03999375, 0.0407124 , 0.04150927, 0.04222682, 0.04220722,
+        0.04299015],
+       [0.        , 0.0108917 , 0.01494471, 0.01745847, 0.01895519,
+        0.0205655 , 0.02155158, 0.0228554 , 0.02405234, 0.02486323,
+        0.02635916, 0.02705598, 0.02788735, 0.02908409, 0.02957137,
+        0.03090377, 0.03201417, 0.03319185, 0.03383869, 0.03526646,
+        0.03647863, 0.03694083, 0.03838219, 0.04005099, 0.04085091,
+        0.04177836, 0.04278106, 0.04410066, 0.04535052, 0.04635712,
+        0.04770807, 0.04856994, 0.05026377, 0.05070915, 0.05234411,
+        0.05360933, 0.05506561, 0.05578664, 0.0580636 , 0.05784155,
+        0.05910849]])
+    u2 =         
+    '''
+    '''    
+    utilMatList = [u1, u2, u3, u4, u5]
+    '''
+    avgUtilMat = np.average(np.array(utilMatList), axis=0)
+    plotMargUtil(avgUtilMat, testMax, testInt, labels=dictTemp['outletNames'], type='delta',
+                 titleStr='Untested Nodes, $t=0.15$, $m=0.6$', lineLabels=True,  # utilMax=0.2,
+                 colors=cm.rainbow(np.linspace(0, 1., numTN)),
+                 dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
+    allocArr, objValArr = smoothAllocationForward(avgUtilMat)
+    plotAlloc(allocArr, paramList=[str(i) for i in np.arange(testInt, testMax + 1, testInt)], testInt=testInt,
+              labels=dictTemp['outletNames'], titleStr='Untested Nodes, $t=0.15$, $m=0.6$',  # allocMax=250,
+              colors=cm.rainbow(np.linspace(0, 1., numTN)),
+              dashes=[[1, 0] for tn in range(4)] + [[1, 1] for tn in range(4)])
+
+    allocArr = np.array()
+
+    #####################################
+    # COMPREHENSIVE UTILITY FOR HEURISTIC
+    #####################################
+    # Identify gap between objValArr and  comprehensive utility; need to adjust input for getUtility()
+    designArr = allocArr / np.sum(allocArr, axis=0)
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    compUtilList = []
+    numReps = 5
+    for rep in range(numReps):
+        dictTemp = CSdict3.copy()
+        dictTemp.update(
+            {'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        # New Bayes draws
+        setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        compUtilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = designArr[:, compInd]
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            compUtilArr[compInd] = currUtil
+        print(compUtilArr)
+        compUtilList.append(compUtilArr)
+        plt.plot(testArr, objValArr)
+        for tempValArr in compUtilList:
+            plt.plot(testArr, tempValArr, alpha=0.3)
+        plt.ylim([0, 1.7])
+        plt.title('Comprehensive utility for allocations via heuristic\nUntested nodes')
+        plt.show()
+        plt.close()
+        plotMargUtilGroups([compUtilList, evenUtilList], testMax, testInt)
+    '''14-MAR run
+    compUtilList = []
+    '''
+
+    ####################################
+    ### UTILITY OF RUDIMENTARY DESIGN
+    ####################################
+    # Find utility of using original design (which ignores untested nodes)
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    utilDict.update({'method': 'weightsNodeDraw4linear'})
+    origUtilList = []
+    numReps = 5
+    for rep in range(numReps):
+        dictTemp = CSdict3.copy()
+        dictTemp.update(
+            {'postSamples': CSdict3['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        # New Bayes draws
+        setDraws = CSdict3['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        print('Generating loss matrix...')
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict3['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        origUtilArr = np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currDes = np.sum(rd3_N, axis=1) / np.sum(rd3_N)
+            currBudget = testArr[compInd]
+            print('Design: ' + str(currDes.round(3)))
+            print('Budget: ' + str(currBudget))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            origUtilArr[compInd] = currUtil
+        print(origUtilArr)
+        origUtilList.append(origUtilArr)
+        for tempValArr in origUtilList:
+            plt.plot(testArr, tempValArr, alpha=0.3)
+        plt.ylim([0, 1.7])
+        plt.title('Comprehensive utility for allocations via heuristic\nUntested nodes')
+        plt.show()
+        plt.close()
+        plotMargUtilGroups([compUtilList, evenUtilList, origUtilList], testMax, testInt)
+
+    '''15-MAR run
+    origUtilList = []
+    '''
+
+    ### GENERATE ERROR BARS PLOT FOR UNIFORM AND HEURISTIC UTILITIES
+    plotMargUtilGroups([compUtilList, evenUtilList, origUtilList], testMax, testInt,
+                       titleStr='Exploratory Setting', labels=['Heuristic', 'Uniform', 'Original'], lineLabels=True)
+
+    # todo: MARKET VECTOR CODE HERE
+
+
 
     ########################
     #### SENSITIVITY RUNS FOR EXPLORATORY SETTING
@@ -11883,8 +12481,8 @@ def allocationCaseStudy():
                                         numtests=sampBudget, utildict=utilDict)[0]
         print('Heuristic utility: ' + str(currCompUtil))
         compUtilList.append(currCompUtil)
-        '''29-MAR
-        compUtilList = 
+        '''31-MAR
+        compUtilList = [0.6382285807799741, 0.605453522348244, 0.5922968790553096, 0.6645225820278204, 0.6663120137844762]
         '''
         # Find the equivalent uniform allocation
         currUnifUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[unifDes],
@@ -11907,8 +12505,8 @@ def allocationCaseStudy():
                     unifCount += 1
                 else:
                     contUnif = False
-        '''29-MAR
-        unifUtilList = 
+        '''31-MAR
+        unifUtilList = [[0.5631271417334545, 0.5994166813757857, 0.6378429395741949, 0.6835979393553409, 0.7142385316083022, 0.7411487822615221, 0.7801856109691689], [0.5412083518513109, 0.5802342879410776, 0.6161760605946305, 0.6524671498708905, 0.6871180403003354, 0.7079930805456969], [0.5211186983137481, 0.5511774227683426, 0.592568678362734, 0.6269942765438241, 0.6669278414846929, 0.699377437591667], [0.5809162235234466, 0.6193576692846765, 0.6599614279877377, 0.7091574392528006, 0.745832588960953, 0.7778515624054068, 0.8067433428017359], [0.585207096221176, 0.615997158919217, 0.6599667654492407, 0.6939685454768338, 0.7320551895449086, 0.7670579333383305, 0.7926379070056919]]
         '''
         # Find the equivalent rudimentary allocation
         currOrigUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[origDes],
@@ -11931,8 +12529,8 @@ def allocationCaseStudy():
                     origCount += 1
                 else:
                     contOrig = False
-        '''29-MAR
-        origUtilList = 
+        '''31-MAR
+        origUtilList = [[0.23049055022113096, 0.2895526438678431, 0.33963460198011886, 0.4000550366197806, 0.4715083799888675, 0.5226152366787868, 0.5879893331034189, 0.6527838792744243, 0.7028075425661329, 0.7762403762992265, 0.8619074792828707], [0.20737143051424356, 0.26668131590771793, 0.32725337174036095, 0.3852652433681998, 0.4391488829825305, 0.5091551506500078, 0.5690837937907518, 0.631596862841127, 0.6944276330070687, 0.764411869566473, 0.8313842268104557], [0.19115607338134888, 0.24817689151821476, 0.302773273965816, 0.3576906746750663, 0.4254981469883168, 0.480833020354662, 0.5389262353897251, 0.5981645575904229, 0.6655694924536766, 0.7274475766066719, 0.8105325492105528], [0.2527203039076764, 0.3168592520560902, 0.37901983528764793, 0.439648650130231, 0.5059541272842392, 0.5698913498132163, 0.63182957650938, 0.6965973010752111, 0.7511492299092892, 0.815602897471333, 0.9123778469463399], [0.2352201964549674, 0.2989608001554642, 0.3584660622368223, 0.42148592408625873, 0.4797782391377976, 0.548082645766665, 0.604773072906827, 0.6727735577340432, 0.7352060089452501, 0.8001844038347796, 0.8727733098137742]]
         '''
     compAvg = np.average(compUtilList)
     # Locate closest sample point for uniform and rudimentary to compAvg
@@ -11943,7 +12541,7 @@ def allocationCaseStudy():
     unifSampSaved = round((compAvg - unifAvgArr[kInd - 1]) / (unifAvgArr[kInd] - unifAvgArr[kInd - 1]) * testInt) + (
             kInd - 1) * testInt
     print(unifSampSaved)
-    '''29-MAR: XX saved'''
+    '''31-MAR: 20 saved'''
     # Rudimentary
     minListLen = np.min([len(i) for i in origUtilList])
     origUtilArr = np.array([i[:minListLen] for i in origUtilList])
@@ -11953,7 +12551,7 @@ def allocationCaseStudy():
         (compAvg - origAvgArr[kInd - 1]) / (origAvgArr[kInd] - origAvgArr[kInd - 1]) * testInt * 3) + (
                             kInd - 1) * testInt * 3
     print(origSampSaved)
-    '''29-MAR: XX saved'''
+    '''31-MAR: 202 saved'''
 
 
 
