@@ -6089,17 +6089,31 @@ def allocationCaseStudy():
     priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar,numTN)) ))
     priorObj = prior_normal_assort(priorMean, priorCovar)
 
-    #todo: REMOVE LATER
     #CSdict1['outletNames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION']
     CSdict1['outletNames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
     CSdict1['importerNames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD', 'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD', 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER', 'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA', 'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
-    #todo: END REMOVE LATER
 
     # Region catchment proportions
     TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488])
     TNcach = TNcach[:4] / np.sum(TNcach[:4])
     tempQ = CSdict1['N'] / np.sum(CSdict1['N'], axis=1).reshape(4, 1)
     SNcach = np.matmul(TNcach, tempQ)
+    '''
+    TNcach normalized in 4-node setting: [42%, 14%, 22%, 22%]
+    SNcach: [ 3%,  7%, 34%,  5%,  4%, 1%, 2%, 
+            ['ACME XX', 'AS GRINDEKS', 'BELCO', 'BHARAT', 'HUBEI TIANYAO', 'MACIN REMEDIES XX', 'NORTH CHINA XX', 
+            'NOVARTIS XX', 'PFIZER XX', 'PIRAMAL ', 'PUSHKAR PHARMA XX', 'SHANDOND SHENGLU XX', 'SHANXI SHUGUANG']
+             11%, 8%, 19%, <1%, <1%, 6%]
+    TENTATIVE SN INDICES: [1, 6, 7, 8, 9, 11, 12]
+    tempQ: MOD_39       [3%,   3%,  26%, 3%, 8%,  0%, 3%,
+                         15%, 18%, 13%, 0%, 0%, 10%]            XX
+           MOD_17       [6%,   6%,  24%, 12%, 0%,  6%, 6%,      XXXxX
+                         12%, 0%, 24%, 0%, 0%, 6%] 
+           MODHIGH_95   [3%, 18%, 32%, 4%, 2%, 0%, 1%,
+                         6%,  0%, 24%, 1%, 2%, 5%]              XX
+           MODHIGH26    [4%,  4%,  58%, 8%, 0%,  0%, 0%,
+                         4%, 0%, 23%, 0%, 0%, 0%]
+    '''
 
     CSdict1['prior'] = priorObj
     CSdict1['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -7587,7 +7601,7 @@ def allocationCaseStudy():
     marketvec = np.concatenate((SNcach, TNcach))
     lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
     numBayesNeigh = 1000
-    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
+    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
 
     # Set limits of data collection and intervals for calculation
     testMax, testInt = 400, 10
@@ -8135,6 +8149,112 @@ def allocationCaseStudy():
     plotMargUtilGroups([evenUtilList, compUtilList, origUtilList], testMax=testMax, testInt=testInt,
                        titleStr='Familiar Setting, including Market Term', labels=['Uniform', 'Heuristic', 'Rudimentary'], lineLabels=True)
 
+    ##############################################
+    # Get comparison runs with uniform and rudimentary by using the same draws
+    testArr = np.arange(testInt, testMax + testInt, testInt)
+    allocArr = np.array([[1., 1., 2., 2., 2., 3., 4., 4., 5., 5., 6., 6., 6.,
+                          7., 8., 8., 8., 8., 8., 9., 10., 10., 10., 11., 11., 12.,
+                          12., 12., 12., 12., 13., 14., 14., 14., 14., 14., 14., 15., 16.,
+                          17.],
+                         [0., 1., 1., 1., 2., 2., 2., 3., 3., 3., 3., 4., 4.,
+                          4., 4., 4., 5., 5., 5., 5., 5., 5., 6., 6., 6., 6.,
+                          6., 7., 7., 8., 8., 8., 8., 8., 8., 8., 8., 8., 8.,
+                          8.],
+                         [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.,
+                          1., 1., 1., 1., 2., 2., 2., 2., 3., 3., 3., 4., 4.,
+                          4., 4., 4., 4., 4., 4., 5., 6., 7., 7., 7., 7., 7.,
+                          7.],
+                         [0., 0., 0., 1., 1., 1., 1., 1., 1., 2., 2., 2., 2.,
+                          2., 2., 3., 3., 3., 4., 4., 4., 4., 4., 4., 4., 4.,
+                          5., 5., 6., 6., 6., 6., 6., 6., 6., 7., 8., 8., 8.,
+                          8.]])
+    designArr = allocArr / np.sum(allocArr, axis=0)
+    rudiList, unifList, heurList = [], [], []
+    rudiDes = np.divide(np.sum(rd3_N, axis=1), np.sum(rd3_N))
+    numReps = 10
+    for rep in range(numReps):
+        # Withdraw a subset of MCMC prior draws
+        dictTemp = CSdict1.copy()
+        dictTemp.update(
+            {'postSamples': CSdict1['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
+             'numPostSamples': numtargetdraws})
+        print('Generating loss matrix...')
+        setDraws = CSdict1['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
+        lossDict.update({'bayesDraws': setDraws})
+        tempLossMat = lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
+        tempLossDict = lossDict.copy()
+        tempLossDict.update({'lossMat': tempLossMat})
+        newBayesDraws, newLossMat = addBayesNeighbors(tempLossDict.copy(), CSdict1['postSamples'],
+                                                      dictTemp['postSamples'])
+        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
+        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
+        # Get a new set of data draws
+        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
+        rudiArr, unifArr, heurArr = np.zeros(testArr.shape), np.zeros(testArr.shape), np.zeros(testArr.shape)
+        for compInd in range(testArr.shape[0]):
+            currBudget = testArr[compInd]
+            print('Budget: ' + str(currBudget))
+            # Rudimentary
+            print('Design: ' + str(rudiDes.round(3)))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[rudiDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            rudiArr[compInd] = currUtil
+            # Uniform
+            unifDes = roundDesignLow(np.ones(numTN) / numTN, testArr[compInd]) / testArr[compInd]
+            print('Design: ' + str(unifDes.round(3)))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[unifDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            unifArr[compInd] = currUtil
+            # Heuristic
+            heurDes = designArr[:, compInd]
+            print('Design: ' + str(heurDes.round(3)))
+            print('Calculating utility...')
+            currUtil = baseLoss - getDesignUtility(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[heurDes],
+                                                   numtests=currBudget, utildict=utilDict)[0]
+            print('Utility: ' + str(currUtil))
+            heurArr[compInd] = currUtil
+        print('Rudimentary:')
+        print(repr(rudiArr))
+        print('Uniform:')
+        print(repr(unifArr))
+        print('Heuristic:')
+        print(repr(heurArr))
+        rudiList.append(rudiArr)
+        unifList.append(unifArr)
+        heurList.append(heurArr)
+        plotMargUtilGroups([rudiList, unifList, heurList], testMax=testMax, testInt=testInt,
+                           titleStr='Familiar Setting, including Market Term',
+                           labels=['Rudimentary', 'Uniform', 'Heuristic'], lineLabels=True)
+    '''10-APR run
+    rudiList = [np.array([0.00408365, 0.00659668, 0.00971391, 0.01268393, 0.01501705,
+       0.01774011, 0.01976965, 0.02259873, 0.02469648, 0.02671448,
+       0.02863334, 0.03074868, 0.03234869, 0.03406916, 0.0356964 ,
+       0.03728166, 0.03950018, 0.04107576, 0.04279211, 0.04446256,
+       0.04587693, 0.04774602, 0.04888318, 0.0501046 , 0.05135876,
+       0.05281397, 0.05407643, 0.0557159 , 0.05696343, 0.05856421,
+       0.05962955, 0.06088553, 0.06257154, 0.06331485, 0.06456221,
+       0.06562104, 0.06635407, 0.06799553, 0.06960971, 0.06982799])]
+    unifList = [np.array([0.00444674, 0.00849487, 0.01145364, 0.01483015, 0.0182642 ,
+       0.02045837, 0.02341296, 0.02587959, 0.0285271 , 0.03066484,
+       0.03272858, 0.03499641, 0.03694944, 0.0385483 , 0.04079861,
+       0.04229113, 0.04419591, 0.04588342, 0.04737929, 0.0492428 ,
+       0.05107569, 0.05190923, 0.0537082 , 0.05506989, 0.05671258,
+       0.0579137 , 0.05913619, 0.06054511, 0.06259035, 0.06388868,
+       0.06497329, 0.06612   , 0.06761998, 0.06836801, 0.06977942,
+       0.07116515, 0.07212518, 0.07320407, 0.07407188, 0.07549588])]
+    heurList = [array([0.0046462 , 0.01035949, 0.01411212, 0.01714631, 0.02095333,
+       0.02396591, 0.02722726, 0.02941946, 0.03239284, 0.03416396,
+       0.03665252, 0.03832415, 0.04056339, 0.04215187, 0.04380399,
+       0.04549616, 0.04766778, 0.04911511, 0.05029734, 0.05266795,
+       0.0535055 , 0.05532648, 0.05706223, 0.05852287, 0.05940419,
+       0.06061065, 0.06216974, 0.06338533, 0.06542705, 0.06641016,
+       0.0677027 , 0.06884568, 0.06989114, 0.07142511, 0.07236781,
+       0.07310875, 0.07317939, 0.0750093 , 0.07671098, 0.07695983])]
+    '''
 
     ########################
     #### RUN 2: ADDING FOUR DISTRICTS WITHOUT ANY DATA YET
