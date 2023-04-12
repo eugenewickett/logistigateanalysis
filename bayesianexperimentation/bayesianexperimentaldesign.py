@@ -5282,7 +5282,13 @@ def caseStudyPlots_Familiar_Market():
         plt.plot(x, deltaArr[tnind], linewidth=2, color=colors[tnind],
                  label=labels[tnind], alpha=0.6)
     for tnind in range(numTN):
-        plt.text(testInt * 1.1, deltaArr[tnind, 0], labels[tnind].ljust(15), fontsize=labelSz-1)
+        adj = 0.00005
+        if tnind == 0:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0]+adj, labels[tnind].ljust(15), fontsize=labelSz-1)
+        elif tnind == 1:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0]-adj, labels[tnind].ljust(15), fontsize=labelSz-1)
+        else:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0], labels[tnind].ljust(15), fontsize=labelSz-1)
     plt.legend(fontsize=labelSz)
     plt.ylim([0., yMax])
     plt.xlim([0., xMax])
@@ -5305,7 +5311,13 @@ def caseStudyPlots_Familiar_Market():
     #allocMax = allocArr.max() * testInt * 1.1
     allocMax = 185
     for tnind in range(numTN):
-        plt.text(testMax * 1.01, allocArr[tnind, -1]*testInt, labels[tnind].ljust(15), fontsize=labelSz-1)
+        adj = 2.9
+        if tnind == 1:
+            plt.text(testMax * 1.01, allocArr[tnind, -1]*testInt+adj, labels[tnind].ljust(15), fontsize=labelSz-1)
+        elif tnind ==3:
+            plt.text(testMax * 1.01, allocArr[tnind, -1]*testInt-adj, labels[tnind].ljust(15), fontsize=labelSz-1)
+        else:
+            plt.text(testMax * 1.01, allocArr[tnind, -1]*testInt, labels[tnind].ljust(15), fontsize=labelSz-1)
     plt.legend(fontsize=labelSz)
     plt.ylim([0., allocMax])
     plt.xlim([0., xMax])
@@ -5910,8 +5922,18 @@ def caseStudyPlots_Exploratory_Market():
         else:
             plt.plot(x, deltaArr[tnind], linewidth=2, color=colors[tnind],
                  label=labels[tnind], alpha=0.6, dashes=[1,dshSz])
+    adj = 0.0002
     for tnind in range(numTN):
-        plt.text(testInt * 1.1, deltaArr[tnind, 0], labels[tnind].ljust(15), fontsize=labelSz-1)
+        if tnind == 0:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0], labels[tnind].ljust(15), fontsize=labelSz-1)
+        elif tnind == 1:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0]+2*adj, labels[tnind].ljust(15), fontsize=labelSz-1)
+        elif tnind == 3:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0]+adj, labels[tnind].ljust(15), fontsize=labelSz-1)
+        elif tnind == 2:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0] - adj, labels[tnind].ljust(15), fontsize=labelSz - 1)
+        else:
+            plt.text(testInt * 1.1, deltaArr[tnind, 0], labels[tnind].ljust(15), fontsize=labelSz-1)
     plt.legend(fontsize=labelSz)
     plt.ylim([0., yMax])
     plt.xlim([0., xMax])
@@ -5995,14 +6017,14 @@ def caseStudyPlots_Exploratory_Market():
     plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nExploratory Setting with Market Term',fontsize=titleSz)
     # Add text box showing budgetary savings
     compUtilAvg = np.average(np.array(compUtilList),axis=0)
-    x2, x3 = 119, 332
-    plt.plot([100,x3],[compUtilAvg[9],compUtilAvg[9]],color='black',linestyle='--')
-    iv = 0.03
+    x2, x3 = 134, 332
+    plt.plot([100,x2],[compUtilAvg[9],compUtilAvg[9]],color='black',linestyle='--')
+    iv = 0.003
     plt.plot([100,100],[compUtilAvg[9]-iv,compUtilAvg[9]+iv],color='black',linestyle='--')
     plt.plot([x2, x2], [compUtilAvg[9] - iv, compUtilAvg[9] + iv], color='black', linestyle='--')
-    plt.plot([x3, x3], [compUtilAvg[9] - iv, compUtilAvg[9] + iv], color='black', linestyle='--')
-    plt.text(105, compUtilAvg[9] + iv/2, str(x2-100), fontsize=labelSz)
-    plt.text(205, compUtilAvg[9] + iv/2, str(x3-x2), fontsize=labelSz)
+    #plt.plot([x3, x3], [compUtilAvg[9] - iv, compUtilAvg[9] + iv], color='black', linestyle='--')
+    plt.text(110, compUtilAvg[9] + iv/2, str(x2-100), fontsize=labelSz)
+    #plt.text(205, compUtilAvg[9] + iv/2, str(x3-x2), fontsize=labelSz)
 
     #plt.tight_layout()
     plt.show()
@@ -8276,6 +8298,14 @@ def allocationCaseStudy():
        0.05590677, 0.0569012 , 0.05808209, 0.05981104, 0.06054725,
        0.06233294, 0.06287915, 0.06495156, 0.06526643, 0.06673481,
        0.06791432, 0.06985476, 0.07011118, 0.07206724, 0.07281596]),
+       np.array([0.00417477, 0.00738503, 0.01089018, 0.01372497, 0.01608757,
+       0.01875562, 0.02107689, 0.02381095, 0.02584553, 0.02803378,
+       0.03012905, 0.03204936, 0.03378924, 0.03603153, 0.03752491,
+       0.03917651, 0.04071801, 0.04269854, 0.0448977 , 0.04626001,
+       0.04749626, 0.04935769, 0.05062121, 0.05148194, 0.05333243,
+       0.05464218, 0.05615321, 0.05828795, 0.05911391, 0.06053408,
+       0.06120145, 0.06343912, 0.06366771, 0.06561829, 0.06679009,
+       0.06848108, 0.06948148, 0.07044105, 0.07159861, 0.07212605]),
        np.]
     unifList = [np.array([0.00444674, 0.00849487, 0.01145364, 0.01483015, 0.0182642 ,
        0.02045837, 0.02341296, 0.02587959, 0.0285271 , 0.03066484,
@@ -8317,6 +8347,14 @@ def allocationCaseStudy():
        0.0607719 , 0.06216097, 0.06359161, 0.06508585, 0.0660644 ,
        0.06717837, 0.06923899, 0.06983411, 0.07116665, 0.0717448 ,
        0.07326356, 0.07428002, 0.07554445, 0.07663304, 0.07735115]),
+       np.array([0.0051047 , 0.00909776, 0.01245413, 0.01615499, 0.01995187,
+       0.02198991, 0.02478221, 0.02731725, 0.03001515, 0.03213346,
+       0.03425097, 0.03601164, 0.03853605, 0.04037408, 0.04219365,
+       0.04393262, 0.04628136, 0.04788809, 0.04941699, 0.05132261,
+       0.05261582, 0.0542335 , 0.05591487, 0.05749708, 0.05933186,
+       0.0604367 , 0.06159741, 0.0630387 , 0.06405631, 0.06590958,
+       0.06715936, 0.06880624, 0.06961094, 0.07152515, 0.07198018,
+       0.0736776 , 0.07512589, 0.07535801, 0.07661507, 0.07670517]),
        np.]
     heurList = [array([0.0046462 , 0.01035949, 0.01411212, 0.01714631, 0.02095333,
        0.02396591, 0.02722726, 0.02941946, 0.03239284, 0.03416396,
@@ -8358,6 +8396,14 @@ def allocationCaseStudy():
        0.06313272, 0.06542077, 0.06651899, 0.06720031, 0.06850545,
        0.06991254, 0.07132995, 0.07343545, 0.07321637, 0.0745857 ,
        0.07516392, 0.07650051, 0.0776102 , 0.07871795, 0.07966502]),
+       np.array([0.00647161, 0.01149149, 0.01640462, 0.0187805 , 0.0228018 ,
+       0.02630502, 0.02897579, 0.03197415, 0.0345634 , 0.03653043,
+       0.03853351, 0.04086522, 0.04223477, 0.04439702, 0.04654666,
+       0.04771872, 0.04984945, 0.0514608 , 0.0529949 , 0.05462646,
+       0.05582061, 0.05801399, 0.05899962, 0.06077242, 0.06184289,
+       0.0636995 , 0.06444484, 0.06628207, 0.06725785, 0.06901733,
+       0.07051056, 0.07135393, 0.0723466 , 0.07388339, 0.07486021,
+       0.07537993, 0.07677777, 0.07784303, 0.0786345 , 0.07912031]),
        np.]
     '''
 
