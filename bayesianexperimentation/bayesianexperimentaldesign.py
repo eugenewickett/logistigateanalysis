@@ -29,6 +29,7 @@ import drs
 
 # Define computation variables
 tol = 1e-8
+e = 2.
 
 class prior_normal_assort:
     """
