@@ -4401,9 +4401,6 @@ def caseStudyPlots_Familiar_Bootstrap_Example():
                               0.19770247, 0.19873292, 0.20328388, 0.20648284, 0.20360451,
                               0.21336285]])]
 
-    np.save(os.path.join('casestudyoutputs', 'PREVIOUS', 'STUDY_bootstrap_utilmatrices', 'margutilset'),
-            np.array(margUtilSet))
-
     numSets = len(margUtilSet)
     numBoot = 50
     numTN = margUtilSet[0].shape[0]
@@ -4523,7 +4520,7 @@ def casestudy_familiar():
     util.plotPostSamples(csdict_fam, 'int90')
 
     ########################
-    ### RUN 1: INITIAL RUN
+    ### RUN 1: INITIAL RUN; FAMILIAR SETTING
     ########################
     # 1) Generate some heuristic runs to form allocation
     # 2) Estimate comprehensive utility for 3 methods: heuristic, uniform, rudimentary
@@ -4733,8 +4730,8 @@ def casestudy_familiar():
                         titlestr='Familiar Setting, $t=0.15$, $m=0.6$', linelabels=True, utilmax=0.1,
                         colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
     allocArr, objValArr = sampf.smooth_alloc_forward(avgUtilMat)
-    util.plot_plan(allocArr, paramList=[str(i) for i in np.arange(testint, testmax + 1, testint)], testInt=testint,
-                   labels=csdict_fam['TNnames'], titleStr='Familiar Setting, $t=0.15$, $m=0.6$', allocMax=250,
+    util.plot_plan(allocArr, paramlist=[str(i) for i in np.arange(testint, testmax + 1, testint)], testint=testint,
+                   labels=csdict_fam['TNnames'], titlestr='Familiar Setting, $t=0.15$, $m=0.6$', allocmax=250,
                    colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
 
     # Now get comprehensive utilities for different sampling plans; use different set of MCMC draws
@@ -4793,90 +4790,15 @@ def casestudy_familiar():
     # np.save(os.path.join('casestudyoutputs', 'unif_utillist_familiar'), np.array(unif_utillist))
     # np.save(os.path.join('casestudyoutputs', 'rudi_utillist_familiar'), np.array(rudi_utillist))
 
-    ####################################
-    ### MARGINAL UTILITY OF EVEN DESIGN
-    ####################################
-    # Utility calculation specification
+    #np.save(os.path.join('casestudyoutputs', 'PREVIOUS', 'STUDY_bootstrap_utilmatrices', 'margutilset'), np.array(margUtilSet))
 
-    numReps = 5
-    testArr = np.arange(testInt, testMax + testInt, testInt)
-    objValArr = np.array([0.06752933, 0.1100887, 0.14689902, 0.17985292, 0.21243662,
-                          0.24157123, 0.26723585, 0.28988744, 0.3112647, 0.33232121,
-                          0.35210045, 0.37224994, 0.39063685, 0.40899997, 0.42695671,
-                          0.4432828, 0.45953303, 0.47562594, 0.49127062, 0.50719359,
-                          0.52188378, 0.53644973, 0.55113067, 0.56541773, 0.57930278,
-                          0.59315281, 0.60661711, 0.62173462, 0.63502188, 0.64829991,
-                          0.66108966, 0.67383238, 0.68649196, 0.69943937, 0.71182813,
-                          0.72558276, 0.73883917, 0.75226574, 0.76456962, 0.77639771])
-    compArr = np.array([0.06608703, 0.10918208, 0.14564888, 0.16823631, 0.20176407,
-                        0.23109409, 0.2562666, 0.27993395, 0.29635759, 0.31885389,
-                        0.34137298, 0.35866341, 0.37829848, 0.39958448, 0.41858327,
-                        0.43625741, 0.4541165, 0.47045005, 0.48927578, 0.5087589,
-                        0.52489596, 0.54100457, 0.55911708, 0.5703767, 0.58505754,
-                        0.60175276, 0.61859336, 0.63481811, 0.65044908, 0.66455405,
-                        0.67861683, 0.69706321, 0.71270969, 0.72197511, 0.73972785,
-                        0.75561279, 0.76932698, 0.78129605, 0.79232414, 0.80920382])
-    evenUtilList = [np.array([0.05344851, 0.07374967, 0.09555827, 0.12388321, 0.14598633,
-                              0.16667934, 0.19072503, 0.21242663, 0.23534029, 0.25111786,
-                              0.27126161, 0.29200407, 0.31176844, 0.33258273, 0.35542894,
-                              0.370087, 0.38802368, 0.4062608, 0.41953889, 0.44046052,
-                              0.46090293, 0.47609541, 0.49517362, 0.50895795, 0.5284029,
-                              0.54650993, 0.55872588, 0.57225913, 0.59284774, 0.60633985,
-                              0.62747039, 0.63934683, 0.65569327, 0.66347341, 0.67466764,
-                              0.69462808, 0.71242031, 0.7232091, 0.73481903, 0.74504348])]  # For storing utility lists
-    for rep in range(numReps):
-        # Withdraw a subset of MCMC prior draws
-        dictTemp = csdict_fam.copy()
-        dictTemp.update(
-            {'postSamples': csdict_fam['postSamples'][choice(np.arange(numdraws), size=numtargetdraws, replace=False)],
-             'numPostSamples': numtargetdraws})
-        print('Generating loss matrix...')
-        setDraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numSetDraws, replace=False)]
-        lossDict.update({'bayesDraws': setDraws})
-        tempLossMat = lf.lossMatSetBayesDraws(dictTemp['postSamples'], lossDict.copy(), lossDict['bayesDraws'])
-        tempLossDict = lossDict.copy()
-        tempLossDict.update({'lossMat': tempLossMat})
-        newBayesDraws, newLossMat = lf.add_cand_neighbors(tempLossDict.copy(), csdict_fam['postSamples'],
-                                                          dictTemp['postSamples'])
-        tempLossDict.update({'bayesDraws': newBayesDraws, 'lossMat': newLossMat})
-        baseLoss = (np.sum(newLossMat, axis=1) / newLossMat.shape[1]).min()
-        # Get a new set of data draws
-        utilDict.update({'dataDraws': setDraws[choice(np.arange(len(setDraws)), size=numDataDraws, replace=False)]})
-        utilArr = np.zeros(testArr.shape)
-        for compInd in range(testArr.shape[0]):
-            currDes = util.round_design_low(np.ones(numTN) / numTN, testArr[compInd]) / testArr[compInd]
-            currBudget = testArr[compInd]
-            print('Design: ' + str(currDes.round(3)))
-            print('Budget: ' + str(currBudget))
-            print('Calculating utility...')
-            currUtil = baseLoss - \
-                       sampf.sampling_plan_loss(priordatadict=dictTemp, lossdict=tempLossDict, designlist=[currDes],
-                                                numtests=currBudget, utildict=utilDict)[0]
-            print('Utility: ' + str(currUtil))
-            utilArr[compInd] = currUtil
-        print(utilArr)
-        evenUtilList.append(utilArr)
-        # Update plot
-        plt.plot(testArr, objValArr, alpha=0.2, label='Heuristic')
-        plt.plot(testArr, compArr, alpha=0.2, label='Comprehensive')
-        for tempValInd, tempValArr in enumerate(evenUtilList):
-            plt.plot(testArr, tempValArr, alpha=0.6, label='Uniform ' + str(tempValInd))
-        plt.ylim([0, 1.])
-        plt.legend()
-        plt.title('Utility of uniform vs. heuristic allocations\nTested nodes setting')
-        plt.show()
-        plt.close()
-        plotMargUtilGroups([evenUtilList], testMax, testInt)
 
-    # 07-MAR
-    avgEvenUtilMat = np.array([0.04682861, 0.06856392, 0.08945723, 0.11724416, 0.14193552,
-                               0.16380635, 0.18544686, 0.20913392, 0.23060517, 0.24840947,
-                               0.26764934, 0.28914474, 0.3133571, 0.32993749, 0.34919212,
-                               0.36632296, 0.38869818, 0.40399745, 0.42080123, 0.44063668,
-                               0.45895443, 0.47439465, 0.48979808, 0.50791495, 0.52372292,
-                               0.54052994, 0.55503846, 0.57241497, 0.59250732, 0.60100518,
-                               0.61779047, 0.63532103, 0.64886451, 0.66195889, 0.67166952,
-                               0.69336616, 0.702893, 0.71585201, 0.73365266, 0.7425016])
+
+
+
+
+
+
 
     ################################
     # NOW USING OUR METHOD
