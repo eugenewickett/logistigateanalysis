@@ -1107,9 +1107,6 @@ def casestudyplots_exploratory():
                                0.64230094, 0.67870712, 0.70463026, 0.70434832, 0.7305568,
                                0.75971935, 0.76436461, 0.80001255, 0.8283422, 0.82860185]), ]
 
-    np.save(os.path.join('casestudyoutputs', 'PREVIOUS', 'Familiar', 'unif_utillist_familiar'),
-            np.array(unif_utillist))
-
     # Size of dashes for unexplored nodes
     dshSz = 2
     # Size of figure layout
