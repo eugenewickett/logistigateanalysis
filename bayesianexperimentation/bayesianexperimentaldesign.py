@@ -4400,6 +4400,10 @@ def caseStudyPlots_Familiar_Bootstrap_Example():
                               0.17886924, 0.18629704, 0.1829588, 0.1889013, 0.19573988,
                               0.19770247, 0.19873292, 0.20328388, 0.20648284, 0.20360451,
                               0.21336285]])]
+
+    np.save(os.path.join('casestudyoutputs', 'PREVIOUS', 'STUDY_bootstrap_utilmatrices', 'margutilset'),
+            np.array(margUtilSet))
+
     numSets = len(margUtilSet)
     numBoot = 50
     numTN = margUtilSet[0].shape[0]
