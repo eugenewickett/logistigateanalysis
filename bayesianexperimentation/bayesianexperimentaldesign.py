@@ -2631,27 +2631,19 @@ def STUDY_baselineloss():
                      [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
     
     (numTN, numSN) = Nfam.shape  # For later use
-    from logistigate.logistigate import utilities as util
     csdict_fam = util.initDataDict(Nfam, Yfam)  # Initialize necessary logistigate keys
 
-    # todo: (REMOVE LATER) csdict_fam['TNnames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION']
+    # Update node names
     csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
     csdict_fam['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
 
-    # Use observed data to form Q
-    csdict_fam['Q'] = csdict_fam['N'] / np.sum(csdict_fam['N'], axis=1).reshape(numTN, 1)
-
     # Build prior
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
-    # Establish test nodes according to assessment by regulators
-    # todo: (REMOVE LATER) ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
-    # todo: (REMOVE LATER; ACTUAL MANUFACTURER NAMES) csdict_fam['SNnames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD', 'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD', 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER', 'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA', 'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
+    # Establish test node risk according to assessment by regulators
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.  # Variances for use with prior
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
-    csdict_fam['prior'] = priorObj
+    csdict_fam['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                              np.diag(np.concatenate((np.repeat(SNvar,numSN),np.repeat(TNvar, numTN)))))
 
     # Set up MCMC
     csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -2757,11 +2749,9 @@ def casestudy_familiar():
     # todo: (REMOVE LATER) ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
     # todo: (REMOVE LATER; ACTUAL MANUFACTURER NAMES) csdict_fam['SNnames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD', 'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD', 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER', 'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA', 'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.  # Variances for use with prior
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
-    csdict_fam['prior'] = priorObj
+    csdict_fam['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                              np.diag(np.concatenate((np.repeat(SNvar, numSN),np.repeat(TNvar,numTN)))))
 
     # Set up MCMC
     csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -3274,11 +3264,9 @@ def casestudy_familiar_market():
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.  # Variances for use with prior
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
-    csdict_fam['prior'] = priorObj
+    csdict_fam['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                              np.diag(np.concatenate((np.repeat(SNvar,numSN),np.repeat(TNvar,numTN)))))
 
     # Set up MCMC
     csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -3480,10 +3468,9 @@ def casestudy_exploratory():
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
+    csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                               np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     # Set up MCMC
     csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -3688,10 +3675,9 @@ def casestudy_exploratory_market():
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
+    csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                               np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     # Set up MCMC
     csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -3900,10 +3886,9 @@ def casestudy_sensitivity():
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
+    csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                               np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     # Set up MCMC
     csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
@@ -8879,11 +8864,9 @@ def casestudy_sensitivity():
     # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
     # GREATER ACCRA: Moderately High; NORTHERN SECTOR: Moderate; VOLTA: Moderately High; WESTERN: Moderate
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 4., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
-    CSdict3['prior'] = priorObj
+    CSdict3['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                           np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     sampBudget = 180
     unifDes = np.zeros(numTN) + 1 / numTN
@@ -9442,15 +9425,10 @@ def casestudy_sensitivity():
     ##############################################
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
-    # REMOVE LATER
-    # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
-    # GREATER ACCRA: Moderately High; NORTHERN SECTOR: Moderate; VOLTA: Moderately High; WESTERN: Moderate
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 1., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
-    CSdict3['prior'] = priorObj
+    CSdict3['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                           np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     sampBudget = 180
     unifDes = np.zeros(numTN) + 1 / numTN
@@ -10664,10 +10642,9 @@ def STUDYsourcingEffects():
     # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
     # GREATER ACCRA: Moderately High; NORTHERN SECTOR: Moderate; VOLTA: Moderately High; WESTERN: Moderate
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
+    CSdict3['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                           np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     ##### REMOVE LATER
     # CSdict3['TNnames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION', 'GREATER ACCRA', 'NORTHERN SECTOR', 'VOLTA', 'WESTERN']
@@ -10689,7 +10666,6 @@ def STUDYsourcingEffects():
     # SNcach = SNcach * TNcach.sum() / SNcach.sum()
     ###################
 
-    CSdict3['prior'] = priorObj
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     CSdict3['SNnum'], CSdict3['TNnum'] = numSN, numTN
     # Generate posterior draws
@@ -10851,14 +10827,10 @@ def STUDYutilVar():
 
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
-    # REMOVE LATER
-    # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
-    # GREATER ACCRA: Moderately High; NORTHERN SECTOR: Moderate; VOLTA: Moderately High; WESTERN: Moderate
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
+    CSdict3['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                           np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     ##### REMOVE LATER
     # CSdict3['TNnames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION', 'GREATER ACCRA', 'NORTHERN SECTOR', 'VOLTA', 'WESTERN']
@@ -10880,7 +10852,6 @@ def STUDYutilVar():
     # SNcach = SNcach * TNcach.sum() / SNcach.sum()
     ###################
 
-    CSdict3['prior'] = priorObj
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     CSdict3['SNnum'], CSdict3['TNnum'] = numSN, numTN
     # Generate posterior draws
@@ -12857,14 +12828,10 @@ def STUDYMCMCmetrics():
 
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
-    # REMOVE LATER
-    # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
-    # GREATER ACCRA: Moderately High; NORTHERN SECTOR: Moderate; VOLTA: Moderately High; WESTERN: Moderate
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
+    CSdict3['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                   np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     ##### REMOVE LATER
     # CSdict3['TNnames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION', 'GREATER ACCRA', 'NORTHERN SECTOR', 'VOLTA', 'WESTERN']
@@ -12886,7 +12853,6 @@ def STUDYMCMCmetrics():
     # SNcach = SNcach * TNcach.sum() / SNcach.sum()
     ###################
 
-    CSdict3['prior'] = priorObj
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     CSdict3['SNnum'], CSdict3['TNnum'] = numSN, numTN
     # Generate posterior draws
@@ -13274,14 +13240,10 @@ def STUDYutilVarOLD():
 
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
     # Establish test nodes according to assessment by regulators
-    # REMOVE LATER
-    # ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
-    # GREATER ACCRA: Moderately High; NORTHERN SECTOR: Moderate; VOLTA: Moderately High; WESTERN: Moderate
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
     TNvar, SNvar = 2., 4.
-    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-    priorObj = prior_normal_assort(priorMean, priorCovar)
+    CSdict3['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                           np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     ##### REMOVE LATER
     # CSdict3['TNnames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION', 'GREATER ACCRA', 'NORTHERN SECTOR', 'VOLTA', 'WESTERN']
@@ -13303,7 +13265,6 @@ def STUDYutilVarOLD():
     # SNcach = SNcach * TNcach.sum() / SNcach.sum()
     ###################
 
-    CSdict3['prior'] = priorObj
     CSdict3['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     CSdict3['SNnum'], CSdict3['TNnum'] = numSN, numTN
     # Generate posterior draws
