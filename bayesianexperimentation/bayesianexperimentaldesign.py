@@ -2618,6 +2618,107 @@ def caseStudyPlots_Familiar_Bootstrap_Example():
 
 # ABOVE ARE VERIFIED TO WORK WITH REFORMATTED STRUCTURE
 
+def STUDY_baselineloss():
+    """Run the Familiar setting under 5k-5k, 10k-5k, and 11k-5k appraoches and get baseline loss estimates"""
+    # PROVINCES-MANUFACTURERS; FAMILIAR SETTING
+    Nfam = np.array([[1., 1., 10., 1., 3., 0., 1., 6., 7., 5., 0., 0., 4.],
+                     [1., 1., 4., 2., 0., 1., 1., 2., 0., 4., 0., 0., 1.],
+                     [3., 17., 31., 4., 2., 0., 1., 6., 0., 23., 1., 2., 5.],
+                     [1., 1., 15., 2., 0., 0., 0., 1., 0., 6., 0., 0., 0.]])
+    Yfam = np.array([[0., 0., 7., 0., 3., 0., 1., 0., 1., 0., 0., 0., 4.],
+                     [0., 0., 2., 2., 0., 1., 1., 0., 0., 1., 0., 0., 1.],
+                     [0., 0., 15., 3., 2., 0., 0., 2., 0., 1., 1., 2., 5.],
+                     [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+    
+    (numTN, numSN) = Nfam.shape  # For later use
+    from logistigate.logistigate import utilities as util
+    csdict_fam = util.initDataDict(Nfam, Yfam)  # Initialize necessary logistigate keys
+
+    # todo: (REMOVE LATER) csdict_fam['TNnames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION']
+    csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
+    csdict_fam['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
+
+    # Use observed data to form Q
+    csdict_fam['Q'] = csdict_fam['N'] / np.sum(csdict_fam['N'], axis=1).reshape(numTN, 1)
+
+    # Build prior
+    SNpriorMean = np.repeat(sps.logit(0.1), numSN)
+    # Establish test nodes according to assessment by regulators
+    # todo: (REMOVE LATER) ASHANTI: Moderate; BRONG AHAFO: Moderate; CENTRAL: Moderately High; EASTERN REGION: Moderately High
+    # todo: (REMOVE LATER; ACTUAL MANUFACTURER NAMES) csdict_fam['SNnames'] = ['ACME FORMULATION PVT. LTD.', 'AS GRINDEKS', 'BELCO PHARMA', 'BHARAT PARENTERALS LTD', 'HUBEI TIANYAO PHARMACEUTICALS CO LTD.', 'MACIN REMEDIES INDIA LTD', 'NORTH CHINA PHARMACEUTICAL CO. LTD', 'NOVARTIS PHARMA', 'PFIZER', 'PIRAMAL HEALTHCARE UK LIMITED', 'PUSHKAR PHARMA', 'SHANDOND SHENGLU PHARMACEUTICAL CO.LTD.', 'SHANXI SHUGUANG PHARM']
+    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
+    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
+    TNvar, SNvar = 2., 4.  # Variances for use with prior
+    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
+    priorObj = prior_normal_assort(priorMean, priorCovar)
+    csdict_fam['prior'] = priorObj
+
+    # Set up MCMC
+    csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    # Generate posterior draws
+    numdraws = 80000
+    csdict_fam['numPostSamples'] = numdraws
+    np.random.seed(1000)  # To replicate draws later
+    #csdict_fam = methods.GeneratePostSamples(csdict_fam)
+
+    # Loss specification
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN+numSN), candneighnum=1000)
+
+    # List for storing baseline loss values
+    list_5k = []
+    list_6k = []
+    list_10k = []
+    list_11k = []
+
+    numtruthdraws = 5000 # This stays constant
+
+    numReps = 100
+    for rep in range(numReps):
+        print('Rep: '+str(rep))
+        csdict_fam = methods.GeneratePostSamples(csdict_fam) #  Get new MCMC draws
+        # Get 5k estimate first
+        numbigcanddraws, numcanddraws = 10000, 5000
+        bigcanddraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numbigcanddraws, replace=False)]
+        currcanddraws = bigcanddraws[choice(np.arange(numbigcanddraws), size=numcanddraws, replace=False)]
+        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
+        paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws})
+        # Build loss matrix
+        lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
+        list_5k.append(sampf.baseloss(lossmatrix))
+        # Add neighbors to best candidate
+        paramdict.update({'lossmatrix':lossmatrix})
+        _, lossmatrix = lf.add_cand_neighbors(paramdict,csdict_fam['postSamples'], currtruthdraws)
+        list_6k.append(sampf.baseloss(lossmatrix))
+        # Do same for larger set of candidates
+        paramdict.update({'canddraws': bigcanddraws})
+        lossmatrix = lf.build_loss_matrix(currtruthdraws, bigcanddraws, paramdict)
+        list_10k.append(sampf.baseloss(lossmatrix))
+        # Add neighbors
+        paramdict.update({'lossmatrix':lossmatrix})
+        _, lossmatrix = lf.add_cand_neighbors(paramdict, csdict_fam['postSamples'], currtruthdraws)
+        list_11k.append(sampf.baseloss(lossmatrix))
+        # Plot distribution of gap from 5k
+        if np.mod(rep+1,5)==0:
+            list_6k_diffs = [list_5k[i]-list_6k[i] for i in range(len(list_5k))]
+            list_10k_diffs = [list_5k[i] - list_10k[i] for i in range(len(list_5k))]
+            list_11k_diffs = [list_5k[i] - list_11k[i] for i in range(len(list_5k))]
+            plt.hist(list_6k_diffs, label='5k+1k', alpha=0.2)
+            plt.hist(list_10k_diffs, label='10k', alpha=0.2)
+            plt.hist(list_11k_diffs, label='10k+1k', alpha=0.2)
+            plt.legend()
+            plt.show()
+            plt.close()
+
+
+    # OPTIONAL store runs for later use
+    # np.save(os.path.join('casestudyoutputs', '17MAY', 'utilmatlist_familiar'), np.array(utilMatList))
+    # np.save(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar'), np.array(utilMatList))
+    # OPTIONAL retrieve allocation
+    # utilMatList = np.load(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar.npy'))
+    # utilMatList = np.load(os.path.join('casestudyoutputs', 'PREVIOUS', 'Familiar', 'utilmatlist_familiar.npy'))
+
+    return
 
 def casestudy_familiar():
     """Allocation generation using case study data for paper"""
@@ -2679,13 +2780,8 @@ def casestudy_familiar():
     # 2) Estimate comprehensive utility for 3 methods: heuristic, uniform, rudimentary
 
     # Loss specification
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'absdiff', 'underestweight': underWt}
-    riskdict = {'name': 'check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    paramdict = {'scoredict': scoredict, 'riskdict': riskdict, 'marketvec': marketvec}
-    candneighnum = 1000
-    paramdict.update({'candneighnum': candneighnum})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     # Set limits of data collection and intervals for calculation
     testmax, testint = 400, 10
@@ -3195,14 +3291,8 @@ def casestudy_familiar_market():
     util.plotPostSamples(csdict_fam, 'int90')
 
     # Loss specification
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'absdiff', 'underestweight': underWt}
-    riskdict = {'name': 'check', 'threshold': t, 'slope': checkSlope}
-    #todo: ONLY CHANGE IS HERE
-    marketvec = np.concatenate((SNcach, TNcach))
-    paramdict = {'scoredict': scoredict, 'riskdict': riskdict, 'marketvec': marketvec}
-    candneighnum = 1000
-    paramdict.update({'candneighnum': candneighnum})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.concatenate((SNcach, TNcach)), candneighnum=1000)
 
     # Set limits of data collection and intervals for calculation
     testmax, testint = 400, 10
@@ -3410,13 +3500,8 @@ def casestudy_exploratory():
     # 2) Estimate comprehensive utility for 3 methods: heuristic, uniform, rudimentary
 
     # Loss specification
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'absdiff', 'underestweight': underWt}
-    riskdict = {'name': 'check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    paramdict = {'scoredict': scoredict, 'riskdict': riskdict, 'marketvec': marketvec}
-    candneighnum = 1000
-    paramdict.update({'candneighnum': candneighnum})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec = np.ones(numTN + numSN), candneighnum=1000)
 
     # Set limits of data collection and intervals for calculation
     testmax, testint = 400, 10
@@ -3623,14 +3708,8 @@ def casestudy_exploratory_market():
     # 2) Estimate comprehensive utility for 3 methods: heuristic, uniform, rudimentary
 
     # Loss specification
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'absdiff', 'underestweight': underWt}
-    riskdict = {'name': 'check', 'threshold': t, 'slope': checkSlope}
-    #todo: ONLY CHANGE IS HERE
-    marketvec = np.concatenate((SNcach, TNcach))
-    paramdict = {'scoredict': scoredict, 'riskdict': riskdict, 'marketvec': marketvec}
-    candneighnum = 1000
-    paramdict.update({'candneighnum': candneighnum})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.concatenate((SNcach, TNcach)), candneighnum=1000)
 
     # Set limits of data collection and intervals for calculation
     testmax, testint = 400, 10
@@ -3771,6 +3850,7 @@ def casestudy_exploratory_market():
                             titlestr='Exploratory Setting', labels=['Uniform', 'Heuristic'], linelabels=True)
     return
 
+
 def casestudy_sensitivity():
     """
     Use the Exploratory setting to probe different choices and parameters. We inspect allocations at 180 tests (the
@@ -3840,16 +3920,11 @@ def casestudy_sensitivity():
     # 2) Estimate comprehensive utility for 3 methods: heuristic, uniform, rudimentary
 
     # Loss specification
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'absdiff', 'underestweight': underWt}
-    riskdict = {'name': 'check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    paramdict = {'scoredict': scoredict, 'riskdict': riskdict, 'marketvec': marketvec}
-    candneighnum = 1000
-    paramdict.update({'candneighnum': candneighnum})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN+numSN), candneighnum=1000)
 
     # Set limits of data collection and intervals for calculation
-    # Set testmax to highest expected allocation for any one node
+    # For sensitivity, set testmax to highest expected allocation for any one node
     testmax, testint = 100, 10
     testarr = np.arange(testint, testmax + testint, testint)
 
@@ -3861,6 +3936,8 @@ def casestudy_sensitivity():
     
     # np.save(os.path.join('casestudyoutputs', 'PREVIOUS', 'SENSITIVITY', 'margutilset'), np.array(margUtilSet))
 
+    #todo: #####################################
+    #todo: STOPPED HERE 17-MAY
 
 
 
@@ -3873,15 +3950,8 @@ def casestudy_sensitivity():
     ###########
     # todo: checkSlope = 0.3
     ###########
-    underWt, t, checkSlope = 5., 0.15, 0.3
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
-
-
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.3,
+                                                  marketvec=np.ones(numTN+numSN), candneighnum=1000)
 
 
     utilMatList = []
@@ -4223,13 +4293,8 @@ def casestudy_sensitivity():
     ###########
     # todo: checkSlope = 0.9
     ###########
-    underWt, t, checkSlope = 5., 0.15, 0.9
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.9,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -4510,13 +4575,9 @@ def casestudy_sensitivity():
     ###########
     # todo: underWt = 1.
     ###########
-    underWt, t, checkSlope = 1., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=1., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
+
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -4801,13 +4862,8 @@ def casestudy_sensitivity():
     ###########
     # todo: underWt = 10.
     ###########
-    underWt, t, checkSlope = 10., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=10., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -5535,13 +5591,8 @@ def casestudy_sensitivity():
     ###########
     # todo: checkSlope = 0.3
     ###########
-    underWt, t, checkSlope = 5., 0.15, 0.3
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.3,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -5889,13 +5940,8 @@ def casestudy_sensitivity():
     ###########
     # todo: checkSlope = 0.9
     ###########
-    underWt, t, checkSlope = 5., 0.15, 0.9
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.9,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -6176,13 +6222,8 @@ def casestudy_sensitivity():
     ###########
     # todo: underWt = 1.
     ###########
-    underWt, t, checkSlope = 1., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=1., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -6467,13 +6508,8 @@ def casestudy_sensitivity():
     ###########
     # todo: underWt = 10.
     ###########
-    underWt, t, checkSlope = 10., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=10., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -7202,13 +7238,8 @@ def casestudy_sensitivity():
     origDes = np.sum(rd3_N, axis=1) / np.sum(rd3_N)
 
     # Use original loss parameters
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -7774,13 +7805,8 @@ def casestudy_sensitivity():
     origDes = np.sum(rd3_N, axis=1) / np.sum(rd3_N)
 
     # Use original loss parameters
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -8864,13 +8890,8 @@ def casestudy_sensitivity():
     origDes = np.sum(rd3_N, axis=1) / np.sum(rd3_N)
 
     # Use original loss parameters
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -9436,13 +9457,8 @@ def casestudy_sensitivity():
     origDes = np.sum(rd3_N, axis=1) / np.sum(rd3_N)
 
     # Use original loss parameters
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numSetDraws, numBayesNeigh = 10000, 1000
-    lossDict.update({'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numtargetdraws, numDataDraws = 5100, 5000
 
@@ -10072,11 +10088,8 @@ def example_chain():
     testMax, testInt = 40, 4
 
     # Loss specification
-    underWt, t, checkSlope = 1., 0.2, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=1., riskthreshold=0.2, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     numSetDraws, numtargetdraws, numBayesNeigh, numDataDraws = 6000, 2000, 1000, 1900
 
@@ -10719,13 +10732,8 @@ def STUDYsourcingEffects():
     '''
 
     # Loss specification
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    numBayesNeigh = 1000
-    lossDict.update({'bayesDraws': setDraws, 'bayesEstNeighborNum': numBayesNeigh})
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     # Set limits of data collection and intervals for calculation
     testMax, testInt = 400, 10
@@ -10904,12 +10912,8 @@ def STUDYutilVar():
     sampBudget = 50
 
     # Loss and utility dictionaries
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    utilDict = {'method': 'weightsNodeDraw3linear'}
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     # Set parameter lists
     bayesNumList = [1000, 5000, 10000]
@@ -13331,12 +13335,8 @@ def STUDYutilVarOLD():
     sampBudget = 50
 
     # Loss and utility dictionaries
-    underWt, t, checkSlope = 5., 0.15, 0.6
-    scoredict = {'name': 'AbsDiff', 'underEstWt': underWt}
-    riskdict = {'name': 'Check', 'threshold': t, 'slope': checkSlope}
-    marketvec = np.ones(numTN + numSN)
-    lossDict = {'scoreDict': scoredict, 'riskDict': riskdict, 'marketVec': marketvec}
-    utilDict = {'method': 'weightsNodeDraw3linear'}
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
     # Set parameter lists
     bayesNumList = [1000, 5000, 10000]

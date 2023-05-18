@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+scratchfiles/17MAY_plots/
+
+MARGUTILPLOT.png
+
+NODEALLOC.png
