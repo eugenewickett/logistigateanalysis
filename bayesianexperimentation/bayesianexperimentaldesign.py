@@ -2637,9 +2637,8 @@ def STUDY_baselineloss():
     csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
     csdict_fam['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
 
-    # Build prior
+    # Build prior; establish test node risk according to assessment by regulators
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
-    # Establish test node risk according to assessment by regulators
     TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
     TNvar, SNvar = 2., 4.  # Variances for use with prior
     csdict_fam['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
@@ -2690,25 +2689,28 @@ def STUDY_baselineloss():
         paramdict.update({'lossmatrix':lossmatrix})
         _, lossmatrix = lf.add_cand_neighbors(paramdict, csdict_fam['postSamples'], currtruthdraws)
         list_11k.append(sampf.baseloss(lossmatrix))
-        # Plot distribution of gap from 5k
-        if np.mod(rep+1,5)==0:
-            list_6k_diffs = [list_5k[i]-list_6k[i] for i in range(len(list_5k))]
-            list_10k_diffs = [list_5k[i] - list_10k[i] for i in range(len(list_5k))]
-            list_11k_diffs = [list_5k[i] - list_11k[i] for i in range(len(list_5k))]
-            plt.hist(list_6k_diffs, label='5k+1k', alpha=0.2)
-            plt.hist(list_10k_diffs, label='10k', alpha=0.2)
-            plt.hist(list_11k_diffs, label='10k+1k', alpha=0.2)
-            plt.legend()
-            plt.show()
-            plt.close()
 
+    # Plot distribution of gap from 5k
+    list_6k_diffs = [list_5k[i]-list_6k[i] for i in range(len(list_5k))]
+    list_10k_diffs = [list_5k[i] - list_10k[i] for i in range(len(list_5k))]
+    list_11k_diffs = [list_5k[i] - list_11k[i] for i in range(len(list_5k))]
 
-    # OPTIONAL store runs for later use
-    # np.save(os.path.join('casestudyoutputs', '17MAY', 'utilmatlist_familiar'), np.array(utilMatList))
-    # np.save(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar'), np.array(utilMatList))
-    # OPTIONAL retrieve allocation
-    # utilMatList = np.load(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar.npy'))
-    # utilMatList = np.load(os.path.join('casestudyoutputs', 'PREVIOUS', 'Familiar', 'utilmatlist_familiar.npy'))
+    np.save(os.path.join('scratchfiles','17MAY_plots','list_5k'),np.array(list_5k))
+    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_6k'), np.array(list_6k))
+    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_10k'), np.array(list_10k))
+    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_11k'), np.array(list_11k))
+
+    plt.hist([list_6k_diffs,list_10k_diffs,list_11k_diffs], label=['5k+1k','10k','10k+1k'], alpha=0.7)
+    plt.title('Histogram of loss decreases as compared with 5k-sized candidate set')
+    plt.legend()
+    plt.show()
+    plt.close()
+
+    plt.hist([list_6k, list_10k, list_11k, list_5k], label=['5k+1k', '10k', '10k+1k', '5k'], alpha=0.7,bins=20)
+    plt.title('Histogram of null loss values under different candidate set sizes')
+    plt.legend()
+    plt.show()
+    plt.close()
 
     return
 
@@ -2731,17 +2733,9 @@ def casestudy_familiar():
     from logistigate.logistigate import utilities as util
     csdict_fam = util.initDataDict(Nfam, Yfam)  # Initialize necessary logistigate keys
 
-    # todo: (REMOVE LATER) csdict_fam['TNnames'] = ['ASHANTI', 'BRONG AHAFO', 'CENTRAL', 'EASTERN REGION']
+    # Update node names
     csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
     csdict_fam['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
-
-    # Use observed data to form Q
-    csdict_fam['Q'] = csdict_fam['N'] / np.sum(csdict_fam['N'], axis=1).reshape(numTN, 1)
-
-    # Region catchment proportions, for market terms
-    TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488])
-    TNcach = TNcach[:4] / np.sum(TNcach[:4])
-    SNcach = np.matmul(TNcach, csdict_fam['Q'])
 
     # Build prior
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
@@ -2756,7 +2750,7 @@ def casestudy_familiar():
     # Set up MCMC
     csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     # Generate posterior draws
-    numdraws = 80000
+    numdraws = 10000
     csdict_fam['numPostSamples'] = numdraws
     np.random.seed(1000)  # To replicate draws later
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
@@ -2781,7 +2775,7 @@ def casestudy_familiar():
     numcanddraws, numtruthdraws, numdatadraws = 5000, 5000, 3000
     numReps = 10  # Number of repeat runs to make
 
-    np.random.seed(10)
+    np.random.seed(10) # Set seed for MCMC draws and data generation
     '''
     # Divide original draws into numReps sets to use with utility estimation
     shufinds = np.arange(numdraws)
@@ -2794,10 +2788,8 @@ def casestudy_familiar():
         # Generate new MCMC set
         csdict_fam = methods.GeneratePostSamples(csdict_fam)
         # Pull relevant draws
-        #currcanddraws = csdict_fam['postSamples'][indsList[rep]]
-        currcanddraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numcanddraws, replace=False)]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3180,10 +3172,11 @@ def casestudy_familiar():
     heur_utillist, unif_utillist, rudi_utillist = [], [], []  # Initialize storage lists
     numReps = 10
     for rep in range(numReps):
+        # Generate new MCMC draws
+        csdict_fam = methods.GeneratePostSamples(csdict_fam)
         # Pull relevant draws
-        currcanddraws = csdict_fam['postSamples'][indsList[rep]]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3241,19 +3234,11 @@ def casestudy_familiar_market():
                      [0., 0., 2., 2., 0., 1., 1., 0., 0., 1., 0., 0., 1.],
                      [0., 0., 15., 3., 2., 0., 0., 2., 0., 1., 1., 2., 5.],
                      [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-    # Some summaries
-    # TNtesttotals = np.sum(Nfam, axis=1)
-    # TNsfptotals = np.sum(Yfam, axis=1)
-    # TNrates = np.divide(TNsfptotals,TNtesttotals)
     (numTN, numSN) = Nfam.shape  # For later use
-    from logistigate.logistigate import utilities as util
     csdict_fam = util.initDataDict(Nfam, Yfam)  # Initialize necessary logistigate keys
 
     csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
     csdict_fam['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
-
-    # Use observed data to form Q
-    csdict_fam['Q'] = csdict_fam['N'] / np.sum(csdict_fam['N'], axis=1).reshape(numTN, 1)
 
     # Region catchment proportions, for market terms
     TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488])
@@ -3300,13 +3285,11 @@ def casestudy_familiar_market():
 
     utilMatList = []  # Initialize results list
     for rep in range(numReps):
-        # Generate new MCMC set
+        # Generate new MCMC draws
         csdict_fam = methods.GeneratePostSamples(csdict_fam)
         # Pull relevant draws
-        #currcanddraws = csdict_fam['postSamples'][indsList[rep]]
-        currcanddraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numcanddraws, replace=False)]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3371,10 +3354,11 @@ def casestudy_familiar_market():
     heur_utillist, unif_utillist, rudi_utillist = [], [], []  # Initialize storage lists
     numReps = 10
     for rep in range(numReps):
+        # Generate new MCMC draws
+        csdict_fam = methods.GeneratePostSamples(csdict_fam)
         # Pull relevant draws
-        currcanddraws = csdict_fam['postSamples'][indsList[rep]]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3441,10 +3425,7 @@ def casestudy_exploratory():
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
                       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-
     (numTN, numSN) = Nexpl.shape
-
-    from logistigate.logistigate import utilities as util
     csdict_expl = util.initDataDict(Nexpl, Yexpl)  # Initialize necessary logistigate keys
 
     csdict_expl['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26',
@@ -3455,14 +3436,8 @@ def casestudy_exploratory():
     numBoot = 44  # Average across each TN in original data set
     SNprobs = np.sum(csdict_expl['N'], axis=0) / np.sum(csdict_expl['N'])
     np.random.seed(33)
-    Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
-    csdict_expl['Q'] = np.vstack((csdict_expl['N'][:4] / np.sum(csdict_expl['N'][:4], axis=1).reshape(4, 1), Qvecs))
-
-    # Region catchment proportions, for market terms
-    TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488, 0.17695, 0.22799, 0.07805, 0.0954])
-    tempQ = csdict_expl['N'][:4] / np.sum(csdict_expl['N'][:4], axis=1).reshape(4, 1)
-    tempTNcach = TNcach[:4] / np.sum(TNcach[:4])
-    SNcach = np.matmul(tempTNcach, tempQ)
+    Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+    csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 
     # Build prior
     SNpriorMean = np.repeat(sps.logit(0.1), numSN)
@@ -3509,12 +3484,10 @@ def casestudy_exploratory():
     utilMatList = []  # Initialize results list
     for rep in range(numReps):
         # Generate new MCMC set
-        csdict_fam = methods.GeneratePostSamples(csdict_expl)
+        csdict_expl = methods.GeneratePostSamples(csdict_expl)
         # Pull relevant draws
-        #currcanddraws = csdict_fam['postSamples'][indsList[rep]]
-        currcanddraws = csdict_expl['postSamples'][choice(np.arange(numdraws), size=numcanddraws, replace=False)]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_expl['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3568,9 +3541,9 @@ def casestudy_exploratory():
                    labels=csdict_expl['TNnames'], titlestr='Exploratory Setting, $t=0.15$, $m=0.6$', allocmax=250,
                    colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
 
+    #########
     # Now get comprehensive utilities for different sampling plans; use different set of MCMC draws
-    np.random.seed(11)
-    csdict_fam = methods.GeneratePostSamples(csdict_expl)
+    #########
     np.random.seed(12)
     shufinds = np.arange(numdraws)
     np.random.shuffle(shufinds)
@@ -3579,10 +3552,11 @@ def casestudy_exploratory():
     heur_utillist, unif_utillist, rudi_utillist = [], [], []  # Initialize storage lists
     numReps = 10
     for rep in range(numReps):
+        # Generate new MCMC set
+        csdict_expl = methods.GeneratePostSamples(csdict_expl)
         # Pull relevant draws
-        currcanddraws = csdict_expl['postSamples'][indsList[rep]]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_expl['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3662,8 +3636,8 @@ def casestudy_exploratory_market():
     numBoot = 44  # Average across each TN in original data set
     SNprobs = np.sum(csdict_expl['N'], axis=0) / np.sum(csdict_expl['N'])
     np.random.seed(33)
-    Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
-    csdict_expl['Q'] = np.vstack((csdict_expl['N'][:4] / np.sum(csdict_expl['N'][:4], axis=1).reshape(4, 1), Qvecs))
+    Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+    csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 
     # Region catchment proportions, for market terms
     TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488, 0.17695, 0.22799, 0.07805, 0.0954])
@@ -3716,12 +3690,10 @@ def casestudy_exploratory_market():
     utilMatList = []  # Initialize results list
     for rep in range(numReps):
         # Generate new MCMC set
-        csdict_fam = methods.GeneratePostSamples(csdict_expl)
+        csdict_expl = methods.GeneratePostSamples(csdict_expl)
         # Pull relevant draws
-        # currcanddraws = csdict_fam['postSamples'][indsList[rep]]
-        currcanddraws = csdict_expl['postSamples'][choice(np.arange(numdraws), size=numcanddraws, replace=False)]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_expl['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3777,7 +3749,7 @@ def casestudy_exploratory_market():
 
     # Now get comprehensive utilities for different sampling plans; use different set of MCMC draws
     np.random.seed(11)
-    csdict_fam = methods.GeneratePostSamples(csdict_expl)
+    csdict_expl = methods.GeneratePostSamples(csdict_expl)
     np.random.seed(12)
     shufinds = np.arange(numdraws)
     np.random.shuffle(shufinds)
@@ -3786,10 +3758,11 @@ def casestudy_exploratory_market():
     heur_utillist, unif_utillist, rudi_utillist = [], [], []  # Initialize storage lists
     numReps = 10
     for rep in range(numReps):
+        # Get new MCMC draws
+        csdict_expl = methods.GeneratePostSamples(csdict_expl)
         # Pull relevant draws
-        currcanddraws = csdict_expl['postSamples'][indsList[rep]]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        currdatadraws = currtruthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        currcanddraws, currtruthdraws, currdatadraws = util.distribute_draws(csdict_expl['postSamples'], numcanddraws,
+                                                                             numtruthdraws, numdatadraws)
         # Update paramdict
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
@@ -3837,6 +3810,8 @@ def casestudy_exploratory_market():
     return
 
 
+
+
 def casestudy_sensitivity():
     """
     Use the Exploratory setting to probe different choices and parameters. We inspect allocations at 180 tests (the
@@ -3873,8 +3848,8 @@ def casestudy_sensitivity():
     numBoot = 44  # Average across each TN in original data set
     SNprobs = np.sum(csdict_expl['N'], axis=0) / np.sum(csdict_expl['N'])
     np.random.seed(33)
-    Qvecs = np.random.multinomial(numBoot, SNprobs, size=numTN - 4) / numBoot
-    csdict_expl['Q'] = np.vstack((csdict_expl['N'][:4] / np.sum(csdict_expl['N'][:4], axis=1).reshape(4, 1), Qvecs))
+    Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+    csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 
     # Region catchment proportions, for market terms
     TNcach = np.array([0.17646, 0.05752, 0.09275, 0.09488, 0.17695, 0.22799, 0.07805, 0.0954])
