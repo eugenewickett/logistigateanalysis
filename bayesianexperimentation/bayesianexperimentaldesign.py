@@ -2731,7 +2731,6 @@ def casestudy_familiar():
     # TNsfptotals = np.sum(Yfam, axis=1)
     # TNrates = np.divide(TNsfptotals,TNtesttotals)
     (numTN, numSN) = Nfam.shape  # For later use
-    from logistigate.logistigate import utilities as util
     csdict_fam = util.initDataDict(Nfam, Yfam)  # Initialize necessary logistigate keys
 
     # Update node names
