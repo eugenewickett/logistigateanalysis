@@ -2714,6 +2714,7 @@ def STUDY_baselineloss():
 
     return
 
+
 def casestudy_familiar():
     """Allocation generation using case study data for paper"""
     # PROVINCES-MANUFACTURERS; FAMILIAR SETTING
@@ -2794,358 +2795,16 @@ def casestudy_familiar():
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
         lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
-        baseloss = sampf.baseloss(lossmatrix)
-        paramdict.update({'lossmatrix': lossmatrix})
+        paramdict.update({'lossmatrix': lossmatrix, 'baseloss':sampf.baseloss(lossmatrix)})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each test node and sampling budget and obtain utility
-        currMargUtilMat = np.zeros((numTN, testarr.shape[0] + 1))
-        for tnInd in range(numTN):
-            currDes = np.zeros(numTN)
-            currDes[tnInd] = 1.
-            print('Utility for TN ' + str(tnInd) + '...')
-            print('Design: ' + str(currDes.round(2)))
-            for testInd in range(testarr.shape[0]):
-                currUtil = baseloss - sampf.sampling_plan_loss_fast(design=currDes, numtests=testarr[testInd],
-                                                                    priordatadict=csdict_fam, paramdict=paramdict)
-                print('Utility for budget ' + str(testarr[testInd]) + ': ' + str(currUtil))
-                currMargUtilMat[tnInd, testInd + 1] = currUtil
-
+        currmargutilmat = sampf.get_marg_util_nodes(csdict_fam, testmax, testint, paramdict)
         print('Utility matrix for replication ' + str(rep) + ':')
-        print(repr(currMargUtilMat))
-        utilMatList.append(currMargUtilMat)
-        colors = cm.rainbow(np.linspace(0, 1., numTN))
-        for mat in utilMatList:
-            for i in range(numTN):
-                plt.plot(testarr, mat[i][1:], linewidth=0.2, color=colors[i])
-        avgUtilMat = np.average(np.array(utilMatList), axis=0)
-        for i in range(numTN):
-            plt.plot(testarr, avgUtilMat[i][1:], linewidth=2, color=colors[i])
-        # plt.ylim([0, 0.4])
-        # plt.title('Comprehensive utility for allocations via heuristic\nUntested nodes')
-        plt.show()
-    '''17-MAY
-    a0 = array([[0.        , 0.01096489, 0.02240087, 0.04414692, 0.06616546,
-        0.0795501 , 0.09277655, 0.11133911, 0.12264578, 0.14530198,
-        0.16277986, 0.1701135 , 0.18965003, 0.21041912, 0.22485266,
-        0.24306004, 0.25850113, 0.26881727, 0.29023637, 0.30058423,
-        0.32094883, 0.33488948, 0.35991964, 0.36224039, 0.38415497,
-        0.40311809, 0.41693304, 0.43316553, 0.46144462, 0.48129067,
-        0.4941818 , 0.52637442, 0.53405928, 0.56254811, 0.58353014,
-        0.59214766, 0.61254123, 0.63635548, 0.66087765, 0.67940555,
-        0.6926091 ],
-       [0.        , 0.05007001, 0.09415804, 0.13546963, 0.17028072,
-        0.20632411, 0.23077511, 0.25924842, 0.28719299, 0.31057697,
-        0.32306756, 0.34541897, 0.36500626, 0.38785275, 0.4030808 ,
-        0.4222204 , 0.43835624, 0.45536779, 0.47352278, 0.49851314,
-        0.51000682, 0.52639415, 0.5503454 , 0.56456123, 0.58058862,
-        0.59753805, 0.61110383, 0.62754892, 0.65428732, 0.6678747 ,
-        0.69079692, 0.71064711, 0.72697412, 0.73357109, 0.76898706,
-        0.78316799, 0.79760678, 0.81112023, 0.8327259 , 0.85365989,
-        0.87905862],
-       [0.        , 0.02454067, 0.04340993, 0.0581233 , 0.07605261,
-        0.09030254, 0.10337732, 0.12560329, 0.13238818, 0.14770156,
-        0.1627998 , 0.17670945, 0.18935313, 0.20233012, 0.21373033,
-        0.23353285, 0.2464186 , 0.26376028, 0.27693459, 0.29158125,
-        0.31151256, 0.31868615, 0.33819902, 0.35842556, 0.38251669,
-        0.38736047, 0.40044854, 0.42277459, 0.44114644, 0.45837813,
-        0.47624027, 0.49883339, 0.51486736, 0.5484085 , 0.55643704,
-        0.57527501, 0.59276479, 0.62268391, 0.63556862, 0.65087659,
-        0.69411919],
-       [0.        , 0.01117703, 0.01946347, 0.02846519, 0.03467302,
-        0.04199524, 0.04752039, 0.05242796, 0.05278018, 0.06115556,
-        0.06445726, 0.07273352, 0.07755952, 0.08080648, 0.08246911,
-        0.08615487, 0.0921634 , 0.0956716 , 0.10387506, 0.10394214,
-        0.10936545, 0.11321581, 0.11620079, 0.12208362, 0.12408395,
-        0.12845777, 0.12896371, 0.12730546, 0.13668643, 0.14166714,
-        0.14565991, 0.15211674, 0.1478321 , 0.15025271, 0.15143471,
-        0.15887051, 0.16451723, 0.15818134, 0.16521804, 0.17418216,
-        0.17515856]])
-    a1 = np.array([[0.00000000e+00, 1.65555199e-02, 3.79914702e-02, 5.59668749e-02,
-        7.26664759e-02, 8.65710497e-02, 1.08232980e-01, 1.21111434e-01,
-        1.41597957e-01, 1.54852460e-01, 1.67692292e-01, 1.79551329e-01,
-        2.00386572e-01, 2.13426243e-01, 2.33081056e-01, 2.42854788e-01,
-        2.66068397e-01, 2.79886156e-01, 2.99013537e-01, 3.15632521e-01,
-        3.27700561e-01, 3.52374800e-01, 3.66556597e-01, 3.86629334e-01,
-        3.97526563e-01, 4.21205690e-01, 4.31844828e-01, 4.55947434e-01,
-        4.79335370e-01, 4.96147803e-01, 5.10813724e-01, 5.24353068e-01,
-        5.40068825e-01, 5.73587138e-01, 5.87598782e-01, 6.18144807e-01,
-        6.25154695e-01, 6.48390850e-01, 6.69232243e-01, 6.95554111e-01,
-        7.13713298e-01],
-       [0.00000000e+00, 4.68140371e-02, 9.87469747e-02, 1.45355150e-01,
-        1.82225650e-01, 2.14970677e-01, 2.45697412e-01, 2.76674596e-01,
-        2.99825096e-01, 3.24038141e-01, 3.47248903e-01, 3.62574534e-01,
-        3.87763699e-01, 4.09629403e-01, 4.29280962e-01, 4.43990746e-01,
-        4.71309937e-01, 4.85563504e-01, 4.97297784e-01, 5.17407943e-01,
-        5.37268523e-01, 5.67901103e-01, 5.73555705e-01, 5.85903683e-01,
-        6.07877742e-01, 6.35473951e-01, 6.50709250e-01, 6.66211396e-01,
-        6.85071904e-01, 7.06467839e-01, 7.17373134e-01, 7.41426756e-01,
-        7.50836627e-01, 7.87927589e-01, 8.04048109e-01, 8.14806881e-01,
-        8.40269234e-01, 8.43350760e-01, 8.71763539e-01, 8.79076309e-01,
-        9.04608591e-01],
-       [0.00000000e+00, 7.41955414e-03, 2.50385287e-02, 4.15194346e-02,
-        5.59967358e-02, 7.38795779e-02, 8.68027871e-02, 1.08799523e-01,
-        1.21252649e-01, 1.35850474e-01, 1.54970403e-01, 1.67195677e-01,
-        1.83704947e-01, 2.03692223e-01, 2.15157013e-01, 2.27395603e-01,
-        2.42189252e-01, 2.63455784e-01, 2.74503212e-01, 2.94229527e-01,
-        3.09203769e-01, 3.33449040e-01, 3.49284193e-01, 3.71233831e-01,
-        3.82022919e-01, 3.99097136e-01, 4.10520541e-01, 4.39425705e-01,
-        4.61372697e-01, 4.78916209e-01, 4.91183485e-01, 5.13328699e-01,
-        5.31736071e-01, 5.48718664e-01, 5.92714910e-01, 6.08008299e-01,
-        6.18471358e-01, 6.39625217e-01, 6.73473701e-01, 6.75607700e-01,
-        6.98290684e-01],
-       [0.00000000e+00, 4.00378823e-04, 5.91228443e-03, 8.99080594e-03,
-        1.40805775e-02, 2.06589482e-02, 2.26516761e-02, 3.09588775e-02,
-        3.27446290e-02, 3.82907438e-02, 4.33748172e-02, 4.98491179e-02,
-        4.90178854e-02, 5.28650425e-02, 5.55211231e-02, 6.36219150e-02,
-        6.74756528e-02, 7.00710122e-02, 7.30119320e-02, 8.28152891e-02,
-        7.84272782e-02, 8.75123595e-02, 9.17428544e-02, 9.47464219e-02,
-        9.76222844e-02, 1.00900553e-01, 1.00713810e-01, 1.13383525e-01,
-        1.18067856e-01, 1.13960604e-01, 1.20680927e-01, 1.24462769e-01,
-        1.24001235e-01, 1.30197344e-01, 1.29764749e-01, 1.37294997e-01,
-        1.39479818e-01, 1.44708263e-01, 1.46393976e-01, 1.46333352e-01,
-        1.54906878e-01]])
-    a2 = np.array([[0.        , 0.0515958 , 0.08517632, 0.11912544, 0.14700552,
-        0.16946035, 0.19076634, 0.20505914, 0.22813426, 0.24461208,
-        0.26054506, 0.27533761, 0.28564982, 0.30640734, 0.32698191,
-        0.34117552, 0.35246602, 0.37765314, 0.38443356, 0.40406923,
-        0.41616175, 0.44230098, 0.44135209, 0.46469571, 0.48955146,
-        0.50860328, 0.52535114, 0.54285415, 0.56803367, 0.59498851,
-        0.59200063, 0.61749075, 0.64544732, 0.66175081, 0.67579774,
-        0.70835979, 0.73210382, 0.73450857, 0.76195334, 0.7928847 ,
-        0.80710117],
-       [0.        , 0.10544812, 0.16654013, 0.21477172, 0.25694206,
-        0.28850007, 0.31873718, 0.34638599, 0.3723592 , 0.39480104,
-        0.41971168, 0.43777359, 0.45815157, 0.47893046, 0.49239641,
-        0.51072866, 0.53312876, 0.5490332 , 0.56734159, 0.58387626,
-        0.60552649, 0.62016974, 0.64586188, 0.65978084, 0.67673919,
-        0.69731284, 0.70935213, 0.73597897, 0.75727833, 0.77416151,
-        0.79145755, 0.81344174, 0.82002455, 0.84157368, 0.85752491,
-        0.8819968 , 0.91796806, 0.91826715, 0.93095371, 0.94863091,
-        0.98111651],
-       [0.        , 0.03175621, 0.05722489, 0.07509549, 0.09412641,
-        0.1192575 , 0.13273675, 0.15499205, 0.17080832, 0.18458139,
-        0.20339582, 0.22282645, 0.23447831, 0.25125831, 0.26668005,
-        0.28684376, 0.30052114, 0.32118503, 0.34113551, 0.35646595,
-        0.36196271, 0.3803235 , 0.39884226, 0.42631304, 0.4414428 ,
-        0.45849683, 0.48122701, 0.511903  , 0.52554859, 0.53991423,
-        0.55192479, 0.57724968, 0.60014926, 0.61897798, 0.65533397,
-        0.66447439, 0.67508093, 0.70434692, 0.73988135, 0.75047082,
-        0.77585096],
-       [0.        , 0.01488393, 0.03110123, 0.04135512, 0.04866157,
-        0.06154501, 0.06933069, 0.07639249, 0.08571694, 0.0886841 ,
-        0.09841164, 0.10075834, 0.10770034, 0.10956672, 0.1178463 ,
-        0.12325517, 0.12646916, 0.13216624, 0.13966833, 0.14109097,
-        0.14486127, 0.15237976, 0.15474796, 0.1617161 , 0.15955178,
-        0.16533667, 0.16936774, 0.17488736, 0.17702208, 0.17867557,
-        0.1802787 , 0.18749386, 0.19149002, 0.19802218, 0.19634535,
-        0.20081329, 0.19918672, 0.21462108, 0.2158309 , 0.21310806,
-        0.2166473 ]])
-    a3 = np.array([[0.        , 0.03327604, 0.06276043, 0.08523699, 0.10970197,
-        0.12699709, 0.14635691, 0.16684645, 0.17994933, 0.20175102,
-        0.21522172, 0.22737753, 0.24923982, 0.26415197, 0.27992905,
-        0.29839578, 0.30928744, 0.32489907, 0.34183804, 0.36317549,
-        0.37840664, 0.39587635, 0.40578452, 0.42421898, 0.45341809,
-        0.47484969, 0.47466178, 0.50183511, 0.53160653, 0.54367235,
-        0.55093983, 0.56293151, 0.60358753, 0.60649093, 0.63522548,
-        0.66961243, 0.66703401, 0.70109722, 0.72587921, 0.73497059,
-        0.76667338],
-       [0.        , 0.07800209, 0.13550582, 0.18288379, 0.21503834,
-        0.25262341, 0.27922245, 0.30779502, 0.33051536, 0.35284479,
-        0.37715559, 0.39399866, 0.41634833, 0.43375751, 0.45459644,
-        0.47346732, 0.48710666, 0.51012919, 0.5317696 , 0.54556675,
-        0.56649216, 0.58686515, 0.59954734, 0.6299147 , 0.63419742,
-        0.65371756, 0.67947897, 0.69754794, 0.71214435, 0.73729932,
-        0.74829744, 0.76628568, 0.78042401, 0.80967843, 0.83150379,
-        0.83987111, 0.8539606 , 0.88033164, 0.89751481, 0.91017012,
-        0.9418097 ],
-       [0.        , 0.02784507, 0.05177054, 0.07130059, 0.09594439,
-        0.11710454, 0.13600434, 0.15185487, 0.17289647, 0.18373386,
-        0.19984021, 0.21569954, 0.23240819, 0.24394486, 0.26278894,
-        0.28192773, 0.29512617, 0.30787374, 0.32946058, 0.34381108,
-        0.35444629, 0.37184874, 0.39214448, 0.41359547, 0.42057689,
-        0.44370843, 0.46335021, 0.47597017, 0.50355477, 0.5115857 ,
-        0.5299466 , 0.56190176, 0.5835199 , 0.58985971, 0.61468649,
-        0.64631184, 0.64848739, 0.67398713, 0.69414669, 0.71459842,
-        0.73276265],
-       [0.        , 0.01623812, 0.02674416, 0.0390553 , 0.04684014,
-        0.05023512, 0.05861334, 0.06696884, 0.07278868, 0.0791801 ,
-        0.08598523, 0.09143037, 0.0935382 , 0.09858847, 0.10788958,
-        0.10726374, 0.11601346, 0.11815954, 0.126232  , 0.12610218,
-        0.13382554, 0.13573904, 0.14139583, 0.14115654, 0.15052348,
-        0.1527721 , 0.1560771 , 0.15879149, 0.16362606, 0.16824779,
-        0.16945187, 0.17254486, 0.17641152, 0.17945017, 0.18688752,
-        0.18781621, 0.18901857, 0.1940795 , 0.19675855, 0.20326091,
-        0.20424046]])
-    a4 = np.array([[0.        , 0.02891472, 0.05509707, 0.07282504, 0.09593613,
-        0.1209911 , 0.14065483, 0.1593888 , 0.17428858, 0.19238623,
-        0.21035348, 0.22896626, 0.24205343, 0.25745488, 0.27751953,
-        0.29324784, 0.30557046, 0.33055467, 0.34428931, 0.35902417,
-        0.37352145, 0.3904456 , 0.41894034, 0.43130596, 0.44100865,
-        0.46900174, 0.48579961, 0.51071472, 0.51684901, 0.53560799,
-        0.56383622, 0.58698728, 0.60901065, 0.61555222, 0.65832077,
-        0.66546762, 0.68261747, 0.70161326, 0.72372319, 0.75399895,
-        0.76188697],
-       [0.        , 0.07738214, 0.14002016, 0.19115502, 0.22858739,
-        0.26705774, 0.29528273, 0.32812392, 0.35046297, 0.37663603,
-        0.3972994 , 0.41683582, 0.43698824, 0.45687615, 0.47544143,
-        0.49577172, 0.51807008, 0.53487639, 0.54837312, 0.56244872,
-        0.58919543, 0.6042261 , 0.62097243, 0.63864584, 0.65415919,
-        0.67230454, 0.69816462, 0.71484368, 0.72993445, 0.7535272 ,
-        0.77053009, 0.77764362, 0.79786856, 0.81400355, 0.85475343,
-        0.85217384, 0.87495393, 0.89599517, 0.90058465, 0.92270097,
-        0.94449831],
-       [0.        , 0.01759994, 0.04123638, 0.06134959, 0.0779424 ,
-        0.09940749, 0.12281439, 0.13898128, 0.15373258, 0.17271434,
-        0.18853981, 0.20170043, 0.21497901, 0.24051008, 0.25715104,
-        0.26548382, 0.28204233, 0.3038575 , 0.32799754, 0.32963716,
-        0.34098207, 0.36829218, 0.38461112, 0.40666155, 0.42116629,
-        0.43601291, 0.46011296, 0.47177276, 0.4862563 , 0.52707079,
-        0.53593966, 0.55431443, 0.57859943, 0.5918471 , 0.61858221,
-        0.62726688, 0.64800807, 0.68434814, 0.69769154, 0.71419473,
-        0.73774033],
-       [0.        , 0.01364523, 0.02943845, 0.03790774, 0.04752453,
-        0.05890319, 0.06652758, 0.07201023, 0.07653971, 0.08277499,
-        0.09071478, 0.09323346, 0.10124588, 0.10458092, 0.11143176,
-        0.11591643, 0.12084377, 0.1245146 , 0.13058747, 0.13700958,
-        0.13952641, 0.14381213, 0.1488595 , 0.14871546, 0.15141936,
-        0.15501593, 0.15724055, 0.16740769, 0.16931558, 0.17478592,
-        0.17746109, 0.1776392 , 0.18417779, 0.18422746, 0.18599976,
-        0.1877633 , 0.1964579 , 0.19833232, 0.20435846, 0.20507637,
-        0.21132138]])
-    a5 = np.array([[0.        , 0.05275008, 0.08586994, 0.11073166, 0.13523642,
-        0.15478097, 0.17597887, 0.19029438, 0.21017627, 0.22168911,
-        0.24003005, 0.25324618, 0.26909615, 0.28617379, 0.30043515,
-        0.31261996, 0.32707896, 0.34420474, 0.35430645, 0.37856323,
-        0.39141482, 0.41234376, 0.4257541 , 0.44104136, 0.45912206,
-        0.47907958, 0.4930746 , 0.51386139, 0.52677235, 0.5430003 ,
-        0.56835891, 0.58261054, 0.60869449, 0.62534492, 0.64422748,
-        0.66786065, 0.68390374, 0.69858984, 0.71945142, 0.74097013,
-        0.758996  ],
-       [0.        , 0.0938351 , 0.15435673, 0.19425538, 0.23898697,
-        0.26676242, 0.29781723, 0.3250495 , 0.34913081, 0.37059544,
-        0.39096263, 0.4121403 , 0.43241887, 0.45061059, 0.46716975,
-        0.48799805, 0.50257387, 0.5164855 , 0.54818245, 0.55503196,
-        0.57201757, 0.60134533, 0.60301363, 0.62135669, 0.64269694,
-        0.6591796 , 0.67326372, 0.69747154, 0.71639689, 0.72785419,
-        0.74960419, 0.77027701, 0.79147313, 0.80466584, 0.82249519,
-        0.84741506, 0.86475497, 0.88802153, 0.8947057 , 0.91622853,
-        0.9415442 ],
-       [0.        , 0.03840181, 0.06611897, 0.09006957, 0.11426191,
-        0.13056562, 0.14813811, 0.16318564, 0.18393015, 0.1963027 ,
-        0.212366  , 0.22844   , 0.24542451, 0.25307053, 0.2693315 ,
-        0.28525934, 0.30385549, 0.31883268, 0.33211142, 0.35045511,
-        0.36945835, 0.38043257, 0.40038483, 0.4212    , 0.43341932,
-        0.4503715 , 0.4612415 , 0.48185791, 0.50858531, 0.52269131,
-        0.54500401, 0.55909023, 0.57252351, 0.60985176, 0.61707993,
-        0.64472553, 0.66697788, 0.67262653, 0.71014932, 0.72132886,
-        0.74299581],
-       [0.        , 0.01819657, 0.03329135, 0.04577404, 0.05631611,
-        0.06258231, 0.07313793, 0.07579965, 0.08513101, 0.09312176,
-        0.09619564, 0.10231313, 0.10778912, 0.1146123 , 0.11904414,
-        0.12577384, 0.12538109, 0.13152648, 0.13447458, 0.14379149,
-        0.14194641, 0.1485071 , 0.15615808, 0.15380833, 0.16117281,
-        0.16122482, 0.16837412, 0.17023051, 0.17717243, 0.17776177,
-        0.17933227, 0.18513269, 0.18423923, 0.19013372, 0.19426269,
-        0.19876745, 0.20410755, 0.20929381, 0.21087932, 0.21471391,
-        0.21545463]])
-    a6 = np.array([[0.        , 0.01567181, 0.03245162, 0.04278851, 0.06761978,
-        0.08116529, 0.09845162, 0.11709828, 0.12953741, 0.14841873,
-        0.16073957, 0.17310139, 0.18959306, 0.2063318 , 0.22391737,
-        0.23710454, 0.24519226, 0.27274503, 0.27733167, 0.30365318,
-        0.31204956, 0.32882168, 0.33775436, 0.36150616, 0.38100224,
-        0.400988  , 0.41090213, 0.43612856, 0.44879911, 0.46759502,
-        0.48660111, 0.51272039, 0.5117981 , 0.55575906, 0.57169042,
-        0.59173225, 0.60035859, 0.61995697, 0.62731073, 0.66079914,
-        0.66875797],
-       [0.        , 0.05741767, 0.10299451, 0.13752819, 0.17195353,
-        0.20459593, 0.23424361, 0.25342664, 0.27955945, 0.29542953,
-        0.31746312, 0.34295551, 0.35884659, 0.37901248, 0.39526554,
-        0.40843385, 0.42693991, 0.44341042, 0.47214626, 0.48358919,
-        0.51146572, 0.51281322, 0.53545022, 0.55079527, 0.57720351,
-        0.5891966 , 0.61151889, 0.62735423, 0.64049002, 0.66336853,
-        0.67619869, 0.69509695, 0.72639526, 0.73212752, 0.74476707,
-        0.768811  , 0.79247089, 0.81530711, 0.81432248, 0.84561811,
-        0.85517037],
-       [0.        , 0.00975235, 0.01901837, 0.03492488, 0.04905717,
-        0.06159594, 0.07442394, 0.09631682, 0.10749948, 0.11909322,
-        0.13374179, 0.1514929 , 0.16697605, 0.17897934, 0.18892194,
-        0.20558402, 0.22274536, 0.23548462, 0.25516059, 0.26952042,
-        0.28289328, 0.29308875, 0.31139562, 0.32205938, 0.34767318,
-        0.36609477, 0.38822501, 0.40582893, 0.41171789, 0.43611755,
-        0.47022124, 0.46303386, 0.49007637, 0.50811557, 0.53594262,
-        0.55377296, 0.56311501, 0.6020821 , 0.62101033, 0.63982759,
-        0.65534892],
-       [0.        , 0.00435293, 0.00993762, 0.01465084, 0.02151315,
-        0.02558212, 0.0299288 , 0.03344248, 0.0398721 , 0.04707204,
-        0.05219972, 0.0530471 , 0.05599923, 0.06363126, 0.06381866,
-        0.07294304, 0.06993416, 0.07949243, 0.07848883, 0.08256119,
-        0.08744561, 0.09393945, 0.08955845, 0.10191076, 0.09911427,
-        0.10260538, 0.10904188, 0.1085054 , 0.11536791, 0.11771527,
-        0.12174755, 0.12283779, 0.13237055, 0.12686392, 0.13448028,
-        0.13334114, 0.14400048, 0.14532959, 0.14269652, 0.15105121,
-        0.14911451]])
-    a7 = np.array([[ 0.00000000e+00,  3.58868227e-03,  9.42433409e-03,
-         2.49017574e-02,  3.61153952e-02,  5.20067770e-02,
-         6.46185743e-02,  7.11654358e-02,  9.20036370e-02,
-         1.02724587e-01,  1.16193151e-01,  1.28296049e-01,
-         1.44335621e-01,  1.55568832e-01,  1.66905584e-01,
-         1.83579468e-01,  1.97742566e-01,  2.06317420e-01,
-         2.24049741e-01,  2.36091074e-01,  2.55332395e-01,
-         2.79929737e-01,  2.87383595e-01,  2.95784512e-01,
-         3.12221201e-01,  3.37515893e-01,  3.46124521e-01,
-         3.73806156e-01,  3.90395218e-01,  4.02448873e-01,
-         4.36950923e-01,  4.51450632e-01,  4.62267150e-01,
-         4.89556399e-01,  5.01805052e-01,  5.19523386e-01,
-         5.39507255e-01,  5.62137052e-01,  5.65877280e-01,
-         5.96290433e-01,  5.97829830e-01],
-       [ 0.00000000e+00,  1.21658145e-02,  4.60041750e-02,
-         7.57493062e-02,  1.06694654e-01,  1.38731644e-01,
-         1.63458544e-01,  1.87715137e-01,  2.08647766e-01,
-         2.28629308e-01,  2.52991762e-01,  2.69797279e-01,
-         2.92911075e-01,  3.07856210e-01,  3.24651981e-01,
-         3.43237633e-01,  3.61065220e-01,  3.82910541e-01,
-         3.99206295e-01,  4.16735580e-01,  4.34846761e-01,
-         4.51352993e-01,  4.62008344e-01,  4.81398981e-01,
-         5.01167207e-01,  5.18817197e-01,  5.41508809e-01,
-         5.55517022e-01,  5.80038160e-01,  5.98370370e-01,
-         6.12000554e-01,  6.37682419e-01,  6.52975540e-01,
-         6.61663088e-01,  6.86257675e-01,  7.00423805e-01,
-         7.18413046e-01,  7.32142856e-01,  7.64849892e-01,
-         7.84285322e-01,  7.77875689e-01],
-       [ 0.00000000e+00,  1.20252222e-03,  3.20127225e-03,
-         1.28853431e-02,  2.78201095e-02,  3.83630089e-02,
-         4.95216184e-02,  5.56622259e-02,  7.36398606e-02,
-         8.34626342e-02,  9.39198653e-02,  1.09620784e-01,
-         1.17290300e-01,  1.37045863e-01,  1.43721804e-01,
-         1.61748080e-01,  1.83319148e-01,  1.83645456e-01,
-         2.10658161e-01,  2.21699591e-01,  2.42327876e-01,
-         2.53524098e-01,  2.70801206e-01,  2.82292833e-01,
-         3.06437716e-01,  3.20102183e-01,  3.31592829e-01,
-         3.61881380e-01,  3.72214836e-01,  3.87756227e-01,
-         4.07733388e-01,  4.24453469e-01,  4.43260046e-01,
-         4.61690820e-01,  4.85161781e-01,  5.08999110e-01,
-         5.18553442e-01,  5.42425274e-01,  5.69720004e-01,
-         5.90399223e-01,  5.93605557e-01],
-       [ 0.00000000e+00, -9.00221481e-04, -7.41244396e-04,
-         7.38101596e-04,  2.59345015e-03,  5.38351314e-03,
-         2.20013623e-03,  8.82535663e-03,  1.19771753e-02,
-         1.46150694e-02,  1.69449503e-02,  2.49889495e-02,
-         2.16831765e-02,  2.42225325e-02,  3.11415348e-02,
-         3.31336129e-02,  3.80671155e-02,  3.51558182e-02,
-         4.53260255e-02,  4.68060728e-02,  4.53795262e-02,
-         5.33234876e-02,  5.57634278e-02,  5.30317547e-02,
-         5.96760366e-02,  6.22911750e-02,  6.62627622e-02,
-         6.74325994e-02,  6.78652279e-02,  7.68635229e-02,
-         7.79620270e-02,  8.41299616e-02,  8.02554238e-02,
-         8.49102642e-02,  8.96087887e-02,  9.19299644e-02,
-         9.12373806e-02,  9.58138872e-02,  9.98481757e-02,
-         1.06559864e-01,  1.00605340e-01]])
-    a8 = np.
-    '''
+        print(repr(currmargutilmat))
+        utilMatList.append(currmargutilmat)
+        # Plot utility curves
+        util.plot_marg_util_nodes_group(utilMatList, testmax, testint)
     # OPTIONAL store runs for later use
     # np.save(os.path.join('casestudyoutputs', '17MAY', 'utilmatlist_familiar'), np.array(utilMatList))
     # np.save(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar'), np.array(utilMatList))
@@ -3182,12 +2841,9 @@ def casestudy_familiar():
         # Build loss matrix
         lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
         baseloss = sampf.baseloss(lossmatrix)
-        paramdict.update({'lossmatrix': lossmatrix})
+        paramdict.update({'lossmatrix': lossmatrix, 'baseloss':sampf.baseloss(lossmatrix)})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each design and sampling budget and obtain utility
         curr_heur_utillist, curr_unif_utillist, curr_rudi_utillist = [], [], []
         for testInd in range(testarr.shape[0]):
@@ -3222,6 +2878,7 @@ def casestudy_familiar():
     util.plot_group_utility([unif_utillist, heur_utillist, rudi_utillist], testmax=testMax, testint=testInt,
                            titlestr='Familiar Setting', labels=['Uniform', 'Heuristic'], linelabels=True)
     return
+
 
 def casestudy_familiar_market():
     """Allocation generation using case study data for paper"""
@@ -3294,40 +2951,17 @@ def casestudy_familiar_market():
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
         lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
-        baseloss = sampf.baseloss(lossmatrix)
-        paramdict.update({'lossmatrix': lossmatrix})
+        paramdict.update({'lossmatrix': lossmatrix, 'baseloss':sampf.baseloss(lossmatrix)})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each test node and sampling budget and obtain utility
-        currMargUtilMat = np.zeros((numTN, testarr.shape[0] + 1))
-        for tnInd in range(numTN):
-            currDes = np.zeros(numTN)
-            currDes[tnInd] = 1.
-            print('Utility for TN ' + str(tnInd) + '...')
-            print('Design: ' + str(currDes.round(2)))
-            for testInd in range(testarr.shape[0]):
-                currUtil = baseloss - sampf.sampling_plan_loss_fast(design=currDes, numtests=testarr[testInd],
-                                                                    priordatadict=csdict_fam, paramdict=paramdict)
-                print('Utility for budget ' + str(testarr[testInd]) + ': ' + str(currUtil))
-                currMargUtilMat[tnInd, testInd + 1] = currUtil
-
+        currmargutilmat = sampf.get_marg_util_nodes(csdict_fam, testmax, testint, paramdict)
+        # Print new utility matrix
         print('Utility matrix for replication ' + str(rep) + ':')
-        print(repr(currMargUtilMat))
-        utilMatList.append(currMargUtilMat)
-        colors = cm.rainbow(np.linspace(0, 1., numTN))
-        for mat in utilMatList:
-            for i in range(numTN):
-                plt.plot(testarr, mat[i][1:], linewidth=0.2, color=colors[i])
-        avgUtilMat = np.average(np.array(utilMatList), axis=0)
-        for i in range(numTN):
-            plt.plot(testarr, avgUtilMat[i][1:], linewidth=2, color=colors[i])
-        # plt.ylim([0, 0.4])
-        # plt.title('Comprehensive utility for allocations via heuristic\nUntested nodes')
-        plt.show()
-
+        print(repr(currmargutilmat))
+        utilMatList.append(currmargutilmat)
+        # Plot utility curves
+        util.plot_marg_util_nodes_group(utilMatList, testmax, testint)
     # OPTIONAL store runs for later use
     # np.save(os.path.join('casestudyoutputs', '17MAY', 'utilmatlist_familiar_market'), np.array(utilMatList))
     # np.save(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar_market'), np.array(utilMatList))
@@ -3366,10 +3000,7 @@ def casestudy_familiar_market():
         baseloss = sampf.baseloss(lossmatrix)
         paramdict.update({'lossmatrix': lossmatrix})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each design and sampling budget and obtain utility
         curr_heur_utillist, curr_unif_utillist, curr_rudi_utillist = [], [], []
         for testInd in range(testarr.shape[0]):
@@ -3405,6 +3036,7 @@ def casestudy_familiar_market():
                            titlestr='Familiar Setting', labels=['Uniform', 'Heuristic'], linelabels=True)
 
     return
+
 
 def casestudy_exploratory():
     """Allocation generation using case study data for paper"""
@@ -3474,12 +3106,6 @@ def casestudy_exploratory():
     numReps = 10  # Number of repeat runs to make
 
     np.random.seed(10)
-    '''
-    # Divide original draws into numReps sets to use with utility estimation
-    shufinds = np.arange(numdraws)
-    np.random.shuffle(shufinds)
-    indsList = [shufinds[i * numcanddraws:(i + 1) * numcanddraws] for i in range(numReps)]
-    '''
 
     utilMatList = []  # Initialize results list
     for rep in range(numReps):
@@ -3492,40 +3118,17 @@ def casestudy_exploratory():
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
         lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
-        baseloss = sampf.baseloss(lossmatrix)
-        paramdict.update({'lossmatrix': lossmatrix})
+        paramdict.update({'lossmatrix': lossmatrix, 'baseloss':sampf.baseloss(lossmatrix)})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each test node and sampling budget and obtain utility
-        currMargUtilMat = np.zeros((numTN, testarr.shape[0] + 1))
-        for tnInd in range(numTN):
-            currDes = np.zeros(numTN)
-            currDes[tnInd] = 1.
-            print('Utility for TN ' + str(tnInd) + '...')
-            print('Design: ' + str(currDes.round(2)))
-            for testInd in range(testarr.shape[0]):
-                currUtil = baseloss - sampf.sampling_plan_loss_fast(design=currDes, numtests=testarr[testInd],
-                                                                    priordatadict=csdict_expl, paramdict=paramdict)
-                print('Utility for budget ' + str(testarr[testInd]) + ': ' + str(currUtil))
-                currMargUtilMat[tnInd, testInd + 1] = currUtil
-
+        currmargutilmat = sampf.get_marg_util_nodes(csdict_expl, testmax, testint, paramdict)
+        # Print new utility matrix
         print('Utility matrix for replication ' + str(rep) + ':')
-        print(repr(currMargUtilMat))
-        utilMatList.append(currMargUtilMat)
-        colors = cm.rainbow(np.linspace(0, 1., numTN))
-        for mat in utilMatList:
-            for i in range(numTN):
-                plt.plot(testarr, mat[i][1:], linewidth=0.2, color=colors[i])
-        avgUtilMat = np.average(np.array(utilMatList), axis=0)
-        for i in range(numTN):
-            plt.plot(testarr, avgUtilMat[i][1:], linewidth=2, color=colors[i])
-        # plt.ylim([0, 0.4])
-        # plt.title('Comprehensive utility for allocations via heuristic\nUntested nodes')
-        plt.show()
-
+        print(repr(currmargutilmat))
+        utilMatList.append(currmargutilmat)
+        # Plot utility curves
+        util.plot_marg_util_nodes_group(utilMatList, testmax, testint)
     # OPTIONAL store runs for later use
     # np.save(os.path.join('casestudyoutputs', '17MAY', 'utilmatlist_familiar'), np.array(utilMatList))
     # np.save(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar'), np.array(utilMatList))
@@ -3564,10 +3167,7 @@ def casestudy_exploratory():
         baseloss = sampf.baseloss(lossmatrix)
         paramdict.update({'lossmatrix': lossmatrix})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each design and sampling budget and obtain utility
         curr_heur_utillist, curr_unif_utillist, curr_rudi_utillist = [], [], []
         for testInd in range(testarr.shape[0]):
@@ -3602,6 +3202,7 @@ def casestudy_exploratory():
     util.plot_group_utility([unif_utillist, heur_utillist, rudi_utillist], testmax=testMax, testint=testInt,
                            titlestr='Exploratory Setting', labels=['Uniform', 'Heuristic'], linelabels=True)
     return
+
 
 def casestudy_exploratory_market():
     """Allocation generation using case study data for paper"""
@@ -3679,14 +3280,6 @@ def casestudy_exploratory_market():
     numcanddraws, numtruthdraws, numdatadraws = 5000, 5000, 3000
     numReps = 10  # Number of repeat runs to make
 
-    np.random.seed(10)
-    '''
-    # Divide original draws into numReps sets to use with utility estimation
-    shufinds = np.arange(numdraws)
-    np.random.shuffle(shufinds)
-    indsList = [shufinds[i * numcanddraws:(i + 1) * numcanddraws] for i in range(numReps)]
-    '''
-
     utilMatList = []  # Initialize results list
     for rep in range(numReps):
         # Generate new MCMC set
@@ -3698,45 +3291,20 @@ def casestudy_exploratory_market():
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
         lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
-        baseloss = sampf.baseloss(lossmatrix)
-        paramdict.update({'lossmatrix': lossmatrix})
+        paramdict.update({'lossmatrix': lossmatrix, 'baseloss':sampf.baseloss(lossmatrix)})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each test node and sampling budget and obtain utility
-        currMargUtilMat = np.zeros((numTN, testarr.shape[0] + 1))
-        for tnInd in range(numTN):
-            currDes = np.zeros(numTN)
-            currDes[tnInd] = 1.
-            print('Utility for TN ' + str(tnInd) + '...')
-            print('Design: ' + str(currDes.round(2)))
-            for testInd in range(testarr.shape[0]):
-                currUtil = baseloss - sampf.sampling_plan_loss_fast(design=currDes, numtests=testarr[testInd],
-                                                                    priordatadict=csdict_expl, paramdict=paramdict)
-                print('Utility for budget ' + str(testarr[testInd]) + ': ' + str(currUtil))
-                currMargUtilMat[tnInd, testInd + 1] = currUtil
-
+        currmargutilmat = sampf.get_marg_util_nodes(csdict_expl, testmax, testint, paramdict)
+        # Print new utility matrix
         print('Utility matrix for replication ' + str(rep) + ':')
-        print(repr(currMargUtilMat))
-        utilMatList.append(currMargUtilMat)
-        colors = cm.rainbow(np.linspace(0, 1., numTN))
-        for mat in utilMatList:
-            for i in range(numTN):
-                plt.plot(testarr, mat[i][1:], linewidth=0.2, color=colors[i])
-        avgUtilMat = np.average(np.array(utilMatList), axis=0)
-        for i in range(numTN):
-            plt.plot(testarr, avgUtilMat[i][1:], linewidth=2, color=colors[i])
-        # plt.ylim([0, 0.4])
-        # plt.title('Comprehensive utility for allocations via heuristic\nUntested nodes')
-        plt.show()
-
+        print(repr(currmargutilmat))
+        utilMatList.append(currmargutilmat)
+        # Plot utility curves
+        util.plot_marg_util_nodes_group(utilMatList, testmax, testint)
     # OPTIONAL store runs for later use
     # np.save(os.path.join('casestudyoutputs', '17MAY', 'utilmatlist_familiar'), np.array(utilMatList))
-    # np.save(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar'), np.array(utilMatList))
     # OPTIONAL retrieve allocation
-    # utilMatList = np.load(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar.npy'))
     # utilMatList = np.load(os.path.join('casestudyoutputs', 'PREVIOUS', 'Familiar', 'utilmatlist_familiar.npy'))
     avgUtilMat = np.average(np.array(utilMatList), axis=0)
     util.plot_marg_util(avgUtilMat, testmax, testint, labels=csdict_expl['TNnames'], type='delta',
@@ -3770,10 +3338,7 @@ def casestudy_exploratory_market():
         baseloss = sampf.baseloss(lossmatrix)
         paramdict.update({'lossmatrix': lossmatrix})
         # Checks
-        print('Candidate draws: ' + str(paramdict['lossmatrix'].shape[0]))
-        print('Truth draws: ' + str(paramdict['lossmatrix'].shape[1]))
-        print('Data draws: ' + str(paramdict['datadraws'].shape[0]))
-        print('Baseline loss: ' + str(baseloss))
+        util.print_param_checks(paramdict)
         # Iterate through each design and sampling budget and obtain utility
         curr_heur_utillist, curr_unif_utillist, curr_rudi_utillist = [], [], []
         for testInd in range(testarr.shape[0]):
@@ -3808,7 +3373,6 @@ def casestudy_exploratory_market():
     util.plot_group_utility([unif_utillist, heur_utillist, rudi_utillist], testmax=testMax, testint=testInt,
                             titlestr='Exploratory Setting', labels=['Uniform', 'Heuristic'], linelabels=True)
     return
-
 
 
 
