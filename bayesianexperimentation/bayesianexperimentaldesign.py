@@ -121,6 +121,79 @@ def STUDY_baselineloss():
     return
 
 
+def STUDY_neighbors_or_loss():
+    """
+    How much faster is adding the nearest 1000 neighbors by Euclidean distance, rather than adding the 1000
+    candidates with the lowest baseline loss?
+    """
+    # Setup usual Familiar case study context
+    Nfam = np.array([[1., 1., 10., 1., 3., 0., 1., 6., 7., 5., 0., 0., 4.],
+                     [1., 1., 4., 2., 0., 1., 1., 2., 0., 4., 0., 0., 1.],
+                     [3., 17., 31., 4., 2., 0., 1., 6., 0., 23., 1., 2., 5.],
+                     [1., 1., 15., 2., 0., 0., 0., 1., 0., 6., 0., 0., 0.]])
+    Yfam = np.array([[0., 0., 7., 0., 3., 0., 1., 0., 1., 0., 0., 0., 4.],
+                     [0., 0., 2., 2., 0., 1., 1., 0., 0., 1., 0., 0., 1.],
+                     [0., 0., 15., 3., 2., 0., 0., 2., 0., 1., 1., 2., 5.],
+                     [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+    (numTN, numSN) = Nfam.shape  # For later use
+    csdict_fam = util.initDataDict(Nfam, Yfam)  # Initialize necessary logistigate keys
+
+    csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
+    csdict_fam['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
+
+    SNpriorMean = np.repeat(sps.logit(0.1), numSN)
+    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
+    TNvar, SNvar = 2., 4.  # Variances for use with prior
+    csdict_fam['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                                    np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
+
+    csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+    numdraws = 80000
+    csdict_fam['numPostSamples'] = numdraws
+    np.random.seed(1000)  # To replicate draws later
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+
+    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                                  marketvec=np.ones(numTN + numSN), candneighnum=1000)
+
+    numcanddraws, numtruthdraws, numdatadraws = 5000, 5000, 3000
+    canddraws, truthdraws, datadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
+                                                                         numtruthdraws, numdatadraws)
+    paramdict.update({'canddraws': canddraws, 'truthdraws': truthdraws, 'datadraws': datadraws,
+                      'lossmatrix': lf.build_loss_matrix(truthdraws, canddraws, paramdict)})
+
+    ### BEST CURRENT METHOD OF FINDING NEAREST NEIGHBORS (pulled from wrapper function in logistigate)
+    # Get best current candidate
+    bestcand = paramdict['canddraws'][np.argmin(np.average(paramdict['lossmatrix'], axis=1))]
+
+    # Add neighbors of best candidate to set of Bayes draws
+    from scipy.spatial.distance import cdist
+    drawDists = cdist(bestcand.reshape(1, len(truthdraws[0])), drawspool)
+    neighborinds = np.argpartition(drawDists[0], paramdict['candneighnum'])[:paramdict['candneighnum']]
+    neighborArr = drawspool[neighborinds]
+
+    currcanddraws_neigh, lossmatrix_neigh = lf.add_cand_neighbors(paramdict, csdict_fam['postSamples'],
+                                                                  currtruthdraws)
+    ### WHAT IF WE RETRIEVED THE LOSS FOR EVERY CANDIDATE
+
+
+    ### WHAT IF WE USED THE CRITICAL RATIO
+    def get_crit_ratio_est(truthdraws, paramdict):
+        """Retrieve Bayes estimate candidate that is the critical ratio for the SFP rate at each node"""
+        return np.quantile(truthdraws,
+                           paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight']),
+                           axis=0)
+    est = get_crit_ratio_est(truthdraws,paramdict).reshape(1,17)
+    sampf.baseloss(lf.build_loss_matrix(truthdraws, est, paramdict))
+    # How to use the critical ratio with a weights matrix?
+    alloc = np.array([0.,50,0.,0.])
+    W = sampf.build_weights_matrix(truthdraws,datadraws,alloc,csdict_fam)
+    
+
+
+
+    return
+
 def casestudy_familiar():
     """Allocation generation using case study data for paper"""
     # PROVINCES-MANUFACTURERS; FAMILIAR SETTING
@@ -200,8 +273,11 @@ def casestudy_familiar():
         paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws, 'datadraws': currdatadraws})
         # Build loss matrix
         lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
+        currcanddraws_neigh, lossmatrix_neigh = lf.add_cand_neighbors(paramdict, csdict_fam['postSamples'],
+                                                                      currtruthdraws)
         # ADD CANDIDATE NEIGHBORS
-        paramdict.update({'lossmatrix': lossmatrix, 'baseloss':sampf.baseloss(lossmatrix)})
+        paramdict.update({'canddraws': currcanddraws_neigh, 'lossmatrix': lossmatrix_neigh,
+                          'baseloss':sampf.baseloss(lossmatrix_neigh)})
         # Checks
         util.print_param_checks(paramdict)
         # Iterate through each test node and sampling budget and obtain utility
