@@ -188,9 +188,21 @@ def STUDY_neighbors_or_loss():
     # How to use the critical ratio with a weights matrix?
     alloc = np.array([0.,50,0.,0.])
     W = sampf.build_weights_matrix(truthdraws,datadraws,alloc,csdict_fam)
-    
-
-
+    Wvec = W[:,0]
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+    def getbayesest(truthdraws, Wvec, q):
+        # Establish the weight-sum target
+        wtTarg = q * np.sum(Wvec)
+        # Initialize return vector
+        est = np.zeros(shape=(len(truthdraws[0])))
+        # Iterate through each node's distribution of SFP rates, sorting the weights accordingly
+        for gind in range(len(truthdraws[0])):
+            currRates = truthdraws[:, gind]
+            sortWts = [x for _, x in sorted(zip(currRates, Wvec))]
+            sortWtsSum = [np.sum(sortWts[:i]) for i in range(len(sortWts))]
+            critInd = np.argmax(sortWtsSum >= wtTarg)
+            est[gind] = sorted(currRates)[critInd]
+        return
 
     return
 
