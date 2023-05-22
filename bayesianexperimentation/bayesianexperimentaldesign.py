@@ -156,7 +156,7 @@ def STUDY_neighbors_or_loss():
     paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                                   marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
-    numcanddraws, numtruthdraws, numdatadraws = 5000, 5000, 3000
+    numcanddraws, numtruthdraws, numdatadraws = 9999, 9999, 3000
     canddraws, truthdraws, datadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
                                                                          numtruthdraws, numdatadraws)
     paramdict.update({'canddraws': canddraws, 'truthdraws': truthdraws, 'datadraws': datadraws,
@@ -203,7 +203,7 @@ def STUDY_neighbors_or_loss():
             sortWtsSum = [np.sum(sortWts[:i]) for i in range(len(sortWts))]
             critInd = np.argmax(sortWtsSum >= wtTarg)
             est[gind] = sorted(currRates)[critInd]
-        return
+        return est
     losslist = []
     for j in range(numdatadraws):
         currWvec = W[:, j]
@@ -219,56 +219,48 @@ def STUDY_neighbors_or_loss():
 
     import scipy.optimize as spo
 
-    def est_obj_val(x, truthdraws, W, paramdict):
+    x = canddraws[2]
+
+    cand_obj_val(x,truthdraws,W,paramdict)
+
+    lossmatrix = lf.build_loss_matrix(truthdraws, canddraws[:5], paramdict)
+    LWmat = np.matmul(lossmatrix,W)
+    LWmatavg = np.average(LWmat,axis=1)
+
+    def cand_obj_val(x, truthdraws, W, paramdict):
         '''function for optimization step'''
-        
+        numnodes = x.shape[0]
+        retval = 0. # initialize
+        scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, numnodes), paramdict['scoredict'])[0]
+        riskvec = lf.risk_check_array(truthdraws,paramdict['riskdict'])
+        Wvalvec = np.sum(W, axis=1) / W.shape[1]
+        return np.sum(np.sum(scoremat*riskvec,axis=1)*Wvalvec)
 
-        return
+    def get_bayes_min_cand(truthdraws, W, paramdict):
+        # Initialize with random truthdraw
+        xinit = truthdraws[choice(np.arange(truthdraws.shape[0]))]
+        # Minimize expected candidate loss
+        # NEED BOUNDS?
+        bds = spo.Bounds(np.repeat(0., xinit.shape[0]), np.repeat(1., xinit.shape[0]))
+        spoOutput = spo.minimize(cand_obj_val, xinit, args=(truthdraws, W, paramdict), #bounds=bds,
+                                 tol= 1e-8)  # Reduce tolerance if not getting integer solutions
 
-    Udim = np.ndim(U)
-    if Udim == 2:  # Node Sampling
-        (numTN, numTests) = U.shape
-        numTests -= 1  # The first entry of U should denote 0 tests
-        # Normalize U so that no data produces no utility
-        if U[0][1] > U[0][0]:  # We have utility; make into a loss
-            # utilNotLoss = True
-            pass
-        else:  # We have loss
-            # utilNotLoss = False
-            U = U * -1
-            pass
-        # Add first element (corresponding to no testing) to all elements of U
-        addElem = U[0][0] * -1
-        U = U + addElem
+        return spoOutput
 
-        # Create pw-linear approximation of U for non-integer number of tests
-        def Upw(U, node, n):
-            if n > U.shape[1] or n < 0:
-                print('n value is outside the feasible range.')
-                return
-            nflr, nceil = int(np.floor(n)), int(np.ceil(n))
-            nrem = n - nflr  # decimal remainder
-            return U[node][nceil] * (nrem) + U[node][nflr] * (1 - nrem)
+    spoOutput.x
+    array([0.10085021, 0.0463785 , 0.49988548, 0.79192503, 0.92376177,
+       0.62462854, 0.59489807, 0.15531303, 0.18350893, 0.04915995,
+       0.66009375, 0.82461902, 0.95640082, 0.11773402, 0.26300716,
+       0.08915359, 0.09778346])
+    array([0.10085022, 0.0463785, 0.4998855, 0.79192503, 0.92376178,
+           0.6246285, 0.59489807, 0.15531303, 0.18350895, 0.0491467,
+           0.66009375, 0.8246199, 0.9564008, 0.11773402, 0.26300718,
+           0.08915359, 0.09778346])
+    Wvalvec = np.sum(W, axis=1) / W.shape[1]
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+    newx = getbayesest(truthdraws,Wvalvec,q)
 
-        def vecUpw(U, x):
-            retVal = 0
-            for i in range(len(x)):
-                retVal += Upw(U, i, x[i])
-            return retVal
 
-        def negVecUpw(x, U):
-            return vecUpw(U, x) * -1
-
-        # Initialize x
-        xinit = np.zeros((numTN))
-        # Maximize the utility
-        bds = spo.Bounds(np.repeat(0, numTN), np.repeat(numTests, numTN))
-        linConstraint = spo.LinearConstraint(np.repeat(1, numTN), 0, numTests)
-        spoOutput = spo.minimize(negVecUpw, xinit, args=(U), method='SLSQP', constraints=linConstraint,
-                                 bounds=bds,
-                                 options={'ftol': 1e-15})  # Reduce tolerance if not getting integer solutions
-        sol = np.round(spoOutput.x, 3)
-        maxU = spoOutput.fun * -1
 
     return
 
