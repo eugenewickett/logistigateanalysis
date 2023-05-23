@@ -93,10 +93,10 @@ def STUDY_baselineloss():
     list_10k_diffs = [list_5k[i] - list_10k[i] for i in range(len(list_5k))]
     list_11k_diffs = [list_5k[i] - list_11k[i] for i in range(len(list_5k))]
 
-    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_5k'), np.array(list_5k))
-    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_6k'), np.array(list_6k))
-    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_10k'), np.array(list_10k))
-    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_11k'), np.array(list_11k))
+    np.save(os.path.join('', '17MAY_plots', 'list_5k'), np.array(list_5k))
+    np.save(os.path.join('', '17MAY_plots', 'list_6k'), np.array(list_6k))
+    np.save(os.path.join('', '17MAY_plots', 'list_10k'), np.array(list_10k))
+    np.save(os.path.join('', '17MAY_plots', 'list_11k'), np.array(list_11k))
 
     plt.hist([list_6k_diffs, list_10k_diffs, list_11k_diffs], label=['5k+1k', '10k', '10k+1k'], alpha=0.7)
     plt.title('Histogram of loss decreases as compared with 5k-sized candidate set')
