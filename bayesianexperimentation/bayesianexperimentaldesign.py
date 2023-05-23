@@ -24,102 +24,6 @@ from math import comb
 import matplotlib.cm as cm
 
 
-def STUDY_baselineloss():
-    """Run the Familiar setting under 5k-5k, 10k-5k, and 11k-5k appraoches and get baseline loss estimates"""
-    # PROVINCES-MANUFACTURERS; FAMILIAR SETTING
-    Nfam = np.array([[1., 1., 10., 1., 3., 0., 1., 6., 7., 5., 0., 0., 4.],
-                     [1., 1., 4., 2., 0., 1., 1., 2., 0., 4., 0., 0., 1.],
-                     [3., 17., 31., 4., 2., 0., 1., 6., 0., 23., 1., 2., 5.],
-                     [1., 1., 15., 2., 0., 0., 0., 1., 0., 6., 0., 0., 0.]])
-    Yfam = np.array([[0., 0., 7., 0., 3., 0., 1., 0., 1., 0., 0., 0., 4.],
-                     [0., 0., 2., 2., 0., 1., 1., 0., 0., 1., 0., 0., 1.],
-                     [0., 0., 15., 3., 2., 0., 0., 2., 0., 1., 1., 2., 5.],
-                     [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-    
-    (numTN, numSN) = Nfam.shape  # For later use
-    csdict_fam = util.initDataDict(Nfam, Yfam)  # Initialize necessary logistigate keys
-
-    # Update node names
-    csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
-    csdict_fam['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
-
-    # Build prior; establish test node risk according to assessment by regulators
-    SNpriorMean = np.repeat(sps.logit(0.1), numSN)
-    TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15]))
-    TNvar, SNvar = 2., 4.  # Variances for use with prior
-    csdict_fam['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
-                                              np.diag(np.concatenate((np.repeat(SNvar,numSN),np.repeat(TNvar, numTN)))))
-
-    # Set up MCMC
-    csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    # Generate posterior draws
-    numdraws = 80000
-    csdict_fam['numPostSamples'] = numdraws
-    np.random.seed(1000)  # To replicate draws later
-    #csdict_fam = methods.GeneratePostSamples(csdict_fam)
-
-    # Loss specification
-    paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
-                                                  marketvec=np.ones(numTN+numSN), candneighnum=1000)
-
-    # List for storing baseline loss values
-    list_5k = []
-    list_6k = []
-    list_10k = []
-    list_11k = []
-
-    numtruthdraws = 5000 # This stays constant
-
-    numReps = 100
-    for rep in range(numReps):
-        print('Rep: '+str(rep))
-        csdict_fam = methods.GeneratePostSamples(csdict_fam) #  Get new MCMC draws
-        # Get 5k estimate first
-        numbigcanddraws, numcanddraws = 10000, 5000
-        bigcanddraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numbigcanddraws, replace=False)]
-        currcanddraws = bigcanddraws[choice(np.arange(numbigcanddraws), size=numcanddraws, replace=False)]
-        currtruthdraws = currcanddraws[choice(np.arange(numcanddraws), size=numtruthdraws, replace=False)]
-        paramdict.update({'canddraws': currcanddraws, 'truthdraws': currtruthdraws})
-        # Build loss matrix
-        lossmatrix = lf.build_loss_matrix(currtruthdraws, currcanddraws, paramdict)
-        list_5k.append(sampf.baseloss(lossmatrix))
-        # Add neighbors to best candidate
-        paramdict.update({'lossmatrix':lossmatrix})
-        _, lossmatrix = lf.add_cand_neighbors(paramdict,csdict_fam['postSamples'], currtruthdraws)
-        list_6k.append(sampf.baseloss(lossmatrix))
-        # Do same for larger set of candidates
-        paramdict.update({'canddraws': bigcanddraws})
-        lossmatrix = lf.build_loss_matrix(currtruthdraws, bigcanddraws, paramdict)
-        list_10k.append(sampf.baseloss(lossmatrix))
-        # Add neighbors
-        paramdict.update({'lossmatrix':lossmatrix})
-        _, lossmatrix = lf.add_cand_neighbors(paramdict, csdict_fam['postSamples'], currtruthdraws)
-        list_11k.append(sampf.baseloss(lossmatrix))
-
-    # Plot distribution of gap from 5k
-    list_6k_diffs = [list_5k[i]-list_6k[i] for i in range(len(list_5k))]
-    list_10k_diffs = [list_5k[i] - list_10k[i] for i in range(len(list_5k))]
-    list_11k_diffs = [list_5k[i] - list_11k[i] for i in range(len(list_5k))]
-
-    np.save(os.path.join('scratchfiles','17MAY_plots','list_5k'),np.array(list_5k))
-    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_6k'), np.array(list_6k))
-    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_10k'), np.array(list_10k))
-    np.save(os.path.join('scratchfiles', '17MAY_plots', 'list_11k'), np.array(list_11k))
-
-    plt.hist([list_6k_diffs,list_10k_diffs,list_11k_diffs], label=['5k+1k','10k','10k+1k'], alpha=0.7)
-    plt.title('Histogram of loss decreases as compared with 5k-sized candidate set')
-    plt.legend()
-    plt.show()
-    plt.close()
-
-    plt.hist([list_6k, list_10k, list_11k, list_5k], label=['5k+1k', '10k', '10k+1k', '5k'], alpha=0.7,bins=20)
-    plt.title('Histogram of null loss values under different candidate set sizes')
-    plt.legend()
-    plt.show()
-    plt.close()
-
-    return
-
 
 def STUDY_neighbors_or_loss():
     """
@@ -148,7 +52,7 @@ def STUDY_neighbors_or_loss():
                                     np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
     csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-    numdraws = 10000
+    numdraws = 20000
     csdict_fam['numPostSamples'] = numdraws
     np.random.seed(999)  # To replicate draws later
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
@@ -156,11 +60,11 @@ def STUDY_neighbors_or_loss():
     paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                                   marketvec=np.ones(numTN + numSN), candneighnum=1000)
 
-    numcanddraws, numtruthdraws, numdatadraws = 9999, 9999, 3000
+    numcanddraws, numtruthdraws, numdatadraws = 5000, 5000, 3000
     canddraws, truthdraws, datadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
                                                                          numtruthdraws, numdatadraws)
-    paramdict.update({'canddraws': canddraws, 'truthdraws': truthdraws, 'datadraws': datadraws,
-                      'lossmatrix': lf.build_loss_matrix(truthdraws, canddraws, paramdict)})
+    paramdict.update({'canddraws': canddraws, 'truthdraws': truthdraws, 'datadraws': datadraws})
+    paramdict.update({'lossmatrix': lf.build_loss_matrix(truthdraws, canddraws, paramdict)})
 
 
     ### BEST CURRENT METHOD OF FINDING NEAREST NEIGHBORS (pulled from wrapper function in logistigate)
@@ -211,7 +115,9 @@ def STUDY_neighbors_or_loss():
         losslist.append(np.matmul(lf.build_loss_matrix(truthdraws, est.reshape(1,17), paramdict),
                   currWvec))
 
+    ###################
     ### WHAT IF WE OPTIMIZED AFTER GENERATING EACH WEIGHTS MATRIX
+    ###################
     sampbudget = 100
     des = np.array([0.,1.,0.,0.])
     allocarr = des * sampbudget
@@ -230,11 +136,13 @@ def STUDY_neighbors_or_loss():
     def cand_obj_val(x, truthdraws, W, paramdict):
         '''function for optimization step'''
         numnodes = x.shape[0]
-        retval = 0. # initialize
         scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, numnodes), paramdict['scoredict'])[0]
         riskvec = lf.risk_check_array(truthdraws,paramdict['riskdict'])
         Wvalvec = np.sum(W, axis=1) / W.shape[1]
         return np.sum(np.sum(scoremat*riskvec,axis=1)*Wvalvec)
+
+    plt.hist(Wvalvec)
+    plt.show()
 
     def get_bayes_min_cand(truthdraws, W, paramdict):
         # Initialize with random truthdraw
@@ -244,22 +152,75 @@ def STUDY_neighbors_or_loss():
         bds = spo.Bounds(np.repeat(0., xinit.shape[0]), np.repeat(1., xinit.shape[0]))
         spoOutput = spo.minimize(cand_obj_val, xinit, args=(truthdraws, W, paramdict), #bounds=bds,
                                  tol= 1e-8)  # Reduce tolerance if not getting integer solutions
-
         return spoOutput
 
-    spoOutput.x
-    array([0.10085021, 0.0463785 , 0.49988548, 0.79192503, 0.92376177,
-       0.62462854, 0.59489807, 0.15531303, 0.18350893, 0.04915995,
-       0.66009375, 0.82461902, 0.95640082, 0.11773402, 0.26300716,
-       0.08915359, 0.09778346])
-    array([0.10085022, 0.0463785, 0.4998855, 0.79192503, 0.92376178,
-           0.6246285, 0.59489807, 0.15531303, 0.18350895, 0.0491467,
-           0.66009375, 0.8246199, 0.9564008, 0.11773402, 0.26300718,
-           0.08915359, 0.09778346])
+    optout = get_bayes_min_cand(truthdraws, W, paramdict)
+    print(optout.x)
+    '''[0.10430342 0.04735841 0.50486985 0.78957791 0.92278796 0.62849234
+ 0.60753786 0.15754878 0.1818898  0.04873693 0.66709724 0.81981531
+ 0.9555529  0.11784781 0.25618332 0.08974038 0.09700689]'''
+    print(cand_obj_val(optout.x,truthdraws,W,paramdict))
+    '''2.389713248087856'''
+
     Wvalvec = np.sum(W, axis=1) / W.shape[1]
     q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
     newx = getbayesest(truthdraws,Wvalvec,q)
+    print(newx)
+    '''[0.1033372  0.04655314 0.50836986 0.80887622 0.93306503 0.72997065
+ 0.66639821 0.15801045 0.18680485 0.04805534 0.7523503  0.86533188
+ 0.95966307 0.11677952 0.26316762 0.08878236 0.09558447]'''
+    cand_obj_val(newx, truthdraws, W, paramdict)
+    '''2.427297718533237'''
+    # with 10k truthdraws
+    print(cand_obj_val(optout.x, truthdraws, W, paramdict))
 
+    #########################
+    #########################
+    # Test optimization vs analytical approach
+    budgetarr = np.arange(0,401,50)
+    numReps = 20
+
+    # Critical ratio
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+
+    # Storage matrices
+    optresmat = np.zeros((numReps, budgetarr.shape[0]))
+    opttimemat = np.zeros((numReps, budgetarr.shape[0]))
+    analyzeresmat = np.zeros((numReps, budgetarr.shape[0]))
+    analyzetimemat = np.zeros((numReps, budgetarr.shape[0]))
+    for rep in range(numReps):
+        print('Replication ' + str(rep) + '...')
+        csdict_fam = methods.GeneratePostSamples(csdict_fam)
+        truthdraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numtruthdraws, replace=False)]
+        datadraws = truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        for budgetind in range(budgetarr.shape[0]):
+            print('Budget: ' + str(budgetarr[budgetind]))
+            # update plan
+            currbudget = budgetarr[budgetind]
+            des = np.array([0., 1., 0., 0.])
+            allocarr = des * currbudget
+            if budgetind == 0:
+                W = np.ones((numtruthdraws,numdatadraws)) / numtruthdraws
+            else:
+                W = sampf.build_weights_matrix(truthdraws, datadraws, allocarr, csdict_fam)
+            # Do optimization
+            time1 = time.time()
+            optobject = get_bayes_min_cand(truthdraws, W, paramdict)
+            optresmat[rep, budgetind] = optobject.fun
+            opttimemat[rep, budgetind] = time.time() - time1
+            # Do analytical solution
+            time2 = time.time()
+            analyze_x = getbayesest(truthdraws, np.sum(W, axis=1) / W.shape[1], q)
+            analyzeresmat[rep, budgetind] =  cand_obj_val(analyze_x, truthdraws, W, paramdict)
+            analyzetimemat[rep, budgetind] = time.time() - time2
+    # Plot
+    xind = 0
+    shift = 0.1
+    for budgetind in range(budgetarr.shape[0]):
+        xind += 1
+        # Opt vals first
+        for rep in range(numReps):
+            plt.plot(xind,)
 
 
     return
@@ -300,7 +261,7 @@ def casestudy_familiar():
     # Set up MCMC
     csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
     # Generate posterior draws
-    numdraws = 30000
+    numdraws = 80000
     csdict_fam['numPostSamples'] = numdraws
     np.random.seed(1000)  # To replicate draws later
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
@@ -351,7 +312,261 @@ def casestudy_familiar():
         print(repr(currmargutilmat))
         utilMatList.append(currmargutilmat)
         # Plot utility curves
-        util.plot_marg_util_nodes_group(utilMatList, testmax, testint)
+        util.plot_marg_util_nodes_group(utilMatList, testmax, testint,type='delta')
+    '''22-MAY PT 2
+   utilMatList=[np.array([[0.        , 0.04707364, 0.08308734, 0.11218597, 0.13970595,
+         0.16016985, 0.18183691, 0.20296511, 0.2243536 , 0.2374837 ,
+         0.25168563, 0.26660573, 0.28753349, 0.30224194, 0.31934646,
+         0.3401507 , 0.34911897, 0.36149871, 0.37722235, 0.39380739,
+         0.41699832, 0.425585  , 0.44592204, 0.46326304, 0.48171007,
+         0.49192414, 0.51676908, 0.52418614, 0.54333886, 0.55432528,
+         0.57543038, 0.60326451, 0.62403526, 0.64097906, 0.65617335,
+         0.66682929, 0.69529532, 0.71094641, 0.72908473, 0.7565769 ,
+         0.76448764],
+        [0.        , 0.09032483, 0.1487822 , 0.19812027, 0.2328932 ,
+         0.27083038, 0.29717857, 0.3248761 , 0.34524488, 0.37204092,
+         0.39265349, 0.4135998 , 0.4334636 , 0.45422051, 0.46617341,
+         0.48582451, 0.50788544, 0.51938964, 0.53744346, 0.56087706,
+         0.57115206, 0.5878924 , 0.59905739, 0.62353994, 0.64930452,
+         0.66333306, 0.67644448, 0.69085396, 0.7121719 , 0.72836248,
+         0.74320653, 0.76157277, 0.78321639, 0.79933322, 0.81856204,
+         0.82280492, 0.85642593, 0.87551018, 0.89236005, 0.90654834,
+         0.91832665],
+        [0.        , 0.03536612, 0.06604591, 0.08676101, 0.11242768,
+         0.12905307, 0.14427399, 0.1647642 , 0.17739049, 0.19826019,
+         0.21289229, 0.22893421, 0.24461393, 0.26376741, 0.27915451,
+         0.29717465, 0.31249891, 0.32912099, 0.34567097, 0.35388051,
+         0.3729834 , 0.39128499, 0.40580956, 0.42353595, 0.43827984,
+         0.45973575, 0.47917765, 0.49204148, 0.51082665, 0.52893473,
+         0.54212915, 0.5560365 , 0.58165145, 0.59803748, 0.62661544,
+         0.65360082, 0.65597454, 0.6661106 , 0.69941843, 0.72300848,
+         0.73731974],
+        [0.        , 0.02085837, 0.03360481, 0.04513356, 0.05563299,
+         0.06336261, 0.07226287, 0.0778826 , 0.08292058, 0.08898205,
+         0.10112836, 0.10221544, 0.11015892, 0.11664283, 0.12087262,
+         0.12257397, 0.12864342, 0.13523727, 0.14159198, 0.13980132,
+         0.14475921, 0.15082147, 0.1502119 , 0.15762354, 0.16237489,
+         0.16550039, 0.16959078, 0.1714942 , 0.17370477, 0.18270131,
+         0.18549174, 0.19008228, 0.19009209, 0.19075348, 0.2019204 ,
+         0.20145909, 0.20615687, 0.20864367, 0.21203277, 0.22359048,
+         0.2200012 ]]),
+ np.array([[0.        , 0.05986217, 0.0964848 , 0.1293531 , 0.15264742,
+         0.17254669, 0.19277813, 0.21952356, 0.23123659, 0.24713165,
+         0.26066983, 0.28672006, 0.29762441, 0.31327748, 0.32726484,
+         0.34321057, 0.36490639, 0.38067149, 0.38625151, 0.40696722,
+         0.42791921, 0.43614132, 0.46242588, 0.46742506, 0.4875266 ,
+         0.50560386, 0.51626109, 0.54089895, 0.55408669, 0.57424007,
+         0.59521845, 0.61296058, 0.63061903, 0.63509728, 0.66087521,
+         0.69684916, 0.70887407, 0.72036288, 0.75095288, 0.76301472,
+         0.79240181],
+        [0.        , 0.12077301, 0.1851583 , 0.23004366, 0.26912908,
+         0.30601395, 0.33053711, 0.3592703 , 0.38229675, 0.40497374,
+         0.42998798, 0.45043814, 0.46700836, 0.4878219 , 0.50243077,
+         0.51684673, 0.53999338, 0.55471988, 0.57933873, 0.58661195,
+         0.60799892, 0.62282962, 0.64786874, 0.6661945 , 0.68026404,
+         0.69668553, 0.70903742, 0.73670644, 0.75744141, 0.77024648,
+         0.78440005, 0.80473984, 0.82580924, 0.8409859 , 0.85612947,
+         0.89048175, 0.90869643, 0.90867352, 0.91696905, 0.96542842,
+         0.9631572 ],
+        [0.        , 0.04867345, 0.08006378, 0.10529058, 0.12740279,
+         0.15033248, 0.17121232, 0.19019888, 0.20803687, 0.22831788,
+         0.23751597, 0.25627883, 0.27246331, 0.28817676, 0.30367696,
+         0.32196284, 0.33245232, 0.33906152, 0.36606063, 0.37987524,
+         0.3998376 , 0.41566709, 0.43174368, 0.449056  , 0.46944768,
+         0.48528572, 0.50471441, 0.52231615, 0.53737112, 0.55954862,
+         0.57294474, 0.59271417, 0.61148627, 0.62945205, 0.64753011,
+         0.68043171, 0.68439047, 0.70958428, 0.72198207, 0.75091846,
+         0.77874715],
+        [0.        , 0.035809  , 0.05798628, 0.07311823, 0.08602294,
+         0.09869752, 0.10619886, 0.11668609, 0.12579303, 0.13212836,
+         0.13957205, 0.14369783, 0.15103858, 0.15628058, 0.16356617,
+         0.16762829, 0.1695861 , 0.17894875, 0.18480976, 0.18831656,
+         0.19083116, 0.19631996, 0.19897463, 0.20662228, 0.21098634,
+         0.2102247 , 0.21522329, 0.21825883, 0.22378135, 0.22975151,
+         0.22866255, 0.23804229, 0.23472138, 0.24442445, 0.24818744,
+         0.24906589, 0.25256729, 0.25419306, 0.25722261, 0.26380383,
+         0.2659412 ]]),
+ np.array([[0.        , 0.03220795, 0.06280418, 0.08924659, 0.11329822,
+         0.1312814 , 0.14651544, 0.16600309, 0.18242458, 0.20016282,
+         0.21533518, 0.22685465, 0.24032373, 0.2585311 , 0.26422495,
+         0.29103346, 0.29726646, 0.31686031, 0.33383687, 0.3448892 ,
+         0.3578679 , 0.3729985 , 0.39583722, 0.41217326, 0.42808579,
+         0.44262403, 0.45109832, 0.46658836, 0.48184513, 0.51533075,
+         0.53053599, 0.55463478, 0.57205227, 0.59772367, 0.59914808,
+         0.60970833, 0.63467467, 0.65206293, 0.67123308, 0.68479366,
+         0.70529242],
+        [0.        , 0.07342285, 0.12900331, 0.16635791, 0.20825325,
+         0.24109916, 0.2685275 , 0.29220554, 0.31492706, 0.34122867,
+         0.35551896, 0.37819256, 0.39840764, 0.41261288, 0.43353425,
+         0.45070773, 0.46587948, 0.48166871, 0.49964818, 0.50937713,
+         0.5305394 , 0.55000439, 0.56824261, 0.58973095, 0.60125421,
+         0.62434813, 0.63673417, 0.65263896, 0.66564512, 0.69098808,
+         0.70681809, 0.71577918, 0.7469139 , 0.77314658, 0.77598373,
+         0.79544425, 0.80549946, 0.82158435, 0.86024305, 0.86429971,
+         0.87937647],
+        [0.        , 0.00939427, 0.02910798, 0.04259357, 0.0583469 ,
+         0.07519154, 0.09511938, 0.1139153 , 0.12811566, 0.14539194,
+         0.15971809, 0.17420945, 0.1911607 , 0.20392138, 0.22474575,
+         0.23591136, 0.24880966, 0.26539777, 0.28500175, 0.29658688,
+         0.31572848, 0.3379337 , 0.34744432, 0.36212291, 0.38612964,
+         0.39828987, 0.41434574, 0.43306213, 0.44957696, 0.47642703,
+         0.49369112, 0.50362871, 0.51562068, 0.54614576, 0.569174  ,
+         0.58630265, 0.61127838, 0.60731638, 0.64527754, 0.65418813,
+         0.68365124],
+        [0.        , 0.00912354, 0.01870432, 0.02454646, 0.03469921,
+         0.0413823 , 0.04693331, 0.0556103 , 0.05972861, 0.06969725,
+         0.07256976, 0.07867255, 0.0835055 , 0.0896111 , 0.09546014,
+         0.10050116, 0.10325732, 0.10827036, 0.1068495 , 0.11642525,
+         0.11962841, 0.12796365, 0.12378733, 0.13020988, 0.13359996,
+         0.13715594, 0.13790287, 0.14773203, 0.14880852, 0.14993135,
+         0.15564932, 0.15894923, 0.16217543, 0.16236234, 0.16901098,
+         0.17524719, 0.1786229 , 0.18342991, 0.1826077 , 0.18727863,
+         0.19076319]]),
+ np.array([[0.        , 0.01331514, 0.03270524, 0.04787052, 0.06507752,
+         0.07749612, 0.09315973, 0.10798867, 0.11647572, 0.12881989,
+         0.1463101 , 0.15746406, 0.1655888 , 0.1804402 , 0.19318647,
+         0.21232148, 0.22622269, 0.23502914, 0.2461052 , 0.26042597,
+         0.27791293, 0.29356747, 0.3035121 , 0.32227373, 0.3327586 ,
+         0.35826066, 0.37371296, 0.38877069, 0.40674822, 0.42258048,
+         0.44038976, 0.45981222, 0.48019758, 0.49103268, 0.51514996,
+         0.52609099, 0.5475986 , 0.56046402, 0.59211045, 0.59921923,
+         0.62340912],
+        [0.        , 0.00820928, 0.03638629, 0.06882018, 0.09895211,
+         0.12850021, 0.15769896, 0.17790013, 0.20321724, 0.2202743 ,
+         0.24415057, 0.26064994, 0.2808547 , 0.29692916, 0.32129465,
+         0.33812918, 0.35276548, 0.37529604, 0.38546391, 0.40083128,
+         0.42175158, 0.43730278, 0.45369567, 0.4638814 , 0.49077094,
+         0.50108863, 0.52028019, 0.52673136, 0.55522757, 0.57487592,
+         0.58304614, 0.62020835, 0.63578888, 0.64853133, 0.66101881,
+         0.67805909, 0.70287206, 0.70997486, 0.74037832, 0.76827254,
+         0.75707092],
+        [0.        , 0.00618892, 0.01605596, 0.0265595 , 0.04023482,
+         0.05468006, 0.06075273, 0.07586086, 0.08298722, 0.09542489,
+         0.10537921, 0.11736021, 0.13282636, 0.14118414, 0.15391436,
+         0.16485533, 0.1746696 , 0.1913097 , 0.20883401, 0.22257426,
+         0.23362413, 0.2504476 , 0.27086105, 0.28523752, 0.29646497,
+         0.31831831, 0.32884993, 0.343442  , 0.35971855, 0.3749    ,
+         0.39751054, 0.40636214, 0.43717739, 0.44790572, 0.46350527,
+         0.48134326, 0.51008533, 0.52153919, 0.54738619, 0.56208854,
+         0.5882843 ],
+        [0.        , 0.00219663, 0.00681421, 0.01006857, 0.01602738,
+         0.01988488, 0.02477183, 0.02925964, 0.03221686, 0.03252698,
+         0.0417887 , 0.04448538, 0.04824249, 0.04711159, 0.05324703,
+         0.05492503, 0.05812204, 0.06123845, 0.06241605, 0.06869213,
+         0.06584206, 0.07255256, 0.07582418, 0.07800508, 0.07911916,
+         0.07860068, 0.08530327, 0.08731106, 0.0901618 , 0.09643489,
+         0.09440985, 0.09738411, 0.09942092, 0.10343704, 0.10448771,
+         0.10701137, 0.10939663, 0.11579314, 0.11946295, 0.11412243,
+         0.12017969]]),
+ np.array([[0.        , 0.01882731, 0.04302016, 0.05805562, 0.07963409,
+         0.09736917, 0.11023487, 0.13154815, 0.14073672, 0.15679339,
+         0.16854235, 0.18619781, 0.19753777, 0.21350789, 0.22281697,
+         0.23910114, 0.25095656, 0.26747712, 0.27864561, 0.2899441 ,
+         0.31256914, 0.32487662, 0.34381651, 0.35626168, 0.36190491,
+         0.37889734, 0.40159377, 0.42306948, 0.43759164, 0.45524009,
+         0.4682142 , 0.49619316, 0.51942656, 0.52059031, 0.54450267,
+         0.55295057, 0.59082996, 0.59822495, 0.62777469, 0.6445228 ,
+         0.64598039],
+        [0.        , 0.03684486, 0.08542261, 0.12408076, 0.16076953,
+         0.19199386, 0.21661994, 0.23974324, 0.26112395, 0.28717129,
+         0.30301689, 0.32979043, 0.34575728, 0.36341218, 0.38077303,
+         0.39763074, 0.41539631, 0.43063496, 0.44520259, 0.47058111,
+         0.47634443, 0.49911683, 0.51641197, 0.53554225, 0.5552249 ,
+         0.56770531, 0.58798218, 0.60523165, 0.61676406, 0.63633774,
+         0.6554642 , 0.67263546, 0.67520835, 0.69254802, 0.7178021 ,
+         0.73571618, 0.74575418, 0.77102188, 0.79089734, 0.80424997,
+         0.81755062],
+        [0.        , 0.00237147, 0.01080609, 0.02206691, 0.03588635,
+         0.04878691, 0.06622193, 0.07588553, 0.09304613, 0.10668896,
+         0.12412273, 0.13229057, 0.14782838, 0.16696212, 0.1753732 ,
+         0.19128405, 0.20901877, 0.22213518, 0.23933397, 0.25245114,
+         0.26791903, 0.28053676, 0.29604581, 0.31070444, 0.33642314,
+         0.3484035 , 0.36560874, 0.37372584, 0.39946703, 0.41856938,
+         0.43675309, 0.44753498, 0.46206605, 0.47354117, 0.49971878,
+         0.52642434, 0.54286832, 0.56223868, 0.59403595, 0.61709118,
+         0.62075645],
+        [0.        , 0.00099191, 0.00274908, 0.00574656, 0.01110405,
+         0.01277259, 0.01683124, 0.02218406, 0.02670506, 0.02968442,
+         0.03689945, 0.04262369, 0.04542182, 0.05113375, 0.05395306,
+         0.05478463, 0.06060254, 0.06478384, 0.07200263, 0.07194082,
+         0.07812193, 0.07832637, 0.08200756, 0.08411846, 0.08846378,
+         0.08818695, 0.09629299, 0.09696593, 0.10335522, 0.10902826,
+         0.10669645, 0.11371165, 0.11844491, 0.11545901, 0.12345819,
+         0.12498942, 0.1265874 , 0.13128857, 0.13220597, 0.1462754 ,
+         0.1424395 ]]),
+ np.array([[0.        , 0.01852692, 0.0374142 , 0.0552234 , 0.07303234,
+         0.09159084, 0.10695794, 0.12378031, 0.13825375, 0.15168262,
+         0.17062221, 0.18520856, 0.19737325, 0.20658527, 0.22420861,
+         0.23686839, 0.2524218 , 0.2706877 , 0.27945896, 0.29159918,
+         0.31419518, 0.32694011, 0.33427224, 0.35875675, 0.36714772,
+         0.38542283, 0.40106913, 0.42622236, 0.43816488, 0.46104448,
+         0.46525935, 0.49731554, 0.51164393, 0.53142347, 0.54120176,
+         0.56506455, 0.58236737, 0.59779058, 0.63441501, 0.64219859,
+         0.65789945],
+        [0.        , 0.03467005, 0.08464008, 0.11968606, 0.1537297 ,
+         0.18200026, 0.2077045 , 0.23688143, 0.25741637, 0.27964143,
+         0.30286771, 0.31966918, 0.33718657, 0.35548703, 0.37069375,
+         0.38981569, 0.40601956, 0.4237278 , 0.44126322, 0.45539497,
+         0.47253475, 0.48612009, 0.50676077, 0.52828503, 0.53717775,
+         0.56359015, 0.57710357, 0.58920501, 0.60708769, 0.63138662,
+         0.66105832, 0.67412679, 0.67899196, 0.69822887, 0.71098108,
+         0.73359637, 0.7601118 , 0.76259446, 0.79161107, 0.80784557,
+         0.83318001],
+        [0.        , 0.01541482, 0.03180279, 0.04626599, 0.05718761,
+         0.07206655, 0.08555726, 0.09755607, 0.1096506 , 0.12634473,
+         0.13843746, 0.1497638 , 0.16970405, 0.18102228, 0.20033055,
+         0.21057924, 0.22177135, 0.23668917, 0.25073281, 0.27027918,
+         0.28061917, 0.30097622, 0.31755567, 0.32635315, 0.34810159,
+         0.36454476, 0.38091595, 0.40208725, 0.41570741, 0.43765313,
+         0.44628616, 0.47874708, 0.48037165, 0.50861713, 0.52663862,
+         0.54866743, 0.56356542, 0.58045006, 0.6113433 , 0.62053329,
+         0.65739922],
+        [0.        , 0.00699298, 0.01487666, 0.02043457, 0.02618375,
+         0.03192993, 0.0388478 , 0.04089247, 0.04750965, 0.05358612,
+         0.05828129, 0.06292217, 0.06728381, 0.07255248, 0.0736002 ,
+         0.08153675, 0.08246167, 0.08692838, 0.08985174, 0.09379842,
+         0.09978434, 0.10366827, 0.10897291, 0.10833333, 0.11314047,
+         0.11688324, 0.11786214, 0.12660265, 0.12780691, 0.13159419,
+         0.13421448, 0.13716074, 0.13809271, 0.14048605, 0.14277821,
+         0.14933171, 0.15092207, 0.15343442, 0.15873466, 0.15644271,
+         0.1626998 ]]),
+ np.array([[0.        , 0.011761  , 0.02361448, 0.04426311, 0.06103153,
+         0.07608594, 0.0942737 , 0.11121076, 0.12029943, 0.1394965 ,
+         0.15361746, 0.17067315, 0.18643257, 0.19943186, 0.21524141,
+         0.23051312, 0.24246482, 0.25263982, 0.27067966, 0.29237682,
+         0.31081847, 0.32576181, 0.33743496, 0.35571179, 0.36825147,
+         0.38626934, 0.40212417, 0.41982561, 0.43303379, 0.45002608,
+         0.47492879, 0.4763702 , 0.51153175, 0.51423105, 0.53878352,
+         0.55262718, 0.58100201, 0.58642587, 0.61978282, 0.63809238,
+         0.65388633],
+        [0.        , 0.02366635, 0.06418929, 0.10528887, 0.13986766,
+         0.17048204, 0.19792239, 0.22552511, 0.24506862, 0.27465   ,
+         0.29142612, 0.30964866, 0.32558245, 0.34681371, 0.36444673,
+         0.38155205, 0.39720627, 0.41862036, 0.43503612, 0.44698065,
+         0.46250221, 0.48208248, 0.50425381, 0.51340095, 0.53042651,
+         0.54407216, 0.57378403, 0.58605026, 0.58921341, 0.62241708,
+         0.63442191, 0.65184288, 0.67283741, 0.68084915, 0.70697612,
+         0.72175509, 0.73740213, 0.75515502, 0.77941006, 0.78071698,
+         0.82462372],
+        [0.        , 0.00599897, 0.01363188, 0.02804367, 0.03984283,
+         0.05253714, 0.06895555, 0.07788172, 0.09034745, 0.10726328,
+         0.1216181 , 0.13585091, 0.15148536, 0.15942051, 0.17543862,
+         0.19009646, 0.20642752, 0.21873334, 0.23419569, 0.252287  ,
+         0.26488712, 0.28659236, 0.2944053 , 0.30781438, 0.32799073,
+         0.34644165, 0.3661948 , 0.38416694, 0.39862244, 0.41057715,
+         0.42244706, 0.44953188, 0.46139689, 0.47992177, 0.50567921,
+         0.51141436, 0.53861593, 0.56576438, 0.5897794 , 0.60654984,
+         0.62391386],
+        [0.        , 0.00224379, 0.00609707, 0.01152598, 0.01545881,
+         0.02021132, 0.02322535, 0.02910738, 0.02993376, 0.03331098,
+         0.03278043, 0.03957569, 0.04586625, 0.04779762, 0.05242837,
+         0.05939246, 0.05940625, 0.06388271, 0.06897462, 0.06847657,
+         0.07042065, 0.07799247, 0.07976692, 0.07949299, 0.08373455,
+         0.08478345, 0.08925428, 0.09333074, 0.09953983, 0.09872382,
+         0.09860259, 0.10379724, 0.10976214, 0.11078434, 0.11603296,
+         0.12507515, 0.11620255, 0.12875534, 0.12441607, 0.12934329,
+         0.13261483]])]
+    '''
     '''22-MAY
     [array([[0.        , 0.03739235, 0.06654467, 0.095116  , 0.1172726 ,
          0.13804861, 0.1596548 , 0.17947336, 0.19755038, 0.21721847,
@@ -785,7 +1000,8 @@ def casestudy_familiar():
     # utilMatList = np.load(os.path.join('casestudyoutputs', '16MAY', 'utilmatlist_familiar.npy'))
     # utilMatList = np.load(os.path.join('casestudyoutputs', 'PREVIOUS', 'Familiar', 'utilmatlist_familiar.npy'))
     avgUtilMat = np.average(np.array(utilMatList), axis=0)
-    util.plot_marg_util(avgUtilMat, testmax, testint, labels=csdict_fam['TNnames'], type='delta',
+    util.plot_marg_util(avgUtilMat, testmax, testint, #labels=csdict_fam['TNnames'],
+                        type='delta',
                         titlestr='Familiar Setting, $t=0.15$, $m=0.6$', linelabels=True, utilmax=0.1,
                         colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
     allocArr, objValArr = sampf.smooth_alloc_forward(avgUtilMat)
