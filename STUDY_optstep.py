@@ -193,13 +193,68 @@ plt.show()
 ###############
 # define a gradient function for any candidate vector x
 def cand_obj_val_jac(x, truthdraws, Wvec, paramdict):
-    '''function for optimization step'''
+    """function gradient for optimization step"""
     numnodes = x.shape[0]
     scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, numnodes), paramdict['scoredict'])[0]
     riskvec = lf.risk_check_array(truthdraws,paramdict['riskdict'])
-    #Wvalvec = np.sum(W, axis=1) / W.shape[1]
+    ### RESTART HERE
     return np.sum(np.sum(scoremat*riskvec,axis=1)*Wvec)
 
 
 
+###############
+# What about using the critical ratio?
+###############
+def getbayesest(truthdraws, Wvec, q):
+    # Establish the weight-sum target
+    wtTarg = q * np.sum(Wvec)
+    # Initialize return vector
+    est = np.zeros(shape=(len(truthdraws[0])))
+    # Iterate through each node's distribution of SFP rates, sorting the weights accordingly
+    for gind in range(len(truthdraws[0])):
+        currRates = truthdraws[:, gind]
+        sortWts = [x for _, x in sorted(zip(currRates, Wvec))]
+        sortWtsSum = [np.sum(sortWts[:i]) for i in range(len(sortWts))]
+        critInd = np.argmax(sortWtsSum >= wtTarg)
+        est[gind] = sorted(currRates)[critInd]
+    return est
 
+############
+# Do the solutions converge as numtruthdraws increases?
+############
+truthsetsizelist = [100, 500, 1000, 5000, 10000]
+numReps = 50
+sol_delta_mat = np.zeros((len(truthsetsizelist),numReps))
+obj_delta_mat = np.zeros((len(truthsetsizelist),numReps))
+time_detla_mat = np.zeros((len(truthsetsizelist),numReps))
+for rep in range(numReps):
+    print('Replication '+str(rep+1)+'...')
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    for truthsetind, truthsetsize in enumerate(truthsetsizelist):
+        print('Truth set size: '+str(truthsetsize))
+        currtruthdraws = csdict_fam['postSamples'][choice(np.arange(numdraws), truthsetsize, replace=False)]
+        Wvec = sampf.build_weights_matrix(currtruthdraws,
+                                          currtruthdraws[choice(np.arange(truthsetsize), size=1)],
+                                          allocarr,csdict_fam)[:,0]
+        time1 = time.time()
+        optout = get_bayes_min_cand(currtruthdraws, Wvec, paramdict)
+        curropt_x = optout.x
+        curropt_fun = optout.fun
+        timeopt = time.time()-time1
+        print('Opt time: '+str(round(timeopt,3)))
+        print('Opt obj: '+str(round(curropt_fun,3)))
+        # Now analytically
+        time2 = time.time()
+        q = paramdict['scoredict']['underestweight'] / (1+paramdict['scoredict']['underestweight'] )
+        curranalyit_x = getbayesest(currtruthdraws, Wvec, q)
+        curranalyit_fun = cand_obj_val(curranalyit_x, currtruthdraws, Wvec, paramdict)
+        timeanalyit = time.time()-time2
+        print('Analytical time: ' + str(round(timeanalyit, 3)))
+        print('Opt obj: ' + str(round(curranalyit_fun, 3)))
+        # Store data
+        sol_delta_mat[truthsetind][rep] = np.linalg.norm(curropt_x-curranalyit_x)
+        obj_delta_mat[truthsetind][rep] = curranalyit_fun - curropt_fun
+        time_detla_mat[truthsetind][rep] = timeopt - timeanalyit
+'''24-MAY
+
+'''
