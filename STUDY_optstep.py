@@ -73,12 +73,12 @@ util100 = base - loss100
 print('Utility at 100 tests, under standard approach: '+str(round(util100,4)))
 
 # Using optimization
-def cand_obj_val(x, truthdraws, Wvec, paramdict):
+
+# Objective function
+def cand_obj_val(x, truthdraws, Wvec, paramdict, riskmat):
     '''function for optimization step'''
     numnodes = x.shape[0]
     scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, numnodes), paramdict['scoredict'])[0]
-    riskmat = lf.risk_check_array(truthdraws,paramdict['riskdict'])
-    #Wvalvec = np.sum(W, axis=1) / W.shape[1]
     return np.sum(np.sum(scoremat*riskmat,axis=1)*Wvec)
 '''
 # RETURNS SAME VALUES AS IN (LW) MATRIX IF CANDDRAW IS USED FOR x; example:
@@ -89,9 +89,8 @@ print(LW[i, j])
 '''
 
 # define a gradient function for any candidate vector x
-def cand_obj_val_jac(x, truthdraws, Wvec, paramdict):
+def cand_obj_val_jac(x, truthdraws, Wvec, paramdict, riskmat):
     """function gradient for optimization step"""
-    riskmat = lf.risk_check_array(truthdraws,paramdict['riskdict'])
     jacmat = np.where(x < truthdraws, -paramdict['scoredict']['underestweight'], 1) * riskmat \
                 * Wvec.reshape(truthdraws.shape[0],1)
     return np.sum(jacmat, axis=0)
@@ -108,34 +107,154 @@ for g in range(len(x0)):
     print(obj1-obj0)
     print(dobj0[g]*diff)
 '''
+def cand_obj_val_hess(x,truthdraws,Wvec,paramdict,riskmat):
+    return np.zeros((x.shape[0],x.shape[0]))
 
 # define an optimization function for a set of parameters, truthdraws, and weights matrix
 def get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit='na', optmethod='BFGS'):
     # Initialize with random truthdraw if not provided
     if isinstance(xinit, str):
         xinit = truthdraws[choice(np.arange(truthdraws.shape[0]))]
+    # Get risk matrix
+    riskmat = lf.risk_check_array(truthdraws, paramdict['riskdict'])
     # Minimize expected candidate loss
-    # NEED BOUNDS?
     #bds = spo.Bounds(np.repeat(0., xinit.shape[0]), np.repeat(1., xinit.shape[0]))
-    spoOutput = spo.minimize(cand_obj_val, xinit, method=optmethod, #bounds=bds,
-                             args=(truthdraws, Wvec, paramdict), tol= 1e-8)  # Reduce tolerance?
+    spoOutput = spo.minimize(cand_obj_val, xinit, jac=cand_obj_val_jac,
+                             hess=cand_obj_val_hess,
+                             method=optmethod, #bounds=bds, tol= 1e-5
+                             args=(truthdraws, Wvec, paramdict, riskmat))
     return spoOutput
 
-# opt function using gradient
-def get_bayes_min_cand_jac(truthdraws, Wvec, paramdict, xinit='na', optmethod='BFGS'):
-    # Initialize with random truthdraw if not provided
-    if isinstance(xinit, str):
-        xinit = truthdraws[choice(np.arange(truthdraws.shape[0]))]
-    # Minimize expected candidate loss
-    # NEED BOUNDS?
-    #bds = spo.Bounds(np.repeat(0., xinit.shape[0]), np.repeat(1., xinit.shape[0]))
-    spoOutput = spo.minimize(cand_obj_val, xinit, jac=cand_obj_val_jac, method=optmethod, #bounds=bds,
-                             args=(truthdraws, Wvec, paramdict), tol= 1e-8)  # Reduce tolerance?
-    return spoOutput
-# Check we're getting the same solutions
-xinit=truthdraws[5]
-out1 = get_bayes_min_cand(truthdraws,Wvec,paramdict,xinit)
-out2 = get_bayes_min_cand_jac(truthdraws,Wvec,paramdict,xinit)
+# Do any methods work faster than any others?
+# Omitted 'Nelder-Mead', 'dogleg', 'trust-krylov'
+methodlist = ['Powell', 'CG', 'BFGS', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+              'trust-constr', 'trust-ncg', 'trust-exact']
+numReps = 100
+obj_delta_mat = np.zeros((len(methodlist),numReps))
+time_delta_mat = np.zeros((len(methodlist),numReps))
+for rep in range(numReps):
+    print('Rep: '+str(rep))
+    xinit = truthdraws[choice(np.arange(len(truthdraws)))]
+    Wvec = W[:,rep]
+    for methodind, method in enumerate(methodlist):
+        time0=time.time()
+        curroptobj = get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit, optmethod=method)
+        time1 = round(time.time() - time0,3)
+        time_delta_mat[methodind][rep] = time1
+        if methodind == 0:
+            obj_std = curroptobj.fun
+            obj_delta_mat[methodind][rep] = 0.
+        else:
+            obj_delta_mat[methodind][rep] = curroptobj.fun - obj_std
+import warnings
+warnings.filterwarnings("always") # "always"
+'''25-MAY
+np.save(os.path.join('studies', 'whichoptimizemethod_25MAY23', 'obj_delta_mat'), np.array(obj_delta_mat))
+np.save(os.path.join('studies', 'whichoptimizemethod_25MAY23', 'time_delta_mat'), np.array(time_delta_mat))
+'''
+# Plot of objective difference
+xlabs = []
+for methodind, method in enumerate(methodlist):
+    plt.boxplot(np.array(obj_delta_mat).T)
+    xlabs.append(str(method))
+plt.xticks(np.arange(1,11),xlabs,size=6)
+plt.title('Objective gap from "Powell" under different scipy methods\n$N=100$, 100 replications, $|\Gamma_{truth}|=5k$')
+plt.ylabel('Objective gap')
+plt.xlabel('Scipy optimization method')
+plt.show()
+plt.close()
+# Zoom in
+xlabs = []
+for methodind, method in enumerate(methodlist):
+    xlabs.append(str(method))
+plt.boxplot(np.array(obj_delta_mat).T)
+plt.xticks(np.arange(1,11),xlabs,size=6)
+plt.title('Objective gap from "Powell" under different scipy methods\n$N=100$, 100 replications, $|\Gamma_{truth}|=5k$')
+plt.ylabel('Objective gap')
+plt.xlabel('Scipy optimization method')
+plt.ylim([-0.005,0.02])
+plt.show()
+plt.close()
+
+# Plot of time needed
+xlabs = []
+for method in methodlist:
+    xlabs.append(str(method))
+plt.boxplot(np.array(time_delta_mat).T)
+plt.xticks(np.arange(1,11),xlabs,size=6)
+plt.title('Time (in sec.) needed for 1 data draw under different scipy methods\n$N=100$, 100 replications, $|\Gamma_{truth}|=5k$')
+plt.ylabel('Time (s)')
+plt.xlabel('Scipy optimization method')
+plt.show()
+plt.close()
+
+###############
+# What about using the critical ratio?
+###############
+def getbayescritratioest(truthdraws, Wvec, q):
+    # Establish the weight-sum target
+    wtTarg = q * np.sum(Wvec)
+    # Initialize return vector
+    est = np.zeros(shape=(len(truthdraws[0])))
+    # Iterate through each node's distribution of SFP rates, sorting the weights accordingly
+    for gind in range(len(truthdraws[0])):
+        currRates = truthdraws[:, gind]
+        sortWts = [x for _, x in sorted(zip(currRates, Wvec))]
+        sortWtsSum = [np.sum(sortWts[:i]) for i in range(len(sortWts))]
+        critInd = np.argmax(sortWtsSum >= wtTarg)
+        est[gind] = sorted(currRates)[critInd]
+    return est
+
+
+###################
+# CONDUCT SOME EXPERIMENTS CHANGING KEY PARAMETERS
+###################
+# Our base case is N=100, random xinit, BFGS method, eps=0.01, numtruthdraws=5k
+#   We will change these initial parameters to gauge the effect on computation time and estimate variance
+paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+                                              marketvec=np.ones(numTN + numSN))
+sampbudget = 100
+allocarr = np.array([0., 1., 0., 0.]) * sampbudget
+
+epsPerc, stoprange = 0.01, 10 # Desired accuracy of loss estimate, expressed as a percentage; also number of last observations to consider
+numtruthdraws, numdatadraws = 5000, 500
+method = 'BFGS'
+
+# conduct replications under different MCMC draws
+numReps = 25
+base_loss_est_mat, base_time_mat = np.zeros(numReps), np.zeros(numReps)
+for rep in range(numReps):
+    print('Replication '+str(rep))
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Distribute draws
+    truthdraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numtruthdraws, replace=False)]
+    datadraws = truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+    # Build W
+    W = sampf.build_weights_matrix(truthdraws, datadraws, allocarr, csdict_fam)
+    # Generate data until we converge OR run out of data
+    rangeList, j, minvalslist = [1e-3,1], -1, []
+    time0 = time.time()
+    while (np.max(rangeList)-np.min(rangeList)) / np.min(rangeList) > epsPerc and j < numdatadraws-1:
+        j +=1 # iterate data draw index
+        print('On data draw '+str(j))
+        Wvec = W[:, j] # Get W vector for current data draw
+        opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, optmethod=method)
+        minvalslist.append(opt_output.fun)
+        cumavglist = np.cumsum(minvalslist) / np.arange(1, j + 2)
+        if j > stopamount:
+            rangeList = cumavglist[-stopamount:]
+            print((np.max(rangeList)-np.min(rangeList)) / np.min(rangeList))
+    base_loss_est_mat[rep] = cumavglist[-1]
+    base_time_mat[rep] = time.time() - time0 # Time to get our estimate, given intialized values
+
+
+
+
+
+
+
+
+
 
 
 
@@ -230,35 +349,6 @@ plt.ylabel('Loss')
 plt.ylim([0,2.5])
 plt.show()
 
-# define a gradient function for any candidate vector x
-def cand_obj_val_jac(x, truthdraws, Wvec, paramdict):
-    """function gradient for optimization step"""
-    numnodes = x.shape[0]
-    scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, numnodes), paramdict['scoredict'])[0]
-    riskvec = lf.risk_check_array(truthdraws,paramdict['riskdict'])
-    ### RESTART HERE
-    return np.sum(np.sum(scoremat*riskvec,axis=1)*Wvec)
-
-
-
-
-
-###############
-# What about using the critical ratio?
-###############
-def getbayesest(truthdraws, Wvec, q):
-    # Establish the weight-sum target
-    wtTarg = q * np.sum(Wvec)
-    # Initialize return vector
-    est = np.zeros(shape=(len(truthdraws[0])))
-    # Iterate through each node's distribution of SFP rates, sorting the weights accordingly
-    for gind in range(len(truthdraws[0])):
-        currRates = truthdraws[:, gind]
-        sortWts = [x for _, x in sorted(zip(currRates, Wvec))]
-        sortWtsSum = [np.sum(sortWts[:i]) for i in range(len(sortWts))]
-        critInd = np.argmax(sortWtsSum >= wtTarg)
-        est[gind] = sorted(currRates)[critInd]
-    return est
 
 ############
 # Do the solutions converge as numtruthdraws increases?
@@ -287,7 +377,7 @@ for rep in range(numReps):
         # Now analytically
         time2 = time.time()
         q = paramdict['scoredict']['underestweight'] / (1+paramdict['scoredict']['underestweight'] )
-        curranalyit_x = getbayesest(currtruthdraws, Wvec, q)
+        curranalyit_x = getbayescritratioest(currtruthdraws, Wvec, q)
         curranalyit_fun = cand_obj_val(curranalyit_x, currtruthdraws, Wvec, paramdict)
         timeanalyit = time.time()-time2
         print('Analytical time: ' + str(round(timeanalyit, 3)))
@@ -337,6 +427,6 @@ plt.xlabel('$|\Gamma_{truth}|$')
 plt.show()
 plt.close()
 
-# Add in gradient; check time effect for 3k, 4k, 5k truthdraws
+
 
 
