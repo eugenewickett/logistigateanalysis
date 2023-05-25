@@ -14,9 +14,10 @@ import time
 from math import comb
 import matplotlib.cm as cm
 
-# 23-MAY-23
+# 21-MAY-23
 # Debug why utility evaluations are not changing with different weights matrices
 
+# First do data setup
 Nfam = np.array([[1., 1., 10., 1., 3., 0., 1., 6., 7., 5., 0., 0., 4.],
                      [1., 1., 4., 2., 0., 1., 1., 2., 0., 4., 0., 0., 1.],
                      [3., 17., 31., 4., 2., 0., 1., 6., 0., 23., 1., 2., 5.],
@@ -40,19 +41,17 @@ csdict_fam['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMe
 csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 numdraws = 20000
 csdict_fam['numPostSamples'] = numdraws
-np.random.seed(999)  # To replicate draws later
 csdict_fam = methods.GeneratePostSamples(csdict_fam)
 
-numcanddraws, numtruthdraws, numdatadraws, numcandneigh = 5000, 5000, 3000, 1000
+numcanddraws, numtruthdraws, numdatadraws  = 5000, 5000, 3000
 
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
-                                              marketvec=np.ones(numTN + numSN), candneighnum=numcandneigh)
+                                              marketvec=np.ones(numTN + numSN))
 
 canddraws, truthdraws, datadraws = util.distribute_draws(csdict_fam['postSamples'], numcanddraws,
                                                                      numtruthdraws, numdatadraws)
 paramdict.update({'canddraws': canddraws, 'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict.update({'lossmatrix': lf.build_loss_matrix(truthdraws, canddraws, paramdict)})
-
 
 import scipy.optimize as spo
 
@@ -78,26 +77,70 @@ def cand_obj_val(x, truthdraws, Wvec, paramdict):
     '''function for optimization step'''
     numnodes = x.shape[0]
     scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, numnodes), paramdict['scoredict'])[0]
-    riskvec = lf.risk_check_array(truthdraws,paramdict['riskdict'])
+    riskmat = lf.risk_check_array(truthdraws,paramdict['riskdict'])
     #Wvalvec = np.sum(W, axis=1) / W.shape[1]
-    return np.sum(np.sum(scoremat*riskvec,axis=1)*Wvec)
+    return np.sum(np.sum(scoremat*riskmat,axis=1)*Wvec)
+'''
 # RETURNS SAME VALUES AS IN (LW) MATRIX IF CANDDRAW IS USED FOR x; example:
 i, j = 1, 1
 x = canddraws[i]
 print(cand_obj_val(x,truthdraws,W[:,j],paramdict))
 print(LW[i, j])
+'''
+
+# define a gradient function for any candidate vector x
+def cand_obj_val_jac(x, truthdraws, Wvec, paramdict):
+    """function gradient for optimization step"""
+    riskmat = lf.risk_check_array(truthdraws,paramdict['riskdict'])
+    jacmat = np.where(x < truthdraws, -paramdict['scoredict']['underestweight'], 1) * riskmat \
+                * Wvec.reshape(truthdraws.shape[0],1)
+    return np.sum(jacmat, axis=0)
+'''
+# Check gradient
+x0 = truthdraws[50]
+diff = 1e-5
+for g in range(len(x0)):
+    x1 = x0.copy()
+    x1[g] += diff
+    obj0 = cand_obj_val(x0, truthdraws, Wvec, paramdict)
+    dobj0 = cand_obj_val_jac(x0, truthdraws, Wvec, paramdict)
+    obj1 = cand_obj_val(x1, truthdraws, Wvec, paramdict)
+    print(obj1-obj0)
+    print(dobj0[g]*diff)
+'''
 
 # define an optimization function for a set of parameters, truthdraws, and weights matrix
-def get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit='na'):
+def get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit='na', optmethod='BFGS'):
     # Initialize with random truthdraw if not provided
     if isinstance(xinit, str):
         xinit = truthdraws[choice(np.arange(truthdraws.shape[0]))]
     # Minimize expected candidate loss
     # NEED BOUNDS?
     #bds = spo.Bounds(np.repeat(0., xinit.shape[0]), np.repeat(1., xinit.shape[0]))
-    spoOutput = spo.minimize(cand_obj_val, xinit, args=(truthdraws, Wvec, paramdict), #bounds=bds,
-                             tol= 1e-8)  # Reduce tolerance?
+    spoOutput = spo.minimize(cand_obj_val, xinit, method=optmethod, #bounds=bds,
+                             args=(truthdraws, Wvec, paramdict), tol= 1e-8)  # Reduce tolerance?
     return spoOutput
+
+# opt function using gradient
+def get_bayes_min_cand_jac(truthdraws, Wvec, paramdict, xinit='na', optmethod='BFGS'):
+    # Initialize with random truthdraw if not provided
+    if isinstance(xinit, str):
+        xinit = truthdraws[choice(np.arange(truthdraws.shape[0]))]
+    # Minimize expected candidate loss
+    # NEED BOUNDS?
+    #bds = spo.Bounds(np.repeat(0., xinit.shape[0]), np.repeat(1., xinit.shape[0]))
+    spoOutput = spo.minimize(cand_obj_val, xinit, jac=cand_obj_val_jac, method=optmethod, #bounds=bds,
+                             args=(truthdraws, Wvec, paramdict), tol= 1e-8)  # Reduce tolerance?
+    return spoOutput
+# Check we're getting the same solutions
+xinit=truthdraws[5]
+out1 = get_bayes_min_cand(truthdraws,Wvec,paramdict,xinit)
+out2 = get_bayes_min_cand_jac(truthdraws,Wvec,paramdict,xinit)
+
+
+
+
+
 
 # First the baseline loss
 opt_output = get_bayes_min_cand(truthdraws, np.ones(numtruthdraws)/numtruthdraws, paramdict)
@@ -187,10 +230,6 @@ plt.ylabel('Loss')
 plt.ylim([0,2.5])
 plt.show()
 
-
-###############
-# Do we get improvement by including the gradient?
-###############
 # define a gradient function for any candidate vector x
 def cand_obj_val_jac(x, truthdraws, Wvec, paramdict):
     """function gradient for optimization step"""
@@ -199,6 +238,8 @@ def cand_obj_val_jac(x, truthdraws, Wvec, paramdict):
     riskvec = lf.risk_check_array(truthdraws,paramdict['riskdict'])
     ### RESTART HERE
     return np.sum(np.sum(scoremat*riskvec,axis=1)*Wvec)
+
+
 
 
 
@@ -223,7 +264,7 @@ def getbayesest(truthdraws, Wvec, q):
 # Do the solutions converge as numtruthdraws increases?
 ############
 truthsetsizelist = [100, 500, 1000, 5000, 10000]
-numReps = 50
+numReps = 100
 sol_delta_mat = np.zeros((len(truthsetsizelist),numReps))
 obj_delta_mat = np.zeros((len(truthsetsizelist),numReps))
 time_detla_mat = np.zeros((len(truthsetsizelist),numReps))
@@ -250,11 +291,52 @@ for rep in range(numReps):
         curranalyit_fun = cand_obj_val(curranalyit_x, currtruthdraws, Wvec, paramdict)
         timeanalyit = time.time()-time2
         print('Analytical time: ' + str(round(timeanalyit, 3)))
-        print('Opt obj: ' + str(round(curranalyit_fun, 3)))
+        print('Analytical obj: ' + str(round(curranalyit_fun, 3)))
         # Store data
         sol_delta_mat[truthsetind][rep] = np.linalg.norm(curropt_x-curranalyit_x)
         obj_delta_mat[truthsetind][rep] = curranalyit_fun - curropt_fun
         time_detla_mat[truthsetind][rep] = timeopt - timeanalyit
 '''24-MAY
-
+np.save(os.path.join('studies', 'diropt_25MAY23', 'sol_delta_mat'), np.array(sol_delta_mat))
+np.save(os.path.join('studies', 'diropt_25MAY23', 'obj_delta_mat'), np.array(obj_delta_mat))
 '''
+# Make some plots
+# Objective gap
+xlabs = []
+for truthsetind, truthsetsize in enumerate(truthsetsizelist):
+    plt.boxplot(np.array(obj_delta_mat).T)
+    xlabs.append(str(truthsetsize))
+plt.xticks(np.arange(1,6),xlabs)
+plt.title('Objective gap between direct optimization and analytical solution\nvs. number of truth draws')
+plt.ylabel('Objective gap')
+plt.xlabel('$|\Gamma_{truth}|$')
+plt.show()
+plt.close()
+# Objective gap, pt. 2
+xlabs = []
+for truthsetind, truthsetsize in enumerate(truthsetsizelist):
+    plt.boxplot(np.array(obj_delta_mat).T)
+    xlabs.append(str(truthsetsize))
+plt.xticks(np.arange(1,6),xlabs)
+plt.title('Objective gap between direct optimization and analytical solution\nvs. number of truth draws, zoomed in')
+plt.ylabel('Objective gap')
+plt.xlabel('$|\Gamma_{truth}|$')
+plt.ylim([0,0.1])
+plt.show()
+plt.close()
+
+# Solution gap
+xlabs = []
+for truthsetind, truthsetsize in enumerate(truthsetsizelist):
+    plt.boxplot(np.array(sol_delta_mat).T)
+    xlabs.append(str(truthsetsize))
+plt.xticks(np.arange(1,6),xlabs)
+plt.title('Solution 2-norm between direct optimization and analytical solution\nvs. number of truth draws')
+plt.ylabel('Solution gap')
+plt.xlabel('$|\Gamma_{truth}|$')
+plt.show()
+plt.close()
+
+# Add in gradient; check time effect for 3k, 4k, 5k truthdraws
+
+
