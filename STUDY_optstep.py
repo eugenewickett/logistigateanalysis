@@ -124,6 +124,58 @@ def get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit='na', optmethod='BFGS'
                              args=(truthdraws, Wvec, paramdict, riskmat))
     return spoOutput
 
+##############
+# For SFP rates defined on R
+def cand_obj_val_expit(beta, truthdraws_beta, Wvec, paramdict, riskmat):
+    '''function for optimization step'''
+    numnodes = beta.shape[0]
+    scoremat = lf.score_diff_matrix(sps.expit(truthdraws_beta), sps.expit(beta).reshape(1, numnodes), paramdict['scoredict'])[0]
+    return np.sum(np.sum(scoremat*riskmat,axis=1)*Wvec)
+def cand_obj_val_expit_jac(beta, truthdraws_beta, Wvec, paramdict, riskmat):
+    """function gradient for optimization step"""
+    jacmat = np.where(beta < truthdraws_beta, -paramdict['scoredict']['underestweight'], 1) *\
+             (np.exp(beta)/((1+np.exp(beta))**2)) *\
+              riskmat * Wvec.reshape(truthdraws_beta.shape[0],1)
+    return np.sum(jacmat, axis=0)
+def get_bayes_min_cand_expit(truthdraws_beta, Wvec, paramdict, betainit='na', optmethod='BFGS'):
+    # Initialize with random truthdraw if not provided
+    if isinstance(xinit, str):
+        betainit = truthdraws_beta[choice(np.arange(truthdraws_beta.shape[0]))]
+    # Get risk matrix
+    riskmat = lf.risk_check_array(sps.expit(truthdraws_beta), paramdict['riskdict'])
+    # Minimize expected candidate loss
+    #bds = spo.Bounds(np.repeat(0., xinit.shape[0]), np.repeat(1., xinit.shape[0]))
+    spoOutput = spo.minimize(cand_obj_val, betainit, jac=cand_obj_val_jac,
+                             method=optmethod,
+                             args=(truthdraws_beta, Wvec, paramdict, riskmat))
+    return spoOutput
+###############
+
+numReps = 100
+obj_delta_mat = np.zeros((2,numReps))
+time_delta_mat = np.zeros((2,numReps))
+for rep in range(numReps):
+    print('Rep: '+str(rep))
+    xinit = truthdraws[choice(np.arange(len(truthdraws)))]
+    betainit, truthdraws_beta = sps.logit(xinit), sps.logit(truthdraws)
+    Wvec = W[:,rep]
+    # Non-transformed x first
+    time0=time.time()
+    curroptobj = get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit, optmethod='L-BFGS-B')
+    time_delta_mat[0][rep] = round(time.time() - time0,3)
+    obj_delta_mat[0][rep] = curroptobj.fun
+    # Beta next
+    time0 = time.time()
+    curroptobj = get_bayes_min_cand_expit(truthdraws_beta, Wvec, paramdict, betainit, optmethod='L-BFGS-B')
+    time_delta_mat[1][rep] = round(time.time() - time0, 3)
+    obj_delta_mat[1][rep] = curroptobj.fun
+plt.boxplot(time_delta_mat.T)
+plt.show()
+plt.close()
+plt.boxplot(obj_delta_mat.T)
+plt.show()
+plt.close()
+
 # Do any methods work faster than any others?
 # Omitted 'Nelder-Mead', 'dogleg', 'trust-krylov'
 methodlist = ['Powell', 'CG', 'BFGS', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
@@ -526,7 +578,7 @@ numtruthdraws, numdatadraws = 5000, 500
 
 method = 'L-BFGS-B'
 
-xinit_list = ['x_0', 'x_k-1', 'rand']
+xinit_list = ['x_0', 'x_k-1', 'x_j', 'rand']
 
 numReps = 25
 loss_est_mat_xinit, time_mat_xinit = np.zeros((len(xinit_list),numReps)), np.zeros((len(xinit_list),numReps))
@@ -562,6 +614,8 @@ for rep in range(numReps):
         while (np.max(rangeList)-np.min(rangeList)) / np.min(rangeList) > epsPerc and j < numdatadraws-1:
             j +=1 # iterate data draw index
             Wvec = W[:, j] # Get W vector for current data draw
+            if xinitstr == 'x_j': # EXPERIMENT PART
+                xinit = datadraws[j]
             opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit, optmethod=method)
             minvalslist.append(opt_output.fun)
             cumavglist = np.cumsum(minvalslist) / np.arange(1, j + 2)
@@ -571,6 +625,7 @@ for rep in range(numReps):
         datadrawsneeded_mat_xinit[xinitind][rep] = j + 1
         loss_est_mat_xinit[xinitind][rep] = cumavglist[-1]
         time_mat_xinit[xinitind][rep] = time.time() - time0
+        print(xinitstr)
         print(time.time()-time0)
 '''
 np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'datadrawsneeded_mat_xinit'), 
@@ -585,7 +640,7 @@ xlabs = []
 for x in xinit_list:
     xlabs.append(str(x))
 plt.boxplot(np.array(time_mat_xinit).T)
-plt.xticks(np.arange(1,4),xlabs,size=8)
+plt.xticks(np.arange(1, 5),xlabs,size=8)
 plt.title('Time (in sec.) needed to converge for different choices of $x_{init}$\n25 replications, $N=100$, $\epsilon=1$%')
 plt.ylabel('Time (s)')
 plt.xlabel('Choice for $x_{init}$')
@@ -597,7 +652,7 @@ xlabs = []
 for x in xinit_list:
     xlabs.append(str(x))
 plt.boxplot(np.array(loss_est_mat_xinit).T)
-plt.xticks(np.arange(1, 4),xlabs,size=8)
+plt.xticks(np.arange(1, 5),xlabs,size=8)
 plt.title('Loss estimates after convergence for different choices of $x_{init}$\n25 replications, $N=100$, $\epsilon=1%$')
 plt.ylabel('Loss estimate')
 plt.xlabel('Choice for $x_{init}$')
@@ -609,7 +664,7 @@ xlabs = []
 for x in xinit_list:
     xlabs.append(str(x))
 plt.boxplot(np.array(datadrawsneeded_mat_xinit).T)
-plt.xticks(np.arange(1, 4),xlabs,size=8)
+plt.xticks(np.arange(1, 5),xlabs,size=8)
 plt.title('Number of data draws for convergence for different choices of $x_{init}$\n25 replications, $N=100$, $\epsilon=1%$')
 plt.ylabel('$|\Gamma_{data}|$')
 plt.xlabel('Choice for $x_{init}$')

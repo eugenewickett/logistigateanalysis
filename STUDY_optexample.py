@@ -94,16 +94,16 @@ numdraws = 20000
 csdict_fam['numPostSamples'] = numdraws
 csdict_fam = methods.GeneratePostSamples(csdict_fam)
 
-numcanddraws, numtruthdraws, numdatadraws  = 5000, 5000, 3000
+numcanddraws, numtruthdraws, numdatadraws  = 5000, 5000, 500
 
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
 sampbudget = 100
 allocarr = np.array([0., 1., 0., 0.]) * sampbudget
 
-epsPerc, stoprange = 0.01, 10 # Desired accuracy of loss estimate, expressed as a percentage; also number of last observations to consider
+epsPerc, stoprange = 0.005, 10 # Desired accuracy of loss estimate, expressed as a percentage; also number of last observations to consider
 numtruthdraws, numdatadraws = 5000, 500
-method = 'BFGS'
+method = 'L-BFGS-B'
 
 # OPTIMIZATION STEP ALGORITHM
 csdict_fam = methods.GeneratePostSamples(csdict_fam)
@@ -119,14 +119,14 @@ while (np.max(rangeList)-np.min(rangeList)) / np.min(rangeList) > epsPerc and j 
     j +=1 # iterate data draw index
     print('On data draw '+str(j))
     Wvec = W[:, j] # Get W vector for current data draw
-    opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, optmethod=method)
+    opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit=datadraws[j],  optmethod=method)
     minvalslist.append(opt_output.fun)
     cumavglist = np.cumsum(minvalslist) / np.arange(1, j + 2)
     if j > stoprange:
         rangeList = cumavglist[-stoprange:]
         print((np.max(rangeList)-np.min(rangeList)) / np.min(rangeList))
-print('Loss estimate: ' + cumavglist[-1])
-print('Calculation time: ' + time.time() - time0)
+print('Loss estimate: ' + str(cumavglist[-1]))
+print('Calculation time: ' + str(time.time() - time0))
 
 
 
