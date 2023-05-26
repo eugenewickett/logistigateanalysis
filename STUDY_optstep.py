@@ -528,8 +528,6 @@ method = 'L-BFGS-B'
 
 xinit_list = ['x_0', 'x_k-1', 'rand']
 
-numdraws = 8000
-
 numReps = 25
 loss_est_mat_xinit, time_mat_xinit = np.zeros((len(xinit_list),numReps)), np.zeros((len(xinit_list),numReps))
 datadrawsneeded_mat_xinit = np.zeros((len(xinit_list), numReps))
