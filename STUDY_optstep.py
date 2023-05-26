@@ -351,8 +351,8 @@ method = 'L-BFGS-B'
 
 # conduct replications under different MCMC draws
 numReps = 25
-loss_est_mat_optmethod, time_mat_optmethod = np.zeros((len(methodlist),numReps)), np.zeros((len(methodlist),numReps))
-datadrawsneeded_mat = np.zeros((len(methodlist), numReps))
+loss_est_mat_budget, time_mat_budget = np.zeros((len(sampbudgetlist),numReps)), np.zeros((len(sampbudgetlist),numReps))
+datadrawsneeded_mat = np.zeros((len(sampbudgetlist), numReps))
 for rep in range(numReps):
     print('Replication '+str(rep))
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
@@ -360,7 +360,8 @@ for rep in range(numReps):
     truthdraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numtruthdraws, replace=False)]
     datadraws = truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
     # EXPERIMENT: Use different sampling budgets
-    for sampbudgetind, sampbudget in sampbudgetlist:
+    for sampbudgetind, sampbudget in enumerate(sampbudgetlist):
+        print('On sample budget: '+ str(sampbudget))
         # Build W
         if sampbudget == 0:
             Wvec = np.ones((numtruthdraws)) / numtruthdraws
@@ -376,7 +377,6 @@ for rep in range(numReps):
             time0 = time.time()
             while (np.max(rangeList)-np.min(rangeList)) / np.min(rangeList) > epsPerc and j < numdatadraws-1:
                 j +=1 # iterate data draw index
-                print('On data draw '+str(j))
                 Wvec = W[:, j] # Get W vector for current data draw
                 opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, optmethod=method)
                 minvalslist.append(opt_output.fun)
@@ -387,15 +387,319 @@ for rep in range(numReps):
             datadrawsneeded_mat[sampbudgetind][rep] = j + 1
             loss_est_mat_budget[sampbudgetind][rep] = cumavglist[-1]
         time_mat_budget[sampbudgetind][rep] = time.time() - time0
+'''
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'loss_est_mat_budget'), 
+            np.array(loss_est_mat_budget))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'time_mat_budget'), 
+            np.array(time_mat_budget))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'datadrawsneeded_mat'), 
+            np.array(datadrawsneeded_mat))
+'''
+# Plot of time needed
+xlabs = []
+for samp in sampbudgetlist:
+    xlabs.append(str(samp))
+plt.boxplot(np.array(time_mat_budget).T)
+plt.xticks(np.arange(1,6),xlabs,size=8)
+plt.title('Time (in sec.) needed to converge for different sampling budgets\n25 replications, $|\Gamma_{truth}|=5k$, $\epsilon=1$%')
+plt.ylabel('Time (s)')
+plt.xlabel('Sampling budget')
+plt.show()
+plt.close()
 
+# Plot of distribution of converged loss estimates
+xlabs = []
+for samp in sampbudgetlist:
+    xlabs.append(str(samp))
+plt.boxplot(np.array(loss_est_mat_budget).T)
+plt.xticks(np.arange(1, 6),xlabs,size=8)
+plt.title('Loss estimates after convergence for different sampling budgets\n25 replications, $|\Gamma_{truth}|=5k$, $\epsilon=1%$')
+plt.ylabel('Loss estimate')
+plt.xlabel('Sampling budget')
+plt.show()
+plt.close()
 
+# Plot of number of data draws needed for convergence
+xlabs = []
+for samp in sampbudgetlist:
+    xlabs.append(str(samp))
+plt.boxplot(np.array(datadrawsneeded_mat).T)
+plt.xticks(np.arange(1, 6),xlabs,size=8)
+plt.title('Number of data draws for convergence under different sampling budgets\n25 replications, $|\Gamma_{truth}|=5k$, $\epsilon=1%$')
+plt.ylabel('$|\Gamma_{data}|$')
+plt.xlabel('Sampling budget')
+plt.show()
+plt.close()
 
+##########
+# NEXT EXPERIMENT: What is the effect of numtruthdraws?
+##########
+sampbudget = 100
+allocarr = np.array([0., 1., 0., 0.]) * sampbudget
 
+epsPerc, stoprange = 0.01, 10 # Desired accuracy of loss estimate, expressed as a percentage; also number of last observations to consider
+numtruthdrawslist, numdatadraws = [3000, 4000, 5000, 7500, 10000], 500
 
+method = 'L-BFGS-B'
 
+numReps = 25
+loss_est_mat_truthdraws, time_mat_truthdraws = np.zeros((len(numtruthdrawslist),numReps)), np.zeros((len(numtruthdrawslist),numReps))
+datadrawsneeded_mat_truthdraws = np.zeros((len(numtruthdrawslist), numReps))
+for rep in range(numReps):
+    print('Replication '+str(rep))
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Distribute draws
+    # EXPERIMENT: Use different numtruthdraws
+    for numtruthdrawsind, numtruthdraws in enumerate(numtruthdrawslist):
+        print('numtruthdraws: '+str(numtruthdraws))
+        truthdraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numtruthdraws, replace=False)]
+        datadraws = truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        # Build W
+        W = sampf.build_weights_matrix(truthdraws, datadraws, allocarr, csdict_fam)
+        # Generate data until we converge OR run out of data
+        rangeList, j, minvalslist = [1e-3,1], -1, []
+        time0 = time.time()
+        while (np.max(rangeList)-np.min(rangeList)) / np.min(rangeList) > epsPerc and j < numdatadraws-1:
+            j +=1 # iterate data draw index
+            Wvec = W[:, j] # Get W vector for current data draw
+            opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, optmethod=method)
+            minvalslist.append(opt_output.fun)
+            cumavglist = np.cumsum(minvalslist) / np.arange(1, j + 2)
+            if j > stopamount:
+                rangeList = cumavglist[-stopamount:]
+                #print((np.max(rangeList)-np.min(rangeList)) / np.min(rangeList))
+        datadrawsneeded_mat_truthdraws[numtruthdrawsind][rep] = j + 1
+        loss_est_mat_truthdraws[numtruthdrawsind][rep] = cumavglist[-1]
+        time_mat_truthdraws[numtruthdrawsind][rep] = time.time() - time0
+'''
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'datadrawsneeded_mat_truthdraws'), 
+            np.array(datadrawsneeded_mat_truthdraws))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'loss_est_mat_truthdraws'), 
+            np.array(loss_est_mat_truthdraws))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'time_mat_truthdraws'), 
+            np.array(time_mat_truthdraws))
+'''
+# Plot of time needed
+xlabs = []
+for x in numtruthdrawslist:
+    xlabs.append(str(x))
+plt.boxplot(np.array(time_mat_truthdraws).T)
+plt.xticks(np.arange(1,6),xlabs,size=8)
+plt.title('Time (in sec.) needed to converge for different $|\Gamma_{truth}|$\n25 replications, $N=100$, $\epsilon=1$%')
+plt.ylabel('Time (s)')
+plt.xlabel('$|\Gamma_{truth}|$')
+plt.show()
+plt.close()
 
+# Plot of distribution of converged loss estimates
+xlabs = []
+for x in numtruthdrawslist:
+    xlabs.append(str(x))
+plt.boxplot(np.array(loss_est_mat_truthdraws).T)
+plt.xticks(np.arange(1, 6),xlabs,size=8)
+plt.title('Loss estimates after convergence for different $|\Gamma_{truth}|$\n25 replications, $N=100$, $\epsilon=1%$')
+plt.ylabel('Loss estimate')
+plt.xlabel('$|\Gamma_{truth}|$')
+plt.show()
+plt.close()
 
+# Plot of number of data draws needed for convergence
+xlabs = []
+for x in numtruthdrawslist:
+    xlabs.append(str(x))
+plt.boxplot(np.array(datadrawsneeded_mat_truthdraws).T)
+plt.xticks(np.arange(1, 6),xlabs,size=8)
+plt.title('Number of data draws for convergence for different $|\Gamma_{truth}|$\n25 replications, $N=100$, $\epsilon=1%$')
+plt.ylabel('$|\Gamma_{data}|$')
+plt.xlabel('$|\Gamma_{truth}|$')
+plt.show()
+plt.close()
 
+##########
+# NEXT EXPERIMENT: What is the effect of different xinit for the optimizer?
+##########
+sampbudget = 100
+allocarr = np.array([0., 1., 0., 0.]) * sampbudget
 
+epsPerc, stoprange = 0.01, 10 # Desired accuracy of loss estimate, expressed as a percentage; also number of last observations to consider
+numtruthdraws, numdatadraws = 5000, 500
 
+method = 'L-BFGS-B'
+
+xinit_list = ['x_0', 'x_k-1', 'rand']
+
+numdraws = 8000
+
+numReps = 25
+loss_est_mat_xinit, time_mat_xinit = np.zeros((len(xinit_list),numReps)), np.zeros((len(xinit_list),numReps))
+datadrawsneeded_mat_xinit = np.zeros((len(xinit_list), numReps))
+for rep in range(numReps):
+    print('Replication '+str(rep))
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Distribute draws
+    truthdraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numtruthdraws, replace=False)]
+    datadraws = truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+
+    # EXPERIMENT: Use different xinit; need to grab an xinit from N=0 or N=budget-10
+    for xinitind, xinitstr in enumerate(xinit_list):
+        if xinitstr == 'x_0':
+            # Get xinit from baseline loss
+            Wvec = np.ones((numtruthdraws)) / numtruthdraws
+            opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, optmethod=method)
+            xinit = opt_output.x
+        elif xinitstr == 'x_k-1':
+            # Build W for sampling budget 10 less than our target (to simulate real implementation)
+            W = sampf.build_weights_matrix(truthdraws, datadraws[:2], allocarr*0.9, csdict_fam)
+            Wvec = W[:, 0]
+            opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit, optmethod=method)
+            xinit = opt_output.x
+        else:
+            xinit = 'na'
+
+        # Build W
+        W = sampf.build_weights_matrix(truthdraws, datadraws, allocarr, csdict_fam)
+        # Generate data until we converge OR run out of data
+        rangeList, j, minvalslist = [1e-3,1], -1, []
+        time0 = time.time()
+        while (np.max(rangeList)-np.min(rangeList)) / np.min(rangeList) > epsPerc and j < numdatadraws-1:
+            j +=1 # iterate data draw index
+            Wvec = W[:, j] # Get W vector for current data draw
+            opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, xinit, optmethod=method)
+            minvalslist.append(opt_output.fun)
+            cumavglist = np.cumsum(minvalslist) / np.arange(1, j + 2)
+            if j > stopamount:
+                rangeList = cumavglist[-stopamount:]
+                #print((np.max(rangeList)-np.min(rangeList)) / np.min(rangeList))
+        datadrawsneeded_mat_xinit[xinitind][rep] = j + 1
+        loss_est_mat_xinit[xinitind][rep] = cumavglist[-1]
+        time_mat_xinit[xinitind][rep] = time.time() - time0
+        print(time.time()-time0)
+'''
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'datadrawsneeded_mat_xinit'), 
+            np.array(datadrawsneeded_mat_xinit))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'loss_est_mat_xinit'), 
+            np.array(loss_est_mat_xinit))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'time_mat_xinit'), 
+            np.array(time_mat_xinit))
+'''
+# Plot of time needed
+xlabs = []
+for x in xinit_list:
+    xlabs.append(str(x))
+plt.boxplot(np.array(time_mat_xinit).T)
+plt.xticks(np.arange(1,4),xlabs,size=8)
+plt.title('Time (in sec.) needed to converge for different choices of $x_{init}$\n25 replications, $N=100$, $\epsilon=1$%')
+plt.ylabel('Time (s)')
+plt.xlabel('Choice for $x_{init}$')
+plt.show()
+plt.close()
+
+# Plot of distribution of converged loss estimates
+xlabs = []
+for x in xinit_list:
+    xlabs.append(str(x))
+plt.boxplot(np.array(loss_est_mat_xinit).T)
+plt.xticks(np.arange(1, 4),xlabs,size=8)
+plt.title('Loss estimates after convergence for different choices of $x_{init}$\n25 replications, $N=100$, $\epsilon=1%$')
+plt.ylabel('Loss estimate')
+plt.xlabel('Choice for $x_{init}$')
+plt.show()
+plt.close()
+
+# Plot of number of data draws needed for convergence
+xlabs = []
+for x in xinit_list:
+    xlabs.append(str(x))
+plt.boxplot(np.array(datadrawsneeded_mat_xinit).T)
+plt.xticks(np.arange(1, 4),xlabs,size=8)
+plt.title('Number of data draws for convergence for different choices of $x_{init}$\n25 replications, $N=100$, $\epsilon=1%$')
+plt.ylabel('$|\Gamma_{data}|$')
+plt.xlabel('Choice for $x_{init}$')
+plt.show()
+plt.close()
+
+##########
+# NEXT EXPERIMENT: How do things change for different epsilon?
+##########
+sampbudget = 100
+allocarr = np.array([0., 1., 0., 0.]) * sampbudget
+
+epsPerclist, stoprange = [0.03, 0.02, 0.01, 0.005, 0.001], 10 # Desired accuracy of loss estimate, expressed as a percentage; also number of last observations to consider
+numtruthdraws, numdatadraws = 5000, 500
+
+method = 'L-BFGS-B'
+
+numReps = 25
+loss_est_mat_eps, time_mat_eps = np.zeros((len(epsPerclist),numReps)), np.zeros((len(epsPerclist),numReps))
+datadrawsneeded_mat_eps = np.zeros((len(epsPerclist), numReps))
+for rep in range(numReps):
+    print('Replication '+str(rep))
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Distribute draws
+    truthdraws = csdict_fam['postSamples'][choice(np.arange(numdraws), size=numtruthdraws, replace=False)]
+    datadraws = truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+    # Build W
+    W = sampf.build_weights_matrix(truthdraws, datadraws, allocarr, csdict_fam)
+
+    # EXPERIMENT: Use different epsPerc
+    for epsPercind, epsPerc in enumerate(epsPerclist):
+        # Generate data until we converge OR run out of data
+        rangeList, j, minvalslist = [1e-3, 1], -1, []
+        time0 = time.time()
+        while (np.max(rangeList)-np.min(rangeList)) / np.min(rangeList) > epsPerc and j < numdatadraws-1:
+            j +=1 # iterate data draw index
+            Wvec = W[:, j] # Get W vector for current data draw
+            opt_output = get_bayes_min_cand(truthdraws, Wvec, paramdict, optmethod=method)
+            minvalslist.append(opt_output.fun)
+            cumavglist = np.cumsum(minvalslist) / np.arange(1, j + 2)
+            if j > stopamount:
+                rangeList = cumavglist[-stopamount:]
+                #print((np.max(rangeList)-np.min(rangeList)) / np.min(rangeList))
+        datadrawsneeded_mat_eps[epsPercind][rep] = j + 1
+        loss_est_mat_eps[epsPercind][rep] = cumavglist[-1]
+        time_mat_eps[epsPercind][rep] = time.time() - time0
+        print(time.time()-time0)
+'''
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'datadrawsneeded_mat_eps'), 
+            np.array(datadrawsneeded_mat_eps))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'loss_est_mat_eps'), 
+            np.array(loss_est_mat_eps))
+np.save(os.path.join('studies', 'diroptexperiments_25MAY23', 'time_mat_eps'), 
+            np.array(time_mat_eps))
+'''
+# Plot of time needed
+xlabs = []
+for x in epsPerclist:
+    xlabs.append(str(x))
+plt.boxplot(np.array(time_mat_eps).T)
+plt.xticks(np.arange(1,6),xlabs,size=8)
+plt.title('Time (in sec.) needed to converge for different choices of $\epsilon$\n25 replications, $N=100$')
+plt.ylabel('Time (s)')
+plt.xlabel('Choice for $\epsilon$')
+plt.show()
+plt.close()
+
+# Plot of distribution of converged loss estimates
+xlabs = []
+for x in epsPerclist:
+    xlabs.append(str(x))
+plt.boxplot(np.array(loss_est_mat_eps).T)
+plt.xticks(np.arange(1, 6),xlabs,size=8)
+plt.title('Loss estimates after convergence for different choices of $\epsilon$\n25 replications, $N=100$')
+plt.ylabel('Loss estimate')
+plt.xlabel('Choice for $\epsilon$')
+plt.show()
+plt.close()
+
+# Plot of number of data draws needed for convergence
+xlabs = []
+for x in epsPerclist:
+    xlabs.append(str(x))
+plt.boxplot(np.array(datadrawsneeded_mat_eps).T)
+plt.xticks(np.arange(1, 6),xlabs,size=8)
+plt.title('Number of data draws for convergence for different choices of $\epsilon$\n25 replications, $N=100$')
+plt.ylabel('$|\Gamma_{data}|$')
+plt.xlabel('Choice for $\epsilon$')
+plt.show()
+plt.close()
 
