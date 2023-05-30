@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Script that generates and analyzes a synthetic set of PMS data. These data differ from the data used in the paper but
-capture the important elements of what is presented in the paper.
-Inference generation requires use of the logistigate package, available at https://logistigate.readthedocs.io/en/main/.
-Running the generateSyntheticData() function generates Figures 2, 3, and 4, as well as the interval widths for Tables
-1 and 2, that are analagous to the items produced using the de-identified data.
+Script for analyzing the case study data. Inference and plan utility require use of the logistigate package, available
+at https://logistigate.readthedocs.io/en/main/.
 """
 
 from logistigate.logistigate import utilities as util  # Pull from the submodule "develop" branch
