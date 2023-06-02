@@ -67,7 +67,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 3000, 1500
+numtruthdraws, numdatadraws = 4000, 1500
 # Get random subsets for truth and data draws
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
@@ -108,29 +108,29 @@ util_avg_rudi, util_hi_rudi, util_lo_rudi = np.zeros((int(testmax / testint) + 1
                                             np.zeros((int(testmax / testint) + 1))
 for testind in range(testarr.shape[0]):
     # Heuristic utility
-    des_heur = allocArr[testind] / testarr[testind]
+    des_heur = allocArr[:, testind] / np.sum(allocArr[:, testind])
     currlosslist = sampf.sampling_plan_loss_list(des_heur, testarr[testind], csdict_fam, paramdict)
     avg_loss, avg_loss_CI = process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_heur[int(testnum / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_heur[int(testnum / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_heur[int(testnum / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[int(testnum / testint)]))
+    util_avg_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss
+    util_lo_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
+    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[int(testind / testint)]))
     # Uniform utility
-    des_unif = util.round_design_low(np.ones(numTN) / numTN, testarr[testInd]) / testarr[testInd]
+    des_unif = util.round_design_low(np.ones(numTN) / numTN, testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_unif, testarr[testind], csdict_fam, paramdict)
     avg_loss, avg_loss_CI = process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_unif[int(testnum / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_unif[int(testnum / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_unif[int(testnum / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[int(testnum / testint)]))
+    util_avg_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss
+    util_lo_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
+    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[int(testind / testint)]))
     # Rudimentary utility
-    des_rudi = util.round_design_low(np.divide(np.sum(Nfam, axis=1), np.sum(Nfam)), testarr[testInd]) / testarr[testInd]
+    des_rudi = util.round_design_low(np.divide(np.sum(Nfam, axis=1), np.sum(Nfam)), testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_rudi, testarr[testind], csdict_fam, paramdict)
     avg_loss, avg_loss_CI = process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_rudi[int(testnum / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_rudi[int(testnum / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_rudi[int(testnum / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_unif[int(testnum / testint)]))
+    util_avg_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss
+    util_lo_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
+    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_unif[int(testind / testint)]))
 
 util_avg_arr = np.vstack((util_avg_heur, util_avg_unif, util_avg_rudi))
 util_hi_arr = np.vstack((util_hi_heur, util_hi_unif, util_hi_rudi))
