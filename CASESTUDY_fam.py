@@ -92,8 +92,8 @@ np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam'), util_lo)
 
 # Form allocation
 allocArr, objValArr = sampf.smooth_alloc_forward(util_avg)
-util.plot_plan(allocArr, paramList=[str(i) for i in np.arange(testint, testmax + 1, testint)], testInt=testint,
-          labels=csdict_fam['TNnames'], titleStr='Familiar Setting', allocMax=250,
+util.plot_plan(allocArr, paramlist=[str(i) for i in np.arange(testint, testmax + 1, testint)], testint=testint,
+          labels=csdict_fam['TNnames'], titlestr='Familiar Setting', allocmax=250,
           colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
 
 # Evaluate utility for heuristic, uniform, and rudimentary
@@ -106,37 +106,41 @@ util_avg_unif, util_hi_unif, util_lo_unif = np.zeros((int(testmax / testint) + 1
 util_avg_rudi, util_hi_rudi, util_lo_rudi = np.zeros((int(testmax / testint) + 1)), \
                                             np.zeros((int(testmax / testint) + 1)), \
                                             np.zeros((int(testmax / testint) + 1))
+plotupdate = True
 for testind in range(testarr.shape[0]):
     # Heuristic utility
     des_heur = allocArr[:, testind] / np.sum(allocArr[:, testind])
     currlosslist = sampf.sampling_plan_loss_list(des_heur, testarr[testind], csdict_fam, paramdict)
-    avg_loss, avg_loss_CI = process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[int(testind / testint)]))
+    avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+    util_avg_heur[testind] = paramdict['baseloss'] - avg_loss
+    util_lo_heur[testind] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_heur[testind] = paramdict['baseloss'] - avg_loss_CI[0]
+    print(des_heur)
+    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[testind]))
     # Uniform utility
     des_unif = util.round_design_low(np.ones(numTN) / numTN, testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_unif, testarr[testind], csdict_fam, paramdict)
-    avg_loss, avg_loss_CI = process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[int(testind / testint)]))
+    avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+    util_avg_unif[testind] = paramdict['baseloss'] - avg_loss
+    util_lo_unif[testind] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_unif[testind] = paramdict['baseloss'] - avg_loss_CI[0]
+    print(des_unif)
+    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[testind]))
     # Rudimentary utility
     des_rudi = util.round_design_low(np.divide(np.sum(Nfam, axis=1), np.sum(Nfam)), testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_rudi, testarr[testind], csdict_fam, paramdict)
-    avg_loss, avg_loss_CI = process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_unif[int(testind / testint)]))
-
-util_avg_arr = np.vstack((util_avg_heur, util_avg_unif, util_avg_rudi))
-util_hi_arr = np.vstack((util_hi_heur, util_hi_unif, util_hi_rudi))
-util_lo_arr = np.vstack((util_lo_heur, util_lo_unif, util_lo_rudi))
-# Plot
-util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
+    avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+    util_avg_rudi[testind] = paramdict['baseloss'] - avg_loss
+    util_lo_rudi[testind] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_rudi[testind] = paramdict['baseloss'] - avg_loss_CI[0]
+    print(des_rudi)
+    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_rudi[testind]))
+    if plotupdate:
+        util_avg_arr = np.vstack((util_avg_heur, util_avg_unif, util_avg_rudi))
+        util_hi_arr = np.vstack((util_hi_heur, util_hi_unif, util_hi_rudi))
+        util_lo_arr = np.vstack((util_lo_heur, util_lo_unif, util_lo_rudi))
+        # Plot
+        util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
                                titlestr='Familiar Setting, comparison with other approaches')
 
 # Store matrices
