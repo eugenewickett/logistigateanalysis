@@ -101,38 +101,40 @@ util_avg_rudi, util_hi_rudi, util_lo_rudi = np.zeros((int(testmax / testint) + 1
 for testind in range(testarr.shape[0]):
     # Heuristic utility
     des_heur = allocArr[:, testind] / np.sum(allocArr[:, testind])
+    print(des_heur)
     currlosslist = sampf.sampling_plan_loss_list(des_heur, testarr[testind], csdict_fam, paramdict)
     avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_heur[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[int(testind / testint)]))
+    util_avg_heur[testind+1] = paramdict['baseloss'] - avg_loss
+    util_lo_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
+    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[testind]))
     # Uniform utility
     des_unif = util.round_design_low(np.ones(numTN) / numTN, testarr[testind]) / testarr[testind]
+    print(des_unif)
     currlosslist = sampf.sampling_plan_loss_list(des_unif, testarr[testind], csdict_fam, paramdict)
     avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_unif[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[int(testind / testint)]))
+    util_avg_unif[testind+1] = paramdict['baseloss'] - avg_loss
+    util_lo_unif[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_unif[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
+    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[testind]))
     # Rudimentary utility
     des_rudi = util.round_design_low(np.divide(np.sum(Nfam, axis=1), np.sum(Nfam)), testarr[testind]) / testarr[testind]
+    print(des_rudi)
     currlosslist = sampf.sampling_plan_loss_list(des_rudi, testarr[testind], csdict_fam, paramdict)
     avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss
-    util_lo_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_rudi[int(testind / testint)] = paramdict['baseloss'] - avg_loss_CI[0]
-    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_unif[int(testind / testint)]))
+    util_avg_rudi[testind+1] = paramdict['baseloss'] - avg_loss
+    util_lo_rudi[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_rudi[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
+    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_unif[testind]))
 
-util_avg_arr = np.vstack((util_avg_heur, util_avg_unif, util_avg_rudi))
-util_hi_arr = np.vstack((util_hi_heur, util_hi_unif, util_hi_rudi))
-util_lo_arr = np.vstack((util_lo_heur, util_lo_unif, util_lo_rudi))
-# Plot
-util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
-                               titlestr='Familiar Setting, comparison with other approaches')
+    util_avg_arr = np.vstack((util_avg_heur, util_avg_unif, util_avg_rudi))
+    util_hi_arr = np.vstack((util_hi_heur, util_hi_unif, util_hi_rudi))
+    util_lo_arr = np.vstack((util_lo_heur, util_lo_unif, util_lo_rudi))
+    # Plot
+    util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
+                               titlestr='Familiar Setting with Market Term, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_fam'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_fam'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_fam'), util_lo_arr)
-
+np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_fam_market'), util_avg_arr)
+np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_fam_market'), util_hi_arr)
+np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_fam_market'), util_lo_arr)
