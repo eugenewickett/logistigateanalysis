@@ -114,27 +114,27 @@ for testind in range(testarr.shape[0]):
     des_heur = allocArr[:, testind] / np.sum(allocArr[:, testind])
     currlosslist = sampf.sampling_plan_loss_list(des_heur, testarr[testind], csdict_expl, paramdict)
     avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_heur[testind] = paramdict['baseloss'] - avg_loss
-    util_lo_heur[testind] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_heur[testind] = paramdict['baseloss'] - avg_loss_CI[0]
+    util_avg_heur[testind+1] = paramdict['baseloss'] - avg_loss
+    util_lo_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
     print(des_heur)
     print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[testind]))
     # Uniform utility
     des_unif = util.round_design_low(np.ones(numTN) / numTN, testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_unif, testarr[testind], csdict_expl, paramdict)
     avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_unif[testind] = paramdict['baseloss'] - avg_loss
-    util_lo_unif[testind] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_unif[testind] = paramdict['baseloss'] - avg_loss_CI[0]
+    util_avg_unif[testind+1] = paramdict['baseloss'] - avg_loss
+    util_lo_unif[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_unif[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
     print(des_unif)
     print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[testind]))
     # Rudimentary utility
     des_rudi = util.round_design_low(np.divide(np.sum(Nfam, axis=1), np.sum(Nfam)), testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_rudi, testarr[testind], csdict_expl, paramdict)
     avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_rudi[testind] = paramdict['baseloss'] - avg_loss
-    util_lo_rudi[testind] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_rudi[testind] = paramdict['baseloss'] - avg_loss_CI[0]
+    util_avg_rudi[testind+1] = paramdict['baseloss'] - avg_loss
+    util_lo_rudi[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+    util_hi_rudi[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
     print(des_rudi)
     print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_rudi[testind]))
     if plotupdate:
