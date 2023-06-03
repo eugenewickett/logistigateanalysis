@@ -66,7 +66,6 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 # Get base loss
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
-
 util.print_param_checks(paramdict) # Check of used parameters
 util_avg, util_hi, util_lo = sampf.get_opt_marg_util_nodes(csdict_fam, testmax, testint, paramdict, zlevel=0.95,
                             printupdate=True, plotupdate=True) # Wrapper function for utility at all test nodes
