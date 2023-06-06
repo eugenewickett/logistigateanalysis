@@ -56,7 +56,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 6000, 2000
+numtruthdraws, numdatadraws = 15000, 2000
 
 alloc_list = []
 numReps = 10
