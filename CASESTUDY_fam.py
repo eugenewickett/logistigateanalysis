@@ -51,7 +51,7 @@ csdict_fam['prior'] = priorObj
 # Set up MCMC
 csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 10000
+numdraws = 50000
 csdict_fam['numPostSamples'] = numdraws
 np.random.seed(1000) # To replicate draws later
 csdict_fam = methods.GeneratePostSamples(csdict_fam)
@@ -67,13 +67,12 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 4000, 1500
+numtruthdraws, numdatadraws = 15000, 2000
 # Get random subsets for truth and data draws
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 # Get base loss
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
-
 
 util.print_param_checks(paramdict) # Check of used parameters
 util_avg, util_hi, util_lo = sampf.get_opt_marg_util_nodes(csdict_fam, testmax, testint, paramdict, zlevel=0.95,
