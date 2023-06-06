@@ -22,14 +22,6 @@ import matplotlib.cm as cm
 
 
 
-
-
-
-
-
-
-
-
 def casestudy_sensitivity():
     """
     Use the Exploratory setting to probe different choices and parameters. We inspect allocations at 180 tests (the

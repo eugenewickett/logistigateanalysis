@@ -93,10 +93,14 @@ for rep in range(numReps):
 #          labels=csdict_fam['TNnames'], titlestr='Familiar Setting', allocmax=250,
 #          colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
 
+
+
+
+
+
 ##############
 ##### MAKE PLOT OF ALL ALLOCATIONS; AT WHAT BUDGET DO THE ALLOCATIONS DIFFER MOST? MEASURE UTILITY AT THIS BUDGET LEVEL
 ###############
-
 
 # Get new draws for comprehensive utility evaluation
 np.random.seed(3000)
