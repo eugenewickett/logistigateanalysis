@@ -44,7 +44,7 @@ csdict_fam['prior'] = priorObj
 # Set up MCMC
 csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 10000
+numdraws = 50000
 csdict_fam['numPostSamples'] = numdraws
 
 # Loss specification
@@ -61,6 +61,7 @@ numtruthdraws, numdatadraws = 6000, 2000
 alloc_list = []
 numReps = 10
 for rep in range(numReps):
+    print('Rep: '+str(rep))
     # Get new MCMC draws
     np.random.seed(2000+rep)
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
