@@ -104,6 +104,7 @@ util.plot_plan(allocArr, paramlist=[str(i) for i in np.arange(testint, testmax +
                labels=csdict_expl['TNnames'], titlestr='Exploratory Setting with Market Term', allocmax=150,
                colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
 
+np.random.seed(4000)
 # Evaluate utility for heuristic, uniform, and rudimentary
 util_avg_heur, util_hi_heur, util_lo_heur = np.zeros((int(testmax / testint) + 1)), \
                                             np.zeros((int(testmax / testint) + 1)), \
