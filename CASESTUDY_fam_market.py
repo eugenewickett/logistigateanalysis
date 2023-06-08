@@ -71,7 +71,7 @@ util_avg, util_hi, util_lo = sampf.get_opt_marg_util_nodes(csdict_fam, testmax, 
                             printupdate=True, plotupdate=True) # Wrapper function for utility at all test nodes
 # Plot
 util.plot_marg_util_CI(util_avg, margutilarr_hi=util_hi, margutilarr_lo=util_lo, testmax=testmax, testint=testint,
-                               titlestr='Familiar Setting')
+                               titlestr='Familiar Setting with Market Term')
 # Store matrices
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_fam_market'), util_avg)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_fam_market'), util_hi)
