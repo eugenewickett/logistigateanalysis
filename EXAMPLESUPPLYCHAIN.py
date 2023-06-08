@@ -18,8 +18,8 @@ import time
 from math import comb
 import matplotlib.cm as cm
 
-N = np.array([[6, 2], [1, 3], [4, 2], [9, 3]], dtype=float)
-Y = np.array([[2, 0], [0, 0], [0, 0], [3, 1]], dtype=float)
+N = np.array([[7, 5], [0, 3], [3, 4], [8, 3]], dtype=float)
+Y = np.array([[3, 1], [0, 0], [0, 0], [2, 1]], dtype=float)
 (numTN, numSN) = N.shape
 s, r = 0.9, 0.95
 exdict = util.initDataDict(N, Y, diagSens=s, diagSpec=r)
@@ -32,7 +32,7 @@ exdict = methods.GeneratePostSamples(exdict)
 util.plotPostSamples(exdict, 'int90')
 
 # Sourcing matrix; EVALUATE
-Q = np.array([[0.4, 0.6], [0.2, 0.8], [0.5, 0.5], [0.7, 0.3]])
+Q = np.array([[0.5, 0.5], [0.2, 0.8], [0.35, 0.65], [0.6, 0.4]])
 exdict.update({'Q': Q})
 
 # Designs
@@ -40,14 +40,13 @@ des1 = np.array([0., 1., 0., 0.])   # Focused
 des2 = np.ones(numTN) / numTN       # Balanced
 des3 = np.array([0.5, 0., 0., 0.5]) # Adapted
 des_list = [des1, des2, des3]
-
 testmax, testint = 40, 4
 testarr = np.arange(testint, testmax + testint, testint)
 
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=1., riskthreshold=0.2, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
 
-numtruthdraws, numdatadraws = 7000, 2000
+numtruthdraws, numdatadraws = 7500, 7000
 np.random.seed(15)
 truthdraws, datadraws = util.distribute_truthdata_draws(exdict['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
@@ -95,6 +94,10 @@ for testind in range(testarr.shape[0]):
     util_lo_arr = np.vstack((util_lo_1, util_lo_2, util_lo_3))
     # Plot
     util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
+                           colors=['blue','red','green'], titlestr='Example supply chain',
+                           labels=['Focused', 'Uniform', 'Adapted'])
+
+util.plot_marg_util(util_avg_arr, testmax=testmax, testint=testint,
                            colors=['blue','red','green'], titlestr='Example supply chain',
                            labels=['Focused', 'Uniform', 'Adapted'])
 
