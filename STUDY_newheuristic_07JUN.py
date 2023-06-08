@@ -1,3 +1,8 @@
+"""
+This script compares the performance of the knapsack heuristic and a new heuristic that greedily moves to the next
+test node
+"""
+
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
 from logistigate.logistigate.priors import prior_normal_assort
@@ -27,17 +32,6 @@ csdict_fam = util.initDataDict(Nfam, Yfam) # Initialize necessary logistigate ke
 csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
 csdict_fam['SNnames'] = ['MNFR ' + str(i+1) for i in range(numSN)]
 
-# Some summaries
-TNtesttotals = np.sum(Nfam, axis=1)
-TNsfptotals = np.sum(Yfam, axis=1)
-TNrates = np.divide(TNsfptotals,TNtesttotals)
-print('Tests at each test node:')
-print(TNtesttotals)
-print('Positives at each test node:')
-print(TNsfptotals)
-print('Positive rates at each test node:')
-print(TNrates)
-
 # Build prior
 SNpriorMean = np.repeat(sps.logit(0.1), numSN)
 # Establish test node priors according to assessment by regulators
@@ -55,8 +49,6 @@ numdraws = 50000
 csdict_fam['numPostSamples'] = numdraws
 np.random.seed(1000) # To replicate draws later
 csdict_fam = methods.GeneratePostSamples(csdict_fam)
-# Print inference from initial data
-#util.plotPostSamples(csdict_fam, 'int90')
 
 # Loss specification
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
@@ -67,7 +59,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 15000, 2000
+numtruthdraws, numdatadraws = 15000, 50
 # Get random subsets for truth and data draws
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
@@ -75,28 +67,88 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
-util_avg, util_hi, util_lo = sampf.get_opt_marg_util_nodes(csdict_fam, testmax, testint, paramdict, zlevel=0.95,
-                            printupdate=True, plotupdate=True) # Wrapper function for utility at all test nodes
+
+# Load matrices for KS heuristic
+util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_fam.npy'))
+util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_hi_fam.npy'))
+util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam.npy'))
+
 # Plot
 util.plot_marg_util_CI(util_avg, margutilarr_hi=util_hi, margutilarr_lo=util_lo, testmax=testmax, testint=testint,
                                titlestr='Familiar Setting')
 # Delta plot
 util.plot_marg_util_CI(util_avg, margutilarr_hi=util_hi, margutilarr_lo=util_lo, testmax=testmax, testint=testint,
                                titlestr='Familiar Setting',type='delta')
-# Store matrices
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_fam'), util_avg)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_fam'), util_hi)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam'), util_lo)
-
-#util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_avg_arr_fam.npy'))
-#util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_hi_arr_fam.npy'))
-#util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_lo_arr_fam.npy'))
 
 # Form allocation
-allocArr, objValArr = sampf.smooth_alloc_forward(util_avg)
-util.plot_plan(allocArr, paramlist=[str(i) for i in np.arange(testint, testmax + 1, testint)], testint=testint,
+allocarr_old, objValArr = sampf.smooth_alloc_forward(util_avg)
+util.plot_plan(allocarr_old, paramlist=[str(i) for i in np.arange(testint, testmax + 1, testint)], testint=testint,
           labels=csdict_fam['TNnames'], titlestr='Familiar Setting', allocmax=250,
           colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
+
+# Form NEW allocation, using choice from last budget for next one
+allocarr_new = np.array([[0., 0., 0., 0., 0., 0., 1., 1., 2., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0.],
+       [1., 2., 3., 4., 5., 6., 6., 7., 7., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0.],
+       [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        0., 0., 0., 0., 0., 0., 0., 0.]])
+bestalloc = allocarr_new[:,8]
+for testind in range(9, testarr.shape[0]):
+    print('Budget: '+str(testarr[testind]))
+    # Evaluate increment of each test node
+    intsaredistinct = False
+    losslist_list = [[] for i in range(numTN)]
+    nondominatedinds = [i for i in range(numTN)]
+    dataiters = 0
+    while not intsaredistinct: # while the CIs overlap...
+        datadraws = truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]
+        paramdict.update({'datadraws': datadraws})
+        dataiters += numdatadraws
+        for tnind in range(numTN):
+            if tnind in nondominatedinds:
+                curralloc = bestalloc.copy() * testint
+                curralloc[tnind] += testint
+                currdes = curralloc / np.sum(curralloc)
+                currlosslist = sampf.sampling_plan_loss_list(currdes, testarr[testind], csdict_fam, paramdict)
+                losslist_list[tnind] = losslist_list[tnind] + currlosslist
+        print('Num loss evals: '+str(dataiters))
+        # Check 99% CIs
+        currCI_list = []
+        for tnind in range(numTN):
+            if tnind in nondominatedinds:
+                _, currloss_CI = sampf.process_loss_list(losslist_list[tnind], zlevel=0.95)
+                currCI_list.append(currloss_CI)
+                print('TN '+str(tnind)+': '+str(currloss_CI))
+        minCImax = min([x[1] for x in currCI_list])
+        minCImaxind = nondominatedinds[np.argmin([x[1] for x in currCI_list])]
+        if (minCImax < [x[0] for x in currCI_list]).sum()==len(currCI_list)-1: # our minmax is lower than all the others
+            intsaredistinct = True
+        else:
+            for ind, item in enumerate(nondominatedinds):
+                if currCI_list[ind][0] > minCImax: # Remove ind from nondominated list
+                    _ = nondominatedinds.pop(nondominatedinds.index(item))
+        if dataiters >= 2000: # Our max number of data draws
+            intsaredistinct = True
+    allocarr_new[:,testind] = bestalloc.copy()
+    allocarr_new[minCImaxind,testind] += 1
+    bestalloc = allocarr_new[:,testind]
+    print('Best design:')
+    print(bestalloc*testint)
+
+
+
+
+
+
+
+
 
 # Evaluate utility for heuristic, uniform, and rudimentary
 util_avg_heur, util_hi_heur, util_lo_heur = np.zeros((int(testmax / testint) + 1)), \
