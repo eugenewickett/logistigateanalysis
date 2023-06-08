@@ -86,9 +86,9 @@ np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_expl'), util_avg)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_expl'), util_hi)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_expl'), util_lo)
 
-#util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_avg_arr_fam.npy'))
-#util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_hi_arr_fam.npy'))
-#util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_lo_arr_fam.npy'))
+#util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_expl.npy'))
+#util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_hi_expl.npy'))
+#util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_lo_expl.npy'))
 
 # Form allocation
 allocArr, objValArr = sampf.smooth_alloc_forward(util_avg)
@@ -116,7 +116,7 @@ for testind in range(testarr.shape[0]):
     util_lo_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
     util_hi_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
     print(des_heur)
-    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[testind]))
+    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[testind+1]))
     # Uniform utility
     des_unif = util.round_design_low(np.ones(numTN) / numTN, testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_unif, testarr[testind], csdict_expl, paramdict)
@@ -125,16 +125,16 @@ for testind in range(testarr.shape[0]):
     util_lo_unif[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
     util_hi_unif[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
     print(des_unif)
-    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[testind]))
+    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_unif[testind+1]))
     # Rudimentary utility
-    des_rudi = util.round_design_low(np.divide(np.sum(Nfam, axis=1), np.sum(Nfam)), testarr[testind]) / testarr[testind]
+    des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_rudi, testarr[testind], csdict_expl, paramdict)
     avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
     util_avg_rudi[testind+1] = paramdict['baseloss'] - avg_loss
     util_lo_rudi[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
     util_hi_rudi[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
     print(des_rudi)
-    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_rudi[testind]))
+    print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_rudi[testind+1]))
     if plotupdate:
         util_avg_arr = np.vstack((util_avg_heur, util_avg_unif, util_avg_rudi))
         util_hi_arr = np.vstack((util_hi_heur, util_hi_unif, util_hi_rudi))
