@@ -64,8 +64,6 @@ numdraws = 50000
 csdict_expl['numPostSamples'] = numdraws
 np.random.seed(1000) # To replicate draws later
 csdict_expl = methods.GeneratePostSamples(csdict_expl)
-# Print inference from initial data
-#util.plotPostSamples(csdict_expl, 'int90')
 
 # Loss specification; use market term
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
