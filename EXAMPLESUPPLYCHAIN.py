@@ -96,6 +96,39 @@ for testind in range(testarr.shape[0]):
     util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
                            colors=['blue','red','green'], titlestr='Example supply chain',
                            labels=['Focused', 'Uniform', 'Adapted'])
+testmax, testmin, testint = 60, 40, 4
+testarr = np.arange(testmin+testint, testmax + testint, testint)
+for testind in range(1, testarr.shape[0]):
+    # Focused
+    currlosslist = sampf.sampling_plan_loss_list(des1, testarr[testind], exdict, paramdict)
+    avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.9)
+    util_avg_1 = np.concatenate((util_avg_1,[paramdict['baseloss'] - avg_loss]))
+    util_lo_1 = np.concatenate((util_lo_1, [paramdict['baseloss'] - avg_loss_CI[1]]))
+    util_hi_1 = np.concatenate((util_hi_1, [paramdict['baseloss'] - avg_loss_CI[0]]))
+    print('Utility at ' + str(testarr[testind]) + ' tests, Focused: ' + str(util_avg_1[-1]))
+    # Uniform
+    currlosslist = sampf.sampling_plan_loss_list(des2, testarr[testind], exdict, paramdict)
+    avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.9)
+    util_avg_2 = np.concatenate((util_avg_2, [paramdict['baseloss'] - avg_loss]))
+    util_lo_2 = np.concatenate((util_lo_2, [paramdict['baseloss'] - avg_loss_CI[1]]))
+    util_hi_2 = np.concatenate((util_hi_2, [paramdict['baseloss'] - avg_loss_CI[0]]))
+    print('Utility at ' + str(testarr[testind]) + ' tests, Uniform: ' + str(util_avg_2[-1]))
+    # Adapted
+    currlosslist = sampf.sampling_plan_loss_list(des3, testarr[testind], exdict, paramdict)
+    avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.9)
+    util_avg_3 = np.concatenate((util_avg_3, [paramdict['baseloss'] - avg_loss]))
+    util_lo_3 = np.concatenate((util_lo_3, [paramdict['baseloss'] - avg_loss_CI[1]]))
+    util_hi_3 = np.concatenate((util_hi_3, [paramdict['baseloss'] - avg_loss_CI[0]]))
+    print('Utility at ' + str(testarr[testind]) + ' tests, Adapted: ' + str(util_avg_3[-1]))
+
+    # Plot
+    util_avg_arr = np.vstack((util_avg_1, util_avg_2, util_avg_3))
+    util_hi_arr = np.vstack((util_hi_1, util_hi_2, util_hi_3))
+    util_lo_arr = np.vstack((util_lo_1, util_lo_2, util_lo_3))
+    # Plot
+    util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testarr[-5+testind], testint=testint,
+                           colors=['blue','red','green'], titlestr='Example supply chain',
+                           labels=['Focused', 'Uniform', 'Adapted'])
 
 util.plot_marg_util(util_avg_arr, testmax=testmax, testint=testint,
                            colors=['blue','red','green'], titlestr='Example supply chain',
@@ -104,6 +137,8 @@ util.plot_marg_util(util_avg_arr, testmax=testmax, testint=testint,
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_base'), util_avg_arr)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_example_base'), util_hi_arr)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_example_base'), util_lo_arr)
+
+
 
 ######################
 # CHANGE THE LOSS SPECIFICATION
