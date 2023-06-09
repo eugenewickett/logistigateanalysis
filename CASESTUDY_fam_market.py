@@ -84,7 +84,7 @@ np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam_market'), util_lo
 # Form allocation
 allocArr, objValArr = sampf.smooth_alloc_forward(util_avg)
 util.plot_plan(allocArr, paramlist=[str(i) for i in np.arange(testint, testmax + 1, testint)], testint=testint,
-          labels=csdict_fam['TNnames'], titlestr='Familiar Setting', allocmax=250,
+          labels=csdict_fam['TNnames'], titlestr='Familiar Setting with Market Term', allocmax=250,
           colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
 
 # Evaluate utility for heuristic, uniform, and rudimentary
