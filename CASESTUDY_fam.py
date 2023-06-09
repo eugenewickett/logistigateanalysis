@@ -88,9 +88,9 @@ np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_fam'), util_avg)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_fam'), util_hi)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam'), util_lo)
 
-#util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_avg_arr_fam.npy'))
-#util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_hi_arr_fam.npy'))
-#util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_lo_arr_fam.npy'))
+#util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_fam.npy'))
+#util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_hi_fam.npy'))
+#util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam.npy'))
 
 # Form allocation
 allocArr, objValArr = sampf.smooth_alloc_forward(util_avg)
