@@ -63,6 +63,7 @@ for rep in range(numreps):
     np.random.seed(1050 + rep)  # To replicate draws later
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
     # 50k truthdraws
+    print('On 50k truth draws...')
     np.random.seed(200 + rep)
     numtruthdraws = 50000
     truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -71,14 +72,17 @@ for rep in range(numreps):
     paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
     util.print_param_checks(paramdict) # Check of used parameters
     for testind in range(testarr.shape[0]):
+        print(str(testarr[testind])+' tests...')
         time0 = time.time()
         currlosslist = sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
         truth50times.append(time.time() - time0)
+        print('Time: ' + str(truth50times[-1]))
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         truth50arr[rep][testind+1] = paramdict['baseloss'] - avg_loss
         truth50arr_lo[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
         truth50arr_hi[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
     # 15k truthdraws
+    print('On 15k truth draws...')
     np.random.seed(200 + rep)
     numtruthdraws = 15000
     truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -87,9 +91,11 @@ for rep in range(numreps):
     paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
     util.print_param_checks(paramdict)  # Check of used parameters
     for testind in range(testarr.shape[0]):
+        print(str(testarr[testind]) + ' tests...')
         time0 = time.time()
         currlosslist = sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
         truth15times.append(time.time() - time0)
+        print('Time: ' + str(truth15times[-1]))
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         truth15arr[rep][testind + 1] = paramdict['baseloss'] - avg_loss
         truth15arr_lo[rep][testind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
@@ -99,3 +105,19 @@ for rep in range(numreps):
                         labels=['15k' for i in range(numreps)]+['50k' for i in range(numreps)],
                         colors=['red' for i in range(numreps)]+['blue' for i in range(numreps)],
                         dashes=[[1,0] for i in range(numreps)]+[[2,1] for i in range(numreps)])
+
+util.plot_marg_util_CI(truth15arr,truth15arr_hi,truth15arr_lo,400,10,utilmax=0.75)
+util.plot_marg_util_CI(truth50arr,truth50arr_hi,truth50arr_lo,400,10,utilmax=0.75)
+
+
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr'), truth15arr)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr_hi'), truth15arr_hi)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr_lo'), truth15arr_lo)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth50arr'), truth50arr)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth50arr_hi'), truth50arr_hi)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth50arr_lo'), truth50arr_lo)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15times'), np.array(truth15times))
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth50times'), np.array(truth50times))
+
+
+
