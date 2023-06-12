@@ -109,7 +109,7 @@ for rep in range(numreps):
 util.plot_marg_util_CI(truth15arr,truth15arr_hi,truth15arr_lo,400,10,utilmax=0.75)
 util.plot_marg_util_CI(truth50arr,truth50arr_hi,truth50arr_lo,400,10,utilmax=0.75)
 
-
+'''
 np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr'), truth15arr)
 np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr_hi'), truth15arr_hi)
 np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr_lo'), truth15arr_lo)
@@ -119,5 +119,118 @@ np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth50arr_lo'), truth50arr
 np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth15times'), np.array(truth15times))
 np.save(os.path.join('studies', 'truthdraws_10JUN', 'truth50times'), np.array(truth50times))
 
+truth15arr = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr.npy'))
+truth15arr_hi = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr_hi.npy'))
+truth15arr_lo = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth15arr_lo.npy'))
+truth50arr = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth50arr.npy'))
+truth50arr_hi = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth50arr_hi.npy'))
+truth50arr_lo = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth50arr_lo.npy'))
+truth15times = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth15times.npy'))
+truth50times = np.load(os.path.join('studies', 'truthdraws_10JUN', 'truth50times.npy'))
+'''
+
+# Boxplot for times
+plt.boxplot(np.vstack((truth15times,truth50times[:320])).T,labels=['15k', '50k'])
+plt.ylim([0,380])
+plt.title('Time needed to compile 2000 data draws')
+plt.xlabel('Number of truth draws')
+plt.ylabel('Seconds')
+plt.show()
+plt.close()
+print(np.average(truth50times)/np.average(truth15times))
+print(50/15)
+
+# Show bias
+truth15arr = truth15arr[:-2]
+truth50arr = truth50arr[:-2]
+truth15arr_hi, truth50arr_hi = truth15arr_hi[:-2], truth50arr_hi[:-2]
+truth15arr_lo, truth50arr_lo = truth15arr_lo[:-2], truth50arr_lo[:-2]
+margutilarr_avg = np.vstack((truth15arr, truth50arr))
+margutilarr_hi = np.vstack((truth15arr_hi, truth50arr_hi))
+margutilarr_lo = np.vstack((truth15arr_lo, truth50arr_lo))
+
+'''
+if len(colors) == 0:
+    colors = cm.rainbow(np.linspace(0, 1, margutilarr_avg.shape[0]))
+if len(dashes) == 0:
+    dashes = [[2, desind + 1] for desind in range(margutilarr_avg.shape[0])]
+if len(labels) == 0:
+    labels = ['Design ' + str(desind + 1) for desind in range(margutilarr_avg.shape[0])]
+'''
+labels = ['15k', '50k']
+al=0.1
+x1 = range(0, testmax + 1, testint)
+yMax = margutilarr_hi.max() * 1.1
+for desind in range(margutilarr_avg.shape[0]):
+    if desind == 0:
+        plt.plot(x1, margutilarr_avg[desind],
+             linewidth=1, color='blue',
+             label=labels[0], alpha=al)
+        #plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+        #                 color='blue', alpha=0.3 * al)
+    elif desind==8:
+        plt.plot(x1, margutilarr_avg[desind],
+             linewidth=1, color='red',
+             label=labels[1], alpha=al)
+        #plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+        #                 color='red', alpha=0.3 * al)
+    elif desind<8:
+        plt.plot(x1, margutilarr_avg[desind],
+                 linewidth=1, color='blue', alpha=al)
+        plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                         color='blue', alpha=0.3 * al)
+    elif desind>8:
+        plt.plot(x1, margutilarr_avg[desind],
+             linewidth=1, color='red', alpha=al)
+        plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                         color='red', alpha=0.3 * al)
+plt.legend()
+plt.ylim([0., yMax])
+plt.xlabel('Number of Tests')
+plt.ylabel('Utility Gain')
+plt.title('Utility with Increasing Tests at Test Node 1\n15k or 50k truth draws')
+plt.show()
+plt.close()
+
+# Get sample standard deviation estimates
+range15 = np.average(truth15arr_hi - truth15arr_lo,axis=0)
+range50 = np.average(truth50arr_hi - truth50arr_lo,axis=0)
+plt.plot(x1,range15,label='15k',color='blue')
+plt.plot(x1,range50,label='50k', color='red')
+plt.legend()
+plt.title('Avg. 95% CI width vs. increasing tests\n15k or 50k truth draws')
+plt.show()
+plt.close()
+
+# Do same analysis when increasing data draws by a commensurate amount
+numdatadraws = round(2000*50/15)
+
+numreps=8
+data6667arr = np.zeros((numreps, testarr.shape[0]+1))
+data6667arr_lo, data6667arr_hi = np.zeros((numreps, testarr.shape[0]+1)), np.zeros((numreps, testarr.shape[0]+1))
+for rep in range(numreps):
+    print('Rep '+str(rep)+'...')
+    np.random.seed(1050 + rep)  # To replicate draws later
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # 6667 datadraws
+    np.random.seed(200 + rep)
+    numtruthdraws = 15000
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict) # Check of used parameters
+    for testind in range(testarr.shape[0]):
+        print(str(testarr[testind])+' tests...')
+        currlosslist = sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
+        avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        data6667arr[rep][testind+1] = paramdict['baseloss'] - avg_loss
+        data6667arr_lo[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+        data6667arr_hi[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
+    # Plot
+    util.plot_marg_util(np.vstack((truth15arr, data6667arr)), testmax, testint,al=0.2,type='delta',
+                        labels=['2k' for i in range(numreps)]+['6.7k' for i in range(numreps)],
+                        colors=['red' for i in range(numreps)]+['blue' for i in range(numreps)],
+                        dashes=[[1,0] for i in range(numreps)]+[[2,1] for i in range(numreps)])
 
 
