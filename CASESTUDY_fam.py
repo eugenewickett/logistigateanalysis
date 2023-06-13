@@ -159,7 +159,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
 testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 15000, 2000
+numtruthdraws, numdatadraws = 15000, 20
 # Get random subsets for truth and data draws
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
@@ -167,7 +167,10 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 util.print_param_checks(paramdict) # Check of used parameters
 
-numTN = priordatadict['N'].shape[0]
+########
+zlevel=0.95
+printupdate, plotupdate = True, True
+numTN = csdict_fam['N'].shape[0]
 # Initialize the return arrays: zlevel CIs on utility, and an allocation array
 util_avg, util_hi, util_lo = np.zeros((int(testmax / testint) + 1)), \
                              np.zeros((int(testmax / testint) + 1)), \
@@ -182,8 +185,8 @@ for testnumind, testnum in enumerate(range(testint, testmax+1, testint)):
         curralloc = bestalloc.copy()
         curralloc[currTN] += 1 # Increment 1 at current test node
         currdes = curralloc / np.sum(curralloc) # Make a proportion design
-        currlosslist = sampf.sampling_plan_loss_list(currdes, testnum, priordatadict, paramdict)
-        currloss_avg, currloss_CI = process_loss_list(currlosslist, zlevel=zlevel)
+        currlosslist = sampf.sampling_plan_loss_list(currdes, testnum, csdict_fam, paramdict)
+        currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
         if printupdate:
             print('TN '+str(currTN)+' loss avg.: '+str(currloss_avg))
         if nextTN == -1 or currloss_avg < currbestloss_avg: # Update with better loss
@@ -191,16 +194,19 @@ for testnumind, testnum in enumerate(range(testint, testmax+1, testint)):
             currbestloss_avg = currloss_avg
             currbestloss_CI = currloss_CI
     # Store best results
-    alloc[:, testnumind+1] = alloc[:, testnumind].copy()
-    alloc[nextTN, testnumind] += 1
+    alloc[:, testnumind+1] = bestalloc.copy()
+    alloc[nextTN, testnumind+1] += 1
     util_avg[testnumind + 1] = paramdict['baseloss'] - currbestloss_avg
     util_hi[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[0]
     util_lo[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[1]
     if printupdate:
         print('TN '+str(nextTN)+' added, with utility CI of ('+str(util_lo[testnumind + 1])+', '+
-              str(util_hi[testnumind + 1])+')')
+              str(util_hi[testnumind + 1])+') for '+str(testnum)+' tests')
     if plotupdate:
-        util.plot_marg_util_CI(util_avg,util_hi,util_lo,testmax,testint)
+        numint = util_avg.shape[0]
+        util.plot_marg_util_CI(util_avg.reshape(1,numint),util_hi.reshape(1,numint),util_lo.reshape(1,numint),
+                               testmax,testint)
+        util.plot_plan(alloc, np.arange(0, testmax+1, testint))
 
 
 
