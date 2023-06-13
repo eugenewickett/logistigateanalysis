@@ -203,7 +203,7 @@ plt.show()
 plt.close()
 
 # Do same analysis when increasing data draws by a commensurate amount
-numdatadraws = round(2000*50/15)
+numdatadraws = 6666
 
 numreps=8
 data6667arr = np.zeros((numreps, testarr.shape[0]+1))
@@ -215,18 +215,23 @@ for rep in range(numreps):
     # 6667 datadraws
     np.random.seed(200 + rep)
     numtruthdraws = 15000
-    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
-    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    truthdraws, datadraws_big = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws})
     # Get base loss
     paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
     util.print_param_checks(paramdict) # Check of used parameters
     for testind in range(testarr.shape[0]):
-        print(str(testarr[testind])+' tests...')
+        paramdict.update({'datadraws': datadraws_big[:2222]})
         currlosslist = sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
+        paramdict.update({'datadraws': datadraws_big[2222:4444]})
+        currlosslist = currlosslist + sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
+        paramdict.update({'datadraws': datadraws_big[4444:]})
+        currlosslist = currlosslist + sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         data6667arr[rep][testind+1] = paramdict['baseloss'] - avg_loss
         data6667arr_lo[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
         data6667arr_hi[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
+        print(str(testarr[testind]) + ' tests: '+str(paramdict['baseloss'] - avg_loss))
     # Plot
     util.plot_marg_util(np.vstack((truth15arr, data6667arr)), testmax, testint,al=0.2,type='delta',
                         labels=['2k' for i in range(numreps)]+['6.7k' for i in range(numreps)],
