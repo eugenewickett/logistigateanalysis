@@ -159,7 +159,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
 testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 15000, 20
+numtruthdraws, numdatadraws = 15000, 2000
 # Get random subsets for truth and data draws
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
@@ -208,6 +208,7 @@ for testnumind, testnum in enumerate(range(testint, testmax+1, testint)):
                                testmax,testint)
         util.plot_plan(alloc, np.arange(0, testmax+1, testint))
 
-
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict, printupdate=True,
+                                                          plotupdate=True, plottitlestr='Familiar Setting')
 
 

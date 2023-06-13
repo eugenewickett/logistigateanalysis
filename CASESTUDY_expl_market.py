@@ -155,3 +155,11 @@ np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_expl_market'), u
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_expl_market'), util_hi_arr)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_expl_market'), util_lo_arr)
 
+##########
+# Updated heuristic
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict, printupdate=True,
+                                                          plotupdate=True, plottitlestr='Familiar Setting')
+np.save(os.path.join('casestudyoutputs', '13JUN', 'alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_lo'), util_lo)

@@ -161,3 +161,12 @@ kInd = next(x for x, val in enumerate(util_avg_arr[2].tolist()) if val > targval
 rudi_saved = round((targval - util_avg_arr[2][kInd - 1]) / (util_avg_arr[2][kInd] - util_avg_arr[2][kInd - 1]) *\
                       testint) + (kInd - 1) * testint - targind*testint
 print(rudi_saved) # 145
+
+##########
+# Updated heuristic
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict, printupdate=True,
+                                                          plotupdate=True, plottitlestr='Familiar Setting')
+np.save(os.path.join('casestudyoutputs', '13JUN', 'alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_lo'), util_lo)

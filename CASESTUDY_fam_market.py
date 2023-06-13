@@ -137,3 +137,12 @@ for testind in range(testarr.shape[0]):
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_fam_market'), util_avg_arr)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_fam_market'), util_hi_arr)
 np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_fam_market'), util_lo_arr)
+
+##########
+# Updated heuristic
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict, printupdate=True,
+                                                          plotupdate=True, plottitlestr='Familiar Setting')
+np.save(os.path.join('casestudyoutputs', '13JUN', 'alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'util_lo'), util_lo)
