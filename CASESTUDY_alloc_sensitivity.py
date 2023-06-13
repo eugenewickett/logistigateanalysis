@@ -60,7 +60,7 @@ numtruthdraws, numdatadraws = 15000, 2000
 
 alloc_list = []
 numReps = 10
-for rep in range(numReps):
+for rep in range(7,numReps):
     print('Rep: '+str(rep))
     # Get new MCMC draws
     np.random.seed(2000+rep)
