@@ -69,6 +69,7 @@ testarr = np.arange(testint, testmax + testint, testint)
 # Set MCMC draws to use in fast algorithm
 numtruthdraws, numdatadraws = 15000, 2000
 # Get random subsets for truth and data draws
+np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 # Get base loss
