@@ -238,4 +238,9 @@ for rep in range(numreps):
                         colors=['red' for i in range(numreps)]+['blue' for i in range(numreps)],
                         dashes=[[1,0] for i in range(numreps)]+[[2,1] for i in range(numreps)])
 
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr'), data6667arr)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr_hi'), data6667arr_hi)
+np.save(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr_lo'), data6667arr_lo)
+
+
 
