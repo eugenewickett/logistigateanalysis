@@ -81,10 +81,10 @@ util.print_param_checks(paramdict) # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict, printupdate=True,
                                                           plotupdate=True, plottitlestr='Familiar Setting')
 # Store results
-np.save(os.path.join('casestudyoutputs', '13JUN', 'alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'util_lo'), util_lo)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_util_lo'), util_lo)
 
 # Key comparison points
 alloc90 = alloc[9]
@@ -124,3 +124,17 @@ for testnum in testarr_rudi:
         currlosslist = sampf.sampling_plan_loss_list(des_rudi, testnum, csdict_expl, paramdict)
         avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_rudi_180.append(avg_loss)
+
+# Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
+kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
+unif90saved = round((alloc90 - util_avg_unif_90[kInd - 1]) / (util_avg_unif_90[kInd] - util_avg_unif_90[kInd - 1]) *\
+                    testint) + (kInd - 1) * testint
+kInd = next(x for x, val in enumerate(util_avg_unif_180) if val > alloc180)
+unif180saved = round((alloc180 - util_avg_unif_180[kInd-1]) / (util_avg_unif_180[kInd]-util_avg_unif_180[kInd - 1]) *\
+                    testint) + (kInd - 1) * testint
+kInd = next(x for x, val in enumerate(util_avg_rudi_90) if val > alloc90)
+rudi90saved = round((alloc90 - util_avg_rudi_90[kInd - 1]) / (util_avg_rudi_90[kInd] - util_avg_rudi_90[kInd - 1]) *\
+                    testint) + (kInd - 1) * testint
+kInd = next(x for x, val in enumerate(util_avg_rudi_180) if val > alloc180)
+rudi180saved = round((alloc180 - util_avg_rudi_180[kInd-1]) / (util_avg_rudi_180[kInd]-util_avg_rudi_180[kInd - 1]) *\
+                    testint) + (kInd - 1) * testint
