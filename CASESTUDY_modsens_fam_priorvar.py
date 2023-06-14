@@ -136,7 +136,7 @@ unif180saved = round((alloc180 - util_avg_unif_180[kInd-1]) / (util_avg_unif_180
                     testint) + (kInd - 1) * testint
 kInd = next(x for x, val in enumerate(util_avg_rudi_90) if val > alloc90)
 rudi90saved = round((alloc90 - util_avg_rudi_90[kInd - 1]) / (util_avg_rudi_90[kInd] - util_avg_rudi_90[kInd - 1]) *\
-                    testint) + (kInd - 1) * testint
+                    testint*5) + (kInd - 1) * testint*5
 kInd = next(x for x, val in enumerate(util_avg_rudi_180) if val > alloc180)
 rudi180saved = round((alloc180 - util_avg_rudi_180[kInd-1]) / (util_avg_rudi_180[kInd]-util_avg_rudi_180[kInd - 1]) *\
-                    testint) + (kInd - 1) * testint
+                    testint*5) + (kInd - 1) * testint*5

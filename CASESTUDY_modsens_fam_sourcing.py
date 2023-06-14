@@ -70,8 +70,8 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
-alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict, printupdate=True,
-                                                          plotupdate=True, plottitlestr='Familiar Setting')
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                printupdate=True, plotupdate=False)
 # Store results
 np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_sourcing_1_alloc'), alloc)
 np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_sourcing_1_util_avg'), util_avg)
@@ -136,7 +136,7 @@ unif180saved = round((alloc180 - util_avg_unif_180[kInd-1]) / (util_avg_unif_180
                     testint) + (kInd - 1) * testint
 kInd = next(x for x, val in enumerate(util_avg_rudi_90) if val > alloc90)
 rudi90saved = round((alloc90 - util_avg_rudi_90[kInd - 1]) / (util_avg_rudi_90[kInd] - util_avg_rudi_90[kInd - 1]) *\
-                    testint) + (kInd - 1) * testint
+                    testint*5) + (kInd - 1) * testint*5
 kInd = next(x for x, val in enumerate(util_avg_rudi_180) if val > alloc180)
 rudi180saved = round((alloc180 - util_avg_rudi_180[kInd-1]) / (util_avg_rudi_180[kInd]-util_avg_rudi_180[kInd - 1]) *\
-                    testint) + (kInd - 1) * testint
+                    testint*5) + (kInd - 1) * testint*5
