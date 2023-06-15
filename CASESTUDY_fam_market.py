@@ -68,6 +68,7 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
+
 util_avg, util_hi, util_lo = sampf.get_opt_marg_util_nodes(csdict_fam, testmax, testint, paramdict, zlevel=0.95,
                             printupdate=True, plotupdate=True) # Wrapper function for utility at all test nodes
 # Plot
@@ -141,8 +142,9 @@ np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_fam_market'), uti
 
 ##########
 # Updated heuristic
-alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict, printupdate=True,
-                                                          plotupdate=True, plottitlestr='Familiar Setting')
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                printupdate=True, plotupdate=True,
+                                                                plottitlestr='Familiar Setting with Market Term')
 np.save(os.path.join('casestudyoutputs', '13JUN', 'alloc'), alloc)
 np.save(os.path.join('casestudyoutputs', '13JUN', 'util_avg'), util_avg)
 np.save(os.path.join('casestudyoutputs', '13JUN', 'util_hi'), util_hi)
