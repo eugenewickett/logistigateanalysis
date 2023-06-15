@@ -143,8 +143,10 @@ print(50/15)
 # Show bias
 truth15arr = truth15arr[:-2]
 truth50arr = truth50arr[:-2]
-truth15arr_hi, truth50arr_hi = truth15arr_hi[:-2], truth50arr_hi[:-2]
-truth15arr_lo, truth50arr_lo = truth15arr_lo[:-2], truth50arr_lo[:-2]
+truth15arr_hi = truth15arr_hi[:-2]
+truth50arr_hi = truth50arr_hi[:-2]
+truth15arr_lo = truth15arr_lo[:-2]
+truth50arr_lo = truth50arr_lo[:-2]
 margutilarr_avg = np.vstack((truth15arr, truth50arr))
 margutilarr_hi = np.vstack((truth15arr_hi, truth50arr_hi))
 margutilarr_lo = np.vstack((truth15arr_lo, truth50arr_lo))
@@ -202,7 +204,9 @@ plt.title('Avg. 95% CI width vs. increasing tests\n15k or 50k truth draws')
 plt.show()
 plt.close()
 
+############
 # Do same analysis when increasing data draws by a commensurate amount
+############
 numdatadraws = 6666
 
 numreps=8
@@ -242,5 +246,58 @@ np.save(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr'), data6667arr)
 np.save(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr_hi'), data6667arr_hi)
 np.save(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr_lo'), data6667arr_lo)
 
+data6667arr = np.load(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr.npy'))
+data6667arr_hi = np.load(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr_hi.npy'))
+data6667arr_lo = np.load(os.path.join('studies', 'truthdraws_10JUN', 'data6667arr_lo.npy'))
 
+margutilarr_avg = np.vstack((truth15arr, data6667arr))
+margutilarr_hi = np.vstack((truth15arr_hi, data6667arr_hi))
+margutilarr_lo = np.vstack((truth15arr_lo, data6667arr_lo))
 
+labels = ['2k', '6.6k']
+al=0.1
+x1 = range(0, testmax + 1, testint)
+yMax = margutilarr_hi.max() * 1.1
+for desind in range(margutilarr_avg.shape[0]):
+    if desind == 0:
+        plt.plot(x1, margutilarr_avg[desind],
+             linewidth=1, color='blue',
+             label=labels[0], alpha=al)
+        #plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+        #                 color='blue', alpha=0.3 * al)
+    elif desind==8:
+        plt.plot(x1, margutilarr_avg[desind],
+             linewidth=1, color='red',
+             label=labels[1], alpha=al)
+        #plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+        #                 color='red', alpha=0.3 * al)
+    elif desind<8:
+        plt.plot(x1, margutilarr_avg[desind],
+                 linewidth=1, color='blue', alpha=al)
+        plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                         color='blue', alpha=0.3 * al)
+    elif desind>8:
+        plt.plot(x1, margutilarr_avg[desind],
+             linewidth=1, color='red', alpha=al)
+        plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                         color='red', alpha=0.3 * al)
+plt.legend()
+plt.ylim([0., yMax])
+plt.xlabel('Number of Tests')
+plt.ylabel('Utility Gain')
+plt.title('Utility with Increasing Tests at Test Node 1\n2k or 6.6k data draws')
+plt.show()
+plt.close()
+
+# Plot of CI widths
+range2 = np.average(truth15arr_hi - truth15arr_lo,axis=0)
+range6 = np.average(data6667arr_hi - data6667arr_lo,axis=0)
+range50 = np.average(truth50arr_hi - truth50arr_lo,axis=0)
+plt.plot(x1,range2,label='15k truth, 2k data',color='blue')
+plt.plot(x1,range6,label='15k truth, 6.6k data', color='red')
+plt.plot(x1,range50, 'r--', label='50k truth, 2k data')
+plt.legend()
+plt.title('Avg. 95% CI width vs. increasing tests')
+plt.xlabel('Number of Tests')
+plt.show()
+plt.close()
