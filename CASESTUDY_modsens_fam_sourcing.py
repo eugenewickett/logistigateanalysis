@@ -111,18 +111,20 @@ util_avg_unif_180 = []
 util_avg_rudi_180 = []
 testarr_unif = np.arange(180, 221, 10)
 for testnum in testarr_unif:
-    if len(util_avg_unif_180) == 0 or not util_avg_unif_180[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
+    if len(util_avg_unif_180) == 0 or not util_avg_unif_180[-1] > alloc180: # Don't add more if we've exceeded the heuristic comparison
         des_unif = util.round_design_low(np.ones(numTN) / numTN, testnum) / testnum
         currlosslist = sampf.sampling_plan_loss_list(des_unif, testnum, csdict_fam, paramdict)
         avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_unif_180.append(paramdict['baseloss'] - avg_loss)
+        print('Unif at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 testarr_rudi = np.arange(180, 681, 50)
 for testnum in testarr_rudi:
-    if len(util_avg_rudi_180) == 0 or not util_avg_rudi_180[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
+    if len(util_avg_rudi_180) == 0 or not util_avg_rudi_180[-1] > alloc180: # Don't add more if we've exceeded the heuristic comparison
         des_rudi = util.round_design_low(np.divide(np.sum(Nfam, axis=1), np.sum(Nfam)), testnum) / testnum
         currlosslist = sampf.sampling_plan_loss_list(des_rudi, testnum, csdict_fam, paramdict)
         avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
+        print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
 np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_sourcing_1_util_avg_unif_180'), util_avg_unif_180)
 np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_sourcing_1_util_avg_rudi_180'), util_avg_rudi_180)
@@ -140,3 +142,17 @@ rudi90saved = round((alloc90 - util_avg_rudi_90[kInd - 1]) / (util_avg_rudi_90[k
 kInd = next(x for x, val in enumerate(util_avg_rudi_180) if val > alloc180)
 rudi180saved = round((alloc180 - util_avg_rudi_180[kInd-1]) / (util_avg_rudi_180[kInd]-util_avg_rudi_180[kInd - 1]) *\
                     testint*5) + (kInd - 1) * testint*5
+print('Saved vs Unif at 90: '+str(unif90saved))
+print('Saved vs Rudi at 90: '+str(rudi90saved))
+print('Saved vs Unif at 180: '+str(unif180saved))
+print('Saved vs Rudi at 180: '+str(rudi180saved))
+
+########################
+# Now use a different sourcing matrix
+########################
+np.random.seed(36) # CHANGED FROM 33 TO 36
+Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+csdict_fam['Q'] = np.vstack((csdict_fam['Q'][:4], Qvecs))
+
+
+
