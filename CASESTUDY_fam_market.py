@@ -145,7 +145,7 @@ np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_fam_market'), uti
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Familiar Setting with Market Term')
-np.save(os.path.join('casestudyoutputs', '13JUN', 'alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'util_lo'), util_lo)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_market_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_market_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_market_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', '13JUN', 'fam_market_util_lo'), util_lo)
