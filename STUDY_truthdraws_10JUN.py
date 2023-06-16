@@ -40,7 +40,7 @@ csdict_fam['prior'] = priorObj
 # Set up MCMC
 csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 70000
+numdraws = 100000
 csdict_fam['numPostSamples'] = numdraws
 
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
@@ -50,10 +50,14 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
 testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
-numdatadraws = 2000
+numdatadraws = 20
 des = np.array([1., 0., 0., 0.])
 
-numreps=10
+##############
+##############
+##############
+
+numreps=8
 truth15arr = np.zeros((numreps, testarr.shape[0]+1))
 truth15arr_lo, truth15arr_hi = np.zeros((numreps, testarr.shape[0]+1)), np.zeros((numreps, testarr.shape[0]+1))
 truth50arr = np.zeros((numreps, testarr.shape[0]+1))
@@ -301,3 +305,118 @@ plt.title('Avg. 95% CI width vs. increasing tests')
 plt.xlabel('Number of Tests')
 plt.show()
 plt.close()
+
+
+#############
+# How much bias is there at higher truth draws?
+#############
+numdatadraws = 50
+minCI = 0.02
+
+numreps=8
+truth75arr = np.zeros((numreps, testarr.shape[0]+1))
+truth75arr_lo, truth75arr_hi = np.zeros((numreps, testarr.shape[0]+1)), np.zeros((numreps, testarr.shape[0]+1))
+truth100arr = np.zeros((numreps, testarr.shape[0]+1))
+truth100arr_lo, truth100arr_hi = np.zeros((numreps, testarr.shape[0]+1)), np.zeros((numreps, testarr.shape[0]+1))
+for rep in range(numreps):
+    np.random.seed(1050 + rep)  # To replicate draws later
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # 50k truthdraws
+    print('On 75k truth draws...')
+    np.random.seed(200 + rep)
+    numtruthdraws = 75000
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict) # Check of used parameters
+    for testind in range(testarr.shape[0]):
+        print(str(testarr[testind])+' tests...')
+        avg_loss_CI = (0, minCI*2)
+        currlosslist = []
+        while avg_loss_CI[1]-avg_loss_CI[0] > minCI:
+            paramdict.update({'datadraws': truthdraws[choice(np.arange(numtruthdraws),size=numdatadraws,replace=False)]})
+            currlosslist = currlosslist + sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
+            avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+            print('Current CI width: ' + str(avg_loss_CI[1]-avg_loss_CI[0]))
+        truth75arr[rep][testind+1] = paramdict['baseloss'] - avg_loss
+        truth75arr_lo[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
+        truth75arr_hi[rep][testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
+    # 100k truthdraws
+    print('On 100k truth draws...')
+    np.random.seed(200 + rep)
+    numtruthdraws = 100000
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict)  # Check of used parameters
+    for testind in range(testarr.shape[0]):
+        print(str(testarr[testind]) + ' tests...')
+        avg_loss_CI = (0, minCI * 2)
+        currlosslist = []
+        while avg_loss_CI[1] - avg_loss_CI[0] > minCI:
+            paramdict.update({'datadraws': truthdraws[choice(np.arange(numtruthdraws), size=numdatadraws, replace=False)]})
+            currlosslist = currlosslist + sampf.sampling_plan_loss_list(des, testarr[testind], csdict_fam, paramdict)
+            avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+            print('Current CI width: ' + str(avg_loss_CI[1] - avg_loss_CI[0]))
+        truth100arr[rep][testind + 1] = paramdict['baseloss'] - avg_loss
+        truth100arr_lo[rep][testind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
+        truth100arr_hi[rep][testind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
+    # Plot
+    margutilarr_avg = np.vstack((truth15arr, truth50arr, truth75arr, truth100arr))
+    margutilarr_hi = np.vstack((truth15arr_hi, truth50arr_hi, truth75arr_hi, truth100arr_hi))
+    margutilarr_lo = np.vstack((truth15arr_lo, truth50arr_lo, truth75arr_lo, truth100arr_lo))
+
+    labels = ['15k', '50k', '75k', '100k']
+    al = 0.1
+    x1 = range(0, testmax + 1, testint)
+    yMax = margutilarr_hi.max() * 1.1
+    for desind in range(margutilarr_avg.shape[0]):
+        if desind == 0:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='blue',
+                     label=labels[0], alpha=al)
+            # plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+            #                 color='blue', alpha=0.3 * al)
+        elif desind == 8:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='red',
+                     label=labels[1], alpha=al)
+            # plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+            #                 color='red', alpha=0.3 * al)
+        elif desind == 16:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='purple',
+                     label=labels[2], alpha=al)
+        elif desind == 24:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='orange',
+                     label=labels[3], alpha=al)
+        elif desind < 8:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='blue', alpha=al)
+            plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                             color='blue', alpha=0.3 * al)
+        elif desind > 8 and desind < 16:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='red', alpha=al)
+            plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                             color='red', alpha=0.3 * al)
+        elif desind > 16 and desind < 24:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='purple', alpha=al)
+            plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                             color='purple', alpha=0.3 * al)
+        elif desind > 24:
+            plt.plot(x1, margutilarr_avg[desind],
+                     linewidth=1, color='purple', alpha=al)
+            plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+                             color='purple', alpha=0.3 * al)
+    plt.legend()
+    plt.ylim([0., yMax])
+    plt.xlabel('Number of Tests')
+    plt.ylabel('Utility Gain')
+    plt.title('Utility with Increasing Tests at Test Node 1\n15k or 50k truth draws')
+    plt.show()
+    plt.close()
