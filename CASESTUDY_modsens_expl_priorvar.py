@@ -49,7 +49,7 @@ csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 SNpriorMean = np.repeat(sps.logit(0.1), numSN)
 # Establish test node priors according to assessment by regulators
 TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-TNvar, SNvar = 2., 4.  # Variances for use with prior; supply nodes are wide due to uncertainty
+TNvar, SNvar = 4., 4.  # TNvar changed to 4
 csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
                                np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
@@ -80,51 +80,63 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict, printupdate=True,
-                                                          plotupdate=True, plottitlestr='Familiar Setting')
+                                                          plotupdate=False, plottitlestr='Familiar Setting')
 # Store results
-np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', '13JUN', 'expl_MS_priorvar_4_util_lo'), util_lo)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_lo'), util_lo)
 
 # Key comparison points
-alloc90 = alloc[9]
-alloc180 = alloc[18]
+alloc90 = util_avg[9]
+alloc180 = util_avg[18]
 # Compare with Uniform and Rudimentary allocations
 util_avg_unif_90 = []
 util_avg_rudi_90 = []
 # Do by 10 for uniform, by 50 for rudimentary
-testarr_unif = np.arange(90,131,10)
+testarr_unif = np.arange(90, 131, 10)
 for testnum in testarr_unif:
-    if not util_avg_unif[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
+    if len(util_avg_unif_90) == 0 or not util_avg_unif_90[-1] > alloc90:
         des_unif = util.round_design_low(np.ones(numTN) / numTN, testnum) / testnum
         currlosslist = sampf.sampling_plan_loss_list(des_unif, testnum, csdict_expl, paramdict)
         avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
-        util_avg_unif_90.append(avg_loss)
-testarr_rudi = np.arange(90,491,50)
+        util_avg_unif_90.append(paramdict['baseloss'] - avg_loss)
+        print('Unif at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+testarr_rudi = np.arange(90, 491, 50)
 for testnum in testarr_rudi:
-    if not util_avg_rudi[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
+    if len(util_avg_rudi_90) == 0 or not util_avg_rudi_90[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
         des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), testnum) / testnum
         currlosslist = sampf.sampling_plan_loss_list(des_rudi, testnum, csdict_expl, paramdict)
         avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
-        util_avg_rudi_90.append(avg_loss)
+        util_avg_rudi_90.append(paramdict['baseloss'] - avg_loss)
+        print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+
+# Store
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_rudi_90'), util_avg_rudi_90)
+
 # Now for comparison with 180; do by 10 for both uniform and rudimentary
 util_avg_unif_180 = []
 util_avg_rudi_180 = []
-testarr_unif = np.arange(180,221,10)
+testarr_unif = np.arange(180, 221, 10)
 for testnum in testarr_unif:
-    if not util_avg_unif[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
+    if len(util_avg_unif_180) == 0 or not util_avg_unif_180[-1] > alloc180: # Don't add more if we've exceeded the heuristic comparison
         des_unif = util.round_design_low(np.ones(numTN) / numTN, testnum) / testnum
         currlosslist = sampf.sampling_plan_loss_list(des_unif, testnum, csdict_expl, paramdict)
         avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
-        util_avg_unif_180.append(avg_loss)
-testarr_rudi = np.arange(180,681,50)
+        util_avg_unif_180.append(paramdict['baseloss'] - avg_loss)
+        print('Unif at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+testarr_rudi = np.arange(180, 681, 50)
 for testnum in testarr_rudi:
-    if not util_avg_rudi[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
+    if len(util_avg_rudi_180) == 0 or not util_avg_rudi_180[-1] > alloc180: # Don't add more if we've exceeded the heuristic comparison
         des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), testnum) / testnum
         currlosslist = sampf.sampling_plan_loss_list(des_rudi, testnum, csdict_expl, paramdict)
         avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
-        util_avg_rudi_180.append(avg_loss)
+        util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
+        print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_rudi_180'), util_avg_rudi_180)
 
 # Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -135,7 +147,105 @@ unif180saved = round((alloc180 - util_avg_unif_180[kInd-1]) / (util_avg_unif_180
                     testint) + (kInd - 1) * testint
 kInd = next(x for x, val in enumerate(util_avg_rudi_90) if val > alloc90)
 rudi90saved = round((alloc90 - util_avg_rudi_90[kInd - 1]) / (util_avg_rudi_90[kInd] - util_avg_rudi_90[kInd - 1]) *\
-                    testint) + (kInd - 1) * testint
+                    testint*5) + (kInd - 1) * testint*5
 kInd = next(x for x, val in enumerate(util_avg_rudi_180) if val > alloc180)
 rudi180saved = round((alloc180 - util_avg_rudi_180[kInd-1]) / (util_avg_rudi_180[kInd]-util_avg_rudi_180[kInd - 1]) *\
+                    testint*5) + (kInd - 1) * testint*5
+print('Saved vs Unif at 90: '+str(unif90saved))
+print('Saved vs Rudi at 90: '+str(rudi90saved))
+print('Saved vs Unif at 180: '+str(unif180saved))
+print('Saved vs Rudi at 180: '+str(rudi180saved))
+
+################
+# Now change
+################
+TNvar, SNvar = 1., 4.  # TNvar changed to 1
+csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
+                               np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
+np.random.seed(1000) # To replicate draws later
+csdict_expl = methods.GeneratePostSamples(csdict_expl)
+
+np.random.seed(444)
+truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
+paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+# Get base loss
+paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+
+util.print_param_checks(paramdict) # Check of used parameters
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
+                                                                printupdate=True, plotupdate=False)
+# Store results
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_lo'), util_lo)
+
+# Key comparison points
+alloc90 = util_avg[9]
+alloc180 = util_avg[18]
+# Compare with Uniform and Rudimentary allocations
+util_avg_unif_90 = []
+util_avg_rudi_90 = []
+# Do by 10 for uniform, by 50 for rudimentary
+testarr_unif = np.arange(90, 131, 10)
+for testnum in testarr_unif:
+    if len(util_avg_unif_90) == 0 or not util_avg_unif_90[-1] > alloc90:
+        des_unif = util.round_design_low(np.ones(numTN) / numTN, testnum) / testnum
+        currlosslist = sampf.sampling_plan_loss_list(des_unif, testnum, csdict_expl, paramdict)
+        avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_unif_90.append(paramdict['baseloss'] - avg_loss)
+        print('Unif at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+testarr_rudi = np.arange(90, 491, 50)
+for testnum in testarr_rudi:
+    if len(util_avg_rudi_90) == 0 or not util_avg_rudi_90[-1] > alloc90: # Don't add more if we've exceeded the heuristic comparison
+        des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), testnum) / testnum
+        currlosslist = sampf.sampling_plan_loss_list(des_rudi, testnum, csdict_expl, paramdict)
+        avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_rudi_90.append(paramdict['baseloss'] - avg_loss)
+        print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+
+# Store
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_avg_rudi_90'), util_avg_rudi_90)
+
+# Now for comparison with 180; do by 10 for both uniform and rudimentary
+util_avg_unif_180 = []
+util_avg_rudi_180 = []
+testarr_unif = np.arange(180, 221, 10)
+for testnum in testarr_unif:
+    if len(util_avg_unif_180) == 0 or not util_avg_unif_180[-1] > alloc180: # Don't add more if we've exceeded the heuristic comparison
+        des_unif = util.round_design_low(np.ones(numTN) / numTN, testnum) / testnum
+        currlosslist = sampf.sampling_plan_loss_list(des_unif, testnum, csdict_expl, paramdict)
+        avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_unif_180.append(paramdict['baseloss'] - avg_loss)
+        print('Unif at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+testarr_rudi = np.arange(180, 681, 50)
+for testnum in testarr_rudi:
+    if len(util_avg_rudi_180) == 0 or not util_avg_rudi_180[-1] > alloc180: # Don't add more if we've exceeded the heuristic comparison
+        des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), testnum) / testnum
+        currlosslist = sampf.sampling_plan_loss_list(des_rudi, testnum, csdict_expl, paramdict)
+        avg_loss, _ = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
+        print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
+
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_avg_rudi_180'), util_avg_rudi_180)
+
+# Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
+kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
+unif90saved = round((alloc90 - util_avg_unif_90[kInd - 1]) / (util_avg_unif_90[kInd] - util_avg_unif_90[kInd - 1]) *\
                     testint) + (kInd - 1) * testint
+kInd = next(x for x, val in enumerate(util_avg_unif_180) if val > alloc180)
+unif180saved = round((alloc180 - util_avg_unif_180[kInd-1]) / (util_avg_unif_180[kInd]-util_avg_unif_180[kInd - 1]) *\
+                    testint) + (kInd - 1) * testint
+kInd = next(x for x, val in enumerate(util_avg_rudi_90) if val > alloc90)
+rudi90saved = round((alloc90 - util_avg_rudi_90[kInd - 1]) / (util_avg_rudi_90[kInd] - util_avg_rudi_90[kInd - 1]) *\
+                    testint*5) + (kInd - 1) * testint*5
+kInd = next(x for x, val in enumerate(util_avg_rudi_180) if val > alloc180)
+rudi180saved = round((alloc180 - util_avg_rudi_180[kInd-1]) / (util_avg_rudi_180[kInd]-util_avg_rudi_180[kInd - 1]) *\
+                    testint*5) + (kInd - 1) * testint*5
+print('Saved vs Unif at 90: '+str(unif90saved))
+print('Saved vs Rudi at 90: '+str(rudi90saved))
+print('Saved vs Unif at 180: '+str(unif180saved))
+print('Saved vs Rudi at 180: '+str(rudi180saved))
+
