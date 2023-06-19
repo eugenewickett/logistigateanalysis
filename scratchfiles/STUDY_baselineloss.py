@@ -17,7 +17,7 @@ import matplotlib.cm as cm
 # 23-MAY-23
 def STUDY_baselineloss():
     """Run the Familiar setting under 5k-5k, 10k-5k, and 11k-5k appraoches and get baseline loss estimates"""
-    # PROVINCES-MANUFACTURERS; FAMILIAR SETTING
+    # PROVINCES-MANUFACTURERS; familiar SETTING
     Nfam = np.array([[1., 1., 10., 1., 3., 0., 1., 6., 7., 5., 0., 0., 4.],
                      [1., 1., 4., 2., 0., 1., 1., 2., 0., 4., 0., 0., 1.],
                      [3., 17., 31., 4., 2., 0., 1., 6., 0., 23., 1., 2., 5.],

@@ -40,7 +40,7 @@ csdict_fam['prior'] = priorObj
 # Set up MCMC
 csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 5000
+numdraws = 80000
 csdict_fam['numPostSamples'] = numdraws
 
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
@@ -56,7 +56,7 @@ des = np.array([1., 0., 0., 0.])
 np.random.seed(1050)  # To replicate draws later
 csdict_fam = methods.GeneratePostSamples(csdict_fam)
 
-numtruthdraws = 1000
+numtruthdraws = 75000
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 # Get base loss
@@ -82,10 +82,44 @@ print(critratio_est)
 print(opt_est.x)
 print(np.linalg.norm(critratio_est-opt_est.x))
 
+from statsmodels.stats.weightstats import DescrStatsW
+statobj = DescrStatsW(data=truthdraws, weights=Wvec)
+critratio_est = statobj.quantile(probs=q, return_pandas=False)
+paramdict['riskdict'].update({'slope': 0.1})
+opt_est = sampf.get_bayes_min(truthdraws, Wvec, paramdict)
+opt_est.x[0]
+paramdict['riskdict'].update({'slope': 0.9})
+opt_est2 = sampf.get_bayes_min(truthdraws, Wvec, paramdict)
+opt_est2.x[0]
+riskmat = lf.risk_check_array(truthdraws, paramdict['riskdict'])
+statobj = DescrStatsW(data=truthdraws, weights=Wvec)
+print(statobj.quantile(probs=q, return_pandas=False)[0][0])
+statobj = DescrStatsW(data=truthdraws, weights=np.multiply(Wvec.reshape(1000,1),riskmat))
+print(statobj.quantile(probs=q, return_pandas=False)[0][0])
 
+temp = np.multiply(Wvec.reshape(1000,1),riskmat)
+temp2 = Wvec*riskmat[:,1]
+temp[:, 1][:5]
+temp2[:5]
+opt_est2 = sampf.get_bayes_min(truthdraws, Wvec, paramdict)
+opt_est2.x
 
+def bayesest_critratio(draws, riskmat, Wvec, critratio):
+    """
+    Returns the Bayes estimate for a set of SFP rates, adjusted for weighting of samples, for the absolute difference
+        score
+    """
+    statobj_list = [DescrStatsW(data=draws[:, i], weights=np.multiply(Wvec, riskmat[:, i])) for i in range(draws.shape[1])]
+    return np.array([statobj.quantile(probs=critratio,return_pandas=False) for statobj in statobj_list]).T[0]
 
-
+time0 = time.time()
+bx = bayesest_critratio(truthdraws, riskmat, Wvec, q)
+print(time.time()-time0)
+print(bx)
+time1 = time.time()
+opt_est2 = sampf.get_bayes_min(truthdraws, Wvec, paramdict)
+print(time.time()-time1)
+print(opt_est2.x)
 
 ##############
 ##############
