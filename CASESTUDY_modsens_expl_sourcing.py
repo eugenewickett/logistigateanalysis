@@ -56,7 +56,7 @@ csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorM
 # Set up MCMC
 csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 50000
+numdraws = 75000
 csdict_expl['numPostSamples'] = numdraws
 np.random.seed(1000) # To replicate draws later
 csdict_expl = methods.GeneratePostSamples(csdict_expl)
@@ -70,7 +70,7 @@ testmax, testint = 180, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 15000, 2000
+numtruthdraws, numdatadraws = 75000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
@@ -83,10 +83,10 @@ util.print_param_checks(paramdict) # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=False)
 # Store results
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_util_lo'), util_lo)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_lo'), util_lo)
 
 # Key comparison points
 alloc90 = util_avg[9]
@@ -113,8 +113,8 @@ for testnum in testarr_rudi:
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
 # Store
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_util_avg_unif_90'), util_avg_unif_90)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_util_avg_rudi_90'), util_avg_rudi_90)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_rudi_90'), util_avg_rudi_90)
 
 # Now for comparison with 180; do by 10 for both uniform and rudimentary
 util_avg_unif_180 = []
@@ -136,8 +136,8 @@ for testnum in testarr_rudi:
         util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_util_avg_unif_180'), util_avg_unif_180)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_1_util_avg_rudi_180'), util_avg_rudi_180)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_rudi_180'), util_avg_rudi_180)
 
 # Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -167,10 +167,10 @@ csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=False)
 # Store results
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_util_lo'), util_lo)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_lo'), util_lo)
 
 # Key comparison points
 alloc90 = util_avg[9]
@@ -197,8 +197,8 @@ for testnum in testarr_rudi:
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
 # Store
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_util_avg_unif_90'), util_avg_unif_90)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_util_avg_rudi_90'), util_avg_rudi_90)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_rudi_90'), util_avg_rudi_90)
 
 # Now for comparison with 180; do by 10 for both uniform and rudimentary
 util_avg_unif_180 = []
@@ -220,8 +220,8 @@ for testnum in testarr_rudi:
         util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_util_avg_unif_180'), util_avg_unif_180)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_sourcing_2_util_avg_rudi_180'), util_avg_rudi_180)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_rudi_180'), util_avg_rudi_180)
 
 # Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)

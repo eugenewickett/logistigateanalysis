@@ -44,7 +44,7 @@ csdict_fam['prior'] = priorObj
 # Set up MCMC
 csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 50000
+numdraws = 75000
 csdict_fam['numPostSamples'] = numdraws
 
 # Loss specification
@@ -56,7 +56,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 15000, 2000
+numtruthdraws, numdatadraws = 75000, 1000
 
 alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
 numReps = 10
@@ -74,8 +74,8 @@ for rep in range(numReps):
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', '13JUN', 'allocsens_alloc_'+str(rep)), alloc)
-    np.save(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_avg_'+str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_hi_'+str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_lo_'+str(rep)), util_lo)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_'+str(rep)), alloc)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_'+str(rep)), util_avg)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_'+str(rep)), util_hi)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_'+str(rep)), util_lo)
 

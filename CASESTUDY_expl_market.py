@@ -60,7 +60,7 @@ csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorM
 # Set up MCMC
 csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 50000
+numdraws = 75000
 csdict_expl['numPostSamples'] = numdraws
 np.random.seed(1000) # To replicate draws later
 csdict_expl = methods.GeneratePostSamples(csdict_expl)
@@ -74,7 +74,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 15000, 2000
+numtruthdraws, numdatadraws = 75000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
@@ -84,31 +84,14 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict)  # Check of used parameters
 
-util_avg, util_hi, util_lo = sampf.get_opt_marg_util_nodes(csdict_expl, testmax, testint, paramdict, zlevel=0.95,
-                                                           printupdate=True, plotupdate=True) # Wrapper function for utility at all test nodes
-# Plot
-util.plot_marg_util_CI(util_avg, margutilarr_hi=util_hi, margutilarr_lo=util_lo, testmax=testmax, testint=testint,
-                               titlestr='Exploratory Setting with Market Term')
-# Store matrices
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_expl_market'), util_avg)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_expl_market'), util_hi)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_expl_market'), util_lo)
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
+                                                                printupdate=True, plotupdate=False)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_lo'), util_lo)
 
-#util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_avg_arr_fam.npy'))
-#util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_hi_arr_fam.npy'))
-#util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'margutil_lo_arr_fam.npy'))
-
-# Form allocation
-allocArr, objValArr = sampf.smooth_alloc_forward(util_avg)
-util.plot_plan(allocArr, paramlist=[str(i) for i in np.arange(testint, testmax + 1, testint)], testint=testint,
-               labels=csdict_expl['TNnames'], titlestr='Exploratory Setting with Market Term', allocmax=150,
-               colors=cm.rainbow(np.linspace(0, 0.5, numTN)), dashes=[[1, 0] for tn in range(numTN)])
-
-np.random.seed(4000)
-# Evaluate utility for heuristic, uniform, and rudimentary
-util_avg_heur, util_hi_heur, util_lo_heur = np.zeros((int(testmax / testint) + 1)), \
-                                            np.zeros((int(testmax / testint) + 1)), \
-                                            np.zeros((int(testmax / testint) + 1))
+# Evaluate utility for uniform and rudimentary
 util_avg_unif, util_hi_unif, util_lo_unif = np.zeros((int(testmax / testint) + 1)), \
                                             np.zeros((int(testmax / testint) + 1)), \
                                             np.zeros((int(testmax / testint) + 1))
@@ -117,15 +100,6 @@ util_avg_rudi, util_hi_rudi, util_lo_rudi = np.zeros((int(testmax / testint) + 1
                                             np.zeros((int(testmax / testint) + 1))
 plotupdate = True
 for testind in range(testarr.shape[0]):
-    # Heuristic utility
-    des_heur = allocArr[:, testind] / np.sum(allocArr[:, testind])
-    currlosslist = sampf.sampling_plan_loss_list(des_heur, testarr[testind], csdict_expl, paramdict)
-    avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    util_avg_heur[testind+1] = paramdict['baseloss'] - avg_loss
-    util_lo_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[1]
-    util_hi_heur[testind+1] = paramdict['baseloss'] - avg_loss_CI[0]
-    print(des_heur)
-    print('Utility at ' + str(testarr[testind]) + ' tests, Heuristic: ' + str(util_avg_heur[testind+1]))
     # Uniform utility
     des_unif = util.round_design_low(np.ones(numTN) / numTN, testarr[testind]) / testarr[testind]
     currlosslist = sampf.sampling_plan_loss_list(des_unif, testarr[testind], csdict_expl, paramdict)
@@ -145,24 +119,28 @@ for testind in range(testarr.shape[0]):
     print(des_rudi)
     print('Utility at ' + str(testarr[testind]) + ' tests, Rudimentary: ' + str(util_avg_rudi[testind+1]))
     if plotupdate:
-        util_avg_arr = np.vstack((util_avg_heur, util_avg_unif, util_avg_rudi))
-        util_hi_arr = np.vstack((util_hi_heur, util_hi_unif, util_hi_rudi))
-        util_lo_arr = np.vstack((util_lo_heur, util_lo_unif, util_lo_rudi))
+        util_avg_arr = np.vstack((util_avg_unif, util_avg_rudi))
+        util_hi_arr = np.vstack((util_hi_unif, util_hi_rudi))
+        util_lo_arr = np.vstack((util_lo_unif, util_lo_rudi))
         # Plot
         util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
                                titlestr='Exploratory Setting with Market Term, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_expl_market'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_expl_market'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_expl_market'), util_lo_arr)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl_market'), util_avg_arr)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl_market'), util_hi_arr)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl_market'), util_lo_arr)
 
-##########
-# Updated heuristic
-alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
-                                                                printupdate=True, plotupdate=True,
-                                                                plottitlestr='Exploratory Setting with Market Term')
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_market_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_market_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_market_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', '15JUN', 'expl_market_util_lo'), util_lo)
+targind = 5 # where do we want to gauge budget savings?
+targval = util_avg_arr[0][targind]
+
+# Uniform
+kInd = next(x for x, val in enumerate(util_avg_arr[1].tolist()) if val > targval)
+unif_saved = round((targval - util_avg_arr[1][kInd - 1]) / (util_avg_arr[1][kInd] - util_avg_arr[1][kInd - 1]) *\
+                      testint) + (kInd - 1) * testint - targind*testint
+print(unif_saved)  #
+# Rudimentary
+kInd = next(x for x, val in enumerate(util_avg_arr[2].tolist()) if val > targval)
+rudi_saved = round((targval - util_avg_arr[2][kInd - 1]) / (util_avg_arr[2][kInd] - util_avg_arr[2][kInd - 1]) *\
+                      testint) + (kInd - 1) * testint - targind*testint
+print(rudi_saved)  #

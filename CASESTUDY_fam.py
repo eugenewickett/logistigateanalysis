@@ -121,12 +121,12 @@ for testind in range(testarr.shape[0]):
         util_lo_arr = np.vstack((util_lo_unif, util_lo_rudi))
         # Plot
         util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
-                               titlestr='Exploratory Setting, comparison with other approaches')
+                               titlestr='Familiar Setting, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_expl'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_expl'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_expl'), util_lo_arr)
+np.save(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_fam'), util_avg_arr)
+np.save(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_fam'), util_hi_arr)
+np.save(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_fam'), util_lo_arr)
 
 targind = 5 # where do we want to gauge budget savings?
 targval = util_avg_arr[0][targind]
