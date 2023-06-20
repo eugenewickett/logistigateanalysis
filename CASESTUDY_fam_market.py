@@ -6,10 +6,6 @@ from logistigate.logistigate import samplingplanfunctions as sampf
 
 import os
 import numpy as np
-import matplotlib.cm as cm
-import matplotlib
-import matplotlib.pyplot as plt
-
 from numpy.random import choice
 import scipy.special as sps
 
