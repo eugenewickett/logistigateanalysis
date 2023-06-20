@@ -74,7 +74,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 1000
+numtruthdraws, numdatadraws = 75000, 2000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
