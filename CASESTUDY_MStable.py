@@ -222,6 +222,11 @@ util_avg_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_e
 util_avg_unif_90, util_avg_unif_180 = util_avg_arr[1, 9:], util_avg_arr[1, 18:]
 util_avg_rudi_90, util_avg_rudi_180 = util_avg_arr[2, 9:], util_avg_arr[2, 18:]
 alloc90, alloc180 = fam_util_avg[9], fam_util_avg[18]
+# Extend rudimentary utility a bit to get estimate
+slope = (util_avg_rudi_180[-1] - util_avg_rudi_180[0]) / util_avg_rudi_180.shape[0]
+addutil = slope*np.arange(30) + util_avg_rudi_180[-1]
+util_avg_rudi_180 = np.concatenate((util_avg_rudi_180, addutil))
+
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
 unif90saved = round((alloc90 - util_avg_unif_90[kInd - 1]) / (util_avg_unif_90[kInd] - util_avg_unif_90[kInd - 1]) *\
                     testint) + (kInd - 1) * testint
