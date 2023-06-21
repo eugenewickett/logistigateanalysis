@@ -244,7 +244,7 @@ print('Saved vs Rudi at 90: '+str(rudi90saved))
 print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
-# Prior variance: 4
+# Prior variance: 1
 fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_alloc.npy'))
 fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_avg.npy'))
 util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_1_util_avg_rudi_90.npy'))
@@ -269,6 +269,34 @@ print('Prior variance of 1, allocation at 90:\n'+str(fam_MS_alloc[:,9]))
 print('Saved vs Unif at 90: '+str(unif90saved))
 print('Saved vs Rudi at 90: '+str(rudi90saved))
 print('Prior variance of 1, allocation at 180:\n'+str(fam_MS_alloc[:,18]))
+print('Saved vs Unif at 180: '+str(unif180saved))
+print('Saved vs Rudi at 180: '+str(rudi180saved))
+
+# Prior variance: 4
+fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_alloc.npy'))
+fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg.npy'))
+util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_rudi_90.npy'))
+util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_rudi_180.npy'))
+util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_unif_90.npy'))
+util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_unif_180.npy'))
+alloc90 = fam_MS_util_avg[9]
+alloc180 = fam_MS_util_avg[18]
+kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
+unif90saved = round((alloc90 - util_avg_unif_90[kInd - 1]) / (util_avg_unif_90[kInd] - util_avg_unif_90[kInd - 1]) *\
+                    testint) + (kInd - 1) * testint
+kInd = next(x for x, val in enumerate(util_avg_unif_180) if val > alloc180)
+unif180saved = round((alloc180 - util_avg_unif_180[kInd-1]) / (util_avg_unif_180[kInd]-util_avg_unif_180[kInd - 1]) *\
+                    testint) + (kInd - 1) * testint
+kInd = next(x for x, val in enumerate(util_avg_rudi_90) if val > alloc90)
+rudi90saved = round((alloc90 - util_avg_rudi_90[kInd - 1]) / (util_avg_rudi_90[kInd] - util_avg_rudi_90[kInd - 1]) *\
+                    testint*5) + (kInd - 1) * testint*5
+kInd = next(x for x, val in enumerate(util_avg_rudi_180) if val > alloc180)
+rudi180saved = round((alloc180 - util_avg_rudi_180[kInd-1]) / (util_avg_rudi_180[kInd]-util_avg_rudi_180[kInd - 1]) *\
+                    testint*5) + (kInd - 1) * testint*5
+print('Prior variance of 4, allocation at 90:\n'+str(fam_MS_alloc[:,9]))
+print('Saved vs Unif at 90: '+str(unif90saved))
+print('Saved vs Rudi at 90: '+str(rudi90saved))
+print('Prior variance of 4, allocation at 180:\n'+str(fam_MS_alloc[:,18]))
 print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
