@@ -6,10 +6,6 @@ from logistigate.logistigate import samplingplanfunctions as sampf
 
 import os
 import numpy as np
-import matplotlib.cm as cm
-import matplotlib
-import matplotlib.pyplot as plt
-
 from numpy.random import choice
 import scipy.special as sps
 
@@ -59,7 +55,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 1000
+numtruthdraws, numdatadraws = 75000, 2000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
