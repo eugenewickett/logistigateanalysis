@@ -149,16 +149,16 @@ np.save(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_fam'), util_a
 np.save(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_fam'), util_hi_arr)
 np.save(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_fam'), util_lo_arr)
 
-targind = 5 # where do we want to gauge budget savings?
-targval = util_avg_arr[0][targind]
+targind = 10 # where do we want to gauge budget savings?
+targval = util_avg[targind]
 
 # Uniform
-kInd = next(x for x, val in enumerate(util_avg_arr[1].tolist()) if val > targval)
-unif_saved = round((targval - util_avg_arr[1][kInd - 1]) / (util_avg_arr[1][kInd] - util_avg_arr[1][kInd - 1]) *\
+kInd = next(x for x, val in enumerate(util_avg_arr[0].tolist()) if val > targval)
+unif_saved = round((targval - util_avg_arr[0][kInd - 1]) / (util_avg_arr[0][kInd] - util_avg_arr[0][kInd - 1]) *\
                       testint) + (kInd - 1) * testint - targind*testint
-print(unif_saved)  #
+print(unif_saved)  # 33
 # Rudimentary
-kInd = next(x for x, val in enumerate(util_avg_arr[2].tolist()) if val > targval)
-rudi_saved = round((targval - util_avg_arr[2][kInd - 1]) / (util_avg_arr[2][kInd] - util_avg_arr[2][kInd - 1]) *\
+kInd = next(x for x, val in enumerate(util_avg_arr[1].tolist()) if val > targval)
+rudi_saved = round((targval - util_avg_arr[1][kInd - 1]) / (util_avg_arr[1][kInd] - util_avg_arr[1][kInd - 1]) *\
                       testint) + (kInd - 1) * testint - targind*testint
-print(rudi_saved)  #
+print(rudi_saved)  # 57
