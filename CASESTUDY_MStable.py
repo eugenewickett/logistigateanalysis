@@ -73,11 +73,11 @@ print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
 # Test node prior variance: 4
-fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_priorvar_4_alloc.npy'))
-fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_priorvar_4_util_avg.npy'))
-util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_priorvar_4_util_avg_rudi_90.npy'))
+fam_MS_alloc = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_priorvar_4_alloc.npy'))
+fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_priorvar_4_util_avg.npy'))
+util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_priorvar_4_util_avg_rudi_90.npy'))
 util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_priorvar_4_util_avg_rudi_180.npy'))
-util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_priorvar_4_util_avg_unif_90.npy'))
+util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_priorvar_4_util_avg_unif_90.npy'))
 util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_priorvar_4_util_avg_unif_180.npy'))
 alloc90 = fam_MS_util_avg[9]
 alloc180 = fam_MS_util_avg[18]

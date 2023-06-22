@@ -96,21 +96,21 @@ def casestudyplots_familiar():
     TNnames = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
     numTN = len(TNnames)
 
-    heur_util = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_fam.npy'))
-
-    #### REMOVE LATER; 9-JUN
-    heur_util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_hi_fam.npy'))
-    heur_util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam.npy'))
-    util.plot_marg_util(heur_util,testmax,testint,colors = cm.rainbow(np.linspace(0, 0.5, numTN)),utilmax=1.0)
-    util.plot_marg_util_CI(heur_util,heur_util_hi, heur_util_lo,testmax,testint, utilmax=1.0,
-                           colors = cm.rainbow(np.linspace(0, 0.5, numTN)))
-    ################
+    heur_util = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_util_avg.npy'))
+    heur_util_hi = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_util_hi.npy'))
+    heur_util_lo = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_util_lo.npy'))
 
     # Size of figure layout for all figures
     figtup = (7, 5)
     titleSz, axSz, labelSz = 12, 10, 9
     xMax = 450
 
+    # color designation
+    import matplotlib as mpl
+    colorsset = plt.get_cmap('Set1')
+    colorinds = [6,1,2,3]
+
+    '''
     #######################
     # Plot of marginal utilities
     colors = cm.rainbow(np.linspace(0, 0.5, numTN))
@@ -138,16 +138,17 @@ def casestudyplots_familiar():
     plt.show()
     plt.close()
     #######################
+    '''
 
     #######################
     # Allocation plot
-    allocArr, objValArr = sampf.smooth_alloc_forward(heur_util)
-    colors = cm.rainbow(np.linspace(0, 0.5, numTN))
+    allocArr = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_alloc.npy'))
+    colors = np.array([colorsset(i) for i in colorinds])
     labels = [TNnames[ind] for ind in range(numTN)]
-    x = range(testint, testmax + 1, testint)
+    x = range(0, testmax + 1, testint)
     _ = plt.figure(figsize=figtup)
     for tnind in range(allocArr.shape[0]):
-        plt.plot(x, allocArr[tnind] * testint, linewidth=2, color=colors[tnind],
+        plt.plot(x, allocArr[tnind] * testint, linewidth=3, color=colors[tnind],
                  label=labels[tnind], alpha=0.6)
     # allocMax = allocArr.max() * testInt * 1.1
     allocMax = 185
@@ -170,7 +171,10 @@ def casestudyplots_familiar():
     util_arr_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_fam.npy'))
     util_arr_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_fam.npy'))
     # Utility comparison plot
-    colors = cm.rainbow(np.linspace(0, 0.8, 3))
+    colorsset = plt.get_cmap('Accent')
+    colorinds = [0, 1, 2]
+    colors = np.array([colorsset(i) for i in colorinds])
+    #colors = cm.rainbow(np.linspace(0, 0.8, 3))
     labels = ['Heuristic', 'Uniform', 'Rudimentary']
     x = range(0, testmax + 1, testint)
     utilMax = -1
@@ -196,128 +200,20 @@ def casestudyplots_familiar():
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
     plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nFamiliar Setting', fontsize=titleSz)
-    '''
-    # Add text box showing budgetary savings
-    heurutilavg = np.average(np.array(heur_utillist), axis=0)
-    x2, x3 = 130, 156
-    plt.plot([100, x3], [heurutilavg[9], heurutilavg[9]], color='black', linestyle='--')
+    # Add text for budgetary savings vs other policies at 100 tests
+    x1, x2, x3 = 100, 132, 155
     iv = 0.015
-    plt.plot([100, 100], [heurutilavg[9] - iv, heurutilavg[9] + iv], color='black', linestyle='--')
-    plt.plot([x2, x2], [heurutilavg[9] - iv, heurutilavg[9] + iv], color='black', linestyle='--')
-    plt.plot([x3, x3], [heurutilavg[9] - iv, heurutilavg[9] + iv], color='black', linestyle='--')
-    plt.text(110, heurutilavg[9] + iv / 2, '30', fontsize=labelSz)
-    plt.text(139, heurutilavg[9] + iv / 2, '26', fontsize=labelSz)
+    utilind = int(x1/testint)
+    plt.plot([x1, x3], [util_arr[0][utilind], util_arr[0][utilind]], color='black', linestyle='--')
+    plt.plot([100, 100], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
+    plt.plot([x2, x2], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
+    plt.plot([x3, x3], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
+    plt.text(110, util_arr[0][utilind] + iv / 2, str(int(x2-x1)), fontsize=labelSz)
+    plt.text(137, util_arr[0][utilind] + iv / 2, str(int(x3-x2)), fontsize=labelSz)
     # plt.tight_layout()
-    '''
     plt.show()
     plt.close()
     #######################
-
-
-
-
-
-
-    # List of comprehensive utilities for heuristic
-    heur_utillist = [np.array([0.06382507, 0.10506746, 0.14113592, 0.17609555, 0.20035397,
-                               0.22949996, 0.25375875, 0.2778598, 0.29984599, 0.31620371,
-                               0.33690511, 0.35860444, 0.38146605, 0.39525024, 0.41716017,
-                               0.43594724, 0.45317528, 0.47051066, 0.49091332, 0.50682803,
-                               0.52018989, 0.5418224, 0.55684317, 0.57245363, 0.58670926,
-                               0.60898051, 0.62757192, 0.63987248, 0.65232003, 0.65433092,
-                               0.67671267, 0.69184994, 0.70314622, 0.72154417, 0.73680664,
-                               0.75444832, 0.76425734, 0.7791746, 0.79497273, 0.81572736]),
-                     np.array([0.06462517, 0.10961266, 0.14617499, 0.17780936, 0.20363225,
-                               0.23041206, 0.25740358, 0.27766876, 0.29312512, 0.31557361,
-                               0.33530329, 0.36081813, 0.37704713, 0.39551182, 0.41443499,
-                               0.42955573, 0.45339857, 0.46742178, 0.48380338, 0.49736288,
-                               0.51375158, 0.52478321, 0.54409508, 0.56177912, 0.57468272,
-                               0.60456728, 0.61228665, 0.62588728, 0.64313516, 0.65165524,
-                               0.67121902, 0.68439816, 0.70397772, 0.70821652, 0.72513014,
-                               0.74635225, 0.76193202, 0.78094993, 0.79430877, 0.79052913]),
-                     np.array([0.06085764, 0.0980188, 0.13265826, 0.16569316, 0.18822259,
-                               0.21785427, 0.24407703, 0.2614815, 0.27854984, 0.29983535,
-                               0.32327982, 0.33844527, 0.36191535, 0.37881142, 0.40331534,
-                               0.41365246, 0.43214752, 0.45162729, 0.46968644, 0.48396314,
-                               0.50285393, 0.51030504, 0.52897311, 0.54987342, 0.56226242,
-                               0.57793117, 0.59861256, 0.62137804, 0.6242618, 0.64609686,
-                               0.66280318, 0.67326059, 0.68449137, 0.70604726, 0.71027971,
-                               0.73686349, 0.7435827, 0.76857242, 0.78926802, 0.79741367]),
-                     np.array([0.03106763, 0.07286322, 0.10998372, 0.13812251, 0.16879457,
-                               0.19922628, 0.22801597, 0.2485636, 0.2655454, 0.28958374,
-                               0.31674403, 0.33936658, 0.36231108, 0.38167127, 0.3972411,
-                               0.41753462, 0.43264919, 0.45685282, 0.47436211, 0.49088067,
-                               0.50921795, 0.51783368, 0.54229446, 0.55684378, 0.57610806,
-                               0.5857951, 0.6096527, 0.6216253, 0.64198431, 0.65428421,
-                               0.67196841, 0.69638327, 0.70304679, 0.7208629, 0.7348868,
-                               0.75061593, 0.76318879, 0.772441, 0.79820724, 0.80558449]),
-                     np.array([0.05668697, 0.10262769, 0.14105674, 0.17363495, 0.19806695,
-                               0.22564098, 0.2548294, 0.27660807, 0.29434048, 0.31304457,
-                               0.3343722, 0.35648835, 0.37606117, 0.39276222, 0.41150551,
-                               0.42859706, 0.44436224, 0.4648064, 0.47967852, 0.49365363,
-                               0.51332197, 0.52561107, 0.53779699, 0.55870816, 0.57876923,
-                               0.59554469, 0.60538101, 0.62178017, 0.64004709, 0.6613331,
-                               0.66403962, 0.68249925, 0.70066103, 0.7172556, 0.73394783,
-                               0.75314802, 0.76254153, 0.7733508, 0.79292171, 0.79750005]),
-                     np.array([0.07613541, 0.12165789, 0.15831771, 0.19297246, 0.21287435,
-                               0.24560646, 0.26539924, 0.29110604, 0.31387596, 0.33061212,
-                               0.35200531, 0.3753401, 0.39611738, 0.41093078, 0.4336867,
-                               0.45234595, 0.46762176, 0.48661515, 0.50080393, 0.52090974,
-                               0.53825081, 0.55038007, 0.56724664, 0.58236747, 0.60817663,
-                               0.62400145, 0.63779373, 0.64763286, 0.67565383, 0.67301454,
-                               0.70715914, 0.7096781, 0.72837052, 0.74372657, 0.75980874,
-                               0.78666726, 0.79364461, 0.80827571, 0.82764946, 0.83088659])]
-    # List of rudimentary comprehensive utilities
-    rudi_utillist = [np.array([0.01121986, 0.02582556, 0.05046794, 0.06909151, 0.09436937,
-                               0.11395778, 0.13825574, 0.15913521, 0.18671247, 0.20126907,
-                               0.22741945, 0.24433737, 0.26078601, 0.27958456, 0.30440025,
-                               0.31756519, 0.33673802, 0.35254002, 0.37326871, 0.39652775,
-                               0.41000818, 0.43284291, 0.43977554, 0.46238721, 0.47483195,
-                               0.48857267, 0.51441441, 0.53274999, 0.54548249, 0.55525837,
-                               0.57250429, 0.59758681, 0.61096384, 0.62156961, 0.64501836,
-                               0.65556402, 0.68559985, 0.67583804, 0.70181668, 0.71108492]),
-                     np.array([0.02795243, 0.04726679, 0.0672626, 0.08798852, 0.10614938,
-                               0.13053853, 0.15074945, 0.16747773, 0.18907569, 0.20509474,
-                               0.22974192, 0.24578162, 0.25939473, 0.2756333, 0.29528029,
-                               0.31613174, 0.33619955, 0.35107068, 0.3705562, 0.38667639,
-                               0.40195513, 0.42197244, 0.43369534, 0.45898202, 0.47330496,
-                               0.49375738, 0.5031161, 0.51690998, 0.53128846, 0.54648137,
-                               0.56853023, 0.58321203, 0.59913081, 0.60826631, 0.63340863,
-                               0.64153133, 0.65420011, 0.66901826, 0.68571198, 0.69962928]),
-                     np.array([0.04086377, 0.05221949, 0.07480906, 0.09650311, 0.1114406,
-                               0.13082882, 0.14498035, 0.16857216, 0.18237847, 0.20280144,
-                               0.2231874, 0.23503265, 0.25486982, 0.27445497, 0.29105611,
-                               0.3066886, 0.33083936, 0.34721591, 0.35844714, 0.38550175,
-                               0.39518974, 0.41596949, 0.42867096, 0.4442613, 0.45951736,
-                               0.47113222, 0.49388963, 0.50549801, 0.53117332, 0.54374756,
-                               0.55286615, 0.57443072, 0.57891583, 0.6097668, 0.61971831,
-                               0.63586965, 0.64704409, 0.66162538, 0.66971241, 0.69195201]),
-                     np.array([0.01254531, 0.02879158, 0.05278567, 0.07742554, 0.09959865,
-                               0.12440331, 0.1466998, 0.16690664, 0.19043403, 0.21231485,
-                               0.23001318, 0.25082075, 0.26544161, 0.28613121, 0.30800187,
-                               0.32662875, 0.35020767, 0.36735421, 0.3919072, 0.39784319,
-                               0.41268325, 0.43892994, 0.45696821, 0.46975601, 0.48625379,
-                               0.50348896, 0.52252359, 0.53017677, 0.55093142, 0.56604239,
-                               0.58815811, 0.60038772, 0.61420697, 0.6325675, 0.65074301,
-                               0.66382202, 0.6776332, 0.68637533, 0.70271301, 0.72212557]),
-                     np.array([0.03337605, 0.05147919, 0.07110944, 0.09467589, 0.11535336,
-                               0.13082484, 0.15407198, 0.17047731, 0.18791144, 0.21047454,
-                               0.22739688, 0.24646216, 0.26520206, 0.2820505, 0.30520826,
-                               0.31922798, 0.33720306, 0.35925602, 0.36941223, 0.39679792,
-                               0.40310058, 0.42532935, 0.43732679, 0.46038079, 0.47657938,
-                               0.49378628, 0.51291656, 0.52468943, 0.54440889, 0.55303288,
-                               0.56610784, 0.58843534, 0.60933449, 0.61384461, 0.62954021,
-                               0.64933632, 0.66456395, 0.67793322, 0.69492135, 0.68922654])]
-
-    avgheurarr = np.average(np.array(heurlist), axis=0)
-
-
-
-
-
-
-
-
 
     return
 
