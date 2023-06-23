@@ -101,12 +101,12 @@ print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
 # Risk slope: 0.3
-fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_03_alloc.npy'))
-fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_03_util_avg.npy'))
-util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_03_util_avg_rudi_90.npy'))
-util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_03_util_avg_rudi_180.npy'))
-util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_03_util_avg_unif_90.npy'))
-util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_03_util_avg_unif_180.npy'))
+fam_MS_alloc = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_03_alloc.npy'))
+fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_03_util_avg.npy'))
+util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_03_util_avg_rudi_90.npy'))
+util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_03_util_avg_rudi_180.npy'))
+util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_03_util_avg_unif_90.npy'))
+util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_03_util_avg_unif_180.npy'))
 alloc90 = fam_MS_util_avg[9]
 alloc180 = fam_MS_util_avg[18]
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -129,12 +129,12 @@ print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
 # Risk slope: 0.9
-fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_09_alloc.npy'))
-fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_09_util_avg.npy'))
-util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_09_util_avg_rudi_90.npy'))
-util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_09_util_avg_rudi_180.npy'))
-util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_09_util_avg_unif_90.npy'))
-util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_MS_riskslope_09_util_avg_unif_180.npy'))
+fam_MS_alloc = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_09_alloc.npy'))
+fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_09_util_avg.npy'))
+util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_09_util_avg_rudi_90.npy'))
+util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_09_util_avg_rudi_180.npy'))
+util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_09_util_avg_unif_90.npy'))
+util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_riskslope_09_util_avg_unif_180.npy'))
 alloc90 = fam_MS_util_avg[9]
 alloc180 = fam_MS_util_avg[18]
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -301,12 +301,12 @@ print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
 # Risk slope: 0.3
-fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_03_alloc.npy'))
-fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_03_util_avg.npy'))
-util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_03_util_avg_rudi_90.npy'))
-util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_03_util_avg_rudi_180.npy'))
-util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_03_util_avg_unif_90.npy'))
-util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_03_util_avg_unif_180.npy'))
+fam_MS_alloc = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_alloc.npy'))
+fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg.npy'))
+util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_rudi_90.npy'))
+util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_rudi_180.npy'))
+util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_unif_90.npy'))
+util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_unif_180.npy'))
 alloc90 = fam_MS_util_avg[9]
 alloc180 = fam_MS_util_avg[18]
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -329,12 +329,12 @@ print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
 # Risk slope: 0.9
-fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_09_alloc.npy'))
-fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_09_util_avg.npy'))
-util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_09_util_avg_rudi_90.npy'))
-util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_09_util_avg_rudi_180.npy'))
-util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_09_util_avg_unif_90.npy'))
-util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_riskslope_09_util_avg_unif_180.npy'))
+fam_MS_alloc = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_alloc.npy'))
+fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg.npy'))
+util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_rudi_90.npy'))
+util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_rudi_180.npy'))
+util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_unif_90.npy'))
+util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_unif_180.npy'))
 alloc90 = fam_MS_util_avg[9]
 alloc180 = fam_MS_util_avg[18]
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
