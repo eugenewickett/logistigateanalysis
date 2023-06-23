@@ -61,7 +61,7 @@ testmax, testint = 180, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 1000
+numtruthdraws, numdatadraws = 75000, 2000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -70,8 +70,20 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
+
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict, printupdate=True,
-                                                                plotupdate=False, plottitlestr='Familiar Setting')
+                                                                plotupdate=False)
+''' 21-JUN
+[1, 1, 1, 1, 1, 0, 1, 1, 0,
+ 0, 2, 1, 0, 2, 2, 1, 1, 0]
+[(0.09329232303723911, 0.09876902425167833), (0.16250226091160114, 0.16972868530750906), (0.2182779557617649, 0.22628418450541554),
+(0.26289669663960114, 0.27139877270639134), (0.305109385881436, 0.31403785559381614), (0.3408104273523289, 0.35035879147134885),
+(0.37674649787712466, 0.38640989564234074), (0.406031397196454, 0.41602849415754317), (0.43851351777062564, 0.448850073932874),
+(0.4649229923978533, 0.4756572715547529), (0.48927692537373146, 0.5004161692279674), (0.5124322644347563, 0.5237996339304827),
+(0.5354797928473836, 0.5470037811809696), (0.5589589380962681, 0.570611204709724), (0.5842486952158443, 0.5967404110541981),
+(0.6048752732195584, 0.6174646012755871), (0.6304852914802674, 0.6436324285441632), (0.6472895037921063, 0.660363832098269)]
+'''
+
 # Store results
 np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_priorvar_4_alloc'), alloc)
 np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'fam_MS_priorvar_4_util_avg'), util_avg)

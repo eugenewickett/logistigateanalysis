@@ -58,7 +58,7 @@ testarr = np.arange(testint, testmax + testint, testint)
 # Set MCMC draws to use in fast algorithm
 numtruthdraws, numdatadraws = 75000, 1000
 
-alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
+
 numReps = 10
 for rep in range(numReps):
     print('Rep: '+str(rep))
@@ -79,3 +79,6 @@ for rep in range(numReps):
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_'+str(rep)), util_hi)
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_'+str(rep)), util_lo)
 
+alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
+for i in range(9):
+    alloc_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_util_avg.npy')))

@@ -67,7 +67,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 1000
+numtruthdraws, numdatadraws = 75000, 2000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -83,6 +83,27 @@ util.print_param_checks(paramdict)  # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Familiar Setting')
+''' 21-JUN
+[1, 1, 1, 1, 1, 0, 1, 1, 0,
+ 0, 1, 1, 2, 2, 0, 2, 1, 2,
+ 0, 2, 2, 1, 1, 1, 2, 3, 0,
+ 2, 0, 0, 2, 0, 2, 1, 2, 1,
+ 2, 1, 0, 2]
+[(0.08709501401732922, 0.09248817606288728), (0.15485069147878416, 0.16180554729293029), (0.21132869080310357, 0.21931614005076927),
+(0.25203372890146003, 0.26063269080331164), (0.29508233713522936, 0.3040828160807423), (0.3287205863959288, 0.33822854576624817), 
+(0.36679105798445644, 0.3762582028535526), (0.3971444263505597, 0.4070388117759731), (0.42485199517149574, 0.4353124807349904),
+(0.4486951832489643, 0.45897840819784275), (0.4761109827432908, 0.48670866415972003), (0.4987593570451616, 0.5097299074978237),
+(0.5263266477028608, 0.5378674990051908), (0.5478847373930049, 0.5603035172340813), (0.5694258037490463, 0.5816813331255415),
+(0.5935104072398629, 0.6068050714362494), (0.6142821720902099, 0.6267292115039553), (0.6375264642099632, 0.651162904882391),
+(0.6569186350254319, 0.6712814975687573), (0.6751661618775924, 0.6901828740981897), (0.6991582605312183, 0.7140608585450436),
+(0.7218481897152977, 0.7377503914991284), (0.7391189140792602, 0.7550833236590053), (0.7595669154703588, 0.7763418662828772),
+(0.7728264632929887, 0.7898690825001178), (0.7930497369742868, 0.8103019605083919), (0.8096944981072554, 0.8272548106037041),
+(0.8314307088795085, 0.8494696827012405), (0.8509469900480071, 0.8700952115080858), (0.8698554241240988, 0.8897037201438907),
+(0.8914266265511126, 0.9116777365803721), (0.9113010414418516, 0.9332423013141198), (0.9227597014567777, 0.9449340291518391),
+(0.9476763861351147, 0.9699704646742606), (0.9638385560225826, 0.986696220828474), (0.9821130962293003, 1.0061686183597554),
+(1.0042917413295647, 1.0287685913425824), (1.0217862509874143, 1.0462029388490077), (1.038252436160777, 1.0634683423858708),
+(1.058442480561017, 1.0845022908644895)]
+'''
 np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_alloc'), alloc)
 np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_util_avg'), util_avg)
 np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_util_hi'), util_hi)
@@ -128,16 +149,16 @@ np.save(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_fam'), util_a
 np.save(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_fam'), util_hi_arr)
 np.save(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_fam'), util_lo_arr)
 
-targind = 5 # where do we want to gauge budget savings?
-targval = util_avg_arr[0][targind]
+targind = 10 # where do we want to gauge budget savings?
+targval = util_avg[targind]
 
 # Uniform
-kInd = next(x for x, val in enumerate(util_avg_arr[1].tolist()) if val > targval)
-unif_saved = round((targval - util_avg_arr[1][kInd - 1]) / (util_avg_arr[1][kInd] - util_avg_arr[1][kInd - 1]) *\
+kInd = next(x for x, val in enumerate(util_avg_arr[0].tolist()) if val > targval)
+unif_saved = round((targval - util_avg_arr[0][kInd - 1]) / (util_avg_arr[0][kInd] - util_avg_arr[0][kInd - 1]) *\
                       testint) + (kInd - 1) * testint - targind*testint
-print(unif_saved)  #
+print(unif_saved)  # 33
 # Rudimentary
-kInd = next(x for x, val in enumerate(util_avg_arr[2].tolist()) if val > targval)
-rudi_saved = round((targval - util_avg_arr[2][kInd - 1]) / (util_avg_arr[2][kInd] - util_avg_arr[2][kInd - 1]) *\
+kInd = next(x for x, val in enumerate(util_avg_arr[1].tolist()) if val > targval)
+rudi_saved = round((targval - util_avg_arr[1][kInd - 1]) / (util_avg_arr[1][kInd] - util_avg_arr[1][kInd - 1]) *\
                       testint) + (kInd - 1) * testint - targind*testint
-print(rudi_saved)  #
+print(rudi_saved)  # 57

@@ -61,7 +61,7 @@ testmax, testint = 180, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 1000
+numtruthdraws, numdatadraws = 75000, 2000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -232,5 +232,3 @@ print('Saved vs Unif at 90: '+str(unif90saved))
 print('Saved vs Rudi at 90: '+str(rudi90saved))
 print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
-
-
