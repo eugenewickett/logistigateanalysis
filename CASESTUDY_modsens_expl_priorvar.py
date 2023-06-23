@@ -70,7 +70,7 @@ testmax, testint = 180, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 1000
+numtruthdraws, numdatadraws = 75000, 2000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
@@ -79,8 +79,8 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
-alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict, printupdate=True,
-                                                          plotupdate=False, plottitlestr='Familiar Setting')
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
+                                                                printupdate=True, plotupdate=False)
 # Store results
 np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_alloc'), alloc)
 np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg'), util_avg)
