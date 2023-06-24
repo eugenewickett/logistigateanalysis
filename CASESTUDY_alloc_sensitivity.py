@@ -56,7 +56,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 1000
+numtruthdraws, numdatadraws = 75000, 2000
 
 
 numReps = 10
@@ -79,6 +79,75 @@ for rep in range(numReps):
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_'+str(rep)), util_hi)
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_'+str(rep)), util_lo)
 
+
+##################
+# Compare utilities and allocations
+##################
 alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
 for i in range(9):
-    alloc_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'fam_util_avg.npy')))
+    alloc_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_alloc_'+str(i)+'.npy')))
+    util_avg_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_avg_'+str(i)+'.npy')))
+    util_hi_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_hi_' + str(i) + '.npy')))
+    util_lo_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_lo_' + str(i) + '.npy')))
+
+util_avg_list = np.array(util_avg_list)
+util_hi_list = np.array(util_hi_list)
+util_lo_list = np.array(util_lo_list)
+
+### PLOT OF UTILITIES
+colors = ['g', 'r']
+dashes = [[5,2], [2,4]]
+x1 = range(0, 401, 10)
+yMax = 1.4
+for desind in range(util_avg_list.shape[0]):
+    if desind == 0:
+        plt.plot(x1, util_hi_list[desind], dashes=dashes[0],
+                 linewidth=0.7, color=colors[0],label='Upper 95% CI')
+        plt.plot(x1, util_lo_list[desind], dashes=dashes[1], label='Lower 95% CI',
+                 linewidth=0.7, color=colors[1])
+    else:
+        plt.plot(x1, util_hi_list[desind], dashes=dashes[0],
+                 linewidth=0.7, color=colors[0])
+        plt.plot(x1, util_lo_list[desind], dashes=dashes[1],
+                 linewidth=0.7, color=colors[1])
+    #plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+    #                color=colors[desind], alpha=0.3 * al)
+plt.legend()
+plt.ylim([0., yMax])
+plt.xlabel('Number of Tests')
+plt.ylabel('Utility Gain')
+plt.title('Utility vs. Sampling Budget\n10 Replications of Heuristic in Familiar Setting')
+plt.show()
+plt.close()
+
+### PLOT OF ALLOCATIONS
+alloc_list = np.array(alloc_list)
+
+colorsset = plt.get_cmap('Set1')
+colorinds = [6,1,2,3]
+colors = np.array([colorsset(i) for i in colorinds])
+x1 = range(0, 401, 10)
+
+_ = plt.figure(figsize=(13,8))
+labels = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
+for allocarr_ind in range(alloc_list.shape[0]):
+    allocarr = alloc_list[allocarr_ind]
+    if allocarr_ind == 0:
+        for tnind in range(allocarr.shape[0]):
+            plt.plot(x1, allocarr[tnind]*testint,
+                     linewidth=3, color=colors[tnind],
+                     label=labels[tnind], alpha=0.2)
+    else:
+        for tnind in range(allocarr.shape[0]):
+            plt.plot(x1, allocarr[tnind]*testint,
+                     linewidth=3, color=colors[tnind],  alpha=0.2)
+allocmax = 200
+plt.legend(fontsize=12)
+plt.ylim([0., allocmax])
+plt.xlabel('Number of Tests', fontsize=14)
+plt.ylabel('Test Node Allocation', fontsize=14)
+plt.title('Test Node Allocation\n10 Replications of Heuristic in Familiar Setting',
+          fontsize=18)
+plt.tight_layout()
+plt.show()
+plt.close()
