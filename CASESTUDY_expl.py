@@ -104,8 +104,6 @@ alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, tes
 ]
 '''
 
-
-
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_alloc'), alloc)
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_avg'), util_avg)
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_hi'), util_hi)
@@ -150,18 +148,3 @@ for testind in range(testarr.shape[0]):
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl'), util_avg_arr)
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl'), util_hi_arr)
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl'), util_lo_arr)
-
-targind = 5 # where do we want to gauge budget savings?
-targval = util_avg_arr[0][targind]
-
-# Uniform
-kInd = next(x for x, val in enumerate(util_avg_arr[1].tolist()) if val > targval)
-unif_saved = round((targval - util_avg_arr[1][kInd - 1]) / (util_avg_arr[1][kInd] - util_avg_arr[1][kInd - 1]) *\
-                      testint) + (kInd - 1) * testint - targind*testint
-print(unif_saved)  #
-# Rudimentary
-kInd = next(x for x, val in enumerate(util_avg_arr[2].tolist()) if val > targval)
-rudi_saved = round((targval - util_avg_arr[2][kInd - 1]) / (util_avg_arr[2][kInd] - util_avg_arr[2][kInd - 1]) *\
-                      testint) + (kInd - 1) * testint - targind*testint
-print(rudi_saved)  #
-
