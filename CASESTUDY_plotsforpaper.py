@@ -393,8 +393,10 @@ def casestudyplots_exploratory():
     # Allocation plot
     allocArr = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
+    colorsset2 = plt.get_cmap('Dark2')
     colorinds = [6, 1, 2, 3, 4, 0, 5, 7]
     colors = np.array([colorsset(i) for i in colorinds])
+    colors[6] = colorsset2(5)
     labels = [TNnames[ind] for ind in range(numTN)]
     x = range(0, testmax + 1, testint)
     _ = plt.figure(figsize=figtup)
@@ -416,7 +418,7 @@ def casestudyplots_exploratory():
         elif tnind==2:
             plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 1.1*delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
         elif tnind==3:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.1*delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
+            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.2*delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
         else:
             plt.text(testmax * 1.01, allocArr[tnind, -1] * testint, labels[tnind].ljust(15), fontsize=labelSz - 1)
 
@@ -538,8 +540,10 @@ def casestudyplots_exploratory_market():
     # Allocation plot
     allocArr = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_market_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
+    colorsset2 = plt.get_cmap('Dark2')
     colorinds = [6, 1, 2, 3, 4, 0, 5, 7]
     colors = np.array([colorsset(i) for i in colorinds])
+    colors[6] = colorsset2(5)
     labels = [TNnames[ind] for ind in range(numTN)]
     x = range(0, testmax + 1, testint)
     _ = plt.figure(figsize=figtup)
@@ -564,7 +568,7 @@ def casestudyplots_exploratory_market():
             plt.text(testmax * 1.01, allocArr[tnind, -1] * testint - delt, labels[tnind].ljust(15),
                      fontsize=labelSz - 1)
         elif tnind == 3:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.1 * delt, labels[tnind].ljust(15),
+            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.2 * delt, labels[tnind].ljust(15),
                      fontsize=labelSz - 1)
         else:
             plt.text(testmax * 1.01, allocArr[tnind, -1] * testint, labels[tnind].ljust(15), fontsize=labelSz - 1)
@@ -582,15 +586,15 @@ def casestudyplots_exploratory_market():
 
     #######################
     # Policy utility comparison
-    util_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_expl_market.npy'))
-    util_arr_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_expl_market.npy'))
-    util_arr_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_expl_market.npy'))
+    util_arr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl_market.npy'))
+    util_arr_hi = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl_market.npy'))
+    util_arr_lo = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl_market.npy'))
     heur_util = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_market_util_avg.npy'))
     heur_util_hi = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_market_util_hi.npy'))
     heur_util_lo = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_market_util_lo.npy'))
-    util_arr = np.vstack((heur_util,util_arr[1:]))
-    util_arr_hi = np.vstack((heur_util_hi, util_arr_hi[1:]))
-    util_arr_lo = np.vstack((heur_util_lo, util_arr_lo[1:]))
+    util_arr = np.vstack((heur_util,util_arr))
+    util_arr_hi = np.vstack((heur_util_hi, util_arr_hi))
+    util_arr_lo = np.vstack((heur_util_lo, util_arr_lo))
     # Utility comparison plot
     colorsset = plt.get_cmap('Accent')
     colorinds = [0, 1, 2]
@@ -622,15 +626,15 @@ def casestudyplots_exploratory_market():
     plt.ylabel('Plan Utility', fontsize=axSz)
     plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nExploratory Setting with Market Term', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
-    x1, x2, x3 = 100, 119, 298
-    iv = 0.03
+    x1, x2 = 100, 125
+    iv = 0.0032
     utilind = int(x1/testint)
-    plt.plot([x1, x3], [util_arr[0][utilind], util_arr[0][utilind]], color='black', linestyle='--')
+    plt.plot([x1, x2], [util_arr[0][utilind], util_arr[0][utilind]], color='black', linestyle='--')
     plt.plot([100, 100], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
     plt.plot([x2, x2], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
-    plt.plot([x3, x3], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
-    plt.text(103.5, util_arr[0][utilind] + iv / 2, str(int(x2-x1)), fontsize=labelSz)
-    plt.text(190, util_arr[0][utilind] + iv / 2, str(int(x3-x2)), fontsize=labelSz)
+    #plt.plot([x3, x3], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
+    plt.text(106, util_arr[0][utilind] + iv / 2, str(int(x2-x1)), fontsize=labelSz)
+    #plt.text(190, util_arr[0][utilind] + iv / 2, str(int(x3-x2)), fontsize=labelSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
