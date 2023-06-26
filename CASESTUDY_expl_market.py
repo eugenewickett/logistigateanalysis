@@ -56,7 +56,7 @@ csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorM
 # Set up MCMC
 csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 75000
+numdraws = 15000
 csdict_expl['numPostSamples'] = numdraws
 np.random.seed(1000) # To replicate draws later
 csdict_expl = methods.GeneratePostSamples(csdict_expl)
@@ -70,7 +70,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 2000
+numtruthdraws, numdatadraws = 15000, 2000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
