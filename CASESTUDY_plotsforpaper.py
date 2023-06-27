@@ -538,7 +538,7 @@ def casestudyplots_exploratory_market():
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_market_alloc.npy'))
+    allocArr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorsset2 = plt.get_cmap('Dark2')
     colorinds = [6, 1, 2, 3, 4, 0, 5, 7]
@@ -558,17 +558,23 @@ def casestudyplots_exploratory_market():
     allocMax = 120
     for tnind in range(numTN):
         delt = 4
-        if tnind == 7:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15),
+        if tnind == 4:
+            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.5*delt, labels[tnind].ljust(15),
                      fontsize=labelSz - 1)
-        elif tnind == 1:
+        elif tnind == 2:
             plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 1.1*delt, labels[tnind].ljust(15),
                      fontsize=labelSz - 1)
         elif tnind == 5:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint - delt, labels[tnind].ljust(15),
+            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint - 0.5*delt, labels[tnind].ljust(15),
                      fontsize=labelSz - 1)
         elif tnind == 3:
             plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.2 * delt, labels[tnind].ljust(15),
+                     fontsize=labelSz - 1)
+        elif tnind == 0:
+            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.5 * delt, labels[tnind].ljust(15),
+                     fontsize=labelSz - 1)
+        elif tnind == 7:
+            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint - 0.5 * delt, labels[tnind].ljust(15),
                      fontsize=labelSz - 1)
         else:
             plt.text(testmax * 1.01, allocArr[tnind, -1] * testint, labels[tnind].ljust(15), fontsize=labelSz - 1)
