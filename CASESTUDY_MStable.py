@@ -214,13 +214,13 @@ print('Saved vs Rudi at 180: '+str(rudi180saved))
 
 
 ######### EXPLORATORY SETTING ###############
-fam_alloc = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_alloc.npy'))
-fam_util_avg = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_util_avg.npy'))
+fam_alloc = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_alloc.npy'))
+fam_util_avg = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_avg.npy'))
 print('Base allocation at 90:\n'+str(fam_alloc[:,9]))
 print('Base allocation at 180:\n'+str(fam_alloc[:,18]))
-util_avg_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_expl.npy'))
-util_avg_unif_90, util_avg_unif_180 = util_avg_arr[1, 9:], util_avg_arr[1, 18:]
-util_avg_rudi_90, util_avg_rudi_180 = util_avg_arr[2, 9:], util_avg_arr[2, 18:]
+util_avg_arr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl.npy'))
+util_avg_unif_90, util_avg_unif_180 = util_avg_arr[0, 9:], util_avg_arr[0, 18:]
+util_avg_rudi_90, util_avg_rudi_180 = util_avg_arr[1, 9:], util_avg_arr[1, 18:]
 alloc90, alloc180 = fam_util_avg[9], fam_util_avg[18]
 # Extend rudimentary utility a bit to get estimate
 slope = (util_avg_rudi_180[-1] - util_avg_rudi_180[0]) / util_avg_rudi_180.shape[0]
@@ -273,12 +273,12 @@ print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
 # Prior variance: 4
-fam_MS_alloc = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_alloc.npy'))
-fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg.npy'))
-util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_rudi_90.npy'))
-util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_rudi_180.npy'))
-util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_unif_90.npy'))
-util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', '15JUN', 'expl_MS_priorvar_4_util_avg_unif_180.npy'))
+fam_MS_alloc = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_alloc.npy'))
+fam_MS_util_avg = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg.npy'))
+util_avg_rudi_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_rudi_90.npy'))
+util_avg_rudi_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_rudi_180.npy'))
+util_avg_unif_90 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_unif_90.npy'))
+util_avg_unif_180 = np.load(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_unif_180.npy'))
 alloc90 = fam_MS_util_avg[9]
 alloc180 = fam_MS_util_avg[18]
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
