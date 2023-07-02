@@ -60,7 +60,10 @@ class Dirichlet(object):
         """Returns random draws from this distribution"""
         return np.random.dirichlet(self._alpha, size=n)
 
-dirObj = Dirichlet([30.3, 10.3, 60.4])
+numdata = 180
+vec = np.random.multinomial(numdata,np.array([0.1,0.6,0.3]))
+
+dirObj = Dirichlet([vec[0]+1/3, vec[1]+1/3, vec[2]+1/3])
 temp = dirObj.rand(1000)
 
 for i in range(temp.shape[1]):
