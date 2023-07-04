@@ -38,10 +38,26 @@ csdict_expl['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26',
                               'MODHIGH_EXPL_1', 'MOD_EXPL_1', 'MODHIGH_EXPL_2', 'MOD_EXPL_2']
 csdict_expl['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
 
+# Which flattened Qs are farthest from our orginal Q
+numBoot = 44  # Average across each TN in original data set
+SNprobs = np.sum(csdict_fam['N'], axis=0) / np.sum(csdict_fam['N'])
+# We used seed 33 in the original allocation
+np.random.seed(33)
+Qvecs_orig = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+normlist = []
+for i in range(34,84,1):
+    np.random.seed(i)
+    Qvecs_curr = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+    currnorm = np.linalg.norm(Qvecs_curr.flatten()-Qvecs_orig.flatten())
+    normlist.append(currnorm)
+ind = np.argpartition(np.array(normlist), -2)[-2:]
+print(ind)
+# seeds 34+26=60 and 34+29=63
+
 # Use observed data to form Q for tested nodes; use bootstrap data for untested nodes
 numBoot = 44  # Average across each TN in original data set
 SNprobs = np.sum(csdict_expl['N'], axis=0) / np.sum(csdict_expl['N'])
-np.random.seed(35) # CHANGED FROM 33 TO 35
+np.random.seed(60) # CHANGED FROM 33 TO 60
 Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
 csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 
@@ -160,7 +176,7 @@ print('Saved vs Rudi at 180: '+str(rudi180saved))
 ######################
 # Change sourcing again
 ######################
-np.random.seed(36) # CHANGED FROM 33 TO 36
+np.random.seed(63) # CHANGED FROM 33 TO 63
 Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
 csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 
