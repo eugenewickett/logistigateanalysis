@@ -40,7 +40,7 @@ csdict_expl['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
 
 # Which flattened Qs are farthest from our orginal Q
 numBoot = 44  # Average across each TN in original data set
-SNprobs = np.sum(csdict_fam['N'], axis=0) / np.sum(csdict_fam['N'])
+SNprobs = np.sum(csdict_expl['N'], axis=0) / np.sum(csdict_expl['N'])
 # We used seed 33 in the original allocation
 np.random.seed(33)
 Qvecs_orig = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
