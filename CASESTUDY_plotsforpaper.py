@@ -73,18 +73,86 @@ def showpriorselicitedfromrisk():
     return
 
 
+def nVecs(length, target):
+    """Return all possible positive integer vectors with size 'length', that sum to 'target'"""
+    if length == 1:
+        return [[target]]
+    else:
+        retSet = []
+        for nexttarg in range(target+1):
+            for nextset in nVecs(length-1,target-nexttarg):
+                retSet.append([nexttarg]+nextset)
+
+    return retSet
+
 def example_planutility():
     """Produce two plots of the example of plan utility"""
     baseutil_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_base.npy'))
     adjutil_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_adj.npy'))
     testmax, testint = 60, 4
-    util.plot_marg_util(baseutil_arr, testmax=testmax, testint=testint,
+
+    def plot_marg_util(margutilarr, testmax, testint, al=0.6, titlestr='', type='cumulative', colors=[], dashes=[],
+                       labels=[], utilmax=-1, linelabels=False):
+        if len(colors) == 0:
+            colors = cm.rainbow(np.linspace(0, 1, margutilarr.shape[0]))
+        if len(dashes) == 0:
+            dashes = [[1, desind] for desind in range(margutilarr.shape[0])]
+        if len(labels) == 0:
+            labels = ['Design ' + str(desind + 1) for desind in range(margutilarr.shape[0])]
+        if type == 'cumulative':
+            x1 = range(0, testmax + 1, testint)
+            if utilmax > 0.:
+                yMax = utilmax
+            else:
+                yMax = margutilarr.max() * 1.1
+            for desind in range(margutilarr.shape[0]):
+                plt.plot(x1, margutilarr[desind], dashes=dashes[desind], linewidth=2.5, color=colors[desind],
+                         label=labels[desind], alpha=al)
+            if linelabels:
+                for tnind in range(margutilarr.shape[0]):
+                    plt.text(testmax * 1.01, margutilarr[tnind, -1], labels[tnind].ljust(15), fontsize=5)
+        elif type == 'delta':
+            x1 = range(testint, testmax + 1, testint)
+            deltaArr = np.zeros((margutilarr.shape[0], margutilarr.shape[1] - 1))
+            for rw in range(deltaArr.shape[0]):
+                for col in range(deltaArr.shape[1]):
+                    deltaArr[rw, col] = margutilarr[rw, col + 1] - margutilarr[rw, col]
+            if utilmax > 0.:
+                yMax = utilmax
+            else:
+                yMax = deltaArr.max() * 1.1
+            for desind in range(deltaArr.shape[0]):
+                plt.plot(x1, deltaArr[desind], dashes=dashes[desind], linewidth=2.5, color=colors[desind],
+                         label=labels[desind], alpha=al)
+            if linelabels:
+                for tnind in range(deltaArr.shape[0]):
+                    plt.text(testmax * 1.01, deltaArr[tnind, -1], labels[tnind].ljust(15), fontsize=5)
+        plt.legend()
+        plt.ylim([0., yMax])
+        plt.xlabel('Number of Tests, $N$')
+        if type == 'delta':
+            plt.ylabel('Marginal Utility Gain')
+            plt.title('Marginal Utility vs. Increasing Tests\n' + titlestr)
+        else:
+            plt.ylabel('Utility')
+            plt.title('Utility vs. Increasing Tests\n' + titlestr)
+        plt.show()
+        plt.close()
+        return
+    plot_marg_util(baseutil_arr, testmax=testmax, testint=testint,
                         colors=['blue', 'red', 'green'], titlestr='$v=1$',
                         labels=['Focused', 'Uniform', 'Adapted'])
-    util.plot_marg_util(adjutil_arr, testmax=testmax, testint=testint,
+    plot_marg_util(adjutil_arr, testmax=testmax, testint=testint,
                         colors=['blue', 'red', 'green'], titlestr='$v=10$',
                         labels=['Focused', 'Uniform', 'Adapted'])
-
+    # Per comment, cut off at 40 tests instead in order to capture more interesting elements
+    testmax=40
+    plot_marg_util(baseutil_arr[:, :-5], testmax=testmax, testint=testint,
+                        colors=['blue', 'red', 'green'], titlestr='$v=1$',
+                        labels=['Focused', 'Uniform', 'Adapted'])
+    plot_marg_util(adjutil_arr[:, :-5], testmax=testmax, testint=testint,
+                        colors=['blue', 'red', 'green'], titlestr='$v=10$',
+                        labels=['Focused', 'Uniform', 'Adapted'])
     return
 
 
