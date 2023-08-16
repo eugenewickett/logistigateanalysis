@@ -313,7 +313,7 @@ plt.close()
 numdatadraws = 50
 minCI = 0.02
 
-numreps=8
+numreps=5
 truth75arr = np.zeros((numreps, testarr.shape[0]+1))
 truth75arr_lo, truth75arr_hi = np.zeros((numreps, testarr.shape[0]+1)), np.zeros((numreps, testarr.shape[0]+1))
 truth100arr = np.zeros((numreps, testarr.shape[0]+1))

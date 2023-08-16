@@ -58,7 +58,6 @@ testarr = np.arange(testint, testmax + testint, testint)
 # Set MCMC draws to use in fast algorithm
 numtruthdraws, numdatadraws = 75000, 2000
 
-
 numReps = 10
 for rep in range(numReps):
     print('Rep: '+str(rep))
@@ -79,16 +78,15 @@ for rep in range(numReps):
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_'+str(rep)), util_hi)
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_'+str(rep)), util_lo)
 
-
 ##################
 # Compare utilities and allocations
 ##################
 alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
 for i in range(9):
-    alloc_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_alloc_'+str(i)+'.npy')))
-    util_avg_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_avg_'+str(i)+'.npy')))
-    util_hi_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_hi_' + str(i) + '.npy')))
-    util_lo_list.append(np.load(os.path.join('casestudyoutputs', '13JUN', 'allocsens_util_lo_' + str(i) + '.npy')))
+    alloc_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_'+str(i)+'.npy')))
+    util_avg_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_'+str(i)+'.npy')))
+    util_hi_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_' + str(i) + '.npy')))
+    util_lo_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_' + str(i) + '.npy')))
 
 util_avg_list = np.array(util_avg_list)
 util_hi_list = np.array(util_hi_list)
@@ -115,7 +113,7 @@ for desind in range(util_avg_list.shape[0]):
 plt.legend()
 plt.ylim([0., yMax])
 plt.xlabel('Number of Tests')
-plt.ylabel('Utility Gain')
+plt.ylabel('Utility')
 plt.title('Utility vs. Sampling Budget\n10 Replications of Heuristic in Familiar Setting')
 plt.show()
 plt.close()
@@ -129,7 +127,7 @@ colors = np.array([colorsset(i) for i in colorinds])
 x1 = range(0, 401, 10)
 
 _ = plt.figure(figsize=(13,8))
-labels = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
+labels = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)']
 for allocarr_ind in range(alloc_list.shape[0]):
     allocarr = alloc_list[allocarr_ind]
     if allocarr_ind == 0:
@@ -151,3 +149,70 @@ plt.title('Test Node Allocation\n10 Replications of Heuristic in Familiar Settin
 plt.tight_layout()
 plt.show()
 plt.close()
+
+#####################################
+### PLOT OF BIAS FROM LOW TRUTH DRAWS
+#####################################
+numdatadraws = 2000
+# Reduce the number of reps
+numReps = 5
+# 15k
+for rep in range(numReps):
+    print('Rep: '+str(rep)+' for 15k')
+    # Get new MCMC draws
+    np.random.seed(2000+rep)
+    numdraws, numtruthdraws = 15000, 15000
+    csdict_fam['numPostSamples'] = numdraws
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Get random subsets for truth and data draws
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict) # Check of used parameters
+    alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                    plotupdate=False)
+    # Store
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_avg_'+str(rep)), util_avg)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_hi_'+str(rep)), util_hi)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_lo_'+str(rep)), util_lo)
+# 50k
+for rep in range(numReps):
+    print('Rep: '+str(rep)+' for 50k')
+    # Get new MCMC draws
+    np.random.seed(2000+rep)
+    numdraws, numtruthdraws = 50000, 50000
+    csdict_fam['numPostSamples'] = numdraws
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Get random subsets for truth and data draws
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict) # Check of used parameters
+    alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                    plotupdate=False)
+    # Store
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_avg_'+str(rep)), util_avg)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_hi_'+str(rep)), util_hi)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_lo_'+str(rep)), util_lo)
+# 100k
+for rep in range(numReps):
+    print('Rep: '+str(rep)+' for 100k')
+    # Get new MCMC draws
+    np.random.seed(2000+rep)
+    numdraws, numtruthdraws = 100000, 100000
+    csdict_fam['numPostSamples'] = numdraws
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Get random subsets for truth and data draws
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict) # Check of used parameters
+    alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                    plotupdate=False)
+    # Store
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_avg_'+str(rep)), util_avg)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_hi_'+str(rep)), util_hi)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_lo_'+str(rep)), util_lo)
