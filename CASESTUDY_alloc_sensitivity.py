@@ -216,3 +216,71 @@ for rep in range(numReps):
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_avg_'+str(rep)), util_avg)
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_hi_'+str(rep)), util_hi)
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_lo_'+str(rep)), util_lo)
+
+#####################################
+### PLOT OF VARIANCE FROM DATA DRAWS
+#####################################
+numdraws, numtruthdraws = 75000, 75000
+
+numReps = 5
+
+# 500
+for rep in range(numReps):
+    print('Rep: '+str(rep)+' for 500')
+    # Get new MCMC draws
+    np.random.seed(2000+rep)
+    numdatadraws = 500
+    csdict_fam['numPostSamples'] = numdraws
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Get random subsets for truth and data draws
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict) # Check of used parameters
+    alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                    plotupdate=False)
+    # Store
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_avg_'+str(rep)), util_avg)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_hi_'+str(rep)), util_hi)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_lo_'+str(rep)), util_lo)
+# 1000
+for rep in range(numReps):
+    print('Rep: ' + str(rep) + ' for 1000')
+    # Get new MCMC draws
+    np.random.seed(2000 + rep)
+    numdatadraws = 1000
+    csdict_fam['numPostSamples'] = numdraws
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Get random subsets for truth and data draws
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict)  # Check of used parameters
+    alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                    plotupdate=False)
+    # Store
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_lo_' + str(rep)), util_lo)
+# 3000
+for rep in range(numReps):
+    print('Rep: ' + str(rep) + ' for 3000')
+    # Get new MCMC draws
+    np.random.seed(2000 + rep)
+    numdatadraws = 3000
+    csdict_fam['numPostSamples'] = numdraws
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # Get random subsets for truth and data draws
+    truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict)  # Check of used parameters
+    alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                    plotupdate=False)
+    # Store
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_lo_' + str(rep)), util_lo)
