@@ -3552,15 +3552,16 @@ pickle.dump(outputDict, open(outputFileName,'wb'))
 '''
 
 def SenegalDataScript():
-    '''
+    """
     This script runs everything needed for the paper 'Inferring sources of substandard and falsified products in
     pharmaceutical supply chains'.
-    '''
+    """
     import os
     import pickle
     #import pandas as pd
 
-    SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+    #SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+    SCRIPT_DIR = os.getcwd()
     filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
     outputFileName = os.path.join(filesPath, 'pickleOutput')
 

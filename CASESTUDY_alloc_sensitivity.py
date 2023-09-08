@@ -114,7 +114,7 @@ plt.legend()
 plt.ylim([0., yMax])
 plt.xlabel('Number of Tests')
 plt.ylabel('Utility')
-plt.title('Utility vs. Sampling Budget\n10 Replications of Heuristic in Familiar Setting')
+plt.title('Utility vs. Sampling Budget\n10 Replications of Heuristic in Regular Setting')
 plt.show()
 plt.close()
 
@@ -144,7 +144,7 @@ plt.legend(fontsize=12)
 plt.ylim([0., allocmax])
 plt.xlabel('Number of Tests', fontsize=14)
 plt.ylabel('Test Node Allocation', fontsize=14)
-plt.title('Test Node Allocation\n10 Replications of Heuristic in Familiar Setting',
+plt.title('Test Node Allocation\n10 Replications of Heuristic in Regular Setting',
           fontsize=18)
 plt.tight_layout()
 plt.show()

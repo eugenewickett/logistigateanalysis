@@ -85,6 +85,7 @@ def nVecs(length, target):
 
     return retSet
 
+
 def example_planutility():
     """Produce two plots of the example of plan utility"""
     baseutil_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_base.npy'))
@@ -149,10 +150,10 @@ def example_planutility():
     testmax=40
     plot_marg_util(baseutil_arr[:, :-5], testmax=testmax, testint=testint,
                         colors=['blue', 'red', 'green'], titlestr='$v=1$',
-                        labels=['Focused', 'Uniform', 'Adapted'])
+                        labels=['Least Tested', 'Uniform', 'Highest SFPs'])
     plot_marg_util(adjutil_arr[:, :-5], testmax=testmax, testint=testint,
                         colors=['blue', 'red', 'green'], titlestr='$v=10$',
-                        labels=['Focused', 'Uniform', 'Adapted'])
+                        labels=['Least Tested', 'Uniform', 'Highest SFPs'])
     return
 
 
@@ -161,7 +162,7 @@ def casestudyplots_familiar():
     Cleaned up plots for use in case study in paper
     """
     testmax, testint = 400, 10
-    TNnames = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
+    TNnames = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)']
     numTN = len(TNnames)
 
     # Size of figure layout for all figures
@@ -220,7 +221,7 @@ def casestudyplots_familiar():
     plt.xlim([0., xMax])
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget\nFamiliar Setting', fontsize=titleSz)
+    plt.title('Sampling Plan vs. Budget\nRegular Setting', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -266,7 +267,7 @@ def casestudyplots_familiar():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nFamiliar Setting', fontsize=titleSz)
+    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nRegular Setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 132, 156
     iv = 0.015
@@ -290,7 +291,7 @@ def casestudyplots_familiar_market():
     Cleaned up plots for use in case study in paper
     """
     testmax, testint = 400, 10
-    TNnames = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
+    TNnames = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)']
     numTN = len(TNnames)
 
     # Size of figure layout for all figures
@@ -349,7 +350,7 @@ def casestudyplots_familiar_market():
     plt.xlim([0., xMax])
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget\nFamiliar Setting with Market Term', fontsize=titleSz)
+    plt.title('Sampling Plan vs. Budget\nRegular Setting with Market Term', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -395,7 +396,7 @@ def casestudyplots_familiar_market():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nFamiliar Setting with Market Term', fontsize=titleSz)
+    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nRegular Setting with Market Term', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 120, 146
     iv = 0.0015
@@ -418,12 +419,12 @@ def casestudyplots_exploratory():
     Cleaned up plots for use in case study in paper
     """
     testmax, testint = 400, 10
-    TNnames = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26',
-              'MODHIGH_EXPL_1', 'MOD_EXPL_1', 'MODHIGH_EXPL_2', 'MOD_EXPL_2']
+    TNnames = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)',
+              'ModeratelyHighUnex(1)', 'ModerateUnex(1)', 'ModeratelyHighUnex(2)', 'ModerateUnex(2)']
     numTN = len(TNnames)
 
     # Size of figure layout for all figures
-    figtup = (7, 5)
+    figtup = (7.5, 5)
     titleSz, axSz, labelSz = 12, 10, 9
     xMax = 450
 
@@ -565,12 +566,13 @@ def casestudyplots_exploratory_market():
     Cleaned up plots for use in case study in paper
     """
     testmax, testint = 400, 10
-    TNnames = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26',
-              'MODHIGH_EXPL_1', 'MOD_EXPL_1', 'MODHIGH_EXPL_2', 'MOD_EXPL_2']
+    TNnames = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)',
+               'ModeratelyHighUnex(1)', 'ModerateUnex(1)', 'ModeratelyHighUnex(2)',
+               'ModerateUnex(2)']
     numTN = len(TNnames)
 
     # Size of figure layout for all figures
-    figtup = (7, 5)
+    figtup = (7.5, 5)
     titleSz, axSz, labelSz = 12, 10, 9
     xMax = 450
 
