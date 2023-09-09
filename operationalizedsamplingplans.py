@@ -12,11 +12,13 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
+import pandas as pd
 import numpy as np
 from numpy.random import choice
 import random
 import scipy.stats as sps
 import scipy.special as spsp
+
 
 # Pull data from analysis of first paper
 def GetSenegalDataMatrices(deidentify=False):
@@ -151,11 +153,26 @@ def GetSenegalDataMatrices(deidentify=False):
 
 # Pull data from newly constructed CSV files
 def GetSenegalCSVData():
-    return 1+1
+    dept_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/deptfixedcosts.csv', header=0)
+    regcost_mat = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/regarcfixedcosts.csv', header=None)
+    regNames = ['Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
+                'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor']
+    # Get testing results
+    testresults_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/dataresults.csv', header=0)
+    manufNames = testresults_df.Manufacturer.sort_values().unique().tolist()
+
+    return dept_df, regcost_mat, testresults_df, regNames, manufNames
 
 # Pull district-level Senegal data
-N, Y, SNnames, TNprovs, TNnames = GetSenegalDataMatrices(deidentify=False)
+# N, Y, SNnames, TNprovs, TNnames = GetSenegalDataMatrices(deidentify=False)
+dept_df, regcost_mat, testresults_df, regNames, manufNames = GetSenegalCSVData()
+
+testdatadict = {'dataTbl':testresults_df.values.tolist(), 'type':'Tracked', 'TNnames':dept_df['Department'].sort_values().tolist(),
+                'SNnames':manufNames}
+testdatadict = util.GetVectorForms(testdatadict)
+N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNnames'], testdatadict['SNnames']
 (numTN, numSN) = N.shape # For later use
+
 ### Print some data summaries
 # Overall data
 print('TNs by SNs: ' + str(N.shape) + '\nNumber of Obsvns: ' + str(N.sum()) + '\nNumber of SFPs: ' + str(Y.sum()) + '\nSFP rate: ' + str(round(
