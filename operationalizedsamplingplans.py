@@ -166,13 +166,20 @@ def GetSenegalCSVData():
 # Pull district-level Senegal data
 # N, Y, SNnames, TNprovs, TNnames = GetSenegalDataMatrices(deidentify=False)
 dept_df, regcost_mat, testresults_df, regNames, manufNames = GetSenegalCSVData()
+deptNames = dept_df['Department'].sort_values().tolist()
 
-testdatadict = {'dataTbl':testresults_df.values.tolist(), 'type':'Tracked', 'TNnames':dept_df['Department'].sort_values().tolist(),
-                'SNnames':manufNames}
+testdatadict = {'dataTbl':testresults_df.values.tolist(), 'type':'Tracked', 'TNnames':deptNames, 'SNnames':manufNames}
 testdatadict = util.GetVectorForms(testdatadict)
 N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNnames'], testdatadict['SNnames']
 (numTN, numSN) = N.shape # For later use
 
+def GetRegion(dept_str, dept_df):
+    '''Retrieves the region associated with a department'''
+    return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
+
+
+
+##############
 ### Print some data summaries
 # Overall data
 print('TNs by SNs: ' + str(N.shape) + '\nNumber of Obsvns: ' + str(N.sum()) + '\nNumber of SFPs: ' + str(Y.sum()) + '\nSFP rate: ' + str(round(
@@ -184,8 +191,9 @@ print('Tests at TNs: ' + str(np.sum(N, axis=1)) + '\nSFPs at TNs: ' + str(np.sum
 lgdict = util.initDataDict(N, Y)
 lgdict.update({'TNnames':TNnames, 'SNnames':SNnames})
 
-
-# TODO: INSPECT CHOICE HERE
+##############
+# Set up priors for SFP rates at nodes
+# TODO: INSPECT CHOICE HERE LATER
 # All SNs are `Moderate'
 SNpriorMean = np.repeat(spsp.logit(0.1), numSN)
 # TNs are randomly assigned risk, such that 5% are in the 1st and 7th levels, 10% are in the 2nd and 6th levels,
@@ -197,31 +205,31 @@ randriskinds = np.mod(np.where(tempCategs.flatten()==1), len(riskMeans))[0]
 TNpriorMean = spsp.logit(np.array([riskMeans[randriskinds[i]] for i in range(numTN)]))
 # Concatenate prior means
 priorMean = np.concatenate((SNpriorMean, TNpriorMean))
-TNvar, SNvar = 2., 2.  # Variances for use with prior; supply nodes are wide due to large
+TNvar, SNvar = 2., 3.  # Variances for use with prior; supply nodes are wider due to unknown risk assessments
 priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
 priorObj = prior_normal_assort(priorMean, priorCovar)
 lgdict['prior'] = priorObj
 
 # Set up MCMC
-lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-# TODO: INSPECT CHOICE HERE
-numdraws = 20000
+lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 1000, 'delta': 0.4}
+# TODO: INSPECT CHOICE HERE LATER
+numdraws = 1000
 lgdict['numPostSamples'] = numdraws
 np.random.seed(300)
+import time
+time0 = time.time()
 lgdict = methods.GeneratePostSamples(lgdict)
+print(time.time()-time0)
 # Print inference from initial data
 # util.plotPostSamples(lgdict, 'int90')
-print(lgdict['TNnames'])
 
+print(lgdict['TNnames'])
 print(np.sum(lgdict['N'],axis=1))
 
 # Loss specification
+# TODO: INSPECT CHOICE HERE LATER
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
-
-# Set limits of data collection and intervals for calculation
-testmax, testint = 400, 10
-testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
 numtruthdraws, numdatadraws = 10000, 500
