@@ -212,21 +212,29 @@ lgdict['prior'] = priorObj
 
 # Set up MCMC
 lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+
+'''
 # TODO: INSPECT CHOICE HERE LATER
 numdraws = 5000
 lgdict['numPostSamples'] = numdraws
 np.random.seed(300)
 import time
 time0 = time.time()
-lgdict = methods.GeneratePostSamples(lgdict, maxTime=2000)
+lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
 print(time.time()-time0)
 
 tempobj = lgdict['postSamples']
-np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws2'),tempobj)
+np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws4'),tempobj)
 import os
-file_name = "operationalizedsamplingplans/numpy_objects/draws1.npy"
+file_name = "operationalizedsamplingplans/numpy_objects/draws3.npy"
 file_stats = os.stat(file_name)
 print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
+'''
+
+# Load draws from files
+tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
+for drawgroupind in range(2, 5):
+
 
 # Print inference from initial data
 # util.plotPostSamples(lgdict, 'int90')
