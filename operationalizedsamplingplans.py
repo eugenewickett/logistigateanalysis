@@ -6,6 +6,7 @@ from logistigate.logistigate import samplingplanfunctions as sampf
 
 import os
 import pickle
+import time
 
 import matplotlib
 import matplotlib.cm as cm
@@ -178,7 +179,6 @@ def GetRegion(dept_str, dept_df):
     return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
 
 
-
 ##############
 ### Print some data summaries
 # Overall data
@@ -234,13 +234,25 @@ print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
 # Load draws from files
 tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
 for drawgroupind in range(2, 5):
-
-
+    newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) +'.npy'))
+    tempobj = np.concatenate((tempobj, newobj))
+lgdict['postSamples'] = tempobj
 # Print inference from initial data
 # util.plotPostSamples(lgdict, 'int90')
 
-print(lgdict['TNnames'])
-print(np.sum(lgdict['N'],axis=1))
+# Generate Q via bootstrap sampling of known traces
+numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'],axis=1))
+numboot = 20 # Average across each department in original data
+SNprobs = np.sum(lgdict['N'], axis=0) / np.sum(lgdict['N']) # SN sourcing probabilities across original data
+np.random.seed(44)
+Qvecs = np.random.multinomial(numboot, SNprobs, size=numTN - numvisitedTNs) / numboot
+Qindcount = 0
+tempQ = lgdict['Q'].copy()
+for i in range(tempQ.shape[0]):
+    if lgdict['Q'][i].sum() == 0:
+        tempQ[i] = Qvecs[Qindcount]
+        Qindcount += 1
+lgdict.update({'Q':tempQ})
 
 # Loss specification
 # TODO: INSPECT CHOICE HERE LATER
@@ -250,10 +262,31 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
 # Set MCMC draws to use in fast algorithm
 numtruthdraws, numdatadraws = 10000, 500
 # Get random subsets for truth and data draws
-np.random.seed(444)
-truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+np.random.seed(56)
+truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 # Get base loss
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict)  # Check of used parameters
+
+# TODO: KEY INPUTS HERE
+n = np.zeros(numTN)
+n[5] = 50
+n[1] = 50
+
+def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
+    """
+    Return a utility estimate average and confidence interval for allocation array n
+    """
+    testnum = int(np.sum(n))
+    des = n/testnum
+    currlosslist = sampf.sampling_plan_loss_list(des, testnum, lgdict, paramdict)
+    currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
+    return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
+
+time0 = time.time()
+getUtilityEstimate(n, lgdict, paramdict)
+print(time.time() - time0)
+
+
