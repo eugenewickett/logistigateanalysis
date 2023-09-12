@@ -302,8 +302,8 @@ utilavg, (utilCIlo, utilCIhi) =
 # Now set up functions for constraints and variables of our program
 ##################
 # Set these parameters per the program described in the paper
-# TODO: INSPECT CHOICES HERE LATER
-b, B, C, t, M = 50, 20, 500, 2, 500
+# TODO: INSPECT CHOICES HERE LATER, ESP M
+b, B, C, t, M = 50, 20, 700, 2, 500
 
 dept_df_sort = dept_df.sort_values('Department')
 
@@ -337,7 +337,7 @@ deptallocbds = GetUpperBounds(optparamdict)
 
 # TODO: INSPECT CHOICES HERE LATER
 # Example set of variables to inspect validity
-v_batch = 3
+v_batch = 7
 n_alloc = np.zeros(numTN)
 n_alloc[36] = 20 # Rufisque, Dakar
 n_alloc[25] = 20 # Louga, Louga
@@ -370,8 +370,9 @@ x[2, 0] = 1 # Fatick to Dakar
 # Generate a dictionary for variables
 varsetdict = {'batch_int':v_batch, 'regaccessvec_bin':z_reg, 'deptaccessvec_bin':z_dept, 'arcmat_bin':x,
               'allocvec_int':n_alloc}
-
+##########
 # Add functions for all constraints; they return True if satisfied, False otherwise
+##########
 def ConstrBudget(varsetdict, optparamdict):
     """Indicates if the budget constraint is satisfied"""
     flag = False
@@ -382,6 +383,133 @@ def ConstrBudget(varsetdict, optparamdict):
     if budgetcost <= optparamdict['budget']: # Constraint satisfied
         flag = True
     return flag
+
+def ConstrRegionAccess(varsetdict, optparamdict):
+    """Indicates if the regional access constraints are satisfied"""
+    flag = True
+    M = optparamdict['Mconstant']
+    for aind, a in enumerate(optparamdict['deptnames']):
+        parentreg = GetRegion(a, optparamdict['dept_df'])
+        parentregind = optparamdict['regnames'].index(parentreg)
+        if varsetdict['allocvec_int'][aind] > M*varsetdict['regaccessvec_bin'][parentregind]:
+            flag = False
+    return flag
+
+def ConstrHQRegionAccess(varsetdict, optparamdict):
+    """Indicates if the regional HQ access is set"""
+    flag = True
+    reghqind = optparamdict['reghqind']
+    if varsetdict['regaccessvec_bin'][reghqind] != 1:
+        flag = False
+    return flag
+
+def ConstrLocationAccess(varsetdict, optparamdict):
+    """Indicates if the location/department access constraints are satisfied"""
+    flag = True
+    M = optparamdict['Mconstant']
+    for aind, a in enumerate(optparamdict['deptnames']):
+        if varsetdict['allocvec_int'][aind] > M*varsetdict['deptaccessvec_bin'][aind]:
+            flag = False
+    return flag
+
+def ConstrBatching(varsetdict, optparamdict):
+    """Indicates if the location/department access constraints are satisfied"""
+    flag = True
+    if optparamdict['batchsize']*varsetdict['batch_int'] < np.sum(varsetdict['allocvec_int']):
+        flag = False
+    return flag
+
+def ConstrArcsLeaveOnce(varsetdict, optparamdict):
+    """Each region can only be exited once"""
+    flag = True
+    x =  varsetdict['arcmat_bin']
+    for rind in range(len(optparamdict['regnames'])):
+        if np.sum(x[rind]) > 1:
+            flag = False
+    return flag
+
+def ConstrArcsPassThruHQ(varsetdict, optparamdict):
+    """Path must pass through the HQ region"""
+    flag = True
+    x =  varsetdict['arcmat_bin']
+    reghqind = optparamdict['reghqind']
+    reghqsum = np.sum(x[reghqind])*optparamdict['Mconstant']
+    if np.sum(x) > reghqsum:
+        flag = False
+    return flag
+
+def ConstrArcsFlowBalance(varsetdict, optparamdict):
+    """Each region must be entered and exited the same number of times"""
+    flag = True
+    x =  varsetdict['arcmat_bin']
+    for rind in range(len(optparamdict['regnames'])):
+        if np.sum(x[rind]) != np.sum(x[:, rind]):
+            flag = False
+    return flag
+
+def ConstrArcsRegAccess(varsetdict, optparamdict):
+    """Accessed regions must be on the path"""
+    flag = True
+    x =  varsetdict['arcmat_bin']
+    reghqind = optparamdict['reghqind']
+    for rind in range(len(optparamdict['regnames'])):
+        if (rind != reghqind) and varsetdict['regaccessvec_bin'][rind] > np.sum(x[rind]):
+            flag = False
+    return flag
+
+def CheckSubtour(varsetdict, optparamdict):
+    """Checks if matrix x has multiple tours"""
+    x = varsetdict['arcmat_bin']
+    tourlist = []
+    flag = True
+    if np.sum(x) == 0:
+        return flag
+    else:
+        # Start from HQ ind
+        reghqind = optparamdict['reghqind']
+        tourlist.append(reghqind)
+        nextregind = np.where(x[reghqind] == 1)[0][0]
+        while nextregind not in tourlist:
+            tourlist.append(nextregind)
+            nextregind = np.where(x[nextregind] == 1)[0][0]
+    if len(tourlist) < np.sum(x):
+        flag = False
+    return flag
+
+def GetTours(varsetdict, optparamdict):
+    """Return a list of lists, each of which is a tour of the arcs matrix in varsetdict"""
+    x = varsetdict['arcmat_bin']
+    tourlist = []
+    flag = True
+    tempx = x.copy()
+    while np.sum(tempx) > 0:
+        currtourlist = GetSubtour(tempx)
+        tourlist.append(currtourlist)
+        tempx[currtourlist] = tempx[currtourlist]*0
+    return tourlist
+
+def GetSubtour(x):
+    tourlist = []
+    startind = (np.sum(x, axis=1) != 0).argmax()
+    tourlist.append(startind)
+    nextind = np.where(x[startind] == 1)[0][0]
+    while nextind not in tourlist:
+        tourlist.append(nextind)
+        nextind = np.where(x[nextind] == 1)[0][0]
+    return tourlist
+
+
+
+
+
+varsetdict.keys()
+optparamdict.keys()
+
+ConstrBatching(varsetdict, optparamdict)
+
+
+
+
 
 ConstrBudget(varsetdict, optparamdict)
 
