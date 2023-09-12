@@ -168,7 +168,7 @@ def GetSenegalCSVData():
 # N, Y, SNnames, TNprovs, TNnames = GetSenegalDataMatrices(deidentify=False)
 dept_df, regcost_mat, testresults_df, regNames, manufNames = GetSenegalCSVData()
 deptNames = dept_df['Department'].sort_values().tolist()
-
+numReg = len(regNames)
 testdatadict = {'dataTbl':testresults_df.values.tolist(), 'type':'Tracked', 'TNnames':deptNames, 'SNnames':manufNames}
 testdatadict = util.GetVectorForms(testdatadict)
 N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNnames'], testdatadict['SNnames']
@@ -177,7 +177,9 @@ N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNn
 def GetRegion(dept_str, dept_df):
     '''Retrieves the region associated with a department'''
     return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
-
+def GetDeptChildren(reg_str, dept_df):
+    '''Retrieves the departments associated with a region'''
+    return dept_df.loc[dept_df['Region']==reg_str,'Department'].values.tolist()
 
 ##############
 ### Print some data summaries
@@ -286,7 +288,110 @@ def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
 
 time0 = time.time()
-getUtilityEstimate(n, lgdict, paramdict)
+utilavg, (utilCIlo, utilCIhi) = getUtilityEstimate(n, lgdict, paramdict)
 print(time.time() - time0)
+
+'''
+With numtruthdraws, numdatadraws = 10000, 500:
+~160 seconds
+utilavg, (utilCIlo, utilCIhi) =
+0.4068438943300112, (0.3931478722114097, 0.42053991644861277)
+0.42619338638365, (0.40593452427234133, 0.4464522484949587)
+'''
+##################
+# Now set up functions for constraints and variables of our program
+##################
+# Set these parameters per the program described in the paper
+# TODO: INSPECT CHOICES HERE LATER
+b, B, C, t, M = 50, 20, 500, 2, 500
+
+dept_df_sort = dept_df.sort_values('Department')
+
+FTEcostperday = 20
+f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
+f_reg = np.array(regcost_mat)*FTEcostperday
+
+optparamdict = {'batchcost':b, 'budget':C, 'pertestcost':t, 'Mconstant':M, 'batchsize':B,
+                'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
+                'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
+
+# What are the upper bounds for our department allocation variables?
+def GetUpperBounds(optparamdict):
+    """Returns a numpy vector of upper bounds for an inputted parameter dictionary"""
+    C, f_dept, f_reg = optparamdict['budget'], optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
+    b, t, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
+    deptnames, regnames, dept_df = optparamdict['deptnames'], optparamdict['regnames'], optparamdict['dept_df']
+    retvec = np.zeros(f_dept.shape[0])
+    for i in range(f_dept.shape[0]):
+        regparent = GetRegion(deptnames[i], dept_df)
+        regparentind = regnames.index(regparent)
+        if regparentind == reghqind:
+            retvec[i] = np.floor((C-f_dept[i]-b)/t)
+        else:
+            searchvec = np.delete( f_reg[:, regparentind], regparentind)
+            minfixedcost = np.min(searchvec)
+            retvec[i] = np.floor((C-f_dept[i]-b-minfixedcost)/t)
+    return retvec
+
+deptallocbds = GetUpperBounds(optparamdict)
+
+# TODO: INSPECT CHOICES HERE LATER
+# Example set of variables to inspect validity
+v_batch = 3
+n_alloc = np.zeros(numTN)
+n_alloc[36] = 20 # Rufisque, Dakar
+n_alloc[25] = 20 # Louga, Louga
+n_alloc[24] = 20 # Linguere, Louga
+n_alloc[2] = 20 # Bignona, Ziguinchor
+n_alloc[32] = 20 # Oussouye, Ziguinchor
+n_alloc[8] = 10 # Fatick, Fatick
+n_alloc[9] = 10 # Foundiougne, Fatick
+n_alloc[10] = 10 # Gossas, Fatick
+z_reg = np.zeros(numReg)
+z_reg[0] = 1 # Dakar
+z_reg[7] = 1 # Louga
+z_reg[13] = 1 # Ziguinchor
+z_reg[2] = 1 # Fatick
+z_dept = np.zeros(numTN)
+z_dept[36] = 1 # Rufisque, Dakar
+z_dept[25] = 1 # Louga, Louga
+z_dept[24] = 1 # Linguere, Louga
+z_dept[2] = 1 # Bignona, Ziguinchor
+z_dept[32] = 1 # Oussouye, Ziguinchor
+z_dept[8] = 1 # Fatick, Fatick
+z_dept[9] = 1 # Foundiougne, Fatick
+z_dept[10] = 1 # Gossas, Fatick
+
+x = np.zeros((numReg, numReg))
+x[0, 7] = 1 # Dakar to Louga
+x[7, 13] = 1 # Louga to Ziguinchor
+x[13, 2] = 1 # Ziguinchor to Fatick
+x[2, 0] = 1 # Fatick to Dakar
+# Generate a dictionary for variables
+varsetdict = {'batch_int':v_batch, 'regaccessvec_bin':z_reg, 'deptaccessvec_bin':z_dept, 'arcmat_bin':x,
+              'allocvec_int':n_alloc}
+
+# Add functions for all constraints; they return True if satisfied, False otherwise
+def ConstrBudget(varsetdict, optparamdict):
+    """Indicates if the budget constraint is satisfied"""
+    flag = False
+    budgetcost = varsetdict['batch_int']*optparamdict['batchcost'] + \
+        np.sum(varsetdict['deptaccessvec_bin']*optparamdict['deptfixedcostvec']) + \
+        np.sum(varsetdict['allocvec_int'] * optparamdict['pertestcost']) + \
+        np.sum(varsetdict['arcmat_bin'] * optparamdict['arcfixedcostmat'])
+    if budgetcost <= optparamdict['budget']: # Constraint satisfied
+        flag = True
+    return flag
+
+ConstrBudget(varsetdict, optparamdict)
+
+
+
+
+
+
+
+
+
 
 
