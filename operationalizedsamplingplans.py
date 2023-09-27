@@ -307,7 +307,7 @@ b, B, C, t, M = 50, 20, 700, 2, 500
 
 dept_df_sort = dept_df.sort_values('Department')
 
-FTEcostperday = 20
+FTEcostperday = 200
 f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
 f_reg = np.array(regcost_mat)*FTEcostperday
 
@@ -498,15 +498,91 @@ def GetSubtour(x):
         nextind = np.where(x[nextind] == 1)[0][0]
     return tourlist
 
+def GetSubtourMaxCardinality(varsetdict, optparamdict):
+    """Provide an upper bound on the number of regions included in any tour"""
+    mincostvec = [] # initialize
+    dept_df = optparamdict['dept_df']
+    t, C, b = optparamdict['pertestcost'], optparamdict['budget'], optparamdict['batchcost']
+    for r in range(len(optparamdict['regnames'])):
+        if r != optparamdict['reghqind']:
+            currReg = optparamdict['regnames'][r]
+            currmindeptcost = np.max(optparamdict['deptfixedcostvec'])
+            deptchildren = GetDeptChildren(currReg, dept_df)
+            for currdept in deptchildren:
+                currdeptind = optparamdict['deptnames'].index(currdept)
+                if optparamdict['deptfixedcostvec'][currdeptind] < currmin:
+                    currmindeptcost = optparamdict['deptfixedcostvec'][currdeptind]
+            currminentry = optparamdict['arcfixedcostmat'][np.where(optparamdict['arcfixedcostmat'][:, r] > 0,
+                                                                    optparamdict['arcfixedcostmat'][:, r],
+                                                                    np.inf).argmin(), r]
+            currminexit = optparamdict['arcfixedcostmat'][r, np.where(optparamdict['arcfixedcostmat'][r] > 0,
+                                                                    optparamdict['arcfixedcostmat'][r],
+                                                                    np.inf).argmin()]
+            mincostvec.append(currmindeptcost + currminentry + currminexit + t)
+        else:
+            mincostvec.append(0) # HQ is always included
+    # Now add regions until the budget is reached
+    currsum = 0
+    numregions = 0
+    nexttoadd = np.array(mincostvec).argmin()
+    while currsum + mincostvec[nexttoadd] <= C - b:
+        currsum += mincostvec[nexttoadd]
+        numregions += 1
+        _ = mincostvec.pop(nexttoadd)
+        nexttoadd = np.array(mincostvec).argmin()
+
+    return numregions
 
 
+def GetConvexInterpolation(xlist, flist, xmax):
+    """
+    Produces a convex interpolation for integers using the inputs x and function evaluations f_x.
+    xmax is the upper end of the interval.
+    """
+    retx = [0]
+    retf = [0]
+    lastxknot = 0
+    if 0 not in xlist:
+        currmaxslope = flist[0] / xlist[0] # TODO: NEED TO FIX TO ACCOUNT FOR INPUTS THAT DONT HAVE THE FIRST POINT
+    else:
+        currmaxslope = flist[1] / xlist[1]
+    for currx in range(1,xmax+1):
+        retx.append(currx)
+        if currx in xlist: # One of our knot points
+            lastxknot = currx
+            xlistind = xlist.index(currx)
+            lastfknot = flist[xlistind]
+            retf.append(lastfknot)
+            currmaxslope = (retf[-1] - retf[-2]) / (retx[-1] - retx[-2])
+        elif currx < np.max(xlist): # Interpolate between last knot and next knot
+            nextxknot, nextfknot = xlist[xlistind + 1], flist[xlistind + 1]
+            currminslope = (nextfknot-lastfknot)/(nextxknot-lastxknot)
+            currmax = min(lastfknot+currmaxslope,nextfknot)
+            currmin = lastfknot+currminslope
+            retf.append((currmax+currmin)/2)
+            lastxknot, lastfknot = currx, retf[-1]
+            currmaxslope = (retf[-1]-retf[-2])/(retx[-1]-retx[-2])
+        else: # We are beyond our last knot; use the minslope
+            retf.append(lastfknot+currminslope*(currx-lastxknot))
+
+    return retx, retf
+
+xmax = 20
+xlist = [1, 3, 5, xmax]
+flist = [4, 9, 11, 15]
+
+retx, retf = GetConvexInterpolation(xlist, flist, xmax)
+
+plt.plot(retx, retf)
+plt.ylim([0,25])
+plt.show()
 
 
 varsetdict.keys()
 optparamdict.keys()
 
 ConstrBatching(varsetdict, optparamdict)
-
+GetSubtourMaxCardinality(varsetdict, optparamdict)
 
 
 
