@@ -29,15 +29,15 @@ def showriskvalues():
     # plt.plot(x,y1)
     import matplotlib.ticker as mtick
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    plt.title('Values for selected risk terms\n$l=30\%$', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
-    plt.ylabel('Risk value', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.xlabel('SFP rate', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.97, '$m=0.05$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.84, '$m=0.2$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.675, '$m=0.4$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.50, '$m=0.6$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.21, '$m=0.95$', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
-    # plt.text(0.00, 0.47, 'Parabolic', fontdict={'fontsize': 12, 'fontname': 'Trebuchet MS'})
+    ax.tick_params(axis='both',labelsize=12)
+    plt.title('Values for selected risk terms\n$l=30\%$', fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.ylabel('Risk value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.xlabel('SFP rate', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.97, '$m=0.05$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.84, '$m=0.2$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.675, '$m=0.4$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.50, '$m=0.6$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.21, '$m=0.95$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -243,7 +243,7 @@ def casestudyplots_familiar():
     colorinds = [0, 1, 2]
     colors = np.array([colorsset(i) for i in colorinds])
     #colors = cm.rainbow(np.linspace(0, 0.8, 3))
-    labels = ['Heuristic', 'Uniform', 'Rudimentary']
+    labels = ['Heuristic', 'Uniform', 'Fixed']
     x = range(0, testmax + 1, testint)
     utilMax = -1
     for lst in util_arr:
@@ -267,7 +267,7 @@ def casestudyplots_familiar():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nRegular Setting', fontsize=titleSz)
+    plt.title('Utility from Heuristic vs. Uniform and Fixed Allocations\nRegular Setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 132, 156
     iv = 0.015
@@ -372,7 +372,7 @@ def casestudyplots_familiar_market():
     colorinds = [0, 1, 2]
     colors = np.array([colorsset(i) for i in colorinds])
     # colors = cm.rainbow(np.linspace(0, 0.8, 3))
-    labels = ['Heuristic', 'Uniform', 'Rudimentary']
+    labels = ['Heuristic', 'Uniform', 'Fixed']
     x = range(0, testmax + 1, testint)
     utilMax = -1
     for lst in util_arr:
@@ -396,7 +396,7 @@ def casestudyplots_familiar_market():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nRegular Setting with Market Term', fontsize=titleSz)
+    plt.title('Utility from Heuristic vs. Uniform and Fixed Allocations\nRegular Setting with Market Term', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 120, 146
     iv = 0.0015
@@ -518,7 +518,7 @@ def casestudyplots_exploratory():
     colorinds = [0, 1, 2]
     colors = np.array([colorsset(i) for i in colorinds])
     #colors = cm.rainbow(np.linspace(0, 0.8, 3))
-    labels = ['Heuristic', 'Uniform', 'Rudimentary']
+    labels = ['Heuristic', 'Uniform', 'Fixed']
     x = range(0, testmax + 1, testint)
     utilMax = -1
     for lst in util_arr:
@@ -542,7 +542,7 @@ def casestudyplots_exploratory():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nExploratory Setting', fontsize=titleSz)
+    plt.title('Utility from Heuristic vs. Uniform and Fixed Allocations\nExploratory Setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 120, 331
     iv = 0.03
@@ -676,7 +676,7 @@ def casestudyplots_exploratory_market():
     colorinds = [0, 1, 2]
     colors = np.array([colorsset(i) for i in colorinds])
     #colors = cm.rainbow(np.linspace(0, 0.8, 3))
-    labels = ['Heuristic', 'Uniform', 'Rudimentary']
+    labels = ['Heuristic', 'Uniform', 'Fixed']
     x = range(0, testmax + 1, testint)
     utilMax = -1
     for lst in util_arr:
@@ -700,7 +700,7 @@ def casestudyplots_exploratory_market():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nExploratory Setting with Market Term', fontsize=titleSz)
+    plt.title('Utility from Heuristic vs. Uniform and Fixed Allocations\nExploratory Setting with Market Term', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2 = 100, 133
     iv = 0.0032
@@ -1281,7 +1281,7 @@ def casestudyplots_exploratory_OLD():
 
     # Utility comparison plot
     colors = cm.rainbow(np.linspace(0, 0.8, 3))
-    labels = ['Heuristic', 'Uniform', 'Rudimentary']
+    labels = ['Heuristic', 'Uniform', 'Fixed']
     x = range(testInt, testMax + 1, testInt)
     margUtilGroupList = [heur_utillist, unif_utillist, rudi_utillist]
     utilMax = -1
@@ -1314,7 +1314,7 @@ def casestudyplots_exploratory_OLD():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nExploratory Setting', fontsize=titleSz)
+    plt.title('Utility from Heuristic vs. Uniform and Fixed Allocations\nExploratory Setting', fontsize=titleSz)
     # Add text box showing budgetary savings
     compUtilAvg = np.average(np.array(heur_utillist), axis=0)
     x2, x3 = 119, 325
@@ -1963,7 +1963,7 @@ def casestudyplots_exploratory_market_OLD():
 
     # Utility comparison plot
     colors = cm.rainbow(np.linspace(0, 0.8, 3))
-    labels = ['Heuristic', 'Uniform', 'Rudimentary']
+    labels = ['Heuristic', 'Uniform', 'Fixed']
     x = range(testInt, testMax + 1, testInt)
     margUtilGroupList = [heur_utillist, unif_utillist, rudi_utillist]
     utilMax = -1
@@ -1996,7 +1996,7 @@ def casestudyplots_exploratory_market_OLD():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Heuristic vs. Uniform and Rudimentary Allocations\nExploratory Setting with Market Term',
+    plt.title('Utility from Heuristic vs. Uniform and Fixed Allocations\nExploratory Setting with Market Term',
               fontsize=titleSz)
     # Add text box showing budgetary savings
     compUtilAvg = np.average(np.array(heur_utillist), axis=0)

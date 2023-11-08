@@ -577,6 +577,50 @@ plt.plot(retx, retf)
 plt.ylim([0,25])
 plt.show()
 
+# todo: REMOVE
+prizeNamesList = ['A', 'B', 'C']
+#prizeAmountsList = [1000, 1000, 1000]
+keyList = ['A', 'B', 'C', 'Dud', 'Master']
+
+prize0, prize1000, prize2000 = 0, 0, 0
+numSims = 1000
+
+for n in range(numSims):
+    # initialize the prize won
+    prizeResult = 0
+    # random.choice() returns an array, so we need to retieve the values of this array
+    (key1, key2) = np.random.choice(keyList, 2, replace=False)
+    #(prize1, prize2) = np.random.choice(prizeNamesList, 2, replace=False)
+    if key1 == 'A':
+        prizeResult += 1000
+    if key2 == 'B':
+        prizeResult += 1000
+    # Store our RV realization
+    if prizeResult==0:
+        prize0 += 1
+    elif prizeResult==1000:
+        prize1000 += 1
+    elif prizeResult==2000:
+        prize2000 += 1
+
+# Plot pmf
+x = [0, 1000, 2000]
+pmf = [prize0/numSims, prize1000/numSims, prize2000/numSims ]
+plt.bar(x, pmf)
+plt.ylim([0,1])
+plt.show()
+
+# Plot cdf
+cdf = np.cumsum(pmf)
+plt.plot(x, cdf)
+plt.title('')
+plt.ylim([0,1])
+plt.show()
+
+
+
+
+# todo: REMOVE
 
 varsetdict.keys()
 optparamdict.keys()
