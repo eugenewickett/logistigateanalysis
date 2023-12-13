@@ -140,12 +140,14 @@ def example_planutility():
         plt.show()
         plt.close()
         return
+    '''
     plot_marg_util(baseutil_arr, testmax=testmax, testint=testint,
                         colors=['blue', 'red', 'green'], titlestr='$v=1$',
                         labels=['Focused', 'Uniform', 'Adapted'])
     plot_marg_util(adjutil_arr, testmax=testmax, testint=testint,
                         colors=['blue', 'red', 'green'], titlestr='$v=10$',
                         labels=['Focused', 'Uniform', 'Adapted'])
+    '''
     # Per comment, cut off at 40 tests instead in order to capture more interesting elements
     testmax=40
     plot_marg_util(baseutil_arr[:, :-5], testmax=testmax, testint=testint,
