@@ -94,6 +94,8 @@ def example_planutility():
 
     def plot_marg_util(margutilarr, testmax, testint, al=0.6, titlestr='', type='cumulative', colors=[], dashes=[],
                        labels=[], utilmax=-1, linelabels=False):
+        figtup = (8, 5)
+        _ = plt.figure(figsize=figtup)
         if len(colors) == 0:
             colors = cm.rainbow(np.linspace(0, 1, margutilarr.shape[0]))
         if len(dashes) == 0:
@@ -352,7 +354,7 @@ def casestudyplots_familiar_market():
     plt.xlim([0., xMax])
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget\nExisting Setting with Market Term', fontsize=titleSz)
+    plt.title('Sampling Plan vs. Budget\nExisting Setting with Prioritization', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -398,7 +400,7 @@ def casestudyplots_familiar_market():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Utility-Informed, Uniform and Fixed Allocations\nExisting Setting with Market Term', fontsize=titleSz)
+    plt.title('Utility from Utility-Informed, Uniform and Fixed Allocations\nExisting Setting with Prioritization', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 120, 146
     iv = 0.0015
@@ -656,7 +658,7 @@ def casestudyplots_exploratory_market():
     plt.xlim([0., xMax])
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget\nAll-Provinces Setting with Market Term', fontsize=titleSz)
+    plt.title('Sampling Plan vs. Budget\nAll-Provinces Setting with Prioritization', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -702,7 +704,7 @@ def casestudyplots_exploratory_market():
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Utility-Informed, Uniform and Fixed Allocations\nAll-Provinces Setting with Market Term', fontsize=titleSz)
+    plt.title('Utility from Utility-Informed, Uniform and Fixed Allocations\nAll-Provinces Setting with Prioritization', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2 = 100, 133
     iv = 0.0032
@@ -2046,5 +2048,82 @@ def casestudyplots_exploratory_market_OLD():
                 kInd - 1) * testInt - (currCompInd*testInt)
     print(rudiSampSaved)
     '''
+
+    return
+
+
+def allocationsensitivityplots():
+    alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
+    for i in range(9):
+        alloc_list.append(
+            np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_' + str(i) + '.npy')))
+        util_avg_list.append(np.load(
+            os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_' + str(i) + '.npy')))
+        util_hi_list.append(
+            np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_' + str(i) + '.npy')))
+        util_lo_list.append(
+            np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_' + str(i) + '.npy')))
+
+    util_avg_list = np.array(util_avg_list)
+    util_hi_list = np.array(util_hi_list)
+    util_lo_list = np.array(util_lo_list)
+
+    colors = ['g', 'r']
+    dashes = [[5, 2], [2, 4]]
+    x1 = range(0, 401, 10)
+    yMax = 1.4
+    for desind in range(util_avg_list.shape[0]):
+        if desind == 0:
+            plt.plot(x1, util_hi_list[desind], dashes=dashes[0],
+                     linewidth=0.7, color=colors[0], label='Upper 95% CI')
+            plt.plot(x1, util_lo_list[desind], dashes=dashes[1], label='Lower 95% CI',
+                     linewidth=0.7, color=colors[1])
+        else:
+            plt.plot(x1, util_hi_list[desind], dashes=dashes[0],
+                     linewidth=0.7, color=colors[0])
+            plt.plot(x1, util_lo_list[desind], dashes=dashes[1],
+                     linewidth=0.7, color=colors[1])
+        # plt.fill_between(x1, margutilarr_lo[desind], margutilarr_hi[desind],
+        #                color=colors[desind], alpha=0.3 * al)
+    plt.legend()
+    plt.ylim([0., yMax])
+    plt.xlabel('Number of Tests')
+    plt.ylabel('Utility')
+    plt.title('Utility vs. Number of Tests\n10 Replications of Heuristic in Existing Setting')
+    plt.show()
+    plt.close()
+
+    ### PLOT OF ALLOCATIONS
+    testmax, testint = 400, 10
+    alloc_list = np.array(alloc_list)
+
+    colorsset = plt.get_cmap('Set1')
+    colorinds = [6, 1, 2, 3]
+    colors = np.array([colorsset(i) for i in colorinds])
+    x1 = range(0, 401, 10)
+
+    _ = plt.figure(figsize=(13, 8))
+    labels = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)']
+    for allocarr_ind in range(alloc_list.shape[0]):
+        allocarr = alloc_list[allocarr_ind]
+        if allocarr_ind == 0:
+            for tnind in range(allocarr.shape[0]):
+                plt.plot(x1, allocarr[tnind] * testint,
+                         linewidth=3, color=colors[tnind],
+                         label=labels[tnind], alpha=0.2)
+        else:
+            for tnind in range(allocarr.shape[0]):
+                plt.plot(x1, allocarr[tnind] * testint,
+                         linewidth=3, color=colors[tnind], alpha=0.2)
+    allocmax = 200
+    plt.legend(fontsize=12)
+    plt.ylim([0., allocmax])
+    plt.xlabel('Number of Tests', fontsize=14)
+    plt.ylabel('Test Node Allocation', fontsize=14)
+    plt.title('Test Node Allocation\n10 Replications of Heuristic in Existing Setting',
+              fontsize=18)
+    plt.tight_layout()
+    plt.show()
+    plt.close()
 
     return
