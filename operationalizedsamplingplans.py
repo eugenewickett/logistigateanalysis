@@ -154,6 +154,10 @@ def GetSenegalDataMatrices(deidentify=False):
 
 # Pull data from newly constructed CSV files
 def GetSenegalCSVData():
+    """
+    Travel out-and-back times for districts/departments are expressed as the proportion of a 10-hour workday, and
+    include a 30-minute collection time; traveling to every region outside the HQ region includes a 2.5 hour fixed cost
+    """
     dept_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/deptfixedcosts.csv', header=0)
     regcost_mat = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/regarcfixedcosts.csv', header=None)
     regNames = ['Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
@@ -175,10 +179,10 @@ N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNn
 (numTN, numSN) = N.shape # For later use
 
 def GetRegion(dept_str, dept_df):
-    '''Retrieves the region associated with a department'''
+    """Retrieves the region associated with a department"""
     return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
 def GetDeptChildren(reg_str, dept_df):
-    '''Retrieves the departments associated with a region'''
+    """Retrieves the departments associated with a region"""
     return dept_df.loc[dept_df['Region']==reg_str,'Department'].values.tolist()
 
 ##############
@@ -257,7 +261,7 @@ for i in range(tempQ.shape[0]):
 lgdict.update({'Q':tempQ})
 
 # Loss specification
-# TODO: INSPECT CHOICE HERE LATER
+# TODO: INSPECT CHOICE HERE LATER, ESP MARKETVEC
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
 
@@ -287,11 +291,12 @@ def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
 
+
+'''
 time0 = time.time()
 utilavg, (utilCIlo, utilCIhi) = getUtilityEstimate(n, lgdict, paramdict)
 print(time.time() - time0)
 
-'''
 With numtruthdraws, numdatadraws = 10000, 500:
 ~160 seconds
 utilavg, (utilCIlo, utilCIhi) =
@@ -302,8 +307,9 @@ utilavg, (utilCIlo, utilCIhi) =
 # Now set up functions for constraints and variables of our program
 ##################
 # Set these parameters per the program described in the paper
-# TODO: INSPECT CHOICES HERE LATER, ESP M
-b, B, C, t, M = 50, 20, 700, 2, 500
+# TODO: INSPECT CHOICES HERE LATER, ESP bigM
+batchcost, batchsize, B, ctest = 0, 700, 700, 2
+bigM = B*ctest
 
 dept_df_sort = dept_df.sort_values('Department')
 
@@ -311,29 +317,30 @@ FTEcostperday = 200
 f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
 f_reg = np.array(regcost_mat)*FTEcostperday
 
-optparamdict = {'batchcost':b, 'budget':C, 'pertestcost':t, 'Mconstant':M, 'batchsize':B,
+optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconstant':bigM, 'batchsize':batchsize,
                 'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
-# What are the upper bounds for our department allocation variables?
+# What are the upper bounds for our allocation variables?
 def GetUpperBounds(optparamdict):
     """Returns a numpy vector of upper bounds for an inputted parameter dictionary"""
-    C, f_dept, f_reg = optparamdict['budget'], optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
-    b, t, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
+    B, f_dept, f_reg = optparamdict['budget'], optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
+    batchcost, ctest, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
     deptnames, regnames, dept_df = optparamdict['deptnames'], optparamdict['regnames'], optparamdict['dept_df']
     retvec = np.zeros(f_dept.shape[0])
     for i in range(f_dept.shape[0]):
         regparent = GetRegion(deptnames[i], dept_df)
         regparentind = regnames.index(regparent)
         if regparentind == reghqind:
-            retvec[i] = np.floor((C-f_dept[i]-b)/t)
+            retvec[i] = np.floor((B-f_dept[i]-batchcost)/ctest)
         else:
-            searchvec = np.delete( f_reg[:, regparentind], regparentind)
-            minfixedcost = np.min(searchvec)
-            retvec[i] = np.floor((C-f_dept[i]-b-minfixedcost)/t)
+            regfixedcost = f_reg[reghqind,regparentind] + f_reg[regparentind, reghqind]
+            retvec[i] = np.floor((B-f_dept[i]-batchcost-regfixedcost)/ctest)
     return retvec
 
 deptallocbds = GetUpperBounds(optparamdict)
+print(deptNames[np.argmin(deptallocbds)], min(deptallocbds))
+print(deptNames[np.argmax(deptallocbds)], max(deptallocbds))
 
 # TODO: INSPECT CHOICES HERE LATER
 # Example set of variables to inspect validity
@@ -387,11 +394,11 @@ def ConstrBudget(varsetdict, optparamdict):
 def ConstrRegionAccess(varsetdict, optparamdict):
     """Indicates if the regional access constraints are satisfied"""
     flag = True
-    M = optparamdict['Mconstant']
+    bigM = optparamdict['Mconstant']
     for aind, a in enumerate(optparamdict['deptnames']):
         parentreg = GetRegion(a, optparamdict['dept_df'])
         parentregind = optparamdict['regnames'].index(parentreg)
-        if varsetdict['allocvec_int'][aind] > M*varsetdict['regaccessvec_bin'][parentregind]:
+        if varsetdict['allocvec_int'][aind] > bigM*varsetdict['regaccessvec_bin'][parentregind]:
             flag = False
     return flag
 
@@ -406,9 +413,9 @@ def ConstrHQRegionAccess(varsetdict, optparamdict):
 def ConstrLocationAccess(varsetdict, optparamdict):
     """Indicates if the location/department access constraints are satisfied"""
     flag = True
-    M = optparamdict['Mconstant']
+    bigM = optparamdict['Mconstant']
     for aind, a in enumerate(optparamdict['deptnames']):
-        if varsetdict['allocvec_int'][aind] > M*varsetdict['deptaccessvec_bin'][aind]:
+        if varsetdict['allocvec_int'][aind] > bigM*varsetdict['deptaccessvec_bin'][aind]:
             flag = False
     return flag
 
@@ -458,7 +465,7 @@ def ConstrArcsRegAccess(varsetdict, optparamdict):
     return flag
 
 def CheckSubtour(varsetdict, optparamdict):
-    """Checks if matrix x has multiple tours"""
+    """Checks if matrix x of varsetdict has multiple tours"""
     x = varsetdict['arcmat_bin']
     tourlist = []
     flag = True
@@ -489,6 +496,9 @@ def GetTours(varsetdict, optparamdict):
     return tourlist
 
 def GetSubtour(x):
+    '''
+    Returns a subtour for incidence matrix x
+    '''
     tourlist = []
     startind = (np.sum(x, axis=1) != 0).argmax()
     tourlist.append(startind)
@@ -502,7 +512,7 @@ def GetSubtourMaxCardinality(varsetdict, optparamdict):
     """Provide an upper bound on the number of regions included in any tour"""
     mincostvec = [] # initialize
     dept_df = optparamdict['dept_df']
-    t, C, b = optparamdict['pertestcost'], optparamdict['budget'], optparamdict['batchcost']
+    ctest, B, batchcost = optparamdict['pertestcost'], optparamdict['budget'], optparamdict['batchcost']
     for r in range(len(optparamdict['regnames'])):
         if r != optparamdict['reghqind']:
             currReg = optparamdict['regnames'][r]
@@ -518,14 +528,14 @@ def GetSubtourMaxCardinality(varsetdict, optparamdict):
             currminexit = optparamdict['arcfixedcostmat'][r, np.where(optparamdict['arcfixedcostmat'][r] > 0,
                                                                     optparamdict['arcfixedcostmat'][r],
                                                                     np.inf).argmin()]
-            mincostvec.append(currmindeptcost + currminentry + currminexit + t)
+            mincostvec.append(currmindeptcost + currminentry + currminexit + ctest)
         else:
             mincostvec.append(0) # HQ is always included
     # Now add regions until the budget is reached
     currsum = 0
     numregions = 0
     nexttoadd = np.array(mincostvec).argmin()
-    while currsum + mincostvec[nexttoadd] <= C - b:
+    while currsum + mincostvec[nexttoadd] <= B - batchcost:
         currsum += mincostvec[nexttoadd]
         numregions += 1
         _ = mincostvec.pop(nexttoadd)
