@@ -266,7 +266,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 10000, 500
+numtruthdraws, numdatadraws = 20000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -309,6 +309,7 @@ utilavg, (utilCIlo, utilCIhi) =
 # Set these parameters per the program described in the paper
 # TODO: INSPECT CHOICES HERE LATER, ESP bigM
 batchcost, batchsize, B, ctest = 0, 700, 700, 2
+batchsize = B
 bigM = B*ctest
 
 dept_df_sort = dept_df.sort_values('Department')
@@ -344,7 +345,7 @@ print(deptNames[np.argmax(deptallocbds)], max(deptallocbds))
 
 # TODO: INSPECT CHOICES HERE LATER
 # Example set of variables to inspect validity
-v_batch = 7
+v_batch = B
 n_alloc = np.zeros(numTN)
 n_alloc[36] = 20 # Rufisque, Dakar
 n_alloc[25] = 20 # Louga, Louga
@@ -353,7 +354,7 @@ n_alloc[2] = 20 # Bignona, Ziguinchor
 n_alloc[32] = 20 # Oussouye, Ziguinchor
 n_alloc[8] = 10 # Fatick, Fatick
 n_alloc[9] = 10 # Foundiougne, Fatick
-n_alloc[10] = 10 # Gossas, Fatick
+n_alloc[10] = 0 # Gossas, Fatick
 z_reg = np.zeros(numReg)
 z_reg[0] = 1 # Dakar
 z_reg[7] = 1 # Louga
@@ -367,7 +368,7 @@ z_dept[2] = 1 # Bignona, Ziguinchor
 z_dept[32] = 1 # Oussouye, Ziguinchor
 z_dept[8] = 1 # Fatick, Fatick
 z_dept[9] = 1 # Foundiougne, Fatick
-z_dept[10] = 1 # Gossas, Fatick
+z_dept[10] = 0 # Gossas, Fatick
 
 x = np.zeros((numReg, numReg))
 x[0, 7] = 1 # Dakar to Louga
@@ -544,65 +545,85 @@ def GetSubtourMaxCardinality(varsetdict, optparamdict):
     return numregions
 
 
-def GetConvexInterpolation(xlist, flist, xmax):
+def GetTriangleInterpolation(xlist, flist):
     """
-    Produces a convex interpolation for integers using the inputs x and function evaluations f_x.
-    xmax is the upper end of the interval.
+    Produces a concave interpolation for integers using the inputs x and function evaluations f_x.
+    xlist should have three values: [x_0, x_0 + 1, x_max], and f_x should have evaluations corresponding to these
+        three points.
+    Returns x and f_x lists for the inclusive range x = [x_0, x_max]
     """
-    retx = [0]
-    retf = [0]
-    lastxknot = 0
-    if 0 not in xlist:
-        currmaxslope = flist[0] / xlist[0] # TODO: NEED TO FIX TO ACCOUNT FOR INPUTS THAT DONT HAVE THE FIRST POINT
-    else:
-        currmaxslope = flist[1] / xlist[1]
-    for currx in range(1,xmax+1):
-        retx.append(currx)
-        if currx in xlist: # One of our knot points
-            lastxknot = currx
-            xlistind = xlist.index(currx)
-            lastfknot = flist[xlistind]
-            retf.append(lastfknot)
-            currmaxslope = (retf[-1] - retf[-2]) / (retx[-1] - retx[-2])
-        elif currx < np.max(xlist): # Interpolate between last knot and next knot
-            nextxknot, nextfknot = xlist[xlistind + 1], flist[xlistind + 1]
-            currminslope = (nextfknot-lastfknot)/(nextxknot-lastxknot)
-            currmax = min(lastfknot+currmaxslope,nextfknot)
-            currmin = lastfknot+currminslope
-            retf.append((currmax+currmin)/2)
-            lastxknot, lastfknot = currx, retf[-1]
-            currmaxslope = (retf[-1]-retf[-2])/(retx[-1]-retx[-2])
-        else: # We are beyond our last knot; use the minslope
-            retf.append(lastfknot+currminslope*(currx-lastxknot))
-
+    retx = np.arange(xlist[0], xlist[2]+1)
+    # First get left line
+    leftlineslope = (flist[1]-flist[0]) / (xlist[1]-xlist[0])
+    leftline = leftlineslope * np.array([retx[i]-retx[0] for i in range(retx.shape[0])]) + flist[0]
+    # Next get bottom line
+    bottomlineslope = (flist[2]-flist[1]) / (xlist[2]-xlist[1])
+    bottomline = bottomlineslope * np.array([retx[i] - retx[1] for i in range(retx.shape[0])]) + flist[1]
+    # Top line is just the largest value
+    topline = np.ones(retx.shape[0]) * flist[2]
+    # Upper vals is minimum of left and top lines
+    uppervals = np.minimum(leftline, topline)
+    # Interpolation is midpoint between upper and bottom lines
+    retf = np.average(np.vstack((uppervals, bottomline)),axis=0)
+    retf[0] = flist[0]  # Otherwise we are changing the first value
     return retx, retf
 
-xmax = 20
-xlist = [1, 3, 5, xmax]
-flist = [4, 9, 11, 15]
 
-retx, retf = GetConvexInterpolation(xlist, flist, xmax)
+''' TEST TRIANGLE INTERPOLATION
+xlist = [0,1,30]
+flist = [0,1,5]
+
+retx, retf = GetTriangleInterpolation(xlist, flist)
 
 plt.plot(retx, retf)
 plt.ylim([0,25])
 plt.show()
+'''
+
+# Here we obtain utility evaluations for 1 and n_bound tests at each department
+deptallocbds = GetUpperBounds(optparamdict)
+util_lo, util_lo_CI = [], []
+util_hi, util_hi_CI = [], []
+for i in range(len(deptNames)):
+    currbd = int(deptallocbds[i])
+    print('Getting utility for ' + deptNames[i] + ', at 1 test...')
+    n = np.zeros(numTN)
+    n[i] = 1
+    currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
+    print(currlo, currlo_CI)
+    util_lo.append(currlo)
+    util_lo_CI.append(currlo_CI)
+    print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
+    n[i] = currbd
+    currhi, currhi_CI = getUtilityEstimate(n, lgdict, paramdict)
+    print(currhi, currhi_CI)
+    util_hi.append(currhi)
+    util_hi_CI.append(currhi_CI)
 
 
 
+# todo: delete later!
+util_lo, util_lo_CI = np.ones(len(deptNames)), [(0.9,1.1) for i in range(len(deptNames))]
+util_hi, util_hi_CI = np.ones(len(deptNames))*8, [(7.9,8.1) for i in range(len(deptNames))]
+util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
+                        'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
 
 
+util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
 
+temp_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+'''
+Bakel,  0.03344590816593218 (0.03147292119474443, 0.03541889513711993), 
+        0.43105884100510217 (0.4231565417533414, 0.43896114025686295)
+Bambey  0.03446700691774751 (0.031950294730139106, 0.03698371910535592)
+
+'''
 
 
 varsetdict.keys()
 optparamdict.keys()
-
 ConstrBatching(varsetdict, optparamdict)
 GetSubtourMaxCardinality(varsetdict, optparamdict)
-
-
-
-
 ConstrBudget(varsetdict, optparamdict)
 
 
