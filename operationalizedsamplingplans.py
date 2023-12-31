@@ -509,8 +509,8 @@ def GetSubtour(x):
         nextind = np.where(x[nextind] == 1)[0][0]
     return tourlist
 
-def GetSubtourMaxCardinality(varsetdict, optparamdict):
-    """Provide an upper bound on the number of regions included in any tour"""
+def GetSubtourMaxCardinality(optparamdict):
+    """Provide an upper bound on the number of regions included in any tour; HQ region is included"""
     mincostvec = [] # initialize
     dept_df = optparamdict['dept_df']
     ctest, B, batchcost = optparamdict['pertestcost'], optparamdict['budget'], optparamdict['batchcost']
@@ -521,7 +521,7 @@ def GetSubtourMaxCardinality(varsetdict, optparamdict):
             deptchildren = GetDeptChildren(currReg, dept_df)
             for currdept in deptchildren:
                 currdeptind = optparamdict['deptnames'].index(currdept)
-                if optparamdict['deptfixedcostvec'][currdeptind] < currmin:
+                if optparamdict['deptfixedcostvec'][currdeptind] < currmindeptcost:
                     currmindeptcost = optparamdict['deptfixedcostvec'][currdeptind]
             currminentry = optparamdict['arcfixedcostmat'][np.where(optparamdict['arcfixedcostmat'][:, r] > 0,
                                                                     optparamdict['arcfixedcostmat'][:, r],
@@ -569,6 +569,37 @@ def GetTriangleInterpolation(xlist, flist):
     return retx, retf
 
 
+reglist = [0,1,2,12]
+
+
+import itertools
+list(itertools.permutations([1, 2, 3]))
+
+def FindTSPPathForGivenNodes(reglist, f_reg):
+    """
+    Returns an sequence of indices corresponding to the shortest path through all indices, per the traversal costs
+    featured in f_reg; uses brute force, so DO NOT use with lists larger than 10 elements or so
+    Uses first index as the HQ region, and assumes all paths must start and end at this region
+    """
+    HQind = reglist[0]
+    nonHQindlist = reglist[1:]
+    permutlist = list(itertools.permutations(nonHQindlist))
+    currbestcost = np.inf
+    currind = HQind
+    currbesttup = 0
+    for permuttuple in permutlist:
+        currpermutcost = 0
+        for ind in permuttuple:
+            currpermutcost += f_reg[currind, ind]
+            currind = ind
+        currpermutcost += f_reg[currind,HQind]
+        if currpermutcost < currbestcost:
+            currbestcost = currpermutcost
+            currbesttup = permuttuple
+    besttuplist = [currbesttup[i] for i in range(len(currbesttup))]
+    besttuplist.insert(0,HQind)
+    return besttuplist, currbestcost
+
 ''' TEST TRIANGLE INTERPOLATION
 xlist = [0,1,30]
 flist = [0,1,5]
@@ -608,11 +639,8 @@ util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':uti
 util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
 '''
 
+# Load previously calculated lower and upper utility evaluations
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
-util_df.keys()
-util_df['Util_lo']
-
-
 
 ''' RUNS 29-DEC
 Bakel       0.03344590816593218 (0.03147292119474443, 0.03541889513711993), 
@@ -712,6 +740,51 @@ Velingara   0.009936752611013233 (0.00939940371292991, 0.010474101509096556)
 Ziguinchor  0.0357728378865243 (0.034026750551074514, 0.037518925221974087)
 155         0.4271828935412305 (0.41682005238472186, 0.43754573469773916)
 '''
+
+### GENERATE PATHS FOR CASE STUDY ###
+# What is the upper bound on the number of regions in any feasible tour that uses at least one test?
+maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
+
+listinds2 = list(itertools.combinations(np.arange(1,numReg).tolist(),2))
+listinds3 = list(itertools.combinations(np.arange(1,numReg).tolist(),3))
+listinds4 = list(itertools.combinations(np.arange(1,numReg).tolist(),4))
+listinds5 = list(itertools.combinations(np.arange(1,numReg).tolist(),5))
+
+mastlist = listinds2 + listinds3 + listinds4 + listinds5
+len(mastlist)
+
+# For storing best sequences and their corresponding costs
+seqlist, seqcostlist = [], []
+
+for tup in mastlist:
+    tuplist = [tup[i] for i in range(len(tup))]
+    tuplist.insert(0,0) # Add HQind to front of list
+    bestseqlist, bestseqcost = FindTSPPathForGivenNodes(tuplist, f_reg)
+    seqlist.append(bestseqlist)
+    seqcostlist.append(bestseqcost)
+
+# For each path, generate a binary vector indicating if each district is accessible on that path
+# First get names of accessible districts
+distaccesslist = []
+for seq in seqlist:
+    currdistlist = []
+    for ind in seq:
+        currdist = GetDeptChildren(regNames[ind],dept_df)
+        currdistlist = currdistlist+currdist
+    currdistlist.sort()
+    distaccesslist.append(currdistlist)
+
+# Next translate each list of district names to binary vectors
+bindistaccessvectors = []
+for distlist in distaccesslist:
+    distbinvec = [int(i in distlist) for i in deptNames]
+    bindistaccessvectors.append(distbinvec)
+
+
+paths_df = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
+
+paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
+
 
 
 varsetdict.keys()
