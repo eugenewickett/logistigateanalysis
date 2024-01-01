@@ -550,7 +550,8 @@ def GetTriangleInterpolation(xlist, flist):
     Produces a concave interpolation for integers using the inputs x and function evaluations f_x.
     xlist should have three values: [x_0, x_0 + 1, x_max], and f_x should have evaluations corresponding to these
         three points.
-    Returns x and f_x lists for the inclusive range x = [x_0, x_max]
+    Returns x and f_x lists for the inclusive range x = [x_0, x_max], as well as intercept l, slope juncture k, and
+        slopes m1 and m2
     """
     retx = np.arange(xlist[0], xlist[2]+1)
     # First get left line
@@ -566,7 +567,18 @@ def GetTriangleInterpolation(xlist, flist):
     # Interpolation is midpoint between upper and bottom lines
     retf = np.average(np.vstack((uppervals, bottomline)),axis=0)
     retf[0] = flist[0]  # Otherwise we are changing the first value
-    return retx, retf
+
+    # Identify slope juncture k, where the line "bends", which is where leftline meets topline
+    # k is the first index where the new slope takes hold
+    k = leftline.tolist().index( next(x for x in leftline if x > topline[0]))
+    # Slopes can be identified using this k
+    # todo: WARNING: THIS MIGHT BREAK DOWN FOR EITHER VERY STRAIGHT OR VERY CURVED INTERPOLATIONS
+    m1 = retf[k-1] - retf[k-2]
+    m2 = retf[k+1] - retf[k]
+    # l is the zero intercept, using m1
+    l = retf[1] - m1
+
+    return retx, retf, l, k, m1, m2
 
 
 reglist = [0,1,2,12]
@@ -784,6 +796,32 @@ for distlist in distaccesslist:
 paths_df = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
 
 paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
+
+###################################
+###################################
+###################################
+# MAIN OPTIMIZATION BLOCK
+###################################
+###################################
+###################################
+
+# First need to obtain vectors of zero intercepts, junctures, and interpolation slopes for each of our Utilde evals
+#   at each district
+lvec, juncvec, m1vec, m2vec, = [], [], [], []
+for ind, row in util_df.iterrows():
+    currBound, loval, hival = row[1], row[2], row[4]
+    # Get interpolation values
+    _, _, l, k, m1, m2 = GetTriangleInterpolation([0, 1, currBound], [0, loval, hival])
+    lvec.append(l)
+    juncvec.append(k)
+    m1vec.append(m1)
+    m2vec.append(m2)
+
+# Make histograms of our interpolated values
+
+
+
+
 
 
 
