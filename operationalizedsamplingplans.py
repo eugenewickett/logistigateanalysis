@@ -19,6 +19,7 @@ from numpy.random import choice
 import random
 import scipy.stats as sps
 import scipy.special as spsp
+import scipy.optimize as spo
 
 
 # Pull data from analysis of first paper
@@ -797,6 +798,7 @@ paths_df = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinary
 
 paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
 
+# paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
 ###################################
 ###################################
 ###################################
@@ -818,26 +820,102 @@ for ind, row in util_df.iterrows():
     m2vec.append(m2)
 
 # Make histograms of our interpolated values
+plt.hist(lvec,color='orange')
+plt.title('Histogram of zero intercepts ($l$ values)')
+plt.xlabel('$l$')
+plt.ylabel('Count')
+plt.show()
+
+plt.hist(juncvec,color='darkgreen')
+plt.title('Histogram of slope junctures ($j$ values)')
+plt.xlabel('$j$')
+plt.ylabel('Count')
+plt.show()
+
+plt.hist(m1vec,color='crimson')
+plt.title('Histogram of first slopes ($m_1$ values)')
+plt.xlabel('$m_1$')
+plt.ylabel('Count')
+plt.xlim([0,0.025])
+plt.show()
+
+plt.hist(m2vec,color='pink')
+plt.title('Histogram of second slopes ($m_2$ values)')
+plt.xlabel('$m_2$')
+plt.ylabel('Count')
+plt.xlim([0,0.025])
+plt.show()
+
+# Now we construct our various program vectors and matrices per the scipy standards
+numPath = paths_df.shape[0]
+
+# Variable bounds
+lbounds = np.concatenate((np.zeros(numTN*3), np.zeros(numPath)))
+ubounds = np.concatenate((np.ones(numTN),
+                          np.array([juncvec[i]-1 for i in range(numTN)]),
+                          np.array(util_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
+                          np.ones(numPath)))
+
+optbounds = spo.Bounds(lbounds, ubounds)
+
+# Objective vector; negated as milp requires minimization
+optobjvec = -np.concatenate((np.array(lvec), np.array(m1vec), np.array(m2vec), np.zeros(numPath)))
+
+### Constraints
+# Build lower and upper inequality values
+optconstrlower = np.concatenate(( np.ones(numTN*4+1) * -np.inf, np.array([1])))
+optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN*2), np.array(juncvec), np.zeros(numTN), np.array([1])))
+
+# Build A matrix, from left to right
+# Build z district binaries first
+optconstraintmat1 = np.vstack((f_dept, -bigM*np.identity(numTN), np.identity(numTN), 0*np.identity(numTN),
+                              np.identity(numTN), np.zeros(numTN)))
+# n^' matrices
+optconstraintmat2 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), np.identity(numTN),
+                              0*np.identity(numTN), np.zeros(numTN)))
+# n^'' matrices
+optconstraintmat3 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), 0*np.identity(numTN),
+                              0*np.identity(numTN), np.zeros(numTN)))
+# path matrices
+optconstraintmat4 = np.vstack((np.array(seqcostlist), np.zeros((numTN*3, numPath)),  -np.array(bindistaccessvectors).T,
+                               np.ones(numPath)))
+
+optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4))
+
+from scipy.optimize import LinearConstraint
+from scipy.optimize import milp
+
+optconstraints = spo.LinearConstraint(optconstraintmat, optconstrlower, optconstrupper)
+
+# Define integrality for all variables
+optintegrality = np.ones_like(optobjvec)
+
+# Solve
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+soln = spoOutput.x
+z = soln[:numTN]
+n1 = soln[numTN:numTN*2]
+n2 = soln[numTN*2:numTN*3]
+x = soln[numTN*3:]
+np.where(x==1)
+
+# Make function for turning scipy output into our case study
+def scipytoallocation(spo_x):
+    z = spo_x[:numTN]
+    n1 = spo_x[numTN:numTN * 2]
+    n2 = spo_x[numTN * 2:numTN * 3]
+    x = spo_x[numTN * 3:]
+    path = seqlist[np.where(x == 1)[0][0]]
+    # Print district name with
+    for distind, distname in enumerate(deptNames):
+        print(str(distname)+':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
+    pathstr = ''
+    for regind in path:
+        pathstr = pathstr + str(regNames[regind]) + ' '
+    print('Path: '+ pathstr)
+    return
 
 
-
-
-
-
-
-varsetdict.keys()
-optparamdict.keys()
-ConstrBatching(varsetdict, optparamdict)
-GetSubtourMaxCardinality(varsetdict, optparamdict)
-ConstrBudget(varsetdict, optparamdict)
-
-
-
-
-
-
-
-
-
+scipytoallocation(spoOutput.x)
 
 
