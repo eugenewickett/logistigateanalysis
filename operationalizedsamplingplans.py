@@ -224,16 +224,17 @@ lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # TODO: INSPECT CHOICE HERE LATER
 numdraws = 5000
 lgdict['numPostSamples'] = numdraws
-np.random.seed(300)
+np.random.seed(300) # For first 4 sets of 5k draws
+np.random.seed(301) # For first 4 sets of 5k draws
 import time
 time0 = time.time()
 lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
 print(time.time()-time0)
 
 tempobj = lgdict['postSamples']
-np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws4'),tempobj)
+np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws20'),tempobj)
 import os
-file_name = "operationalizedsamplingplans/numpy_objects/draws3.npy"
+file_name = "operationalizedsamplingplans/numpy_objects/draws5.npy"
 file_stats = os.stat(file_name)
 print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
 '''
@@ -253,6 +254,7 @@ numboot = 20 # Average across each department in original data
 SNprobs = np.sum(lgdict['N'], axis=0) / np.sum(lgdict['N']) # SN sourcing probabilities across original data
 np.random.seed(44)
 Qvecs = np.random.multinomial(numboot, SNprobs, size=numTN - numvisitedTNs) / numboot
+# Only update rows with no observed traces
 Qindcount = 0
 tempQ = lgdict['Q'].copy()
 for i in range(tempQ.shape[0]):
@@ -267,7 +269,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 20000, 1000
+numtruthdraws, numdatadraws = 20000, 500
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -276,11 +278,6 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict)  # Check of used parameters
-
-# TODO: KEY INPUTS HERE
-n = np.zeros(numTN)
-n[5] = 50
-n[1] = 50
 
 def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     """
@@ -893,11 +890,6 @@ optintegrality = np.ones_like(optobjvec)
 # Solve
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 soln = spoOutput.x
-z = soln[:numTN]
-n1 = soln[numTN:numTN*2]
-n2 = soln[numTN*2:numTN*3]
-x = soln[numTN*3:]
-np.where(x==1)
 
 # Make function for turning scipy output into our case study
 def scipytoallocation(spo_x):
@@ -915,7 +907,147 @@ def scipytoallocation(spo_x):
     print('Path: '+ pathstr)
     return
 
-
 scipytoallocation(spoOutput.x)
 
+### Inspect our solution
+# How does our utility value compare with the real utility?
+n1 = spo_x[numTN:numTN * 2]
+n2 = spo_x[numTN * 2:numTN * 3]
+n_init = n1+n2
 
+u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
+'''
+spoOutput*-1: 2.7690379399483853
+u_init, u_init_CI: 3.5665632763261836, (3.4140124738789748, 3.7191140787733925)
+'''
+spoOutput.fun*-1
+
+
+# todo: WHY DONT' THE COMPARATIVE UTILITIES MAKE SENSE
+# Put answer into interpolated functions and check that the modified objective is working as intended
+tempobjval = 0
+for ind, row in util_df.iterrows():
+    currBound, loval, hival = row[1], row[2], row[4]
+    # Get interpolation values
+    retx, retf, l, k, m1, m2 = GetTriangleInterpolation([0, 1, currBound], [0, loval, hival])
+    tempobjval += retf[int(n_init[ind])]
+# MATCHES
+# tempobjval: 2.7690379399483893
+
+# Take hi vals of CIs and see how much the interpolations change
+tempobjval = 0
+for ind, row in util_df.iterrows():
+    currBound, loval, loval_CI, hival, hival_CI = row[1], row[2], row[3], row[4], row[5]
+    # Get interpolation values
+    retx, retf, l, k, m1, m2 = GetTriangleInterpolation([0, 1, currBound], [0, loval_CI[0], hival_CI[0]])
+    tempobjval += retf[int(n_init[ind])]
+print(tempobjval)
+'''
+HI-HI: 2.943311577936248
+LO-HI: 
+HI-LO: 2.6811757278907646
+LO-LO: 
+'''
+
+# Choose two correlated districts and check sum of utilities
+# iterate through Q
+currminnorm, currmaxnorm = 1e4, 0.
+ind1min, ind2min = 0, 0
+ind1max, ind2max = 0, 0
+for i, qvec in enumerate(Qvecs):
+    for j, qvec2 in enumerate(Qvecs):
+        if np.linalg.norm((qvec-qvec2))<currminnorm and i != j:
+            currminnorm = np.linalg.norm((qvec-qvec2))
+            ind1min, ind2min = i, j
+        if np.linalg.norm((qvec - qvec2)) > currmaxnorm and i != j:
+            currmaxnorm = np.linalg.norm((qvec - qvec2))
+            ind1max, ind2max = i, j
+
+ntemp = np.zeros(numTN)
+ntemp[ind1] = 100
+ntemp[ind2] = 100
+realutil, realutil_CI = getUtilityEstimate(ntemp, lgdict, paramdict)
+print(realutil, realutil_CI) #0.7081823056941321 (0.6771539227322343, 0.7392106886560299)
+
+ntemp = np.zeros(numTN)
+ntemp[ind1] = 100
+tildeutil1, tildutil1_CI = getUtilityEstimate(ntemp, lgdict, paramdict)
+print(tildeutil1, tildutil1_CI) #0.3484752939904734 (0.3414514488824043, 0.35549913909854247)
+
+ntemp = np.zeros(numTN)
+ntemp[ind2] = 100
+tildeutil2, tildutil2_CI = getUtilityEstimate(ntemp, lgdict, paramdict)
+print(tildeutil2, tildutil2_CI) #0.22789067301994415 (0.22005794709540005, 0.23572339894448824)
+
+# Equal to 81% of real combined utility
+
+# Look at just 2 tests
+ntemp = np.zeros(numTN)
+ntemp[ind1] = 1
+ntemp[ind2] = 1
+realutil, realutil_CI = getUtilityEstimate(ntemp, lgdict, paramdict)
+# realutil: 0.038604538610504946 (0.03658020869356271, 0.04062886852744718), for ind1, ind2 = 9, 16
+util_df.iloc[ind1][2] + util_df.iloc[ind2][2] # 0.036228213316286784
+util_df.iloc[ind1][3][0] + util_df.iloc[ind2][3][0] # 0.03333885619967347
+util_df.iloc[ind1][3][1] + util_df.iloc[ind2][3][1] # 0.039117570432900095
+
+# Look at *least* correlated districts
+# indices 1 and 15
+ntemp = np.zeros(numTN)
+ntemp[ind1max] = 100
+ntemp[ind2max] = 100
+realutil, realutil_CI = getUtilityEstimate(ntemp, lgdict, paramdict)
+print(realutil, realutil_CI) # 0.6592539560234485 (0.6296673529836117, 0.6888405590632853)
+
+ntemp = np.zeros(numTN)
+ntemp[ind1max] = 100
+tildeutil1, tildutil1_CI = getUtilityEstimate(ntemp, lgdict, paramdict)
+print(tildeutil1, tildutil1_CI) # 0.3904876268310815 (0.3826728966658255, 0.39830235699633754)
+
+ntemp = np.zeros(numTN)
+ntemp[ind2max] = 100
+tildeutil2, tildutil2_CI = getUtilityEstimate(ntemp, lgdict, paramdict)
+print(tildeutil2, tildutil2_CI) # 0.16721586913591047 (0.16076033432742953, 0.1736714039443914)
+# Equal to 85% of real combined utility
+
+# Iterate through a pair of samples and plot
+utilcomblist, utilcombCIlist = [0], [(0,0)]
+utilsumlist, utilsumCIlist = [0], [(0,0)]
+for i in range(20, 101, 20):
+    print('On ' + str(i) + ' tests...')
+    print('Location 8...')
+    n = np.zeros(numTN)
+    n[8] = i
+    util1, util1_CI = getUtilityEstimate(n, lgdict, paramdict)
+    print('Location 9...')
+    n = np.zeros(numTN)
+    n[9] = i
+    util2, util2_CI = getUtilityEstimate(n, lgdict, paramdict)
+    utilsumlist.append(util1+util2)
+    utilsumCIlist.append((util1_CI[0]+util2_CI[0], util1_CI[1]+util2_CI[1]))
+    # Holistic utility
+    print('Holistic...')
+    n = np.zeros(numTN)
+    n[8], n[9] = i, i
+    utilcomb, utilcomb_CI = getUtilityEstimate(n, lgdict, paramdict)
+    utilcomblist.append(utilcomb)
+    utilcombCIlist.append(utilcomb_CI)
+    # Update plotting lists
+    utilsumCIlistlower = [x[0] for x in utilsumCIlist]
+    utilsumCIlistupper = [x[1] for x in utilsumCIlist]
+    utilcombCIlistlower = [x[0] for x in utilcombCIlist]
+    utilcombCIlistupper = [x[1] for x in utilcombCIlist]
+    # Plot
+    plt.plot(range(0,i + 1,20), utilsumlist, color='darkgreen',linewidth=3)
+    plt.plot(range(0,i + 1,20), utilcomblist, color='black',linewidth=3)
+    plt.plot(range(0,i + 1,20), utilsumCIlistlower, color='lightgreen',linestyle='dashed')
+    plt.plot(range(0,i + 1,20), utilsumCIlistupper, color='lightgreen',linestyle='dashed')
+    plt.plot(range(0,i + 1,20), utilcombCIlistlower, color='gray',linestyle='dashed')
+    plt.plot(range(0,i + 1,20), utilcombCIlistupper, color='gray',linestyle='dashed')
+    plt.legend(['$U(n_1)+U(n_2)$','$U(n_1+n_2)$'])
+    plt.title('Equal tests at Locations 8 and 9\n20k truth, 500 data')
+    plt.xlabel('Number of tests at each location')
+    plt.show()
+
+
+# todo: (END OF COMPARING UTILITIES)
