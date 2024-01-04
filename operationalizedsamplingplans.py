@@ -19,8 +19,10 @@ from numpy.random import choice
 import random
 import scipy.stats as sps
 import scipy.special as spsp
-import scipy.optimize as spo
 
+import scipy.optimize as spo
+from scipy.optimize import LinearConstraint
+from scipy.optimize import milp
 
 # Pull data from analysis of first paper
 def GetSenegalDataMatrices(deidentify=False):
@@ -225,14 +227,14 @@ lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 numdraws = 5000
 lgdict['numPostSamples'] = numdraws
 np.random.seed(300) # For first 4 sets of 5k draws
-np.random.seed(301) # For first 4 sets of 5k draws
+np.random.seed(301) # For second 17 sets of 5k draws
 import time
 time0 = time.time()
 lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
 print(time.time()-time0)
 
 tempobj = lgdict['postSamples']
-np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws20'),tempobj)
+np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws32'),tempobj)
 import os
 file_name = "operationalizedsamplingplans/numpy_objects/draws5.npy"
 file_stats = os.stat(file_name)
@@ -241,7 +243,7 @@ print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
 
 # Load draws from files
 tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
-for drawgroupind in range(2, 5):
+for drawgroupind in range(2, 33):
     newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) +'.npy'))
     tempobj = np.concatenate((tempobj, newobj))
 lgdict['postSamples'] = tempobj
@@ -269,7 +271,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 20000, 500
+numtruthdraws, numdatadraws = 100000, 10
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -755,12 +757,13 @@ Ziguinchor  0.0357728378865243 (0.034026750551074514, 0.037518925221974087)
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
 maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
 
+listinds1 = list(itertools.combinations(np.arange(1,numReg).tolist(),1))
 listinds2 = list(itertools.combinations(np.arange(1,numReg).tolist(),2))
 listinds3 = list(itertools.combinations(np.arange(1,numReg).tolist(),3))
 listinds4 = list(itertools.combinations(np.arange(1,numReg).tolist(),4))
 listinds5 = list(itertools.combinations(np.arange(1,numReg).tolist(),5))
 
-mastlist = listinds2 + listinds3 + listinds4 + listinds5
+mastlist = listinds1 + listinds2 + listinds3 + listinds4 + listinds5
 len(mastlist)
 
 # For storing best sequences and their corresponding costs
@@ -790,9 +793,16 @@ for distlist in distaccesslist:
     distbinvec = [int(i in distlist) for i in deptNames]
     bindistaccessvectors.append(distbinvec)
 
+paths_df_all = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
 
-paths_df = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
+# Remove all paths with cost exceeding budget - min{district access} - sampletest
+paths_df = paths_df_all[paths_df_all['Cost'] < B].copy()
+# Update cost list and district access vectors to reflect these dropped paths
+seqlist_trim = paths_df['Sequence'].copy()
+seqcostlist_trim = paths_df['Cost'].copy()
+bindistaccessvectors_trim = np.array(paths_df['DistAccessBinaryVec'].tolist())
 
+# Save to avoid generating later
 paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
 
 # paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
@@ -815,6 +825,12 @@ for ind, row in util_df.iterrows():
     juncvec.append(k)
     m1vec.append(m1)
     m2vec.append(m2)
+    
+# What is the curvature, kappa, for our estimates?
+kappavec = [1-m2vec[i]/m1vec[i] for i in range(len(m2vec))]
+plt.hist(kappavec)
+plt.title('Histogram of $\kappa$ curvature at each district')
+plt.show()
 
 # Make histograms of our interpolated values
 plt.hist(lvec,color='orange')
@@ -874,13 +890,10 @@ optconstraintmat2 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.ide
 optconstraintmat3 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), 0*np.identity(numTN),
                               0*np.identity(numTN), np.zeros(numTN)))
 # path matrices
-optconstraintmat4 = np.vstack((np.array(seqcostlist), np.zeros((numTN*3, numPath)),  -np.array(bindistaccessvectors).T,
-                               np.ones(numPath)))
+optconstraintmat4 = np.vstack((np.array(seqcostlist_trim), np.zeros((numTN*3, numPath)),
+                               (-bindistaccessvectors_trim).T, np.ones(numPath)))
 
 optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4))
-
-from scipy.optimize import LinearConstraint
-from scipy.optimize import milp
 
 optconstraints = spo.LinearConstraint(optconstraintmat, optconstrlower, optconstrupper)
 
@@ -897,7 +910,7 @@ def scipytoallocation(spo_x):
     n1 = spo_x[numTN:numTN * 2]
     n2 = spo_x[numTN * 2:numTN * 3]
     x = spo_x[numTN * 3:]
-    path = seqlist[np.where(x == 1)[0][0]]
+    path = seqlist_trim[np.where(x == 1)[0][0]]
     # Print district name with
     for distind, distname in enumerate(deptNames):
         print(str(distname)+':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
@@ -1045,8 +1058,61 @@ for i in range(20, 101, 20):
     plt.plot(range(0,i + 1,20), utilcombCIlistlower, color='gray',linestyle='dashed')
     plt.plot(range(0,i + 1,20), utilcombCIlistupper, color='gray',linestyle='dashed')
     plt.legend(['$U(n_1)+U(n_2)$','$U(n_1+n_2)$'])
-    plt.title('Equal tests at Locations 8 and 9\n20k truth, 500 data')
+    plt.title('Equal tests at Locations 8 and 9\n150k truth, 500 data')
     plt.xlabel('Number of tests at each location')
+    plt.show()
+
+# Focus *only* at 100 tests for each location; compare the bound and holistic utility under different levels of
+#   truth draws
+truthdrawslist = [5000, 20000, 50000, 75000, 100000, 125000, 150000]
+utilcomblist, utilcombCIlist = [0 for x in range(len(truthdrawslist))], [(0,0) for x in range(len(truthdrawslist))]
+utilsumlist, utilsumCIlist = [0 for x in range(len(truthdrawslist))], [(0,0) for x in range(len(truthdrawslist))]
+tn1, tn2 = 8, 9
+for i, currtruthdraws in enumerate(truthdrawslist):
+    print('On ' + str(currtruthdraws) + ' draws...')
+    # Set MCMC draws to use in fast algorithm
+    numtruthdraws, numdatadraws = currtruthdraws, 300
+    # Get random subsets for truth and data draws
+    np.random.seed(58)
+    truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    # Get base loss
+    paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+    util.print_param_checks(paramdict)
+
+    # Get bounds and holistic utility
+    print('Location '+str(tn1) +'...')
+    n = np.zeros(numTN)
+    n[tn1] = 100
+    util1, util1_CI = getUtilityEstimate(n, lgdict, paramdict)
+    print('Location '+str(tn2) +'...')
+    n = np.zeros(numTN)
+    n[tn2] = 100
+    util2, util2_CI = getUtilityEstimate(n, lgdict, paramdict)
+    utilsumlist[i] = util1 + util2
+    utilsumCIlist[i] = (util1_CI[0] + util2_CI[0], util1_CI[1] + util2_CI[1])
+    # Holistic utility
+    print('Holistic...')
+    n = np.zeros(numTN)
+    n[tn1], n[tn2] = 100, 100
+    utilcomb, utilcomb_CI = getUtilityEstimate(n, lgdict, paramdict)
+    utilcomblist[i] = utilcomb
+    utilcombCIlist[i] = utilcomb_CI
+    # Update plotting lists
+    utilsumCIlistlower = [x[0] for x in utilsumCIlist]
+    utilsumCIlistupper = [x[1] for x in utilsumCIlist]
+    utilcombCIlistlower = [x[0] for x in utilcombCIlist]
+    utilcombCIlistupper = [x[1] for x in utilcombCIlist]
+    # Plot
+    plt.plot(truthdrawslist, utilsumlist, color='orange', linewidth=3)
+    plt.plot(truthdrawslist, utilcomblist, color='black', linewidth=3)
+    plt.plot(truthdrawslist, utilsumCIlistlower, color='bisque', linestyle='dashed')
+    plt.plot(truthdrawslist, utilsumCIlistupper, color='bisque', linestyle='dashed')
+    plt.plot(truthdrawslist, utilcombCIlistlower, color='gray', linestyle='dashed')
+    plt.plot(truthdrawslist, utilcombCIlistupper, color='gray', linestyle='dashed')
+    plt.legend(['$U(n_1)+U(n_2)$', '$U(n_1+n_2)$'])
+    plt.title('Bounds and real utility vs. truth draws\n100 tests at Locations 8 and 9, 300 MCMC data draws')
+    plt.xlabel('Number of truth draws')
     plt.show()
 
 
