@@ -17,6 +17,7 @@ import pandas as pd
 import numpy as np
 from numpy.random import choice
 import random
+import itertools
 import scipy.stats as sps
 import scipy.special as spsp
 
@@ -154,7 +155,6 @@ def GetSenegalDataMatrices(deidentify=False):
 
     return retDict['N'], retDict['Y'], retlist_MANUF, retlist_PROV, retlist_LOCAT
 
-
 # Pull data from newly constructed CSV files
 def GetSenegalCSVData():
     """
@@ -226,24 +226,27 @@ lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # TODO: INSPECT CHOICE HERE LATER
 numdraws = 5000
 lgdict['numPostSamples'] = numdraws
+
 np.random.seed(300) # For first 4 sets of 5k draws
 np.random.seed(301) # For second 17 sets of 5k draws
-import time
+np.random.seed(410) # For third 11 sets of 5k draws
+np.random.seed(466) # For fourth XX sets of 5k draws
+
 time0 = time.time()
 lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
 print(time.time()-time0)
 
 tempobj = lgdict['postSamples']
-np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws32'),tempobj)
-import os
-file_name = "operationalizedsamplingplans/numpy_objects/draws5.npy"
+np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws40'),tempobj)
+
+file_name = "operationalizedsamplingplans/numpy_objects/draws35.npy"
 file_stats = os.stat(file_name)
 print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
 '''
 
 # Load draws from files
 tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
-for drawgroupind in range(2, 33):
+for drawgroupind in range(2, 41):
     newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) +'.npy'))
     tempobj = np.concatenate((tempobj, newobj))
 lgdict['postSamples'] = tempobj
@@ -271,7 +274,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 100000, 10
+numtruthdraws, numdatadraws = 200000, 500
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -581,12 +584,6 @@ def GetTriangleInterpolation(xlist, flist):
     return retx, retf, l, k, m1, m2
 
 
-reglist = [0,1,2,12]
-
-
-import itertools
-list(itertools.permutations([1, 2, 3]))
-
 def FindTSPPathForGivenNodes(reglist, f_reg):
     """
     Returns an sequence of indices corresponding to the shortest path through all indices, per the traversal costs
@@ -797,6 +794,21 @@ paths_df_all = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBi
 
 # Remove all paths with cost exceeding budget - min{district access} - sampletest
 paths_df = paths_df_all[paths_df_all['Cost'] < B].copy()
+# Remaining paths require at least one district and one test in each visited region
+boolevec = [True for i in range(paths_df.shape[0])]
+for i in range(paths_df.shape[0]):
+    rowseq, rowcost = paths_df.iloc[i]['Sequence'], paths_df.iloc[i]['Cost']
+    mindistcost = 0
+    for reg in rowseq:
+        if reg != 0:
+            mindistcost += f_dept[[deptNames.index(x) for x in GetDeptChildren(regNames[reg], dept_df)]].min()
+    # Add district costs, testing costs, and path cost
+    mincost = mindistcost + (len(rowseq)-1)*ctest + rowcost
+    if mincost > B:
+        boolevec[i] = False
+
+paths_df = paths_df[boolevec]
+
 # Update cost list and district access vectors to reflect these dropped paths
 seqlist_trim = paths_df['Sequence'].copy()
 seqcostlist_trim = paths_df['Cost'].copy()
@@ -904,6 +916,7 @@ optintegrality = np.ones_like(optobjvec)
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 soln = spoOutput.x
 
+
 # Make function for turning scipy output into our case study
 def scipytoallocation(spo_x):
     z = spo_x[:numTN]
@@ -924,16 +937,102 @@ scipytoallocation(spoOutput.x)
 
 ### Inspect our solution
 # How does our utility value compare with the real utility?
-n1 = spo_x[numTN:numTN * 2]
-n2 = spo_x[numTN * 2:numTN * 3]
+n1 = soln[numTN:numTN * 2]
+n2 = soln[numTN * 2:numTN * 3]
 n_init = n1+n2
 
+time0 = time.time()
 u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
-'''
+time1 = time.time() - time0
+print(time1)
+''' 4-JAN
 spoOutput*-1: 2.7690379399483853
-u_init, u_init_CI: 3.5665632763261836, (3.4140124738789748, 3.7191140787733925)
+150k/500 draws:
+u_init, u_init_CI:  2.184450706985116, (2.0683527673839848, 2.300548646586247)
+                    2.189141541015074, (2.063870236586828, 2.3144128454433197)
+                    2.1243090313794664, (2.0040581266308806, 2.244559936128052)
+Bound is about 27% above actual value
+100k/500 draws:     (2.217041463121607, (2.098915436652165, 2.335167489591049))
+
 '''
 spoOutput.fun*-1
+
+def getUtilityEstimateSequential(n, lgdict, paramdict, zlevel=0.95, datadrawsiter=50, eps=0.2, maxdatadraws=2000):
+    """
+    Return a utility estimate average and confidence interval for allocation array n that is epsperc of the estimate,
+    by running data draws until the confidence interval is sufficiently small
+    """
+    testnum = int(np.sum(n))
+    des = n/testnum
+
+    # Modify paramdict to only have datadrawsiter data draws
+    masterlosslist = []
+    epsgap = 1.
+    itercount = 0
+    while len(masterlosslist) < maxdatadraws and epsgap > eps:
+        itercount += 1
+        print('Total number of data draws: ' + str(itercount*datadrawsiter))
+        paramdictcopy = paramdict.copy()
+
+        paramdictcopy.update({'datadraws':truthdraws[choice(np.arange(paramdict['truthdraws'].shape[0] ),
+                                                            size=datadrawsiter, replace=False)]})
+        util.print_param_checks(paramdictcopy)
+        masterlosslist = masterlosslist + sampf.sampling_plan_loss_list(des, testnum, lgdict, paramdictcopy)
+        currloss_avg, currloss_CI = sampf.process_loss_list(masterlosslist, zlevel=zlevel)
+        # Get current gap
+        epsgap = (currloss_CI[1]-currloss_CI[0])/(paramdict['baseloss'] -currloss_avg)
+        print('New utility range: ' + str(epsgap))
+
+    return paramdict['baseloss'] - currloss_avg, \
+           (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0]), masterlosslist
+
+
+
+
+time0 = time.time()
+u_init, u_init_CI = getUtilityEstimateSequential(n_init, lgdict, paramdict)
+runtime = time.time()-time0
+print(runtime)
+
+
+################################
+################################
+# COMPARATIVE CASE: GENERATE RANDOM PATHS AND ALLOCATIONS AND COMPARE WITH THE UTILITY OF OUR INITIAL FEASIBLE SOLUTION
+################################
+################################
+comparepathsdict = {}
+# Choose 2|D|+1 feasible paths
+np.random.seed(5588)
+numcomparepaths = 2*len(deptNames)+1
+compare_pathinds = np.random.choice(np.arange(numPath),size=numcomparepaths,replace=False)
+compare_pathinds.sort()
+comparepathsdict.update({'pathinds':compare_pathinds})
+# Iterate through each path and designate visited districts
+compare_visiteddistinds = []
+for pathind in comparepathsdict['pathinds'].tolist():
+    curr_distaccess = [0 for x in range(numTN)]
+    curr_regs = paths_df.iloc[pathind]['Sequence']
+    for r in curr_regs:
+        if r == 0: # Flip coin for HQ region
+            possDists = GetDeptChildren(regNames[r], dept_df)
+            possDistsInds = [deptNames.index(x) for x in possDists]
+            for distInd in possDistsInds:
+                curr_distaccess[distInd] = np.random.binomial(n=1,p=0.5)
+        else:
+            # Guarantee one district is visited
+            possDists = GetDeptChildren(regNames[r], dept_df)
+            defVisitDist = possDists[np.random.choice(np.arange(len(possDists)))]
+            curr_distaccess[deptNames.index(defVisitDist)] = 1
+            possDists.remove(defVisitDist)
+            possDistsInds = [deptNames.index(x) for x in possDists]
+            for distInd in possDistsInds:
+                curr_distaccess[distInd] = np.random.binomial(1, 0.5)
+    compare_visiteddistinds.append(curr_distaccess)
+comparepathsdict.update({'distaccesslist':compare_visiteddistinds})
+
+# Now allocate as many tests as possible uniformly random across available districts
+
+# todo: if a district has 0 tests, remove that district and allocate the savings to other districts
 
 
 # todo: WHY DONT' THE COMPARATIVE UTILITIES MAKE SENSE
@@ -1067,7 +1166,7 @@ for i in range(20, 101, 20):
 truthdrawslist = [5000, 20000, 50000, 75000, 100000, 125000, 150000]
 utilcomblist, utilcombCIlist = [0 for x in range(len(truthdrawslist))], [(0,0) for x in range(len(truthdrawslist))]
 utilsumlist, utilsumCIlist = [0 for x in range(len(truthdrawslist))], [(0,0) for x in range(len(truthdrawslist))]
-tn1, tn2 = 8, 9
+tn1, tn2 = 9, 16
 for i, currtruthdraws in enumerate(truthdrawslist):
     print('On ' + str(currtruthdraws) + ' draws...')
     # Set MCMC draws to use in fast algorithm
