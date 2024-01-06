@@ -274,7 +274,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 200000, 500
+numtruthdraws, numdatadraws = 200000, 100
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -1002,13 +1002,15 @@ print(runtime)
 ################################
 comparepathsdict = {}
 # Choose 2|D|+1 feasible paths
-np.random.seed(5588)
-numcomparepaths = 2*len(deptNames)+1
+np.random.seed(55893)
+numcomparepaths = 2*len(deptNames)+277
 compare_pathinds = np.random.choice(np.arange(numPath),size=numcomparepaths,replace=False)
 compare_pathinds.sort()
 comparepathsdict.update({'pathinds':compare_pathinds})
 # Iterate through each path and designate visited districts
 compare_visiteddistinds = []
+compare_allocvecs = []
+pathstoadd = 0 # For ensuring we end up with 93 feasible paths
 for pathind in comparepathsdict['pathinds'].tolist():
     curr_distaccess = [0 for x in range(numTN)]
     curr_regs = paths_df.iloc[pathind]['Sequence']
@@ -1017,7 +1019,7 @@ for pathind in comparepathsdict['pathinds'].tolist():
             possDists = GetDeptChildren(regNames[r], dept_df)
             possDistsInds = [deptNames.index(x) for x in possDists]
             for distInd in possDistsInds:
-                curr_distaccess[distInd] = np.random.binomial(n=1,p=0.5)
+                curr_distaccess[distInd] = np.random.binomial(n=1,p=0.25)
         else:
             # Guarantee one district is visited
             possDists = GetDeptChildren(regNames[r], dept_df)
@@ -1026,15 +1028,60 @@ for pathind in comparepathsdict['pathinds'].tolist():
             possDists.remove(defVisitDist)
             possDistsInds = [deptNames.index(x) for x in possDists]
             for distInd in possDistsInds:
-                curr_distaccess[distInd] = np.random.binomial(1, 0.5)
+                curr_distaccess[distInd] = np.random.binomial(1, 0.25)
     compare_visiteddistinds.append(curr_distaccess)
-comparepathsdict.update({'distaccesslist':compare_visiteddistinds})
+    # Add one test to each visited district
+    curr_n = np.array(curr_distaccess)
+    # Check if budget is feasible
+    budgetcost = np.sum(np.array(curr_distaccess) * f_dept) + paths_df.iloc[pathind]['Cost'] + curr_n.sum()*ctest
+    if budgetcost > B:
+        pathstoadd += 1
+    else: # Expend rest of budget on tests at random locations
+        teststoadd = int(np.floor((B-budgetcost)/ctest))
+        multinom_num = curr_n.sum()
+        multinom_vec = np.random.multinomial(n=teststoadd,pvals=np.ones(multinom_num)/multinom_num)
+        curraddind = 0
+        for t_ind in range(curr_n.shape[0]):
+            if curr_n[t_ind] > 0:
+                curr_n[t_ind] += multinom_vec[curraddind]
+                curraddind += 1
+    compare_allocvecs.append(curr_n)
+comparepathsdict.update({'visiteddistinds':compare_visiteddistinds})
+comparepathsdict.update({'allocvecs':compare_allocvecs})
+print(numcomparepaths-pathstoadd) # Target is 93
 
-# Now allocate as many tests as possible uniformly random across available districts
+# Save comparative paths dictionary
+'''
+comparepathsdict.update({'lossevals':[[] for x in range(numcomparepaths)]})
+with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
+    pickle.dump(comparepathsdict, fp)
+'''
 
-# todo: if a district has 0 tests, remove that district and allocate the savings to other districts
+#########
+# Load previous runs and append to those
+with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'rb') as fp:
+    comparepathsdict = pickle.load(fp)
 
 
+# Now loop through feasible budgets and get loss evaluations
+for temp_i, pathind in enumerate(comparepathsdict['pathinds'].tolist()):
+    budgetcost = (np.array(np.array(comparepathsdict['visiteddistinds']).tolist()[temp_i])*f_dept).sum() +\
+                 paths_df['Cost'].tolist()[pathind] +\
+                 np.array(np.array(comparepathsdict['allocvecs']).tolist()[temp_i]).sum()*ctest
+    if budgetcost <= B: # Get utility
+        print('Getting utility for comparative path '+str(temp_i)+'...')
+        curr_n = comparepathsdict['allocvecs'][temp_i]
+        currlosslist = sampf.sampling_plan_loss_list(curr_n/curr_n.sum(), curr_n.sum(), lgdict, paramdict)
+        comparepathsdict['lossevals'][temp_i] = comparepathsdict['lossevals'][temp_i] + currlosslist
+
+with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
+    pickle.dump(comparepathsdict, fp)
+
+
+
+########################
+########################
+########################
 # todo: WHY DONT' THE COMPARATIVE UTILITIES MAKE SENSE
 # Put answer into interpolated functions and check that the modified objective is working as intended
 tempobjval = 0
