@@ -1064,11 +1064,12 @@ with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'compare
 
 
 # Now loop through feasible budgets and get loss evaluations
+start_i = 6 # Denote which comparison path to begin with
 for temp_i, pathind in enumerate(comparepathsdict['pathinds'].tolist()):
     budgetcost = (np.array(np.array(comparepathsdict['visiteddistinds']).tolist()[temp_i])*f_dept).sum() +\
                  paths_df['Cost'].tolist()[pathind] +\
                  np.array(np.array(comparepathsdict['allocvecs']).tolist()[temp_i]).sum()*ctest
-    if budgetcost <= B: # Get utility
+    if budgetcost <= B and temp_i >= start_i: # Get utility
         print('Getting utility for comparative path '+str(temp_i)+'...')
         curr_n = comparepathsdict['allocvecs'][temp_i]
         currlosslist = sampf.sampling_plan_loss_list(curr_n/curr_n.sum(), curr_n.sum(), lgdict, paramdict)
