@@ -1063,7 +1063,7 @@ with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'compare
     comparepathsdict = pickle.load(fp)
 
 # Now loop through feasible budgets and get loss evaluations
-start_i = 46 # Denote which comparison path to begin with
+start_i = 201 # Denote which comparison path to begin with
 for temp_i, pathind in enumerate(comparepathsdict['pathinds'].tolist()):
     budgetcost = (np.array(np.array(comparepathsdict['visiteddistinds']).tolist()[temp_i])*f_dept).sum() +\
                  paths_df['Cost'].tolist()[pathind] +\
