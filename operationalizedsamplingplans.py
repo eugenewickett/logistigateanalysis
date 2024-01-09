@@ -1082,6 +1082,9 @@ utilhistvals = []
 for i in range(len(comparepathsdict['pathinds'].tolist())):
     utilhistvals.append(paramdict['baseloss'] - np.average(comparepathsdict['lossevals'][i]))
 plt.hist(utilhistvals)
+plt.title('Histogram of utilities for random paths and allocations')
+plt.xlabel('Utility')
+plt.ylabel('Count')
 plt.show()
 
 
