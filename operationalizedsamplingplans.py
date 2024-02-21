@@ -256,6 +256,8 @@ lgdict['postSamples'] = tempobj
 # Print inference from initial data
 util.plotPostSamples(lgdict, 'int90')
 
+
+
 # Generate Q via bootstrap sampling of known traces
 numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'],axis=1))
 numboot = 20 # Average across each department in original data
@@ -597,9 +599,9 @@ def FindTSPPathForGivenNodes(reglist, f_reg):
     nonHQindlist = reglist[1:]
     permutlist = list(itertools.permutations(nonHQindlist))
     currbestcost = np.inf
-    currind = HQind
     currbesttup = 0
     for permuttuple in permutlist:
+        currind = HQind
         currpermutcost = 0
         for ind in permuttuple:
             currpermutcost += f_reg[currind, ind]
@@ -875,9 +877,9 @@ plt.show()
 # interpolated junctures, as percentage of upper bound
 juncvecperc = [juncvec[i]/bds[i] for i in range(len(juncvec))]
 plt.hist(juncvecperc, color='darkgreen', density=True)
-plt.title('Histogram of interpolation junctures vs. allocation bounds\n($j_d/'+r'\bar{n}_d$ values)',
+plt.title('Histogram of interpolation junctures vs. allocation bounds\n($h_d/'+r'n^{max}_d$ values)',
           fontsize=14)
-plt.xlabel(r'$j_d/\bar{n}_d$',fontsize=12)
+plt.xlabel(r'$h_d/n^{max}_d$',fontsize=12)
 plt.ylabel('Density',fontsize=12)
 plt.show()
 
@@ -954,17 +956,21 @@ def scipytoallocation(spo_x, eliminateZeros=False):
     # Print district name with
     for distind, distname in enumerate(deptNames):
         if not eliminateZeros:
-            print(str(distname)+':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
+            print(str(distname)+', '+ str(round(juncvec[distind], 3))+', '+\
+                  str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'],3)) +':', str(int(z[distind])),
+                  str(int(n1[distind])), str(int(n2[distind])))
         else: # Remove zeros
             if int(z[distind])==1:
-                print(str(distname) + ':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
+                print(str(distname)+', '+str(round( juncvec[distind], 3))+', '+\
+                      str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'],3))+':', str(int(z[distind])),
+                      str(int(n1[distind])), str(int(n2[distind])))
     pathstr = ''
     for regind in path:
         pathstr = pathstr + str(regNames[regind]) + ' '
     print('Path: '+ pathstr)
     return
 
-scipytoallocation(spoOutput.x, eliminateZeros=True)
+scipytoallocation(spoOutput.x, eliminateZeros=False)
 
 ### Inspect our solution
 # How does our utility value compare with the real utility?
@@ -1120,16 +1126,17 @@ with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'compare
 utilhistvals = []
 for i in range(len(comparepathsdict['pathinds'].tolist())):
     utilhistvals.append(paramdict['baseloss'] - np.average(comparepathsdict['lossevals'][i]))
+
 fig, ax = plt.subplots()
 plt.hist(utilhistvals, color='dimgray', density=True)
-plt.title('Histogram of utilities for reasonable plans',
+plt.title('Histogram of utilities for benchmark plans',
           fontsize=14)
 plt.xlabel('Utility', fontsize=12)
 plt.ylabel('Density', fontsize=12)
 plt.axvline(x=2.7690379399483853, color='royalblue') # Approximation
 plt.axvline(x=2.184450706985116, color='black') # Evaluated utility
-ax.text(1.8,5,'$U(n^{(0)})$',fontsize=12)
-ax.text(2.26,5,r'$\sum_{d}\tilde{U}_{d}(n^{(0)})$',fontsize=12,color='royalblue')
+ax.text(1.79,5,'$U(n^{Best})$',fontsize=11)
+ax.text(2.24,5,r'$\sum_{d}\tilde{U}_{d}(n_{d}^{Best})$',fontsize=11,color='royalblue')
 plt.show()
 
 
@@ -1782,13 +1789,13 @@ ax.errorbar(xvals, utilvals, yerr=utilvalCIs, fmt='o',
             color='black', linewidth=0.5, capsize=1.5)
 # Plot the first Gain and noGain lists before everything else, so as to get the legend right
 lst = avoidcorrlist_Gain[0]
-ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
+ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='^', markersize=6,
                 color='darkgreen',linewidth=0.5,capsize=1.5,alpha=0.4)
 lst = avoidcorrlist_noGain[0]
 ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
                 color='crimson',linewidth=0.5,capsize=1.5,alpha=0.4)
 for lst in avoidcorrlist_Gain[1:]:
-    ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
+    ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='^', markersize=6,
                 color='darkgreen',linewidth=0.5,capsize=1.5,alpha=0.4)
 for lst in avoidcorrlist_noGain[1:]:
     ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
@@ -1796,9 +1803,9 @@ for lst in avoidcorrlist_noGain[1:]:
 ax.set(xticks=xvals, ylim=(1., 3.1))
 plt.xticks(fontsize=8)
 plt.ylabel('Utility', fontsize=12)
-plt.xlabel('Path index', fontsize=12)
-plt.title('Second stage utility evaluations', fontsize=14)
-plt.legend(['RIP Objective (UB)', 'RIP Utility', 'AVOIDCORR: Gain', 'AVOIDCORR: No Gain'],
+plt.xlabel('Candidate index', fontsize=12)
+plt.title('Candidate solution evaluations', fontsize=14)
+plt.legend(['IP-RP Objective', 'Candidate Utility', 'AVOIDCORR: Gain', 'AVOIDCORR: No Gain'],
            fontsize=9, loc='upper right')
 plt.axhline(2.184450706985116, xmin=0.06, color='gray', linestyle='dashed', alpha=0.4) # Evaluated utility
 plt.show()
