@@ -1,4 +1,4 @@
-from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
+from logistigate.logistigate import utilities as util  # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
 from logistigate.logistigate.priors import prior_normal_assort
 from logistigate.logistigate import lossfunctions as lf
@@ -11,6 +11,7 @@ import time
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+
 plt.rcParams["mathtext.fontset"] = "dejavuserif"
 plt.rcParams["font.family"] = "serif"
 import matplotlib.ticker as mtick
@@ -27,6 +28,7 @@ import scipy.optimize as spo
 from scipy.optimize import LinearConstraint
 from scipy.optimize import milp
 
+
 # Pull data from analysis of first paper
 def GetSenegalDataMatrices(deidentify=False):
     # Pull Senegal data from MQDB
@@ -40,10 +42,12 @@ def GetSenegalDataMatrices(deidentify=False):
     # 7 unique Province_Name_GROUPED; 23 unique Facility_Location_GROUPED; 66 unique Facility_Name_GROUPED
     # Remove 'Missing' and 'Unknown' labels
     SEN_df_2010 = SEN_df[(SEN_df['Date_Received'] == '7/12/2010') & (SEN_df['Manufacturer_GROUPED'] != 'Unknown') & (
-                SEN_df['Facility_Location_GROUPED'] != 'Missing')].copy()
-    tbl_SEN_G1_2010 = SEN_df_2010[['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+            SEN_df['Facility_Location_GROUPED'] != 'Missing')].copy()
+    tbl_SEN_G1_2010 = SEN_df_2010[
+        ['Province_Name_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
     tbl_SEN_G1_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G1_2010]
-    tbl_SEN_G2_2010 = SEN_df_2010[['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
+    tbl_SEN_G2_2010 = SEN_df_2010[
+        ['Facility_Location_GROUPED', 'Manufacturer_GROUPED', 'Final_Test_Conclusion']].values.tolist()
     tbl_SEN_G2_2010 = [[i[0], i[1], 1] if i[2] == 'Fail' else [i[0], i[1], 0] for i in tbl_SEN_G2_2010]
 
     SEN_df_2010.pivot_table(index=['Manufacturer_GROUPED'], columns=['Final_Test_Conclusion'],
@@ -157,6 +161,7 @@ def GetSenegalDataMatrices(deidentify=False):
 
     return retDict['N'], retDict['Y'], retlist_MANUF, retlist_PROV, retlist_LOCAT
 
+
 # Pull data from newly constructed CSV files
 def GetSenegalCSVData():
     """
@@ -173,27 +178,34 @@ def GetSenegalCSVData():
 
     return dept_df, regcost_mat, testresults_df, regNames, manufNames
 
+
 # Pull district-level Senegal data
 # N, Y, SNnames, TNprovs, TNnames = GetSenegalDataMatrices(deidentify=False)
 dept_df, regcost_mat, testresults_df, regNames, manufNames = GetSenegalCSVData()
 deptNames = dept_df['Department'].sort_values().tolist()
 numReg = len(regNames)
-testdatadict = {'dataTbl':testresults_df.values.tolist(), 'type':'Tracked', 'TNnames':deptNames, 'SNnames':manufNames}
+testdatadict = {'dataTbl': testresults_df.values.tolist(), 'type': 'Tracked', 'TNnames': deptNames,
+                'SNnames': manufNames}
 testdatadict = util.GetVectorForms(testdatadict)
 N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNnames'], testdatadict['SNnames']
-(numTN, numSN) = N.shape # For later use
+(numTN, numSN) = N.shape  # For later use
+
 
 def GetRegion(dept_str, dept_df):
     """Retrieves the region associated with a department"""
-    return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
+    return dept_df.loc[dept_df['Department'] == dept_str, 'Region'].values[0]
+
+
 def GetDeptChildren(reg_str, dept_df):
     """Retrieves the departments associated with a region"""
-    return dept_df.loc[dept_df['Region']==reg_str,'Department'].values.tolist()
+    return dept_df.loc[dept_df['Region'] == reg_str, 'Department'].values.tolist()
+
 
 ##############
 ### Print some data summaries
 # Overall data
-print('TNs by SNs: ' + str(N.shape) + '\nNumber of Obsvns: ' + str(N.sum()) + '\nNumber of SFPs: ' + str(Y.sum()) + '\nSFP rate: ' + str(round(
+print('TNs by SNs: ' + str(N.shape) + '\nNumber of Obsvns: ' + str(N.sum()) + '\nNumber of SFPs: ' + str(
+    Y.sum()) + '\nSFP rate: ' + str(round(
     Y.sum() / N.sum(), 4)))
 # TN-specific data
 print('Tests at TNs: ' + str(np.sum(N, axis=1)) + '\nSFPs at TNs: ' + str(np.sum(Y, axis=1)) + '\nSFP rates: ' + str(
@@ -201,7 +213,7 @@ print('Tests at TNs: ' + str(np.sum(N, axis=1)) + '\nSFPs at TNs: ' + str(np.sum
 
 # Set up logistigate dictionary
 lgdict = util.initDataDict(N, Y)
-lgdict.update({'TNnames':TNnames, 'SNnames':SNnames})
+lgdict.update({'TNnames': TNnames, 'SNnames': SNnames})
 
 ##############
 # Set up priors for SFP rates at nodes
@@ -211,9 +223,9 @@ SNpriorMean = np.repeat(spsp.logit(0.1), numSN)
 # TNs are randomly assigned risk, such that 5% are in the 1st and 7th levels, 10% are in the 2nd and 6th levels,
 #   20% are in the 3rd and 5th levels, and 30% are in the 4th level
 np.random.seed(15)
-tempCategs = np.random.multinomial(n=1, pvals=[0.05,0.1,0.2,0.3,0.2,0.1,0.05], size=numTN)
-riskMeans = [0.01,0.02,0.05,0.1,0.15,0.2,0.25]
-randriskinds = np.mod(np.where(tempCategs.flatten()==1), len(riskMeans))[0]
+tempCategs = np.random.multinomial(n=1, pvals=[0.05, 0.1, 0.2, 0.3, 0.2, 0.1, 0.05], size=numTN)
+riskMeans = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25]
+randriskinds = np.mod(np.where(tempCategs.flatten() == 1), len(riskMeans))[0]
 TNpriorMean = spsp.logit(np.array([riskMeans[randriskinds[i]] for i in range(numTN)]))
 # Concatenate prior means
 priorMean = np.concatenate((SNpriorMean, TNpriorMean))
@@ -250,18 +262,17 @@ print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
 # Load draws from files
 tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
 for drawgroupind in range(2, 41):
-    newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) +'.npy'))
+    newobj = np.load(
+        os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) + '.npy'))
     tempobj = np.concatenate((tempobj, newobj))
 lgdict['postSamples'] = tempobj
 # Print inference from initial data
 util.plotPostSamples(lgdict, 'int90')
 
-
-
 # Generate Q via bootstrap sampling of known traces
-numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'],axis=1))
-numboot = 20 # Average across each department in original data
-SNprobs = np.sum(lgdict['N'], axis=0) / np.sum(lgdict['N']) # SN sourcing probabilities across original data
+numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'], axis=1))
+numboot = 20  # Average across each department in original data
+SNprobs = np.sum(lgdict['N'], axis=0) / np.sum(lgdict['N'])  # SN sourcing probabilities across original data
 np.random.seed(44)
 Qvecs = np.random.multinomial(numboot, SNprobs, size=numTN - numvisitedTNs) / numboot
 # Only update rows with no observed traces
@@ -271,15 +282,16 @@ for i in range(tempQ.shape[0]):
     if lgdict['Q'][i].sum() == 0:
         tempQ[i] = Qvecs[Qindcount]
         Qindcount += 1
-lgdict.update({'Q':tempQ})
+lgdict.update({'Q': tempQ})
 
 # Loss specification
 # TODO: INSPECT CHOICE HERE LATER, ESP MARKETVEC
+markVec = np.concatenate((np.ones(numSN)*20, np.ones(numTN)))
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
-                                              marketvec=np.ones(numTN + numSN))
+                                              marketvec=markVec)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 200000, 100
+numtruthdraws, numdatadraws = 50000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -289,15 +301,17 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict)  # Check of used parameters
 
+
 def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     """
     Return a utility estimate average and confidence interval for allocation array n
     """
     testnum = int(np.sum(n))
-    des = n/testnum
+    des = n / testnum
     currlosslist = sampf.sampling_plan_loss_list(des, testnum, lgdict, paramdict)
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
-    return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
+    return paramdict['baseloss'] - currloss_avg, (
+    paramdict['baseloss'] - currloss_CI[1], paramdict['baseloss'] - currloss_CI[0])
 
 
 '''
@@ -318,17 +332,18 @@ utilavg, (utilCIlo, utilCIhi) =
 # TODO: INSPECT CHOICES HERE LATER, ESP bigM
 batchcost, batchsize, B, ctest = 0, 700, 700, 2
 batchsize = B
-bigM = B*ctest
+bigM = B * ctest
 
 dept_df_sort = dept_df.sort_values('Department')
 
 FTEcostperday = 200
-f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
-f_reg = np.array(regcost_mat)*FTEcostperday
+f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist()) * FTEcostperday
+f_reg = np.array(regcost_mat) * FTEcostperday
 
-optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconstant':bigM, 'batchsize':batchsize,
-                'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
-                'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
+optparamdict = {'batchcost': batchcost, 'budget': B, 'pertestcost': ctest, 'Mconstant': bigM, 'batchsize': batchsize,
+                'deptfixedcostvec': f_dept, 'arcfixedcostmat': f_reg, 'reghqname': 'Dakar', 'reghqind': 0,
+                'deptnames': deptNames, 'regnames': regNames, 'dept_df': dept_df_sort}
+
 
 # What are the upper bounds for our allocation variables?
 def GetUpperBounds(optparamdict):
@@ -341,11 +356,12 @@ def GetUpperBounds(optparamdict):
         regparent = GetRegion(deptnames[i], dept_df)
         regparentind = regnames.index(regparent)
         if regparentind == reghqind:
-            retvec[i] = np.floor((B-f_dept[i]-batchcost)/ctest)
+            retvec[i] = np.floor((B - f_dept[i] - batchcost) / ctest)
         else:
-            regfixedcost = f_reg[reghqind,regparentind] + f_reg[regparentind, reghqind]
-            retvec[i] = np.floor((B-f_dept[i]-batchcost-regfixedcost)/ctest)
+            regfixedcost = f_reg[reghqind, regparentind] + f_reg[regparentind, reghqind]
+            retvec[i] = np.floor((B - f_dept[i] - batchcost - regfixedcost) / ctest)
     return retvec
+
 
 deptallocbds = GetUpperBounds(optparamdict)
 print(deptNames[np.argmin(deptallocbds)], min(deptallocbds))
@@ -355,50 +371,53 @@ print(deptNames[np.argmax(deptallocbds)], max(deptallocbds))
 # Example set of variables to inspect validity
 v_batch = B
 n_alloc = np.zeros(numTN)
-n_alloc[36] = 20 # Rufisque, Dakar
-n_alloc[25] = 20 # Louga, Louga
-n_alloc[24] = 20 # Linguere, Louga
-n_alloc[2] = 20 # Bignona, Ziguinchor
-n_alloc[32] = 20 # Oussouye, Ziguinchor
-n_alloc[8] = 10 # Fatick, Fatick
-n_alloc[9] = 10 # Foundiougne, Fatick
-n_alloc[10] = 0 # Gossas, Fatick
+n_alloc[36] = 20  # Rufisque, Dakar
+n_alloc[25] = 20  # Louga, Louga
+n_alloc[24] = 20  # Linguere, Louga
+n_alloc[2] = 20  # Bignona, Ziguinchor
+n_alloc[32] = 20  # Oussouye, Ziguinchor
+n_alloc[8] = 10  # Fatick, Fatick
+n_alloc[9] = 10  # Foundiougne, Fatick
+n_alloc[10] = 0  # Gossas, Fatick
 z_reg = np.zeros(numReg)
-z_reg[0] = 1 # Dakar
-z_reg[7] = 1 # Louga
-z_reg[13] = 1 # Ziguinchor
-z_reg[2] = 1 # Fatick
+z_reg[0] = 1  # Dakar
+z_reg[7] = 1  # Louga
+z_reg[13] = 1  # Ziguinchor
+z_reg[2] = 1  # Fatick
 z_dept = np.zeros(numTN)
-z_dept[36] = 1 # Rufisque, Dakar
-z_dept[25] = 1 # Louga, Louga
-z_dept[24] = 1 # Linguere, Louga
-z_dept[2] = 1 # Bignona, Ziguinchor
-z_dept[32] = 1 # Oussouye, Ziguinchor
-z_dept[8] = 1 # Fatick, Fatick
-z_dept[9] = 1 # Foundiougne, Fatick
-z_dept[10] = 0 # Gossas, Fatick
+z_dept[36] = 1  # Rufisque, Dakar
+z_dept[25] = 1  # Louga, Louga
+z_dept[24] = 1  # Linguere, Louga
+z_dept[2] = 1  # Bignona, Ziguinchor
+z_dept[32] = 1  # Oussouye, Ziguinchor
+z_dept[8] = 1  # Fatick, Fatick
+z_dept[9] = 1  # Foundiougne, Fatick
+z_dept[10] = 0  # Gossas, Fatick
 
 x = np.zeros((numReg, numReg))
-x[0, 7] = 1 # Dakar to Louga
-x[7, 13] = 1 # Louga to Ziguinchor
-x[13, 2] = 1 # Ziguinchor to Fatick
-x[2, 0] = 1 # Fatick to Dakar
+x[0, 7] = 1  # Dakar to Louga
+x[7, 13] = 1  # Louga to Ziguinchor
+x[13, 2] = 1  # Ziguinchor to Fatick
+x[2, 0] = 1  # Fatick to Dakar
 # Generate a dictionary for variables
-varsetdict = {'batch_int':v_batch, 'regaccessvec_bin':z_reg, 'deptaccessvec_bin':z_dept, 'arcmat_bin':x,
-              'allocvec_int':n_alloc}
+varsetdict = {'batch_int': v_batch, 'regaccessvec_bin': z_reg, 'deptaccessvec_bin': z_dept, 'arcmat_bin': x,
+              'allocvec_int': n_alloc}
+
+
 ##########
 # Add functions for all constraints; they return True if satisfied, False otherwise
 ##########
 def ConstrBudget(varsetdict, optparamdict):
     """Indicates if the budget constraint is satisfied"""
     flag = False
-    budgetcost = varsetdict['batch_int']*optparamdict['batchcost'] + \
-        np.sum(varsetdict['deptaccessvec_bin']*optparamdict['deptfixedcostvec']) + \
-        np.sum(varsetdict['allocvec_int'] * optparamdict['pertestcost']) + \
-        np.sum(varsetdict['arcmat_bin'] * optparamdict['arcfixedcostmat'])
-    if budgetcost <= optparamdict['budget']: # Constraint satisfied
+    budgetcost = varsetdict['batch_int'] * optparamdict['batchcost'] + \
+                 np.sum(varsetdict['deptaccessvec_bin'] * optparamdict['deptfixedcostvec']) + \
+                 np.sum(varsetdict['allocvec_int'] * optparamdict['pertestcost']) + \
+                 np.sum(varsetdict['arcmat_bin'] * optparamdict['arcfixedcostmat'])
+    if budgetcost <= optparamdict['budget']:  # Constraint satisfied
         flag = True
     return flag
+
 
 def ConstrRegionAccess(varsetdict, optparamdict):
     """Indicates if the regional access constraints are satisfied"""
@@ -407,9 +426,10 @@ def ConstrRegionAccess(varsetdict, optparamdict):
     for aind, a in enumerate(optparamdict['deptnames']):
         parentreg = GetRegion(a, optparamdict['dept_df'])
         parentregind = optparamdict['regnames'].index(parentreg)
-        if varsetdict['allocvec_int'][aind] > bigM*varsetdict['regaccessvec_bin'][parentregind]:
+        if varsetdict['allocvec_int'][aind] > bigM * varsetdict['regaccessvec_bin'][parentregind]:
             flag = False
     return flag
+
 
 def ConstrHQRegionAccess(varsetdict, optparamdict):
     """Indicates if the regional HQ access is set"""
@@ -419,59 +439,66 @@ def ConstrHQRegionAccess(varsetdict, optparamdict):
         flag = False
     return flag
 
+
 def ConstrLocationAccess(varsetdict, optparamdict):
     """Indicates if the location/department access constraints are satisfied"""
     flag = True
     bigM = optparamdict['Mconstant']
     for aind, a in enumerate(optparamdict['deptnames']):
-        if varsetdict['allocvec_int'][aind] > bigM*varsetdict['deptaccessvec_bin'][aind]:
+        if varsetdict['allocvec_int'][aind] > bigM * varsetdict['deptaccessvec_bin'][aind]:
             flag = False
     return flag
+
 
 def ConstrBatching(varsetdict, optparamdict):
     """Indicates if the location/department access constraints are satisfied"""
     flag = True
-    if optparamdict['batchsize']*varsetdict['batch_int'] < np.sum(varsetdict['allocvec_int']):
+    if optparamdict['batchsize'] * varsetdict['batch_int'] < np.sum(varsetdict['allocvec_int']):
         flag = False
     return flag
+
 
 def ConstrArcsLeaveOnce(varsetdict, optparamdict):
     """Each region can only be exited once"""
     flag = True
-    x =  varsetdict['arcmat_bin']
+    x = varsetdict['arcmat_bin']
     for rind in range(len(optparamdict['regnames'])):
         if np.sum(x[rind]) > 1:
             flag = False
     return flag
 
+
 def ConstrArcsPassThruHQ(varsetdict, optparamdict):
     """Path must pass through the HQ region"""
     flag = True
-    x =  varsetdict['arcmat_bin']
+    x = varsetdict['arcmat_bin']
     reghqind = optparamdict['reghqind']
-    reghqsum = np.sum(x[reghqind])*optparamdict['Mconstant']
+    reghqsum = np.sum(x[reghqind]) * optparamdict['Mconstant']
     if np.sum(x) > reghqsum:
         flag = False
     return flag
 
+
 def ConstrArcsFlowBalance(varsetdict, optparamdict):
     """Each region must be entered and exited the same number of times"""
     flag = True
-    x =  varsetdict['arcmat_bin']
+    x = varsetdict['arcmat_bin']
     for rind in range(len(optparamdict['regnames'])):
         if np.sum(x[rind]) != np.sum(x[:, rind]):
             flag = False
     return flag
 
+
 def ConstrArcsRegAccess(varsetdict, optparamdict):
     """Accessed regions must be on the path"""
     flag = True
-    x =  varsetdict['arcmat_bin']
+    x = varsetdict['arcmat_bin']
     reghqind = optparamdict['reghqind']
     for rind in range(len(optparamdict['regnames'])):
         if (rind != reghqind) and varsetdict['regaccessvec_bin'][rind] > np.sum(x[rind]):
             flag = False
     return flag
+
 
 def CheckSubtour(varsetdict, optparamdict):
     """Checks if matrix x of varsetdict has multiple tours"""
@@ -492,6 +519,7 @@ def CheckSubtour(varsetdict, optparamdict):
         flag = False
     return flag
 
+
 def GetTours(varsetdict, optparamdict):
     """Return a list of lists, each of which is a tour of the arcs matrix in varsetdict"""
     x = varsetdict['arcmat_bin']
@@ -501,8 +529,9 @@ def GetTours(varsetdict, optparamdict):
     while np.sum(tempx) > 0:
         currtourlist = GetSubtour(tempx)
         tourlist.append(currtourlist)
-        tempx[currtourlist] = tempx[currtourlist]*0
+        tempx[currtourlist] = tempx[currtourlist] * 0
     return tourlist
+
 
 def GetSubtour(x):
     '''
@@ -517,9 +546,10 @@ def GetSubtour(x):
         nextind = np.where(x[nextind] == 1)[0][0]
     return tourlist
 
+
 def GetSubtourMaxCardinality(optparamdict):
     """Provide an upper bound on the number of regions included in any tour; HQ region is included"""
-    mincostvec = [] # initialize
+    mincostvec = []  # initialize
     dept_df = optparamdict['dept_df']
     ctest, B, batchcost = optparamdict['pertestcost'], optparamdict['budget'], optparamdict['batchcost']
     for r in range(len(optparamdict['regnames'])):
@@ -535,11 +565,11 @@ def GetSubtourMaxCardinality(optparamdict):
                                                                     optparamdict['arcfixedcostmat'][:, r],
                                                                     np.inf).argmin(), r]
             currminexit = optparamdict['arcfixedcostmat'][r, np.where(optparamdict['arcfixedcostmat'][r] > 0,
-                                                                    optparamdict['arcfixedcostmat'][r],
-                                                                    np.inf).argmin()]
+                                                                      optparamdict['arcfixedcostmat'][r],
+                                                                      np.inf).argmin()]
             mincostvec.append(currmindeptcost + currminentry + currminexit + ctest)
         else:
-            mincostvec.append(0) # HQ is always included
+            mincostvec.append(0)  # HQ is always included
     # Now add regions until the budget is reached
     currsum = 0
     numregions = 0
@@ -561,28 +591,28 @@ def GetTriangleInterpolation(xlist, flist):
     Returns x and f_x lists for the inclusive range x = [x_0, x_max], as well as intercept l, slope juncture k, and
         slopes m1 and m2
     """
-    retx = np.arange(xlist[0], xlist[2]+1)
+    retx = np.arange(xlist[0], xlist[2] + 1)
     # First get left line
-    leftlineslope = (flist[1]-flist[0]) / (xlist[1]-xlist[0])
-    leftline = leftlineslope * np.array([retx[i]-retx[0] for i in range(retx.shape[0])]) + flist[0]
+    leftlineslope = (flist[1] - flist[0]) / (xlist[1] - xlist[0])
+    leftline = leftlineslope * np.array([retx[i] - retx[0] for i in range(retx.shape[0])]) + flist[0]
     # Next get bottom line
-    bottomlineslope = (flist[2]-flist[1]) / (xlist[2]-xlist[1])
+    bottomlineslope = (flist[2] - flist[1]) / (xlist[2] - xlist[1])
     bottomline = bottomlineslope * np.array([retx[i] - retx[1] for i in range(retx.shape[0])]) + flist[1]
     # Top line is just the largest value
     topline = np.ones(retx.shape[0]) * flist[2]
     # Upper vals is minimum of left and top lines
     uppervals = np.minimum(leftline, topline)
     # Interpolation is midpoint between upper and bottom lines
-    retf = np.average(np.vstack((uppervals, bottomline)),axis=0)
+    retf = np.average(np.vstack((uppervals, bottomline)), axis=0)
     retf[0] = flist[0]  # Otherwise we are changing the first value
 
     # Identify slope juncture k, where the line "bends", which is where leftline meets topline
     # k is the first index where the new slope takes hold
-    k = leftline.tolist().index( next(x for x in leftline if x > topline[0]))
+    k = leftline.tolist().index(next(x for x in leftline if x > topline[0]))
     # Slopes can be identified using this k
     # todo: WARNING: THIS MIGHT BREAK DOWN FOR EITHER VERY STRAIGHT OR VERY CURVED INTERPOLATIONS
-    m1 = retf[k-1] - retf[k-2]
-    m2 = retf[k+1] - retf[k]
+    m1 = retf[k - 1] - retf[k - 2]
+    m2 = retf[k + 1] - retf[k]
     # l is the zero intercept, using m1
     l = retf[1] - m1
 
@@ -606,18 +636,17 @@ def FindTSPPathForGivenNodes(reglist, f_reg):
         for ind in permuttuple:
             currpermutcost += f_reg[currind, ind]
             currind = ind
-        currpermutcost += f_reg[currind,HQind]
+        currpermutcost += f_reg[currind, HQind]
         if currpermutcost < currbestcost:
             currbestcost = currpermutcost
             currbesttup = permuttuple
     besttuplist = [currbesttup[i] for i in range(len(currbesttup))]
-    besttuplist.insert(0,HQind)
+    besttuplist.insert(0, HQind)
     return besttuplist, currbestcost
 
 
+# todo: 22-FEB RESUME HERE
 
-
-'''
 # Here we obtain utility evaluations for 1 and n_bound tests at each department
 deptallocbds = GetUpperBounds(optparamdict)
 util_lo, util_lo_CI = [], []
@@ -641,11 +670,11 @@ for i in range(len(deptNames)):
 util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
                         'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
 
-util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
-'''
+util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals_SNemph.pkl'))
+
 
 # Load previously calculated lower and upper utility evaluations
-util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals_SNemph.pkl'))
 
 ''' RUNS 29-DEC
 Bakel       0.03344590816593218 (0.03147292119474443, 0.03541889513711993), 
@@ -750,21 +779,21 @@ Ziguinchor  0.0357728378865243 (0.034026750551074514, 0.037518925221974087)
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
 maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
 
-listinds1 = list(itertools.combinations(np.arange(1,numReg).tolist(),1))
-listinds2 = list(itertools.combinations(np.arange(1,numReg).tolist(),2))
-listinds3 = list(itertools.combinations(np.arange(1,numReg).tolist(),3))
-listinds4 = list(itertools.combinations(np.arange(1,numReg).tolist(),4))
-listinds5 = list(itertools.combinations(np.arange(1,numReg).tolist(),5))
+listinds1 = list(itertools.combinations(np.arange(1, numReg).tolist(), 1))
+listinds2 = list(itertools.combinations(np.arange(1, numReg).tolist(), 2))
+listinds3 = list(itertools.combinations(np.arange(1, numReg).tolist(), 3))
+listinds4 = list(itertools.combinations(np.arange(1, numReg).tolist(), 4))
+listinds5 = list(itertools.combinations(np.arange(1, numReg).tolist(), 5))
 
 mastlist = listinds1 + listinds2 + listinds3 + listinds4 + listinds5
-print('Number of feasible region combinations:',len(mastlist))
+print('Number of feasible region combinations:', len(mastlist))
 
 # For storing best sequences and their corresponding costs
 seqlist, seqcostlist = [], []
 
 for tup in mastlist:
     tuplist = [tup[i] for i in range(len(tup))]
-    tuplist.insert(0,0) # Add HQind to front of list
+    tuplist.insert(0, 0)  # Add HQind to front of list
     bestseqlist, bestseqcost = FindTSPPathForGivenNodes(tuplist, f_reg)
     seqlist.append(bestseqlist)
     seqcostlist.append(bestseqcost)
@@ -775,8 +804,8 @@ distaccesslist = []
 for seq in seqlist:
     currdistlist = []
     for ind in seq:
-        currdist = GetDeptChildren(regNames[ind],dept_df)
-        currdistlist = currdistlist+currdist
+        currdist = GetDeptChildren(regNames[ind], dept_df)
+        currdistlist = currdistlist + currdist
     currdistlist.sort()
     distaccesslist.append(currdistlist)
 
@@ -786,7 +815,7 @@ for distlist in distaccesslist:
     distbinvec = [int(i in distlist) for i in deptNames]
     bindistaccessvectors.append(distbinvec)
 
-paths_df_all = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
+paths_df_all = pd.DataFrame({'Sequence': seqlist, 'Cost': seqcostlist, 'DistAccessBinaryVec': bindistaccessvectors})
 
 # Remove all paths with cost exceeding budget - min{district access} - sampletest
 paths_df = paths_df_all[paths_df_all['Cost'] < B].copy()
@@ -799,7 +828,7 @@ for i in range(paths_df.shape[0]):
         if reg != 0:
             mindistcost += f_dept[[deptNames.index(x) for x in GetDeptChildren(regNames[reg], dept_df)]].min()
     # Add district costs, testing costs, and path cost
-    mincost = mindistcost + (len(rowseq)-1)*ctest + rowcost
+    mincost = mindistcost + (len(rowseq) - 1) * ctest + rowcost
     if mincost > B:
         boolevec[i] = False
 
@@ -813,8 +842,6 @@ seqlist_trim = seqlist_trim.reset_index()
 seqlist_trim = seqlist_trim.drop(columns='index')
 seqcostlist_trim = seqcostlist_trim.reset_index()
 seqcostlist_trim = seqcostlist_trim.drop(columns='index')
-
-
 
 # Save to avoid generating later
 # paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
@@ -842,18 +869,18 @@ for ind, row in util_df.iterrows():
     bds.append(currBound)
     lovals.append(loval)
     hivals.append(hival)
-    
+
 # What is the curvature, kappa, for our estimates?
-kappavec = [1-m2vec[i]/m1vec[i] for i in range(len(m2vec))]
+kappavec = [1 - m2vec[i] / m1vec[i] for i in range(len(m2vec))]
 plt.hist(kappavec)
 plt.title('Histogram of $\kappa$ curvature at each district')
 plt.show()
 
 # Make histograms of our interpolated values
-plt.hist(lvec,color='darkorange', density=True)
+plt.hist(lvec, color='darkorange', density=True)
 plt.title("Histogram of interpolation intercepts\n($l$ values)",
           fontsize=14)
-plt.xlabel(r'$l$',fontsize=12)
+plt.xlabel(r'$l$', fontsize=12)
 plt.ylabel('Density', fontsize=12)
 plt.show()
 
@@ -861,33 +888,33 @@ plt.show()
 plt.hist(juncvec, color='darkgreen', density=True)
 plt.title('Histogram of interpolation slope junctures\n($j$ values)',
           fontsize=14)
-plt.xlabel(r'$j$',fontsize=12)
-plt.ylabel('Density',fontsize=12)
+plt.xlabel(r'$j$', fontsize=12)
+plt.ylabel('Density', fontsize=12)
 plt.show()
 
 # interpolated junctures, as percentage of upper bound
-juncvecperc = [juncvec[i]/bds[i] for i in range(len(juncvec))]
+juncvecperc = [juncvec[i] / bds[i] for i in range(len(juncvec))]
 plt.hist(juncvecperc, color='darkgreen', density=True)
-plt.title('Histogram of interpolation junctures vs. allocation bounds\n($h_d/'+r'n^{max}_d$ values)',
+plt.title('Histogram of interpolation junctures vs. allocation bounds\n($h_d/' + r'n^{max}_d$ values)',
           fontsize=14)
-plt.xlabel(r'$h_d/n^{max}_d$',fontsize=12)
-plt.ylabel('Density',fontsize=12)
+plt.xlabel(r'$h_d/n^{max}_d$', fontsize=12)
+plt.ylabel('Density', fontsize=12)
 plt.show()
 
-plt.hist(m1vec,color='purple', density=True)
+plt.hist(m1vec, color='purple', density=True)
 plt.title('Histogram of first interpolation slopes\n($m^{(1)}$ values)'
           , fontsize=14)
 plt.xlabel('$m^{(1)}$', fontsize=12)
 plt.ylabel('Density', fontsize=12)
-plt.xlim([0,0.025])
+plt.xlim([0, 0.025])
 plt.show()
 
-plt.hist(m2vec,color='orchid', density=True)
+plt.hist(m2vec, color='orchid', density=True)
 plt.title('Histogram of second interpolation slopes\n($m^{(2)}$ values)'
           , fontsize=14)
 plt.xlabel('$m^{(2)}$', fontsize=12)
 plt.ylabel('Density', fontsize=12)
-plt.xlim([0,0.025])
+plt.xlim([0, 0.025])
 plt.show()
 
 # Now we construct our various program vectors and matrices per the scipy standards
@@ -895,9 +922,9 @@ numPath = paths_df.shape[0]
 
 # Variable bounds
 # Variable vectors are in form (z, n, x) [districts, allocations, paths]
-lbounds = np.concatenate((np.zeros(numTN*3), np.zeros(numPath)))
+lbounds = np.concatenate((np.zeros(numTN * 3), np.zeros(numPath)))
 ubounds = np.concatenate((np.ones(numTN),
-                          np.array([juncvec[i]-1 for i in range(numTN)]),
+                          np.array([juncvec[i] - 1 for i in range(numTN)]),
                           np.array(util_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
                           np.ones(numPath)))
 
@@ -908,21 +935,21 @@ optobjvec = -np.concatenate((np.array(lvec), np.array(m1vec), np.array(m2vec), n
 
 ### Constraints
 # Build lower and upper inequality values
-optconstrlower = np.concatenate(( np.ones(numTN*4+1) * -np.inf, np.array([1])))
-optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN*2), np.array(juncvec), np.zeros(numTN), np.array([1])))
+optconstrlower = np.concatenate((np.ones(numTN * 4 + 1) * -np.inf, np.array([1])))
+optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN * 2), np.array(juncvec), np.zeros(numTN), np.array([1])))
 
 # Build A matrix, from left to right
 # Build z district binaries first
-optconstraintmat1 = np.vstack((f_dept, -bigM*np.identity(numTN), np.identity(numTN), 0*np.identity(numTN),
-                              np.identity(numTN), np.zeros(numTN)))
+optconstraintmat1 = np.vstack((f_dept, -bigM * np.identity(numTN), np.identity(numTN), 0 * np.identity(numTN),
+                               np.identity(numTN), np.zeros(numTN)))
 # n^' matrices
-optconstraintmat2 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), np.identity(numTN),
-                              0*np.identity(numTN), np.zeros(numTN)))
+optconstraintmat2 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN), np.identity(numTN),
+                               0 * np.identity(numTN), np.zeros(numTN)))
 # n^'' matrices
-optconstraintmat3 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), 0*np.identity(numTN),
-                              0*np.identity(numTN), np.zeros(numTN)))
+optconstraintmat3 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN), 0 * np.identity(numTN),
+                               0 * np.identity(numTN), np.zeros(numTN)))
 # path matrices
-optconstraintmat4 = np.vstack((np.array(seqcostlist_trim).T, np.zeros((numTN*3, numPath)),
+optconstraintmat4 = np.vstack((np.array(seqcostlist_trim).T, np.zeros((numTN * 3, numPath)),
                                (-bindistaccessvectors_trim).T, np.ones(numPath)))
 
 optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4))
@@ -942,24 +969,25 @@ def scipytoallocation(spo_x, eliminateZeros=False):
     z = np.round(spo_x[:numTN])
     n1 = np.round(spo_x[numTN:numTN * 2])
     n2 = np.round(spo_x[numTN * 2:numTN * 3])
-    x = np.round(spo_x[numTN * 3:]) # Solver sometimes gives non-integer solutions
-    path = seqlist_trim.iloc[np.where(x == 1)[0][0],0]
+    x = np.round(spo_x[numTN * 3:])  # Solver sometimes gives non-integer solutions
+    path = seqlist_trim.iloc[np.where(x == 1)[0][0], 0]
     # Print district name with
     for distind, distname in enumerate(deptNames):
         if not eliminateZeros:
-            print(str(distname)+', '+ str(round(m2vec[distind], 5))+', '+\
-                  str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'],3)) +':', str(int(z[distind])),
+            print(str(distname) + ', ' + str(round(m2vec[distind], 5)) + ', ' + \
+                  str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'], 3)) + ':', str(int(z[distind])),
                   str(int(n1[distind])), str(int(n2[distind])))
-        else: # Remove zeros
-            if int(z[distind])==1:
-                print(str(distname)+', '+str(round( m2vec[distind], 5))+', '+\
-                      str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'],3))+':', str(int(z[distind])),
+        else:  # Remove zeros
+            if int(z[distind]) == 1:
+                print(str(distname) + ', ' + str(round(m2vec[distind], 5)) + ', ' + \
+                      str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'], 3)) + ':', str(int(z[distind])),
                       str(int(n1[distind])), str(int(n2[distind])))
     pathstr = ''
     for regind in path:
         pathstr = pathstr + str(regNames[regind]) + ' '
-    print('Path: '+ pathstr)
+    print('Path: ' + pathstr)
     return
+
 
 scipytoallocation(spoOutput.x, eliminateZeros=False)
 
@@ -967,8 +995,7 @@ scipytoallocation(spoOutput.x, eliminateZeros=False)
 # How does our utility value compare with the real utility?
 n1 = soln[numTN:numTN * 2]
 n2 = soln[numTN * 2:numTN * 3]
-n_init = n1+n2
-
+n_init = n1 + n2
 
 time0 = time.time()
 u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
@@ -986,7 +1013,8 @@ Bound is about 27% above actual value
 losslist:           
 '''
 # This objective is our overall upper bound for the problem
-UB = spoOutput.fun*-1
+UB = spoOutput.fun * -1
+
 
 def getUtilityEstimateSequential(n, lgdict, paramdict, zlevel=0.95, datadrawsiter=50, eps=0.2, maxdatadraws=2000):
     """
@@ -994,7 +1022,7 @@ def getUtilityEstimateSequential(n, lgdict, paramdict, zlevel=0.95, datadrawsite
     by running data draws until the confidence interval is sufficiently small
     """
     testnum = int(np.sum(n))
-    des = n/testnum
+    des = n / testnum
 
     # Modify paramdict to only have datadrawsiter data draws
     masterlosslist = []
@@ -1002,32 +1030,26 @@ def getUtilityEstimateSequential(n, lgdict, paramdict, zlevel=0.95, datadrawsite
     itercount = 0
     while len(masterlosslist) < maxdatadraws and epsgap > eps:
         itercount += 1
-        print('Total number of data draws: ' + str(itercount*datadrawsiter))
+        print('Total number of data draws: ' + str(itercount * datadrawsiter))
         paramdictcopy = paramdict.copy()
 
-        paramdictcopy.update({'datadraws':truthdraws[choice(np.arange(paramdict['truthdraws'].shape[0] ),
-                                                            size=datadrawsiter, replace=False)]})
+        paramdictcopy.update({'datadraws': truthdraws[choice(np.arange(paramdict['truthdraws'].shape[0]),
+                                                             size=datadrawsiter, replace=False)]})
         util.print_param_checks(paramdictcopy)
         masterlosslist = masterlosslist + sampf.sampling_plan_loss_list(des, testnum, lgdict, paramdictcopy)
         currloss_avg, currloss_CI = sampf.process_loss_list(masterlosslist, zlevel=zlevel)
         # Get current gap
-        epsgap = (currloss_CI[1]-currloss_CI[0])/(paramdict['baseloss'] -currloss_avg)
+        epsgap = (currloss_CI[1] - currloss_CI[0]) / (paramdict['baseloss'] - currloss_avg)
         print('New utility: ' + str(paramdict['baseloss'] - currloss_avg))
         print('New utility range: ' + str(epsgap))
 
     return paramdict['baseloss'] - currloss_avg, \
-           (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0]), masterlosslist
+           (paramdict['baseloss'] - currloss_CI[1], paramdict['baseloss'] - currloss_CI[0]), masterlosslist
 
-reglist_MostSFP = [0, regNames.index('Tambacounda'), regNames.index('Diourbel'),regNames.index('Saint-Louis'),
-                   regNames.index('Kolda'),regNames.index('Matam')]
+
+reglist_MostSFP = [0, regNames.index('Tambacounda'), regNames.index('Diourbel'), regNames.index('Saint-Louis'),
+                   regNames.index('Kolda'), regNames.index('Matam')]
 FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
-
-reglist_NearDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),regNames.index('Louga'),
-                   regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Fatick')]
-FindTSPPathForGivenNodes(reglist_NearDistricts, f_reg)
-
-reglist_MoreTests = [0, regNames.index('Thies'), regNames.index('Diourbel')]
-FindTSPPathForGivenNodes(reglist_MoreTests, f_reg)
 
 
 def utilityEstimatesForBenchmarks():
@@ -1057,7 +1079,7 @@ def utilityEstimatesForBenchmarks():
 
 time0 = time.time()
 u_init, u_init_CI, l_list = getUtilityEstimateSequential(n_init, lgdict, paramdict, eps=0.1)
-runtime = time.time()-time0
+runtime = time.time() - time0
 print(runtime)
 print(l_list)
 
@@ -1075,23 +1097,23 @@ l_list = [10.442996835781189, 10.390019889039577, 10.630643831687987, 10.3769109
 comparepathsdict = {}
 # Choose 2|D|+1 feasible paths
 np.random.seed(55893)
-numcomparepaths = 2*len(deptNames)+277
-compare_pathinds = np.random.choice(np.arange(numPath),size=numcomparepaths,replace=False)
+numcomparepaths = 2 * len(deptNames) + 277
+compare_pathinds = np.random.choice(np.arange(numPath), size=numcomparepaths, replace=False)
 compare_pathinds.sort()
-comparepathsdict.update({'pathinds':compare_pathinds})
+comparepathsdict.update({'pathinds': compare_pathinds})
 # Iterate through each path and designate visited districts
 compare_visiteddistinds = []
 compare_allocvecs = []
-pathstoadd = 0 # For ensuring we end up with 93 feasible paths
+pathstoadd = 0  # For ensuring we end up with 93 feasible paths
 for pathind in comparepathsdict['pathinds'].tolist():
     curr_distaccess = [0 for x in range(numTN)]
     curr_regs = paths_df.iloc[pathind]['Sequence']
     for r in curr_regs:
-        if r == 0: # Flip coin for HQ region
+        if r == 0:  # Flip coin for HQ region
             possDists = GetDeptChildren(regNames[r], dept_df)
             possDistsInds = [deptNames.index(x) for x in possDists]
             for distInd in possDistsInds:
-                curr_distaccess[distInd] = np.random.binomial(n=1,p=0.25)
+                curr_distaccess[distInd] = np.random.binomial(n=1, p=0.25)
         else:
             # Guarantee one district is visited
             possDists = GetDeptChildren(regNames[r], dept_df)
@@ -1105,22 +1127,22 @@ for pathind in comparepathsdict['pathinds'].tolist():
     # Add one test to each visited district
     curr_n = np.array(curr_distaccess)
     # Check if budget is feasible
-    budgetcost = np.sum(np.array(curr_distaccess) * f_dept) + paths_df.iloc[pathind]['Cost'] + curr_n.sum()*ctest
+    budgetcost = np.sum(np.array(curr_distaccess) * f_dept) + paths_df.iloc[pathind]['Cost'] + curr_n.sum() * ctest
     if budgetcost > B:
         pathstoadd += 1
-    else: # Expend rest of budget on tests at random locations
-        teststoadd = int(np.floor((B-budgetcost)/ctest))
+    else:  # Expend rest of budget on tests at random locations
+        teststoadd = int(np.floor((B - budgetcost) / ctest))
         multinom_num = curr_n.sum()
-        multinom_vec = np.random.multinomial(n=teststoadd,pvals=np.ones(multinom_num)/multinom_num)
+        multinom_vec = np.random.multinomial(n=teststoadd, pvals=np.ones(multinom_num) / multinom_num)
         curraddind = 0
         for t_ind in range(curr_n.shape[0]):
             if curr_n[t_ind] > 0:
                 curr_n[t_ind] += multinom_vec[curraddind]
                 curraddind += 1
     compare_allocvecs.append(curr_n)
-comparepathsdict.update({'visiteddistinds':compare_visiteddistinds})
-comparepathsdict.update({'allocvecs':compare_allocvecs})
-print(numcomparepaths-pathstoadd) # Target is 93
+comparepathsdict.update({'visiteddistinds': compare_visiteddistinds})
+comparepathsdict.update({'allocvecs': compare_allocvecs})
+print(numcomparepaths - pathstoadd)  # Target is 93
 
 # Save comparative paths dictionary
 '''
@@ -1135,15 +1157,15 @@ with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'compare
     comparepathsdict = pickle.load(fp)
 
 # Now loop through feasible budgets and get loss evaluations
-start_i = 201 # Denote which comparison path to begin with
+start_i = 201  # Denote which comparison path to begin with
 for temp_i, pathind in enumerate(comparepathsdict['pathinds'].tolist()):
-    budgetcost = (np.array(np.array(comparepathsdict['visiteddistinds']).tolist()[temp_i])*f_dept).sum() +\
-                 paths_df['Cost'].tolist()[pathind] +\
-                 np.array(np.array(comparepathsdict['allocvecs']).tolist()[temp_i]).sum()*ctest
-    if budgetcost <= B and temp_i >= start_i: # Get utility
-        print('Getting utility for comparative path '+str(temp_i)+'...')
+    budgetcost = (np.array(np.array(comparepathsdict['visiteddistinds']).tolist()[temp_i]) * f_dept).sum() + \
+                 paths_df['Cost'].tolist()[pathind] + \
+                 np.array(np.array(comparepathsdict['allocvecs']).tolist()[temp_i]).sum() * ctest
+    if budgetcost <= B and temp_i >= start_i:  # Get utility
+        print('Getting utility for comparative path ' + str(temp_i) + '...')
         curr_n = comparepathsdict['allocvecs'][temp_i]
-        currlosslist = sampf.sampling_plan_loss_list(curr_n/curr_n.sum(), curr_n.sum(), lgdict, paramdict)
+        currlosslist = sampf.sampling_plan_loss_list(curr_n / curr_n.sum(), curr_n.sum(), lgdict, paramdict)
         comparepathsdict['lossevals'][temp_i] = comparepathsdict['lossevals'][temp_i] + currlosslist
 
 with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
@@ -1160,10 +1182,10 @@ plt.title('Histogram of utilities for benchmark plans',
           fontsize=14)
 plt.xlabel('Utility', fontsize=12)
 plt.ylabel('Density', fontsize=12)
-plt.axvline(x=2.7690379399483853, color='royalblue') # Approximation
-plt.axvline(x=2.184450706985116, color='black') # Evaluated utility
-ax.text(1.79,5,'$U(n^{Best})$',fontsize=11)
-ax.text(2.24,5,r'$\sum_{d}\tilde{U}_{d}(n_{d}^{Best})$',fontsize=11,color='royalblue')
+plt.axvline(x=2.7690379399483853, color='royalblue')  # Approximation
+plt.axvline(x=2.184450706985116, color='black')  # Evaluated utility
+ax.text(1.79, 5, '$U(n^{Best})$', fontsize=11)
+ax.text(2.24, 5, r'$\sum_{d}\tilde{U}_{d}(n_{d}^{Best})$', fontsize=11, color='royalblue')
 plt.show()
 
 
@@ -1174,13 +1196,14 @@ def GetConstraintsWithDistrictCut(numVar, distIndsList):
     """
     Returns constraint object for use with scipy optimize, where each district in distIndsList must be 0
     """
-    newconstraintmat = np.zeros((len(distIndsList), numVar)) # size of new constraints matrix
+    newconstraintmat = np.zeros((len(distIndsList), numVar))  # size of new constraints matrix
     for rowInd, distInd in enumerate(distIndsList):
         newconstraintmat[rowInd, distInd] = 1.
     return spo.LinearConstraint(newconstraintmat, np.zeros(len(distIndsList)), np.zeros(len(distIndsList)))
 
-cutconstraints = GetConstraintsWithDistrictCut(numPath+numTN*3,[3])
-numVar = numPath + numTN*3
+
+cutconstraints = GetConstraintsWithDistrictCut(numPath + numTN * 3, [3])
+numVar = numPath + numTN * 3
 solTuple = np.round(spoOutput.x)
 solUtil = 2.184450706985116
 
@@ -1200,40 +1223,40 @@ def AvoidCorrelatedDistricts(solTuple, solUtil, constrToAdd=None):
     utilDropped = False
     while not utilDropped:
         # Identify most correlated pair of districts
-        eligDistInds = [ind for ind, x in enumerate(retTuple[:numTN].tolist()) if x>0]
+        eligDistInds = [ind for ind, x in enumerate(retTuple[:numTN].tolist()) if x > 0]
         eligDistQ = tempQ[eligDistInds]
         # Initialize low pair
         lowpair = (0, 1)
-        lownorm = np.linalg.norm(eligDistQ[0]-eligDistQ[1])
+        lownorm = np.linalg.norm(eligDistQ[0] - eligDistQ[1])
         # Identify smallest sourcing vector norm
         for i in range(len(eligDistInds)):
             for j in range(len(eligDistInds)):
                 if j > i:
-                    currnorm = np.linalg.norm(eligDistQ[i]-eligDistQ[j])
+                    currnorm = np.linalg.norm(eligDistQ[i] - eligDistQ[j])
                     if currnorm < lownorm:
                         lownorm = currnorm
                         lowpair = (i, j)
         # Identify district providing least to objective
         ind1, ind2 = eligDistInds[lowpair[0]], eligDistInds[lowpair[1]]
-        print('Most correlated pair: ' + str((ind1, ind2)) + ' (' + deptNames[ind1] + ', ' + deptNames[ind2] + ')' )
+        print('Most correlated pair: ' + str((ind1, ind2)) + ' (' + deptNames[ind1] + ', ' + deptNames[ind2] + ')')
         nprime1_1 = retTuple[numTN + ind1]
         nprime1_2 = retTuple[numTN * 2 + ind1]
         nprime2_1 = retTuple[numTN + ind2]
         nprime2_2 = retTuple[numTN * 2 + ind2]
         obj1 = lvec[ind1] + m1vec[ind1] * nprime1_1 + m2vec[ind1] * nprime1_2
         obj2 = lvec[ind2] + m1vec[ind2] * nprime2_1 + m2vec[ind2] * nprime2_2
-        if obj2 < obj1: # Drop ind2
+        if obj2 < obj1:  # Drop ind2
             print('Cut district: ' + str(ind2) + ' (' + str(deptNames[ind2]) + ')')
             distCutIndsList.append(ind2)
-        else: # Drop ind1
+        else:  # Drop ind1
             print('Cut district: ' + str(ind1) + ' (' + str(deptNames[ind1]) + ')')
             distCutIndsList.append(ind1)
         # Generate constraints for cut districts
         cutconstraints = GetConstraintsWithDistrictCut(numVar, distCutIndsList)
         if constrToAdd == None:
             curr_spoOutput = milp(c=optobjvec,
-                              constraints=(optconstraints, cutconstraints),
-                              integrality=optintegrality, bounds=optbounds)
+                                  constraints=(optconstraints, cutconstraints),
+                                  integrality=optintegrality, bounds=optbounds)
         else:
             curr_spoOutput = milp(c=optobjvec,
                                   constraints=(optconstraints, cutconstraints, constrToAdd),
@@ -1275,16 +1298,18 @@ distCutIndsList = [9]
 ####################
 # PART 2: TRY SOME RANDOM PATHS AND CHECK THEIR UTILITY
 ####################
-UB = spoOutput.fun*-1
+UB = spoOutput.fun * -1
+
 
 # Solve RP while setting each path to 1
 def GetConstraintsWithPathCut(numVar, pathInd):
     """
     Returns constraint object for use with scipy optimize, where each district in distIndsList must be 0
     """
-    newconstraintmat = np.zeros((1, numVar)) # size of new constraints matrix
-    newconstraintmat[0, numTN*3 + pathInd] = 1.
+    newconstraintmat = np.zeros((1, numVar))  # size of new constraints matrix
+    newconstraintmat[0, numTN * 3 + pathInd] = 1.
     return spo.LinearConstraint(newconstraintmat, np.ones(1), np.ones(1))
+
 
 # Prep a new paths dataframe
 
@@ -1293,27 +1318,26 @@ def GetConstraintsWithPathCut(numVar, pathInd):
 
 phase2paths_df = paths_df.copy()
 phase2paths_df.insert(3, 'RPobj', np.zeros(numPath).tolist(), True)
-phase2paths_df.insert(4, 'DistCost', np.zeros(numPath).tolist(), True) # Add column to store RP district costs
-phase2paths_df.insert(5, 'Uoracle', np.zeros(numPath).tolist(), True) # Add column for oracle evals
-phase2paths_df.insert(6, 'UoracleCIlo', [0 for i in range(numPath)], True) # Add column for oracle eval CIs
-phase2paths_df.insert(7, 'UoracleCIhi', [0 for i in range(numPath)], True) # Add column for oracle eval CIs
-
+phase2paths_df.insert(4, 'DistCost', np.zeros(numPath).tolist(), True)  # Add column to store RP district costs
+phase2paths_df.insert(5, 'Uoracle', np.zeros(numPath).tolist(), True)  # Add column for oracle evals
+phase2paths_df.insert(6, 'UoracleCIlo', [0 for i in range(numPath)], True)  # Add column for oracle eval CIs
+phase2paths_df.insert(7, 'UoracleCIhi', [0 for i in range(numPath)], True)  # Add column for oracle eval CIs
 
 # List of eligible path indices
 eligPathInds = []
 
 # RP for each path
 for pathind in range(numPath):
-    pathconstraint = GetConstraintsWithPathCut(numPath+numTN*3, pathind)
+    pathconstraint = GetConstraintsWithPathCut(numPath + numTN * 3, pathind)
     curr_spoOutput = milp(c=optobjvec, constraints=(optconstraints, pathconstraint),
                           integrality=optintegrality, bounds=optbounds)
-    phase2paths_df.iloc[pathind, 3] = curr_spoOutput.fun*-1
+    phase2paths_df.iloc[pathind, 3] = curr_spoOutput.fun * -1
     phase2paths_df.iloc[pathind, 4] = (curr_spoOutput.x[:numTN] * f_dept).sum()
-    if curr_spoOutput.fun*-1 > LB:
+    if curr_spoOutput.fun * -1 > LB:
         eligPathInds.append(pathind)
         scipytoallocation(np.round(curr_spoOutput.x), True)
-        #print('Path cost: ' + str(phase2paths_df.iloc[pathind, 1]))
-        #print('Path RP utility: ' + str(phase2paths_df.iloc[pathind, 3]))
+        # print('Path cost: ' + str(phase2paths_df.iloc[pathind, 1]))
+        # print('Path RP utility: ' + str(phase2paths_df.iloc[pathind, 3]))
 
 # Save to avoid generating later
 phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
@@ -1324,7 +1348,7 @@ eligPathInds = [1, 13, 14, 15, 18, 25, 26, 29, 31, 32, 33, 34, 35, 91, 92, 95, 9
 
 # Sort 30 remaining eligible paths by transit/collection trade-off distance from initial solution tradeoff
 initPathInd = np.where(soln[numTN * 3:] == 1)[0][0]
-eligPathInds.remove(initPathInd) # Don't need to reevaluate this
+eligPathInds.remove(initPathInd)  # Don't need to reevaluate this
 
 initPathCost = phase2paths_df.iloc[initPathInd, 1] + phase2paths_df.iloc[initPathInd, 4]
 initSol_transittestPerc = initPathCost / B
@@ -1335,11 +1359,12 @@ for currpathind in eligPathInds:
     # Get ratio
     currPathCost = phase2paths_df.iloc[currpathind, 1] + phase2paths_df.iloc[currpathind, 4]
     currSol_transittestPerc = currPathCost / B
-    eligPathRatioDists_forHist.append(initSol_transittestPerc-currSol_transittestPerc)
-    eligPathRatioDists.append(np.abs(initSol_transittestPerc-currSol_transittestPerc))
+    eligPathRatioDists_forHist.append(initSol_transittestPerc - currSol_transittestPerc)
+    eligPathRatioDists.append(np.abs(initSol_transittestPerc - currSol_transittestPerc))
 # Histogram of differences in transit/testing ratio
 plt.hist(eligPathRatioDists_forHist, color='darkblue')
-plt.title('Histogram of difference of transit-testing ratios for Phase II paths\nSubtracted from initial solution ratio (lower=more transit)')
+plt.title(
+    'Histogram of difference of transit-testing ratios for Phase II paths\nSubtracted from initial solution ratio (lower=more transit)')
 plt.xlabel('Difference')
 plt.ylabel('Count')
 plt.show()
@@ -1356,11 +1381,11 @@ eligPathInds_sort = [eligPathInds[x] for x in np.argsort(eligPathRatioDists).tol
 # phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
 
 for currpathind in eligPathInds_sort:
-    print('On path index: '+ str(currpathind)+'...')
+    print('On path index: ' + str(currpathind) + '...')
     pathconstraint = GetConstraintsWithPathCut(numPath + numTN * 3, currpathind)
     currpath_spoOutput = milp(c=optobjvec, constraints=(optconstraints, pathconstraint),
-                          integrality=optintegrality, bounds=optbounds)
-    curr_n = currpath_spoOutput.x[numTN:numTN*2] + currpath_spoOutput.x[numTN*2:numTN*3]
+                              integrality=optintegrality, bounds=optbounds)
+    curr_n = currpath_spoOutput.x[numTN:numTN * 2] + currpath_spoOutput.x[numTN * 2:numTN * 3]
     curr_u, curr_u_CI, curr_losslist = getUtilityEstimateSequential(curr_n, lgdict, paramdict, maxdatadraws=1000,
                                                                     eps=0.1)
     # Run AVOIDCORR to see if we can get a better fit
@@ -1384,7 +1409,7 @@ for currpathind in eligPathInds_sort:
 
 ###########
 # For plotting AVOIDCORR results
-avoidcorrlist_noGain = [] # Each item is a list of [ind, util, utilCIlo, utilCIhi]
+avoidcorrlist_noGain = []  # Each item is a list of [ind, util, utilCIlo, utilCIhi]
 # 'ind' corresponds to order in eligPathInds_sort, AFTER our initial feasible solution
 avoidcorrlist_noGain.append([2, 1.1365323217042338, 1.0810216850767471, 1.1920429583317205])
 avoidcorrlist_noGain.append([1, 1.8413414217440174, 1.7541682776352108, 1.928514565852824])
@@ -1417,9 +1442,7 @@ avoidcorrlist_noGain.append([28, 1.2688401546211114, 1.2199322422560446, 1.31774
 avoidcorrlist_noGain.append([29, 1.2697834033770796, 1.2156822459149161, 1.323884560839243])
 avoidcorrlist_noGain.append([30, 1.2936727204013998, 1.233567581324321, 1.3537778594784786])
 
-
-
-avoidcorrlist_Gain = [] # When improvements occur
+avoidcorrlist_Gain = []  # When improvements occur
 avoidcorrlist_Gain.append([12, 1.4046122168968633, 1.3362814309248137, 1.472943002868913])
 avoidcorrlist_Gain.append([20, 1.7710611380324792, 1.6856646041734447, 1.8564576718915138])
 avoidcorrlist_Gain.append([24, 1.3848606156474457, 1.32386079041531, 1.4458604408795814])
@@ -1703,7 +1726,6 @@ u, CI: 1.2936727204013998, (1.233567581324321, 1.3537778594784786)
 losslist: [10.932353358223665, 10.456391320029741, 10.723343526833533, 10.818915314661153, 10.573552519913617, 10.74954235704849, 10.300178570115175, 10.54621534109875, 10.490045735632972, 10.582698886813812, 10.613313950390381, 10.539877586179935, 10.361269826202765, 10.510965038931165, 11.029299575241712, 10.681700130537878, 10.815925937497942, 10.50484667389913, 10.71042439803913, 10.332993711090355, 10.482364741047618, 9.269562093892027, 10.386853591566332, 10.617551252746948, 10.601626736310793, 10.261456016077288, 10.633558218248487, 10.566300267420802, 10.732636658393208, 9.837906111256498, 10.603837224184566, 10.588981372799818, 10.703359589913582, 10.488086632339874, 10.18677151149425, 10.790087330917148, 10.646307605752941, 10.622234253579991, 10.73731350581978, 10.14001132144521, 10.65211005682199, 10.507660668317548, 10.632088314605712, 10.569166222114234, 10.649705705209099, 10.38630602237608, 10.642085196365585, 10.924767618190744, 10.492339625973921, 10.64946943540468, 10.472114060851373, 10.536627440282057, 10.49593989963511, 10.35535513895903, 10.965825808517055, 10.641617066416437, 9.997290366031013, 9.860323945749398, 10.608035880515677, 10.70476781687169, 10.81595680033086, 10.329353666875402, 10.407457888256689, 9.522613275294866, 10.538116487298252, 10.569120353461841, 10.596967253444095, 10.667878726734047, 10.631460765344599, 10.502589511434824, 9.170807350698858, 10.525335489635596, 10.886129397216907, 10.727203950846182, 10.709148118351157, 10.41620341596394, 10.766400591726889, 10.585146465279607, 10.567128108559967, 10.06937006754339, 10.090188027671163, 10.598683502587335, 10.450968223324992, 10.749923223549164, 10.678311147911765, 10.66684646269724, 10.442921997096828, 10.785869658885897, 10.531910975688291, 10.480716803669546, 10.379266127259818, 10.736509864256606, 10.580477871898603, 10.777134862257995, 10.377166512388404, 10.517268539817056, 10.657236078620102, 10.94837831493162, 10.298936643975935, 10.367522007800215]
 '''
 
-
 ''' RUN BEFORE DOING PLOTTING BELOW
 phase2paths_df.iloc[eligPathInds_sort[0], 5] = 1.212514932297184
 phase2paths_df.iloc[eligPathInds_sort[0], 6] = 1.1539925129541722
@@ -1800,33 +1822,33 @@ phase2paths_df.iloc[eligPathInds_sort[28], 7] = 1.3898257691509261
 
 
 # Generate a plot for our improvement runs
-xvals = np.arange(1,len(eligPathInds)+2) # Add 1 for our initial feasible solution
+xvals = np.arange(1, len(eligPathInds) + 2)  # Add 1 for our initial feasible solution
 UBvals = [phase2paths_df.iloc[i, 3] for i in eligPathInds_sort]
 UBvals.insert(0, UB)
 utilvals = [phase2paths_df.iloc[i, 5] for i in eligPathInds_sort]
 utilvals.insert(0, solUtil)
-utilvalCIs = [(phase2paths_df.iloc[i, 7]-phase2paths_df.iloc[i, 6])/2 for i in eligPathInds_sort]
-utilvalCIs.insert(0, (2.300548646586247-2.0683527673839848)/4)
+utilvalCIs = [(phase2paths_df.iloc[i, 7] - phase2paths_df.iloc[i, 6]) / 2 for i in eligPathInds_sort]
+utilvalCIs.insert(0, (2.300548646586247 - 2.0683527673839848) / 4)
 
 # Plot
 fig, ax = plt.subplots()
 # yerr should be HALF the length of the total error bar
-ax.plot(xvals,UBvals,'v',color='royalblue',alpha=0.4, markersize=4)
+ax.plot(xvals, UBvals, 'v', color='royalblue', alpha=0.4, markersize=4)
 ax.errorbar(xvals, utilvals, yerr=utilvalCIs, fmt='o',
             color='black', linewidth=0.5, capsize=1.5)
 # Plot the first Gain and noGain lists before everything else, so as to get the legend right
 lst = avoidcorrlist_Gain[0]
-ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='^', markersize=6,
-                color='darkgreen',linewidth=0.5,capsize=1.5,alpha=0.4)
+ax.errorbar(lst[0], lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='^', markersize=6,
+            color='darkgreen', linewidth=0.5, capsize=1.5, alpha=0.4)
 lst = avoidcorrlist_noGain[0]
-ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
-                color='crimson',linewidth=0.5,capsize=1.5,alpha=0.4)
+ax.errorbar(lst[0], lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='x', markersize=5,
+            color='crimson', linewidth=0.5, capsize=1.5, alpha=0.4)
 for lst in avoidcorrlist_Gain[1:]:
-    ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='^', markersize=6,
-                color='darkgreen',linewidth=0.5,capsize=1.5,alpha=0.4)
+    ax.errorbar(lst[0], lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='^', markersize=6,
+                color='darkgreen', linewidth=0.5, capsize=1.5, alpha=0.4)
 for lst in avoidcorrlist_noGain[1:]:
-    ax.errorbar(lst[0],lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
-                color='crimson',linewidth=0.5,capsize=1.5,alpha=0.4)
+    ax.errorbar(lst[0], lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='x', markersize=5,
+                color='crimson', linewidth=0.5, capsize=1.5, alpha=0.4)
 ax.set(xticks=xvals, ylim=(1., 3.1))
 plt.xticks(fontsize=8)
 plt.ylabel('Utility', fontsize=12)
@@ -1834,10 +1856,8 @@ plt.xlabel('Candidate index', fontsize=12)
 plt.title('Candidate solution evaluations', fontsize=14)
 plt.legend(['IP-RP Objective', 'Candidate Utility', 'AVOIDCORR: Gain', 'AVOIDCORR: No Gain'],
            fontsize=9, loc='upper right')
-plt.axhline(2.184450706985116, xmin=0.06, color='gray', linestyle='dashed', alpha=0.4) # Evaluated utility
+plt.axhline(2.184450706985116, xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
 plt.show()
-
-
 
 # Sort the same values by UBs
 UBsortInds = np.argsort(UBvals).tolist()
@@ -1846,23 +1866,22 @@ newUBvals = [UBvals[x] for x in UBsortInds]
 newutilvals = [utilvals[x] for x in UBsortInds]
 newutilvalCIs = [utilvalCIs[x] for x in UBsortInds]
 
-
 fig, ax = plt.subplots()
-ax.plot(xvals, newUBvals,'^',color='royalblue',alpha=0.4, markersize=4)
+ax.plot(xvals, newUBvals, '^', color='royalblue', alpha=0.4, markersize=4)
 ax.errorbar(xvals, newutilvals, yerr=newutilvalCIs, fmt='o',
             color='black', linewidth=0.5, capsize=1.5)
 lst = avoidcorrlist_Gain[0]
-ax.errorbar(UBsortInds.index(lst[0]-1)+1, lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
-                color='darkgreen',linewidth=0.5,capsize=1.5,alpha=0.4)
+ax.errorbar(UBsortInds.index(lst[0] - 1) + 1, lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='x', markersize=5,
+            color='darkgreen', linewidth=0.5, capsize=1.5, alpha=0.4)
 lst = avoidcorrlist_noGain[0]
-ax.errorbar(UBsortInds.index(lst[0]-1)+1, lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
-                color='crimson',linewidth=0.5,capsize=1.5,alpha=0.4)
+ax.errorbar(UBsortInds.index(lst[0] - 1) + 1, lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='x', markersize=5,
+            color='crimson', linewidth=0.5, capsize=1.5, alpha=0.4)
 for lst in avoidcorrlist_Gain[1:]:
-    ax.errorbar(UBsortInds.index(lst[0]-1)+1, lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
-                color='darkgreen',linewidth=0.5,capsize=1.5,alpha=0.4)
+    ax.errorbar(UBsortInds.index(lst[0] - 1) + 1, lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='x', markersize=5,
+                color='darkgreen', linewidth=0.5, capsize=1.5, alpha=0.4)
 for lst in avoidcorrlist_noGain[1:]:
-    ax.errorbar(UBsortInds.index(lst[0]-1)+1, lst[1], yerr=[(lst[3]-lst[2])/2], fmt='x', markersize=5,
-                color='crimson',linewidth=0.5,capsize=1.5,alpha=0.4)
+    ax.errorbar(UBsortInds.index(lst[0] - 1) + 1, lst[1], yerr=[(lst[3] - lst[2]) / 2], fmt='x', markersize=5,
+                color='crimson', linewidth=0.5, capsize=1.5, alpha=0.4)
 ax.set(xticks=xvals, ylim=(1., 3.1))
 plt.xticks(fontsize=8)
 plt.ylabel('Utility', fontsize=12)
