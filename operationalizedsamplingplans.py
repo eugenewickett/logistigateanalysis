@@ -893,6 +893,9 @@ plt.show()
 # Now we construct our various program vectors and matrices per the scipy standards
 numPath = paths_df.shape[0]
 
+# Update budget if needed
+B = 1400
+
 # Variable bounds
 # Variable vectors are in form (z, n, x) [districts, allocations, paths]
 lbounds = np.concatenate((np.zeros(numTN*3), np.zeros(numPath)))
@@ -961,7 +964,10 @@ def scipytoallocation(spo_x, eliminateZeros=False):
     print('Path: '+ pathstr)
     return
 
-scipytoallocation(spoOutput.x, eliminateZeros=False)
+scipytoallocation(spoOutput.x, eliminateZeros=True)
+
+
+
 
 ### Inspect our solution
 # How does our utility value compare with the real utility?
@@ -1022,12 +1028,25 @@ reglist_MostSFP = [0, regNames.index('Tambacounda'), regNames.index('Diourbel'),
                    regNames.index('Kolda'),regNames.index('Matam')]
 FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
 
-reglist_NearDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),regNames.index('Louga'),
+''' INCLUDES LOUGA
+reglist_MoreDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),regNames.index('Louga'),
                    regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Fatick')]
-FindTSPPathForGivenNodes(reglist_NearDistricts, f_reg)
+FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
+'''
+reglist_MoreDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),
+                   regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Fatick')]
+FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
 
 reglist_MoreTests = [0, regNames.index('Thies'), regNames.index('Diourbel')]
 FindTSPPathForGivenNodes(reglist_MoreTests, f_reg)
+
+reglist_LeastVisited = [0, regNames.index('Fatick'), regNames.index('Diourbel'), regNames.index('Kaolack'),
+                        regNames.index('Kaffrine'), regNames.index('Louga'), regNames.index('Tambacounda')]
+FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+
+reglist_InitialOptSol = [0, regNames.index('Fatick'), regNames.index('Diourbel'), regNames.index('Kaolack'),
+                        regNames.index('Kaffrine')]
+FindTSPPathForGivenNodes(reglist_InitialOptSol, f_reg)
 
 
 def utilityEstimatesForBenchmarks():
