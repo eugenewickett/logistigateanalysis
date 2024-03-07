@@ -279,7 +279,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 200000, 100
+numtruthdraws, numdatadraws = 20000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -331,9 +331,12 @@ optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconsta
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
 # What are the upper bounds for our allocation variables?
-def GetUpperBounds(optparamdict):
-    """Returns a numpy vector of upper bounds for an inputted parameter dictionary"""
-    B, f_dept, f_reg = optparamdict['budget'], optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
+def GetUpperBounds(optparamdict, alpha=1.0):
+    """
+    Returns a numpy vector of upper bounds for an inputted parameter dictionary. alpha determines the proportion of the
+    budget that can be dedicated to any one district
+    """
+    B, f_dept, f_reg = optparamdict['budget']*alpha, optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
     batchcost, ctest, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
     deptnames, regnames, dept_df = optparamdict['deptnames'], optparamdict['regnames'], optparamdict['dept_df']
     retvec = np.zeros(f_dept.shape[0])
@@ -348,6 +351,10 @@ def GetUpperBounds(optparamdict):
     return retvec
 
 deptallocbds = GetUpperBounds(optparamdict)
+# Lower upper bounds to maximum of observed prior tests at any district
+maxpriortests = int(np.max(np.sum(N,axis=1)))
+deptallocbds = np.array([min(deptallocbds[i], maxpriortests) for i in range(deptallocbds.shape[0])])
+
 print(deptNames[np.argmin(deptallocbds)], min(deptallocbds))
 print(deptNames[np.argmax(deptallocbds)], max(deptallocbds))
 
@@ -552,7 +559,6 @@ def GetSubtourMaxCardinality(optparamdict):
 
     return numregions
 
-
 def GetTriangleInterpolation(xlist, flist):
     """
     Produces a concave interpolation for integers using the inputs x and function evaluations f_x.
@@ -588,7 +594,6 @@ def GetTriangleInterpolation(xlist, flist):
 
     return retx, retf, l, k, m1, m2
 
-
 def FindTSPPathForGivenNodes(reglist, f_reg):
     """
     Returns an sequence of indices corresponding to the shortest path through all indices, per the traversal costs
@@ -613,7 +618,6 @@ def FindTSPPathForGivenNodes(reglist, f_reg):
     besttuplist = [currbesttup[i] for i in range(len(currbesttup))]
     besttuplist.insert(0,HQind)
     return besttuplist, currbestcost
-
 
 
 
@@ -642,6 +646,23 @@ util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':uti
                         'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
 
 util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+
+#####
+# ADDED 7-MAR: Add bounds for 81 tests at each department
+util_81, util_81_CI = [], []
+for i in range(len(deptNames)):
+    n = np.zeros(numTN)
+    currbd = maxpriortests
+    print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
+    n[i] = currbd
+    curr81, curr81_CI = getUtilityEstimate(n, lgdict, paramdict)
+    print(curr81, curr81_CI)
+    util_81.append(curr81)
+    util_81_CI.append(curr81_CI)
+    
+util_df.insert(5, 'Util_81', util_81)
+util_df.insert(6, 'Util_81_CI', util_81_CI)
+######
 '''
 
 # Load previously calculated lower and upper utility evaluations

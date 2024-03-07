@@ -286,12 +286,12 @@ lgdict.update({'Q': tempQ})
 
 # Loss specification
 # TODO: INSPECT CHOICE HERE LATER, ESP MARKETVEC
-markVec = np.concatenate((np.ones(numSN)*20, np.ones(numTN)))
+markVec = np.concatenate((np.ones(numSN)*10, np.ones(numTN)))
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=markVec)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 50000, 1000
+numtruthdraws, numdatadraws = 20000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -346,9 +346,9 @@ optparamdict = {'batchcost': batchcost, 'budget': B, 'pertestcost': ctest, 'Mcon
 
 
 # What are the upper bounds for our allocation variables?
-def GetUpperBounds(optparamdict):
+def GetUpperBounds(optparamdict, alpha=1.0):
     """Returns a numpy vector of upper bounds for an inputted parameter dictionary"""
-    B, f_dept, f_reg = optparamdict['budget'], optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
+    B, f_dept, f_reg = optparamdict['budget']*alpha, optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
     batchcost, ctest, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
     deptnames, regnames, dept_df = optparamdict['deptnames'], optparamdict['regnames'], optparamdict['dept_df']
     retvec = np.zeros(f_dept.shape[0])
@@ -364,6 +364,9 @@ def GetUpperBounds(optparamdict):
 
 
 deptallocbds = GetUpperBounds(optparamdict)
+# Lower upper bounds to maximum of observed prior tests at any district
+maxpriortests = int(np.max(np.sum(N,axis=1)))
+deptallocbds = np.array([min(deptallocbds[i], maxpriortests) for i in range(deptallocbds.shape[0])])
 print(deptNames[np.argmin(deptallocbds)], min(deptallocbds))
 print(deptNames[np.argmax(deptallocbds)], max(deptallocbds))
 
