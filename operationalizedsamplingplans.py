@@ -668,6 +668,13 @@ util_df.insert(6, 'Util_81_CI', util_81_CI)
 # Load previously calculated lower and upper utility evaluations
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
 
+''' RUNS 7-MAR (81 tests at all districts)
+Bakel               0.3804905943479593 (0.37531994211371256, 0.385661246582206)
+Bambey              0.3537908316260996 (0.3474585325224755, 0.3601231307297237)
+Bignona             
+
+'''
+
 ''' RUNS 29-DEC
 Bakel       0.03344590816593218 (0.03147292119474443, 0.03541889513711993), 
 105         0.43105884100510217 (0.4231565417533414, 0.43896114025686295)
