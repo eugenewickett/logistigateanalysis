@@ -650,7 +650,7 @@ for i in range(len(deptNames)):
 util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
                         'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
 
-util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals_POPemph.pkl'))
 
 #####
 # ADDED 7-MAR: Add bounds for 81 tests at each department
@@ -673,30 +673,30 @@ util_df.insert(6, 'Util_81_CI', util_81_CI)
 # Load previously calculated lower and upper utility evaluations
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
 
-''' RUNS 7-MAR (81 tests at all districts)
-Bakel               0.3804905943479593 (0.37531994211371256, 0.385661246582206)
-Bambey              0.3537908316260996 (0.3474585325224755, 0.3601231307297237)
-Bignona             0.303304650040106 (0.2975468347532466, 0.30906246532696535)
-Birkilane           0.30183608790021665 (0.29794423499694034, 0.30572794080349297)
-Bounkiling          0.13796590865289637 (0.13071163145257358, 0.14522018585321916)
-Dagana              0.10617503170720077 (0.10383079104924242, 0.10851927236515913)
-Dakar               0.22373887063283782 (0.21817512842645392, 0.2293026128392217)
-Diourbel            0.15011867225809894 (0.14573581193779894, 0.15450153257839894)
-Fatick              0.36544388135986416 (0.35752176288448645, 0.3733659998352419)
-Foundiougne         0.3149454272197083 (0.31022985081163945, 0.31966100362777716)
-Gossas              0.38013122163191326 (0.3726337331724885, 0.38762871009133804)
-Goudiry             0.23679760643748615 (0.23286394366552798, 0.24073126920944432)
-Goudoump            0.327926416525667 (0.3222128401148101, 0.3336399929365239)
-Guediawaye          0.12678496714767284 (0.1233906005998513, 0.1301793336954944)
-Guinguineo          0.22963783064008148 (0.22679676719415554, 0.23247889408600741)
-Kaffrine            0.16052526719445837 (0.1562230766027355, 0.16482745778618124)
-Kanel               0.1939563786495757 (0.19066492103026178, 0.19724783626888964)
-Kaolack             0.3146963006621952 (0.3082350976922825, 0.32115750363210793)
-Kebemer             0.1449245487831039 (0.14152012880917297, 0.14832896875703483)
-Kedougou            0.15031593463413095 (0.14607722324234196, 0.15455464602591995)
-Keur Massar         0.3090183459309941 (0.3027306635924152, 0.315306028269573)
-Kolda               0.1564661415465327 (0.15152531714038808, 0.16140696595267734)
-Koumpentoum         0.09916213199920776 (0.09633754780882953, 0.10198671618958599)
+''' RUNS 7-MAR
+Bakel               
+Bambey              
+Bignona             
+Birkilane          
+Bounkiling         
+Dagana             
+Dakar               
+Diourbel            
+Fatick              
+Foundiougne        
+Gossas              
+Goudiry            
+Goudoump            
+Guediawaye          
+Guinguineo         
+Kaffrine            
+Kanel               
+Kaolack             
+Kebemer             
+Kedougou            
+Keur Massar         
+Kolda               
+Koumpentoum         
 Koungheul           0.3639154928606363 (0.35134468929145335, 0.37648629642981923)
 Linguere            0.27414127359790363 (0.2690590390256844, 0.27922350817012287)
 Louga               0.34476435295838925 (0.339767604724031, 0.3497611011927475)
@@ -712,11 +712,11 @@ Podor               0.2742522651800421 (0.26581043772924673, 0.28269409263083745
 Ranerou Ferlo       0.3394313127669566 (0.33297046963369326, 0.34589215590021993)
 Rufisque            0.07124513033692992 (0.06922921125947745, 0.07326104941438238)
 Saint-Louis         0.12586430746292088 (0.12216911472668102, 0.12955950019916074)
-Salemata            0.29759841099845374 (0.2811954020445331, 0.3140014199523744)
-Saraya              0.33683449620171935 (0.33037365665778573, 0.34329533574565296)
-Sedhiou             0.272007403464686 (0.2628897141959552, 0.2811250927334168)
-Tambacounda         0.12905557231962206 (0.12494546402022877, 0.13316568061901535)
-Thies               0.08009970771387387 (0.07744959931028816, 0.08274981611745957)
+Salemata            
+Saraya              
+Sedhiou             
+Tambacounda         
+Thies               
 Tivaoune            
 '''
 
