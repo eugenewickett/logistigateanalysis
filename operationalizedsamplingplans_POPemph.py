@@ -177,11 +177,15 @@ def GetSenegalCSVData():
 # N, Y, SNnames, TNprovs, TNnames = GetSenegalDataMatrices(deidentify=False)
 dept_df, regcost_mat, testresults_df, regNames, manufNames = GetSenegalCSVData()
 deptNames = dept_df['Department'].sort_values().tolist()
+deptPop = [] # Sort by dept name
+for dName in deptNames:
+    deptPop.append(dept_df.iloc[dept_df.index[dept_df['Department']==dName][0]]['Population2023'] )
 numReg = len(regNames)
 testdatadict = {'dataTbl':testresults_df.values.tolist(), 'type':'Tracked', 'TNnames':deptNames, 'SNnames':manufNames}
 testdatadict = util.GetVectorForms(testdatadict)
 N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNnames'], testdatadict['SNnames']
 (numTN, numSN) = N.shape # For later use
+
 
 def GetRegion(dept_str, dept_df):
     """Retrieves the region associated with a department"""
@@ -256,8 +260,6 @@ lgdict['postSamples'] = tempobj
 # Print inference from initial data
 util.plotPostSamples(lgdict, 'int90')
 
-
-
 # Generate Q via bootstrap sampling of known traces
 numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'],axis=1))
 numboot = 20 # Average across each department in original data
@@ -274,12 +276,15 @@ for i in range(tempQ.shape[0]):
 lgdict.update({'Q':tempQ})
 
 # Loss specification
-# TODO: INSPECT CHOICE HERE LATER, ESP MARKETVEC
+# TODO: USE POPULATION FOR MARKETVEC PRIORITIZATION
+TNpriority = np.array([deptPop[i] / np.sum(deptPop) for i in range(numTN)])
+SNpriority = np.array([np.dot(lgdict['Q'][:,i], TNpriority) for i in range(numSN)])
+markVec = np.concatenate((SNpriority, TNpriority))
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
-                                              marketvec=np.ones(numTN + numSN))
+                                              marketvec=markVec)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 20000, 1000
+numtruthdraws, numdatadraws = 40000, 500
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -712,9 +717,7 @@ Saraya              0.33683449620171935 (0.33037365665778573, 0.3432953357456529
 Sedhiou             0.272007403464686 (0.2628897141959552, 0.2811250927334168)
 Tambacounda         0.12905557231962206 (0.12494546402022877, 0.13316568061901535)
 Thies               0.08009970771387387 (0.07744959931028816, 0.08274981611745957)
-Tivaoune            0.1733016776058509 (0.16927234523031487, 0.17733100998138696)
-Velingara           0.2341150853530749 (0.23025985898946466, 0.23797031171668515)
-Ziguinchor          0.3201464489800685 (0.3131644019882689, 0.3271284959718681)
+Tivaoune            
 '''
 
 ''' RUNS 29-DEC

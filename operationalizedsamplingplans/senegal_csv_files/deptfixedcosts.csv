@@ -1,47 +1,47 @@
-Department,Region,N,Y,DeptFixedCostDays
-Dakar,Dakar,31,9,0.05
-Guediawaye,Dakar,16,3,0.123333333
-Keur Massar,Dakar,0,0,0.19
-Pikine,Dakar,0,0,0.133333333
-Rufisque,Dakar,8,0,0.186666667
-Thies,Thies,12,0,0.05
-Mbour,Thies,7,0,0.243333333
-Tivaoune,Thies,3,0,0.173333333
-Louga,Louga,0,0,0.05
-Kebemer,Louga,4,0,0.166666667
-Linguere,Louga,0,0,0.41
-Tambacounda,Tambacounda,36,5,0.05
-Bakel,Tambacounda,0,0,0.843333333
-Goudiry,Tambacounda,0,0,0.37
-Koumpentoum,Tambacounda,13,2,0.34
-Kedougou,Kedougou,9,0,0.05
-Salemata,Kedougou,0,0,0.343333333
-Saraya,Kedougou,0,0,0.256666667
-Kaolack,Kaolack,15,0,0.05
-Guinguineo,Kaolack,0,0,0.153333333
-Nioro du Rip,Kaolack,0,0,0.273333333
-Kaffrine,Kaffrine,1,0,0.05
-Birkilane,Kaffrine,0,0,0.13
-Koungheul,Kaffrine,0,0,0.306666667
-Malem Hoddar,Kaffrine,0,0,0.276666667
-Ziguinchor,Ziguinchor,0,0,0.05
-Oussouye,Ziguinchor,0,0,0.206666667
-Bignona,Ziguinchor,0,0,0.193333333
-Diourbel,Diourbel,81,24,0.05
-Bambey,Diourbel,0,0,0.15
-Mbacke,Diourbel,0,0,0.22
-Saint-Louis,Saint-Louis,45,3,0.05
-Dagana,Saint-Louis,6,0,0.46
-Podor,Saint-Louis,5,1,0.766666667
-Fatick,Fatick,0,0,0.05
-Foundiougne,Fatick,0,0,0.156666667
-Gossas,Fatick,0,0,0.21
-Kolda,Kolda,44,8,0.05
-Medina Yoro Foulah,Kolda,0,0,0.47
-Velingara,Kolda,12,7,0.476666667
-Matam,Matam,43,6,0.05
-Kanel,Matam,15,5,0.163333333
-Ranerou Ferlo,Matam,0,0,0.346666667
-Bounkiling,Sedhiou,0,0,0.25
-Goudoump,Sedhiou,0,0,0.606666667
-Sedhiou,Sedhiou,0,0,0.05
+Department,Region,N,Y,DeptFixedCostDays,Population2023
+Dakar,Dakar,31,9,0.05,1182417
+Guediawaye,Dakar,16,3,0.123333333,373638
+Keur Massar,Dakar,0,0,0.19,759849
+Pikine,Dakar,0,0,0.133333333,758554
+Rufisque,Dakar,8,0,0.186666667,822105
+Thies,Thies,12,0,0.05,880266
+Mbour,Thies,7,0,0.243333333,937189
+Tivaoune,Thies,3,0,0.173333333,650067
+Louga,Louga,0,0,0.05,477887
+Kebemer,Louga,4,0,0.166666667,336401
+Linguere,Louga,0,0,0.41,312831
+Tambacounda,Tambacounda,36,5,0.05,427419
+Bakel,Tambacounda,0,0,0.843333333,190501
+Goudiry,Tambacounda,0,0,0.37,170816
+Koumpentoum,Tambacounda,13,2,0.34,199457
+Kedougou,Kedougou,9,0,0.05,124265
+Salemata,Kedougou,0,0,0.343333333,28111
+Saraya,Kedougou,0,0,0.256666667,92912
+Kaolack,Kaolack,15,0,0.05,665008
+Guinguineo,Kaolack,0,0,0.153333333,160483
+Nioro du Rip,Kaolack,0,0,0.273333333,513181
+Kaffrine,Kaffrine,1,0,0.05,280969
+Birkilane,Kaffrine,0,0,0.13,151205
+Koungheul,Kaffrine,0,0,0.306666667,253710
+Malem Hoddar,Kaffrine,0,0,0.276666667,135403
+Ziguinchor,Ziguinchor,0,0,0.05,274563
+Oussouye,Ziguinchor,0,0,0.206666667,52883
+Bignona,Ziguinchor,0,0,0.193333333,284897
+Diourbel,Diourbel,81,24,0.05,344108
+Bambey,Diourbel,0,0,0.15,376945
+Mbacke,Diourbel,0,0,0.22,1359757
+Saint-Louis,Saint-Louis,45,3,0.05,387513
+Dagana,Saint-Louis,6,0,0.46,330130
+Podor,Saint-Louis,5,1,0.766666667,487220
+Fatick,Fatick,0,0,0.05,409283
+Foundiougne,Fatick,0,0,0.156666667,376408
+Gossas,Fatick,0,0,0.21,123167
+Kolda,Kolda,44,8,0.05,324434
+Medina Yoro Foulah,Kolda,0,0,0.47,185575
+Velingara,Kolda,12,7,0.476666667,406504
+Matam,Matam,43,6,0.05,387866
+Kanel,Matam,15,5,0.163333333,342507
+Ranerou Ferlo,Matam,0,0,0.346666667,103283
+Bounkiling,Sedhiou,0,0,0.25,208380
+Goudoump,Sedhiou,0,0,0.606666667,188537
+Sedhiou,Sedhiou,0,0,0.05,193867
