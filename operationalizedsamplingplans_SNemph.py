@@ -291,7 +291,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=markVec)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 20000, 1000
+numtruthdraws, numdatadraws = 100000, 500
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -648,10 +648,42 @@ def FindTSPPathForGivenNodes(reglist, f_reg):
     return besttuplist, currbestcost
 
 
-# todo: 22-FEB RESUME HERE
+def getUtilityEstimateSequential(n, lgdict, paramdict, zlevel=0.95, datadrawsiter=50, eps=0.2, maxdatadraws=2000,
+                                 mindatadraws = 500, printUpdate=True):
+    """
+    Return a utility estimate average and confidence interval for allocation array n that is epsperc of the estimate,
+    by running data draws until the confidence interval is sufficiently small
+    """
+    testnum = int(np.sum(n))
+    des = n / testnum
+
+    # Modify paramdict to only have datadrawsiter data draws
+    masterlosslist = []
+    epsgap = 1.
+    itercount = 0
+    while (len(masterlosslist) < maxdatadraws and epsgap > eps) or (len(masterlosslist) < mindatadraws):
+        itercount += 1
+        if printUpdate:
+            print('Total number of data draws: ' + str(itercount * datadrawsiter))
+        paramdictcopy = paramdict.copy()
+
+        paramdictcopy.update({'datadraws': truthdraws[choice(np.arange(paramdict['truthdraws'].shape[0]),
+                                                             size=datadrawsiter, replace=False)]})
+        if printUpdate:
+            util.print_param_checks(paramdictcopy)
+        masterlosslist = masterlosslist + sampf.sampling_plan_loss_list(des, testnum, lgdict, paramdictcopy)
+        currloss_avg, currloss_CI = sampf.process_loss_list(masterlosslist, zlevel=zlevel)
+        # Get current gap
+        epsgap = (currloss_CI[1] - currloss_CI[0]) / (paramdict['baseloss'] - currloss_avg)
+        print('New utility: ' + str(paramdict['baseloss'] - currloss_avg))
+        print('New utility range: ' + str(epsgap))
+
+    return paramdict['baseloss'] - currloss_avg, \
+           (paramdict['baseloss'] - currloss_CI[1], paramdict['baseloss'] - currloss_CI[0]), masterlosslist
+
 
 # Here we obtain utility evaluations for 1 and n_bound tests at each department
-deptallocbds = GetUpperBounds(optparamdict)
+#deptallocbds = GetUpperBounds(optparamdict)
 util_lo, util_lo_CI = [], []
 util_hi, util_hi_CI = [], []
 for i in range(len(deptNames)):
@@ -659,16 +691,17 @@ for i in range(len(deptNames)):
     print('Getting utility for ' + deptNames[i] + ', at 1 test...')
     n = np.zeros(numTN)
     n[i] = 1
-    currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
+    currlo, currlo_CI, _ = getUtilityEstimateSequential(n, lgdict, paramdict, eps=0.2, printUpdate=False)
     print(currlo, currlo_CI)
     util_lo.append(currlo)
     util_lo_CI.append(currlo_CI)
     print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
     n[i] = currbd
-    currhi, currhi_CI = getUtilityEstimate(n, lgdict, paramdict)
+    currhi, currhi_CI, _ = getUtilityEstimateSequential(n, lgdict, paramdict, eps=0.2, printUpdate=False)
     print(currhi, currhi_CI)
     util_hi.append(currhi)
     util_hi_CI.append(currhi_CI)
+
 
 util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
                         'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
@@ -680,7 +713,98 @@ util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals_SNemph.pkl'))
 
 ''' RUNS 7-MAR
-
+Bakel                   0.05155044748696014 (0.04639573710838363, 0.05670515786553665)
+81                      1.701911369414674 (1.5523116349736057, 1.8515111038557421)
+Bambey                  0.050339151496665124 (0.04261760558535599, 0.05806069740797426)
+81                      1.4935696706424793 (1.4408198440393463, 1.5463194972456122)
+Bignona                 0.04117253855048375 (0.031532286437986556, 0.050812790662980944)
+81                      1.2246762794485662 (1.1745615975625157, 1.2747909613346167)
+Birkilane               0.04519592860125954 (0.040129443708750046, 0.05026241349376903)
+81                      0.9404168934696884 (0.9111684486926208, 0.9696653382467559)
+Bounkiling              0.011354810729116593 (0.007865294959735536, 0.01484432649849765)
+81                      0.7244051333947681 (0.7015508185989958, 0.7472594481905404)
+Dagana                  0.011239424280269361 (0.009748454998224076, 0.012730393562314646)
+81                      0.40512276036062644 (0.39457243640728024, 0.41567308431397265)
+Dakar                   0.02761740613655661 (0.020442701614591385, 0.034792110658521835)
+81                      1.7185832447391576 (1.6657210839681866, 1.7714454055101285)
+Diourbel                0.02066331235597829 (0.01478057957097434, 0.026546045140982244)
+81                      1.3073064638651175 (1.2671876866504093, 1.3474252410798258)
+Fatick                  0.05330433474419749 (0.04430330749161726, 0.06230536199677772)
+81                      1.542665224757016 (1.4897389420767908, 1.5955915074372413)
+Foundiougne             0.04129913475453861 (0.0359775246725107, 0.04662074483656653)
+81                      1.0966368389270684 (1.0565936541283634, 1.1366800237257735)
+Gossas                  0.061343023585351375 (0.05162514455008704, 0.0710609026206157)
+81                      1.553860509982492 (1.489515314160144, 1.61820570580484)
+Goudiry                 0.025637794101172062 (0.020228851504320744, 0.03104673669802338)
+81                      0.6474380480771202 (0.6173692001613773, 0.6775068959928632)
+Goudoump                0.04290820723799982 (0.0348641869248425, 0.05095222755115714)
+81                      1.2415472935175487 (1.1912257638015262, 1.291868823233571)
+Guediawaye              0.008480659522504652 (0.004535644547921436, 0.012425674497087869)
+81                      0.608347227369741 (0.5799766054124476, 0.6367178493270345)
+Guinguineo              0.026689583672705908 (0.02321099009890304, 0.030168177246508776)
+81                      0.6208037392302046 (0.6046916780362039, 0.6369158004242053)
+Kaffrine                0.04699907355134059 (0.03775143125248093, 0.056246715850200246)
+81                      0.4217259468989383 (0.3933320025233371, 0.45011989127453944)
+Kanel                   0.018304207851024046 (0.014767055052530509, 0.021841360649517583)
+81                      1.0863893723792302 (1.0608346673398614, 1.111944077418599)
+Kaolack                 0.07050762963466894 (0.060403511474703464, 0.08061174779463443)
+81                      2.8283553873325147 (2.7767400205324506, 2.8799707541325787)
+Kebemer                 0.016884246135695946 (0.011323543533940494, 0.022444948737451398)
+81                      0.48322004463186374 (0.46138633957033903, 0.5050537496933885)
+Kedougou                0.01843023313525549 (0.011254313094582358, 0.025606153175928625)
+81                      0.9563637357085852 (0.9177755603248912, 0.9949519110922793)
+Keur Massar             0.0431956260457369 (0.03615073306590233, 0.05024051902557147)
+81                      1.8639057995799817 (1.8204483470399992, 1.9073632521199642)
+Kolda                   0.018866483492793407 (0.013341204536303053, 0.02439176244928376)
+81                      1.3249017091059159 (1.2874440011967607, 1.362359417015071)
+Koumpentoum             0.007669177269370664 (0.004482802412233866, 0.010855552126507462)
+81                      0.6627558734362822 (0.6399278315880181, 0.6855839152845462)
+Koungheul               0.04594592367047312 (0.03513557926733313, 0.056756268073613114)
+81                      2.8956847057314334 (2.831205764436376, 2.9601636470264907)
+Linguere                0.03606863277203587 (0.0284825649708651, 0.04365470057320664)
+81                      1.0830955832142735 (1.0387762608090725, 1.1274149056194744)
+Louga                   0.05102266370062836 (0.04602702473614073, 0.05601830266511598)
+81                      1.1157312383705502 (1.069131645426559, 1.1623308313145415)
+Malem Hoddar            0.0402562737557588 (0.03483825195915102, 0.04567429555236657)
+81                      1.0239760315051853 (0.9847522285962, 1.0631998344141707)
+Matam                   0.019049426774948586 (0.014658751696195793, 0.02344010185370138)
+81                      1.1857137197096534 (1.1491845057566152, 1.2222429336626917)
+Mbacke                  0.0418479337576656 (0.03807888080307009, 0.04561698671226111)
+81                      0.8257469903553414 (0.7918920284185518, 0.859601952292131)
+Mbour                   0.019966737372207888 (0.0172128219375125, 0.022720652806903274)
+81                      0.8889534598826003 (0.8660717756416147, 0.9118351441235859)
+Medina Yoro Foulah      0.060456906102963615 (0.0532355684887591, 0.06767824371716813)
+70                      1.5688461642288019 (1.5281575839525416, 1.609534744505062)
+Nioro du Rip            0.05458697915604205 (0.043364837084091334, 0.06580912122799276)
+81                      2.027325559630647 (1.9631242161259266, 2.0915269031353674)
+Oussouye                0.01517321057376364 (0.006235444202609131, 0.02411097694491815)
+81                      1.2544566694739316 (1.2081486193181732, 1.30076471962969)
+Pikine                  0.04990515111440885 (0.04743730537575175, 0.052372996853065956)
+81                      0.9163608040156532 (0.8849205307400609, 0.9478010772912455)
+Podor                   0.04996047802263348 (0.03718060326513495, 0.06274035278013201)
+81                      2.009225191829792 (1.974927348784334, 2.0435230348752498)
+Ranerou Ferlo           0.04792038041301083 (0.03943785208375772, 0.056402908742263946)
+81                      1.1485832180897688 (1.0989425120851593, 1.1982239240943784)
+Rufisque                0.011768672886859122 (0.009882072060520386, 0.013655273713197857)
+81                      0.5994056752894181 (0.585941865202507, 0.6128694853763292)
+Saint-Louis             0.013222261909845656 (0.008260239405984748, 0.018184284413706564)
+81                      1.1713682222900275 (1.1410700828083264, 1.2016663617717285)
+Salemata                0.03135730064176556 (0.02365710032622559, 0.039057500957305535)
+81                      1.6858437472716474 (1.6149362388526143, 1.7567512556906806)
+Saraya                  0.04694771827233524 (0.039581678316046975, 0.0543137582286235)
+81                      1.3258873559424416 (1.2755239493177015, 1.3762507625671816)
+Sedhiou                 0.030013410010369057 (0.018563933316912085, 0.04146288670382603)
+81                      1.4932357530346039 (1.4422380612593884, 1.5442334448098194)
+Tambacounda             0.01744523462087244 (0.012173654822390745, 0.022716814419354137)
+81                      1.0578797213198143 (1.0228807552887318, 1.0928786873508969)
+Thies                   0.010371039483729305 (0.007907595309973203, 0.012834483657485407)
+81                      0.6008427934676561 (0.5812362148372046, 0.6204493720981077)
+Tivaoune                0.01930338302234702 (0.01584323866625681, 0.02276352737843723)
+81                      0.7996446584029187 (0.7740482561366875, 0.8252410606691498)
+Velingara               0.025401098946652212 (0.022218660281744462, 0.02858353761155996)
+69                      0.9364139859680165 (0.9105040353667491, 0.9623239365692839)
+Ziguinchor              0.04605270364091041 (0.04248305813812436, 0.049622349143696454)
+81                      1.1287952306200353 (1.094983405704788, 1.1626070555352825)
 '''
 
 
