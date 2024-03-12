@@ -816,6 +816,15 @@ Ziguinchor  0.0357728378865243 (0.034026750551074514, 0.037518925221974087)
 155         0.4271828935412305 (0.41682005238472186, 0.43754573469773916)
 '''
 
+# How different are the ultimate h_d*n_d vals when using old bounds vs new bounds (81 tests)?
+oldval_list, newval_list = [], []
+#lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
+for ind, row in util_df.iterrows():
+    currBound, loval, oldhival, newhival = row[1], row[2], row[4], row[5]
+    # Get interpolation values
+    _, _, l_old, k_old, m1_old, m2_old = GetTriangleInterpolation([0, 1, currBound], [0, loval, hival])
+
+
 ### GENERATE PATHS FOR CASE STUDY ###
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
 maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)

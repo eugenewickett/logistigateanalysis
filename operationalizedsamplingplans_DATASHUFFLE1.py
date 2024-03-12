@@ -235,8 +235,9 @@ lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 numdraws = 10000
 lgdict['numPostSamples'] = numdraws
 
-np.random.seed(300) # For first 20 sets of 5k draws
-for i in range(10):
+np.random.seed(300) # For first 10 sets of 10k draws
+np.random.seed(3002) # For second 10 sets of 10k draws
+for i in range(10, 20):
     print('On MCMC draws set ' + str(i+1) + '...')
     lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
     tempobj = lgdict['postSamples']
@@ -246,7 +247,7 @@ for i in range(10):
 
 # Load draws from files
 tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf1_1.npy'))
-for drawgroupind in range(2, 11):
+for drawgroupind in range(2, 21):
     newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf1_' + str(drawgroupind) +'.npy'))
     tempobj = np.concatenate((tempobj, newobj))
 lgdict['postSamples'] = tempobj
