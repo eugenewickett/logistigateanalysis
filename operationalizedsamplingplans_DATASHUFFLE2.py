@@ -208,6 +208,9 @@ print('Tests at TNs: ' + str(np.sum(N, axis=1)) + '\nSFPs at TNs: ' + str(np.sum
 # Set up logistigate dictionary
 lgdict = util.initDataDict(N, Y)
 lgdict.update({'TNnames':TNnames, 'SNnames':SNnames})
+for i in range(numTN):
+    print(lgdict['TNnames'][i] + ': ' + str(np.sum(lgdict['N'][i])) + ', ' + str(np.sum(lgdict['Y'][i])))
+
 
 ##############
 # Set up priors for SFP rates at nodes
@@ -235,18 +238,18 @@ lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 numdraws = 10000
 lgdict['numPostSamples'] = numdraws
 
-np.random.seed(301) # For first 20 sets of 5k draws
-for i in range(10):
+np.random.seed(301) # For first 10 sets of 10k draws
+np.random.seed(3002) # For second 10 sets of 10k draws
+for i in range(10, 20):
     print('On MCMC draws set ' + str(i+1) + '...')
     lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
     tempobj = lgdict['postSamples']
     np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_' + str(i+1)), tempobj)
-
 '''
 
 # Load draws from files
 tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_1.npy'))
-for drawgroupind in range(2, 11):
+for drawgroupind in range(2, 21):
     newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_' + str(drawgroupind) +'.npy'))
     tempobj = np.concatenate((tempobj, newobj))
 lgdict['postSamples'] = tempobj
@@ -648,20 +651,15 @@ util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals_DATASHUFFLE2.pkl'))
 
 
-
-
-
 ### GENERATE PATHS FOR CASE STUDY ###
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
+# TODO: REDO FROM HERE ON DOWN WHEN BUDGET INCREASED
 maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
 
-listinds1 = list(itertools.combinations(np.arange(1,numReg).tolist(),1))
-listinds2 = list(itertools.combinations(np.arange(1,numReg).tolist(),2))
-listinds3 = list(itertools.combinations(np.arange(1,numReg).tolist(),3))
-listinds4 = list(itertools.combinations(np.arange(1,numReg).tolist(),4))
-listinds5 = list(itertools.combinations(np.arange(1,numReg).tolist(),5))
+mastlist = []
+for regamt in range(1,maxregnum):
+    mastlist = mastlist + list(itertools.combinations(np.arange(1, numReg).tolist(), regamt))
 
-mastlist = listinds1 + listinds2 + listinds3 + listinds4 + listinds5
 print('Number of feasible region combinations:',len(mastlist))
 
 # For storing best sequences and their corresponding costs
@@ -691,7 +689,7 @@ for distlist in distaccesslist:
     distbinvec = [int(i in distlist) for i in deptNames]
     bindistaccessvectors.append(distbinvec)
 
-paths_df_all = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
+paths_df_all = pd.DataFrame({'Sequence': seqlist, 'Cost': seqcostlist, 'DistAccessBinaryVec': bindistaccessvectors})
 
 # Remove all paths with cost exceeding budget - min{district access} - sampletest
 paths_df = paths_df_all[paths_df_all['Cost'] < B].copy()
@@ -720,11 +718,10 @@ seqcostlist_trim = seqcostlist_trim.reset_index()
 seqcostlist_trim = seqcostlist_trim.drop(columns='index')
 
 
-
 # Save to avoid generating later
-# paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
+# paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths_DATASHUFFLE2.pkl'))
 
-# paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
+# paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths_DATASHUFFLE2.pkl'))
 ###################################
 ###################################
 ###################################
@@ -799,7 +796,7 @@ plt.show()
 numPath = paths_df.shape[0]
 
 # Update budget if needed
-B = 1400
+#B = 1400
 
 # Variable bounds
 # Variable vectors are in form (z, n, x) [districts, allocations, paths]
