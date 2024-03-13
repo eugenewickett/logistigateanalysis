@@ -279,7 +279,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 20000, 1000
+numtruthdraws, numdatadraws = 60000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -619,8 +619,6 @@ def FindTSPPathForGivenNodes(reglist, f_reg):
     besttuplist.insert(0,HQind)
     return besttuplist, currbestcost
 
-
-
 '''
 # Here we obtain utility evaluations for 1 and n_bound tests at each department
 deptallocbds = GetUpperBounds(optparamdict)
@@ -667,6 +665,7 @@ util_df.insert(6, 'Util_81_CI', util_81_CI)
 
 # Load previously calculated lower and upper utility evaluations
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+
 
 ''' RUNS 7-MAR (81 tests at all districts)
 Bakel               0.3804905943479593 (0.37531994211371256, 0.385661246582206)
@@ -817,25 +816,55 @@ Ziguinchor  0.0357728378865243 (0.034026750551074514, 0.037518925221974087)
 '''
 
 # How different are the ultimate h_d*n_d vals when using old bounds vs new bounds (81 tests)?
-oldval_list, newval_list = [], []
+k_list_old, k_list_new = [], []
+utileval_list_old, utileval_list_new = [], []
+names_list = []
 #lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
 for ind, row in util_df.iterrows():
-    currBound, loval, oldhival, newhival = row[1], row[2], row[4], row[5]
+    currBound, loval, oldhival, newhival = row[1], row[2], row[6], row[4]
     # Get interpolation values
-    _, _, l_old, k_old, m1_old, m2_old = GetTriangleInterpolation([0, 1, currBound], [0, loval, hival])
+    _, _, l_old, k_old, m1_old, m2_old = GetTriangleInterpolation([0, 1, currBound], [0, loval, oldhival])
+    _, _, l_new, k_new, m1_new, m2_new = GetTriangleInterpolation([0, 1, 81], [0, loval, newhival])
+    k_list_old.append(k_old)
+    k_list_new.append(k_new)
+    utileval_list_old.append(l_old+k_new * m1_old)
+    utileval_list_new.append(l_new + k_new * m1_new)
+    names_list.append(row[0])
 
+# How do the k values compare?
+fig, ax = plt.subplots()
+plt.scatter(k_list_old, k_list_new)
+plt.plot(np.arange(200),np.arange(200),alpha=0.2,color='gray')
+plt.ylim([0,200])
+plt.xlim([0,200])
+for i in range(numTN):
+    ax.text(k_list_old[i], k_list_new[i], names_list[i], size=7)
+plt.title('Plot of $h_d$ junctures')
+plt.xlabel('Budget-based (hi) bound')
+plt.ylabel('Prior data-based (lo) bound')
+plt.show()
+
+# How do the resulting separable utility values compare?
+fig, ax = plt.subplots()
+plt.scatter(utileval_list_old, utileval_list_new)
+plt.plot(np.arange(100)/100,np.arange(100)/100,alpha=0.2,color='gray')
+plt.ylim([0,0.4])
+plt.xlim([0,0.4])
+for i in range(numTN):
+    ax.text(utileval_list_old[i], utileval_list_new[i], names_list[i], size=7)
+plt.title('Plot of separable utility estimates at lo-based $h_d$ junctures')
+plt.xlabel('Budget-based (hi) bound')
+plt.ylabel('Prior data-based (lo) bound')
+plt.show()
 
 ### GENERATE PATHS FOR CASE STUDY ###
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
 maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
 
-listinds1 = list(itertools.combinations(np.arange(1,numReg).tolist(),1))
-listinds2 = list(itertools.combinations(np.arange(1,numReg).tolist(),2))
-listinds3 = list(itertools.combinations(np.arange(1,numReg).tolist(),3))
-listinds4 = list(itertools.combinations(np.arange(1,numReg).tolist(),4))
-listinds5 = list(itertools.combinations(np.arange(1,numReg).tolist(),5))
+mastlist = []
+for regamt in range(1, maxregnum):
+    mastlist = mastlist + list(itertools.combinations(np.arange(1,numReg).tolist(), regamt))
 
-mastlist = listinds1 + listinds2 + listinds3 + listinds4 + listinds5
 print('Number of feasible region combinations:',len(mastlist))
 
 # For storing best sequences and their corresponding costs
@@ -972,8 +1001,164 @@ plt.show()
 # Now we construct our various program vectors and matrices per the scipy standards
 numPath = paths_df.shape[0]
 
-# Update budget if needed
+# Variable bounds
+# Variable vectors are in form (z, n, x) [districts, allocations, paths]
+lbounds = np.concatenate((np.zeros(numTN*3), np.zeros(numPath)))
+ubounds = np.concatenate((np.ones(numTN),
+                          np.array([juncvec[i]-1 for i in range(numTN)]),
+                          np.array(util_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
+                          np.ones(numPath)))
+
+optbounds = spo.Bounds(lbounds, ubounds)
+
+# Objective vector; negated as milp requires minimization
+optobjvec = -np.concatenate((np.array(lvec), np.array(m1vec), np.array(m2vec), np.zeros(numPath)))
+
+### Constraints
+# Build lower and upper inequality values
+optconstrlower = np.concatenate(( np.ones(numTN*4+1) * -np.inf, np.array([1])))
+optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN*2), np.array(juncvec), np.zeros(numTN), np.array([1])))
+
+# Build A matrix, from left to right
+# Build z district binaries first
+optconstraintmat1 = np.vstack((f_dept, -bigM*np.identity(numTN), np.identity(numTN), 0*np.identity(numTN),
+                              np.identity(numTN), np.zeros(numTN)))
+# n^' matrices
+optconstraintmat2 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), np.identity(numTN),
+                              0*np.identity(numTN), np.zeros(numTN)))
+# n^'' matrices
+optconstraintmat3 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), 0*np.identity(numTN),
+                              0*np.identity(numTN), np.zeros(numTN)))
+# path matrices
+optconstraintmat4 = np.vstack((np.array(seqcostlist_trim).T, np.zeros((numTN*3, numPath)),
+                               (-bindistaccessvectors_trim).T, np.ones(numPath)))
+
+optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4))
+
+optconstraints = spo.LinearConstraint(optconstraintmat, optconstrlower, optconstrupper)
+
+# Define integrality for all variables
+optintegrality = np.ones_like(optobjvec)
+
+# Solve
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+soln_loBudget = spoOutput.x
+
+# Make function for turning scipy output into our case study
+def scipytoallocation(spo_x, eliminateZeros=False):
+    z = np.round(spo_x[:numTN])
+    n1 = np.round(spo_x[numTN:numTN * 2])
+    n2 = np.round(spo_x[numTN * 2:numTN * 3])
+    x = np.round(spo_x[numTN * 3:]) # Solver sometimes gives non-integer solutions
+    path = seqlist_trim.iloc[np.where(x == 1)[0][0],0]
+    # Print district name with
+    for distind, distname in enumerate(deptNames):
+        if not eliminateZeros:
+            print(str(distname)+':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
+        else: # Remove zeros
+            if int(z[distind])==1:
+                print(str(distname)+ ':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
+    pathstr = ''
+    for regind in path:
+        pathstr = pathstr + str(regNames[regind]) + ' '
+    print('Path: '+ pathstr)
+    return
+
+scipytoallocation(soln_loBudget, eliminateZeros=True)
+
+##########################
+##########################
+# Generate 30 additional candidates for lo budget
+##########################
+##########################
+
+# TODO: DO THIS
+
+
+
+###################
+###################
+# Update to hi budget
+###################
+###################
 B = 1400
+
+optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconstant':bigM, 'batchsize':batchsize,
+                'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
+                'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
+
+maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
+
+# TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 9 REGIONS
+maxregnum = maxregnum - 1
+
+mastlist = []
+for regamt in range(1, maxregnum):
+    mastlist = mastlist + list(itertools.combinations(np.arange(1,numReg).tolist(), regamt))
+
+print('Number of feasible region combinations:',len(mastlist))
+
+# For storing best sequences and their corresponding costs
+seqlist, seqcostlist = [], []
+
+kiter = 0 #These take longer with more possible regional subsets
+for tup in mastlist:
+    kiter += 1
+    tuplist = [tup[i] for i in range(len(tup))]
+    tuplist.insert(0,0) # Add HQind to front of list
+    bestseqlist, bestseqcost = FindTSPPathForGivenNodes(tuplist, f_reg)
+    seqlist.append(bestseqlist)
+    seqcostlist.append(bestseqcost)
+    if np.mod(kiter+1,250)==0:
+        print('On tuple '+str(kiter+1))
+
+# For each path, generate a binary vector indicating if each district is accessible on that path
+# First get names of accessible districts
+distaccesslist = []
+for seq in seqlist:
+    currdistlist = []
+    for ind in seq:
+        currdist = GetDeptChildren(regNames[ind],dept_df)
+        currdistlist = currdistlist+currdist
+    currdistlist.sort()
+    distaccesslist.append(currdistlist)
+
+# Next translate each list of district names to binary vectors
+bindistaccessvectors = []
+for distlist in distaccesslist:
+    distbinvec = [int(i in distlist) for i in deptNames]
+    bindistaccessvectors.append(distbinvec)
+
+paths_df_all_hibudget = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
+
+# Remove all paths with cost exceeding budget - min{district access} - sampletest
+paths_df = paths_df_all_hibudget[paths_df_all_hibudget['Cost'] < B].copy()
+# Remaining paths require at least one district and one test in each visited region
+boolevec = [True for i in range(paths_df.shape[0])]
+for i in range(paths_df.shape[0]):
+    rowseq, rowcost = paths_df.iloc[i]['Sequence'], paths_df.iloc[i]['Cost']
+    mindistcost = 0
+    for reg in rowseq:
+        if reg != 0:
+            mindistcost += f_dept[[deptNames.index(x) for x in GetDeptChildren(regNames[reg], dept_df)]].min()
+    # Add district costs, testing costs, and path cost
+    mincost = mindistcost + (len(rowseq)-1)*ctest + rowcost
+    if mincost > B:
+        boolevec[i] = False
+
+paths_df = paths_df[boolevec]
+
+# Update cost list and district access vectors to reflect these dropped paths
+seqlist_trim = paths_df['Sequence'].copy()
+seqcostlist_trim = paths_df['Cost'].copy()
+bindistaccessvectors_trim = np.array(paths_df['DistAccessBinaryVec'].tolist())
+seqlist_trim = seqlist_trim.reset_index()
+seqlist_trim = seqlist_trim.drop(columns='index')
+seqcostlist_trim = seqcostlist_trim.reset_index()
+seqcostlist_trim = seqcostlist_trim.drop(columns='index')
+
+# Now we construct our various program vectors and matrices per the scipy standards
+numPath = paths_df.shape[0]
 
 # Variable bounds
 # Variable vectors are in form (z, n, x) [districts, allocations, paths]
@@ -1016,42 +1201,94 @@ optintegrality = np.ones_like(optobjvec)
 
 # Solve
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
-soln = spoOutput.x
+soln_hiBudget, UB_hiBudget = spoOutput.x, spoOutput.fun*-1
+
+scipytoallocation(soln_hiBudget, eliminateZeros=True)
 
 
-# Make function for turning scipy output into our case study
-def scipytoallocation(spo_x, eliminateZeros=False):
-    z = np.round(spo_x[:numTN])
-    n1 = np.round(spo_x[numTN:numTN * 2])
-    n2 = np.round(spo_x[numTN * 2:numTN * 3])
-    x = np.round(spo_x[numTN * 3:]) # Solver sometimes gives non-integer solutions
-    path = seqlist_trim.iloc[np.where(x == 1)[0][0],0]
-    # Print district name with
-    for distind, distname in enumerate(deptNames):
-        if not eliminateZeros:
-            print(str(distname)+', '+ str(round(m2vec[distind], 5))+', '+\
-                  str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'],3)) +':', str(int(z[distind])),
-                  str(int(n1[distind])), str(int(n2[distind])))
-        else: # Remove zeros
-            if int(z[distind])==1:
-                print(str(distname)+', '+str(round( m2vec[distind], 5))+', '+\
-                      str(round(dept_df_sort.iloc[distind]['DeptFixedCostDays'],3))+':', str(int(z[distind])),
-                      str(int(n1[distind])), str(int(n2[distind])))
-    pathstr = ''
-    for regind in path:
-        pathstr = pathstr + str(regNames[regind]) + ' '
-    print('Path: '+ pathstr)
-    return
+##########################
+##########################
+# Generate 30 additional candidates
+##########################
+##########################
+numtruthdraws, numdatadraws = 200000, 100
+# Get random subsets for truth and data draws
+np.random.seed(56)
+truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
+paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+# Get base loss
+paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+util.print_param_checks(paramdict)
 
-scipytoallocation(spoOutput.x, eliminateZeros=True)
+# Calculate current utility to establish a lower bound for comparison with candidates
+n1 = soln_hiBudget[numTN:numTN * 2]
+n2 = soln_hiBudget[numTN * 2:numTN * 3]
+n_init = n1+n2
+u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
+LB = u_init
+#todo: 13-MAR-24: 5.049080819723875 with 60k/1000 draws
+#todo: 13-MAR-24: 4.239 with 100k/100 draws
+#todo: 13-MAR-24: 4.164 with 200k/100 draws
+
+
+
+
+# Solve IP-RP while setting each path to 1
+def GetConstraintsWithPathCut(numVar, pathInd):
+    """
+    Returns constraint object for use with scipy optimize, where each district in distIndsList must be 0
+    """
+    newconstraintmat = np.zeros((1, numVar)) # size of new constraints matrix
+    newconstraintmat[0, numTN*3 + pathInd] = 1.
+    return spo.LinearConstraint(newconstraintmat, np.ones(1), np.ones(1))
+
+# Prep a new paths dataframe
+
+# Or load
+# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+
+phase2paths_df = paths_df.copy()
+phase2paths_df.insert(3, 'RPobj', np.zeros(numPath).tolist(), True)
+phase2paths_df.insert(4, 'DistCost', np.zeros(numPath).tolist(), True) # Add column to store RP district costs
+phase2paths_df.insert(5, 'Uoracle', np.zeros(numPath).tolist(), True) # Add column for oracle evals
+phase2paths_df.insert(6, 'UoracleCIlo', [0 for i in range(numPath)], True) # Add column for oracle eval CIs
+phase2paths_df.insert(7, 'UoracleCIhi', [0 for i in range(numPath)], True) # Add column for oracle eval CIs
+
+# List of eligible path indices
+eligPathInds = []
+
+# IP-RP for each path
+for pathind in range(numPath):
+    pathconstraint = GetConstraintsWithPathCut(numPath+numTN*3, pathind)
+    curr_spoOutput = milp(c=optobjvec, constraints=(optconstraints, pathconstraint),
+                          integrality=optintegrality, bounds=optbounds)
+    phase2paths_df.iloc[pathind, 3] = curr_spoOutput.fun*-1
+    phase2paths_df.iloc[pathind, 4] = (curr_spoOutput.x[:numTN] * f_dept).sum()
+    if curr_spoOutput.fun*-1 > LB:
+        eligPathInds.append(pathind)
+        scipytoallocation(np.round(curr_spoOutput.x), True)
+        print('Path ' + str(pathind) + ' cost: ' + str(phase2paths_df.iloc[pathind, 1]))
+        print('Path ' + str(pathind) + ' RP utility: ' + str(phase2paths_df.iloc[pathind, 3]))
+
+# Save to avoid generating later
+phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+
+
+
+
+
+#todo:############################################################
+#todo:####### THINGS BELOW HERE NEED TO BE EDITED ################
+#todo:############################################################
+
 
 
 
 
 ### Inspect our solution
 # How does our utility value compare with the real utility?
-n1 = soln[numTN:numTN * 2]
-n2 = soln[numTN * 2:numTN * 3]
+n1 = soln_loBudget[numTN:numTN * 2]
+n2 = soln_loBudget[numTN * 2:numTN * 3]
 n_init = n1+n2
 
 
@@ -1059,17 +1296,7 @@ time0 = time.time()
 u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
 time1 = time.time() - time0
 print(time1)
-''' 4-JAN
-spoOutput*-1: 2.7690379399483853
-150k/500 draws:
-u_init, u_init_CI:  2.184450706985116, (2.0683527673839848, 2.300548646586247)
-                    2.189141541015074, (2.063870236586828, 2.3144128454433197)
-                    2.1243090313794664, (2.0040581266308806, 2.244559936128052)
-Bound is about 27% above actual value
-100k/500 draws:     (2.217041463121607, (2.098915436652165, 2.335167489591049))
-200k/xxx draws:     ???????????????
-losslist:           
-'''
+
 # This objective is our overall upper bound for the problem
 UB = spoOutput.fun*-1
 
@@ -1103,10 +1330,58 @@ def getUtilityEstimateSequential(n, lgdict, paramdict, zlevel=0.95, datadrawsite
     return paramdict['baseloss'] - currloss_avg, \
            (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0]), masterlosslist
 
+#############################
+#############################
+# BENCHMARK CONSTRUCTION (12-MAR-24)
+#############################
+#############################
+# First for B=700
+# LeastVisited
+reglist_LeastVisited = [0, regNames.index('Diourbel'), regNames.index('Fatick')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+# MostSFPs
+reglist_MostSFP = [0, regNames.index('Diourbel'), regNames.index('Saint-Louis')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+# MoreDistricts
+reglist_MoreDistrict = [0, regNames.index('Diourbel'), regNames.index('Thies')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreDistrict, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+# MoreTests
+reglist_MoreTest = [0, regNames.index('Thies')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreTest, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+# Now B=1400
+# LeastVisited
+reglist_LeastVisited = [0, regNames.index('Fatick'), regNames.index('Diourbel'), regNames.index('Kaolack'),
+                        regNames.index('Kaffrine'), regNames.index('Louga'), regNames.index('Tambacounda')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+# MostSFPs
 reglist_MostSFP = [0, regNames.index('Tambacounda'), regNames.index('Diourbel'),regNames.index('Saint-Louis'),
                    regNames.index('Kolda'),regNames.index('Matam')]
-FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
 
+# MoreDistricts
 ''' INCLUDES LOUGA
 reglist_MoreDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),regNames.index('Louga'),
                    regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Fatick')]
@@ -1114,18 +1389,37 @@ FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
 '''
 reglist_MoreDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),
                    regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Fatick')]
-FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
 
-reglist_MoreTests = [0, regNames.index('Thies'), regNames.index('Diourbel')]
-FindTSPPathForGivenNodes(reglist_MoreTests, f_reg)
+# MoreTests
+reglist_MoreTests = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Fatick')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreTests, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
 
-reglist_LeastVisited = [0, regNames.index('Fatick'), regNames.index('Diourbel'), regNames.index('Kaolack'),
-                        regNames.index('Kaffrine'), regNames.index('Louga'), regNames.index('Tambacounda')]
-FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+# Opt Soln
+reglist_optSoln = [0, regNames.index('Louga'), regNames.index('Diourbel'), regNames.index('Fatick'),
+                   regNames.index('Kaffrine'), regNames.index('Kaolack')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_optSoln, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
 
-reglist_InitialOptSol = [0, regNames.index('Fatick'), regNames.index('Diourbel'), regNames.index('Kaolack'),
-                        regNames.index('Kaffrine')]
-FindTSPPathForGivenNodes(reglist_InitialOptSol, f_reg)
+
+##########################
+##########################
+# Evaluate utility of candidates and benchmarks
+##########################
+##########################
+
+
+
+
+
 
 
 def utilityEstimatesForBenchmarks():
@@ -1159,110 +1453,6 @@ runtime = time.time()-time0
 print(runtime)
 print(l_list)
 
-'''15-JAN sequential draws
-l_list = [10.442996835781189, 10.390019889039577, 10.630643831687987, 10.37691098584561, 9.863938228319885, 9.533729833554805, 10.186727458409926, 10.320859396406009, 10.205343799145952, 9.98384901191533, 10.246306987974553, 10.483967819488006, 10.449970659196254, 10.15844427009691, 10.223746961818799, 10.49440619652099, 10.25528409677842, 9.626691766877931, 9.88870093299244, 6.64599200992307, 9.89023131074264, 10.107485766933525, 10.331595666947075, 9.492566845770828, 10.151556316615775, 10.112977990225714, 10.14190915518512, 10.000867017110714, 10.18503278995988, 10.38586768409199, 9.977931808511265, 10.278475870201454, 10.006414346225839, 9.53582656920562, 10.020701814480661, 6.598305909754853, 9.666506956670647, 10.470244599994967, 10.066506083180949, 10.200975292371552, 10.460094058552976, 10.041182383849492, 10.721883896645851, 10.513346031975615, 9.9136970272746, 10.286159502653765, 10.405614779680882, 10.185215030543446, 10.280428757157622, 10.4816565152816, 10.792152547604289, 9.894413823361697, 10.400209054012285, 10.3444413636887, 8.405829099614945, 9.970248951306072, 10.332090663919619, 10.14873018547446, 10.2234249421107, 10.127639125327754, 9.827343794686492, 10.203644000687337, 9.668224541045955, 10.295889652099923, 10.382146720309093, 9.268278645706838, 10.34926977963196, 10.281088111716635, 10.659325856182782, 10.133090595343411, 10.429189686974173, 10.448585371749092, 10.280313566783285, 9.827659328940879, 10.03913602749003, 6.8329622705510324, 10.217478939309887, 10.565998569695422, 9.985324718594802, 9.563779182800538, 8.755372076519157, 10.425639700312516, 10.453147866678702, 10.126487094791548, 10.253880561853002, 10.536359407718297, 10.06810597843708, 10.437709519694655, 10.570132166237508, 8.769575687437198, 9.864294302632565, 9.772001516501293, 10.26340214654804, 10.254365673065518, 10.003121710429136, 9.47242323228721, 10.324002450418847, 0.07318458178565151, 10.388168587324326, 10.525848353697603, 9.694539437437847, 9.911244260175964, 9.873775412955558, 9.801063646852526, 8.523677991873896, 10.14900672121192, 9.922034569108707, 10.111648122979915, 8.586621629222167, 10.140014577781235, 9.872807622487354, 8.08976049826687, 10.472971740538153, 10.379813543489265, 9.831134560950542, 10.064368979840951, 10.245146163581554, 8.985750411852473, 9.193261232388792, 8.938763198942958, 9.992348216310093, 9.486772160108561, 8.431231740546083, 9.9788725156258, 9.724152124542073, 10.343955730127908, 9.06295436930468, 10.284647004314543, 7.7343368807799235, 7.280258624436381, 10.055951972177402, 10.344963928577487, 10.483999667133695, 10.085828709737836, 10.561391074424387, 9.14933404945485, 10.196529734082034, 9.903335587847304, 10.2818911401616, 9.640603113315432, 10.471831251789249, 9.995594775723314, 9.815776406964776, 9.784897709828916, 10.058443723225817, 10.192440213769899, 9.783093354966043, 9.890602661059155, 10.19379649701372, 9.861759317644301, 9.793414007963605, 10.38681943683679, 10.236977294345715, 10.58272162197702, 10.365304829336647, 9.346197448489875, 10.328184298045656, 10.175541167224182, 10.374870251468588, 8.808113556423812, 10.51737366178282, 8.983955991871325, 10.018283268697301, 8.699274084112686, 9.940745351633039, 9.280728728033342, 10.249252961920142, 8.239840649548462, 10.059465948636944, 10.658064133062252, 10.291353988483532, 10.317163365028316, 5.091420823312945, 9.939502138710617, 10.470766560525055, 3.3652566563269826, 10.239558970814766, 10.414192072106045, 10.372507235845585, 10.130683735263037, 9.478711430417412, 10.169853963498726, 5.679365557295321, 10.522831367566289, 9.906581949594079, 10.111332321881058, 10.601220340864733, 9.985032791568855, 10.256021373187547, 10.211558083694017, 9.928747998694853, 9.838470659195627, 10.29432092743594, 10.179376447942385, 9.981782433110222, 10.32143185269747, 10.282499234873661, 9.86179869321955, 9.963266904585389, 9.633640379039823, 10.38750749482857, 10.274881143114584, 9.914042963447834, 9.87381255087762, 7.075060400128026, 9.989105432825498, 9.275847920353, 10.002442317557465, 10.15364988305535, 10.336679484869212, 7.491558327671446, 10.554528859318827, 10.228187479858006, 10.32395744931034, 10.327217464551973, 10.560943234373426, 10.495468944253833, 8.917289587535812, 10.456556158865565, 10.15004925218855, 9.560260123628577, 10.131423900840609, 9.965529082372964, 10.128896805189749, 10.328894021026086, 9.979972465659822, 7.341202972903474, 10.310317880535747, 10.131155110181698, 10.056478116239678, 10.148234453634377, 9.764851514576161, 10.667319087692858, 10.426893281905365, 10.019304595480243, 10.358249370046305, 9.845312835191395, 10.620084892471848, 9.824817488472808, 8.591129432710062, 9.922409606824703, 10.091048212052776, 10.371881758590117, 8.569744954351851, 9.541142640000817, 9.207233073755301, 10.307461186713473, 10.38797028774525, 9.413167467176875, 10.613019194788862, 10.575969389384829, 10.262957759707614, 10.002574915228585, 10.074556443053575, 10.636782892232356, 10.070988971155847, 8.515943463904746, 10.573839654013927, 9.199534499604104, 10.138897665411221, 8.365095724261478, 6.42851420143532, 10.265723821606676, 8.526562873487443, 9.938576173830894, 9.43180606724316, 10.32956057823461, 10.409947313177357, 10.627714499551727, 10.3763993413091, 10.279483671793281, 10.00266635905606, 10.756560088235462, 8.92744301809653, 10.20823210701084, 9.503963385449525, 10.367740335648573, 10.586095161619266, 9.248744679729127, 6.783802739685619, 10.385607722188329, 10.952871025639968, 10.541762144580963, 7.37609699932146, 10.35101425454128, 9.23274767567994, 10.239381467420175, 9.856278213069364, 10.373760616694529, 2.6895410979013867, 10.541887153514725, 10.245897734724432, 10.181558534128012, 10.451198021958767, 10.570814992033148, 10.331666882144482, 10.109459593309008, 10.037098927336546, 10.006329293134346, 10.070170482639845, 9.11752827118502, 9.800682125864224, 10.189941155060149, 9.333042869920183, 8.233931890507197, 8.631927458039454, 9.74917495635073, 10.402362659404606, 9.58080920019523, 10.294172222636382, 9.6989530930483, 10.559582480092002, 10.450604551802543, 10.093805297661167, 10.17232591489882, 8.576239389193566, 9.961862267400281, 9.913197583354792, 8.660240592516878, 9.960147969672198, 10.05153895796463, 8.485935013031888, 6.1149609314285325, 10.325154849225827, 10.281553203299726, 10.446412515948001, 9.781717504567466, 10.110615126012167, 8.68457381595919, 9.63990818937899, 9.417735906542564, 10.495179641462403, 10.106906003185433, 10.358066003406275, 10.374959586952968, 10.646815329457201, 10.099269389152056, 9.23020839118651, 10.20803233967698, 8.741781724042655, 9.668110290967682, 10.36026297986632, 10.129781029370676, 5.062030876579721, 8.802573634879643, 10.324196737974722, 10.395598523054565, 10.126353992819022, 10.29645743257499, 9.554853226069477, 9.384551855001867, 10.176352100942275, 9.808318283775067, 10.335810841004534, 10.283006385597453, 9.820616732800804, 10.252222348876401, 10.033737672929282, 10.546282573526629, 10.70848837776804, 10.1228199744358, 10.009862018185617, 10.135044409013648, 9.861014502314408, 10.284404429339935, 10.277587153000798, 9.923059844387208, 10.304947891967059, 8.529122723321091, 8.498287433414097, 9.604982512734411, 6.730480314134162, 10.24858573442245, 10.156061438102476, 10.20822753877644, 10.366746734680577, 10.614131300714963, 8.791512769490495, 10.141237896744025, 10.076599877275195, 10.490806309768347, 10.49666576868176, 10.063200097755399, 10.686954310818619, 9.973614709899305, 10.30534112416588, 10.190936758640545, 10.34451397399869, 9.464711957695542, 10.070942136033903, 10.50748328582241, 10.464655951842634, 10.135457774684939, 6.365980624279101, 9.60379512400387, 9.233130280509386, 9.868356531266521, 10.200478960537486, 10.128320221258964, 9.040957168779727, 10.414138134333104, 10.172334655931703, 10.395201123295353, 9.695569786508383, 9.79552037852002, 10.093088799721837, 10.490630231477967, 10.028086136603129, 10.320587314951698, 9.653773001339232, 9.938344918772051, 9.175023624778312, 10.222443521739098, 6.29388895059991, 10.335100712717685, 8.481734132207295, 10.118448253612145, 10.266284634858833, 10.232327527239176, 10.4618390639198, 7.281342262040244, 10.04720483059564, 9.408950109898987, 8.60841081214386, 10.388082060368546, 3.6461617508586137, 7.832111979926391, 10.058031010523948, 9.997663690227695, 10.184356587988384, 10.062795246105072, 9.684461536302843, 10.660897656324066, 9.94620876788075, 9.976982697649023, 10.140854608810924, 9.963023259709724, 10.506175395934076, 10.10983345011927, 10.43715497098677, 10.557987425584166, 10.150625045967164, 10.344515285869397, 10.482515276266716, 9.400113240500273, 10.317377899743853, 10.370849646479943, 8.739795287753397, 10.039561962223576, 10.351227170643936, 10.407963015163608, 10.034334240945585, 10.410926834025055, 9.652809136773545, 5.958011468951926, 10.231880153316643, 10.061247285083487, 10.456054810910638, 10.71123249745387, 9.993116023139855, 3.9921298927263345, 10.512009212381981, 7.346422502066185, 10.396182483042953, 10.195471289685223, 10.488444226790762, 10.217318187079345, 7.106710640368592, 9.95642963458766, 10.168411265829887, 9.883833317874155, 10.385490507030445, 10.086390981981925, 10.174793980284504, 9.845351149812418, 10.53104823588115, 10.362285132964745, 10.488087151856426, 9.792415928279745, 10.46117735307701, 10.32271785755814, 10.24661119544864, 10.29774534830496, 8.513072923372523, 9.947072624262312, 10.34526781929906, 10.455985712833424, 10.496394188372442, 10.353751487527001, 10.488620446347143, 1.164625474048867, 7.35186682495822, 9.697074119989262, 3.248853372708683, 10.165804786632027, 10.408394375498231, 9.725231582960289, 10.339363829246574, 9.058111219332487, 10.444520440005869, 4.5742498743720565, 10.4144602876836, 8.640148643035939, 10.098888830112934, 9.8942214133548, 9.731468475026412, 10.345768787554555, 10.254622806603548, 10.081252505886962, 10.216811945388475, 10.03989513760421, 10.167194296863574, 9.908033338764552, 10.053648777919483, 10.668989600912074, 10.428928204394735, 10.031959713545522, 10.394763406931542, 9.846504513382339, 10.531614010838089, 10.06826891584711, 9.94422162744142, 10.208905499710285, 10.398642339327196, 10.230974426292232, 10.234225353733763, 10.420261689542285, 9.833800576792516, 10.249517089866728, 9.702398023009192, 9.92502828786074, 10.163839598143964, 10.025952144787048, 10.202741986964645, 10.440276909007016, 9.223685364115557, 10.242564439559382, 10.328153644200954, 10.274589508851582, 10.467598266279973, 9.586106730802438, 10.428161791764389, 2.105105084378693, 10.711215571434407, 9.980300119997878, 9.390078627464467, 8.940323237419365, 8.088208249039681, 9.963551328936338, 10.353122728125268, 10.171875230549896, 10.311519323536306, 8.614465925030961, 10.201183528285826, 10.030032055551555, 9.966660515056299, 9.488007184815444, 10.112912164991616, 9.958870977795415, 10.252300554880268, 9.79333218991588, 9.331607597962545, 8.948903198262945, 10.025298656312662, 7.216611969661757, 10.341160862347081, 10.231610718847781, 10.379973418626056, 9.371600484311795, 10.006328878884938, 9.959277197327207, 10.42244856817023, 9.702915720440295, 9.580474233086155, 9.797697679605852, 10.296731141851756, 10.266861892652637, 10.183919366343991, 10.272838170388088, 10.247308576371799, 10.359377484846044, 10.332599722183343, 10.20183145308672, 9.54257249479826, 10.099308259294833, 10.53988428216637, 9.94587087600522, 10.590830992735103, 10.182773263368484, 9.801280657294589, 10.438520309952914, 10.388634584168564, 9.712666909161843, 10.281847596326921, 9.760339764159347, 10.113320883000183, 10.001391867965838, 10.146089684285965, 10.308100846651797, 9.990752848182073, 10.461090739214415, 10.060035064141397, 9.4438468449256, 9.93561280339964, 9.67678327878811, 9.95667129439584, 7.557424140379383, 10.329588775172125, 10.207164658425784, 9.800065425623114, 9.678007823972267, 8.986303562108544, 10.070210895469357, 10.460046178167767, 10.00547745727634, 10.332207156440916, 10.345522551581553, 10.592862130388944, 9.96424813562322, 10.383683899906675, 10.372737653764727, 10.054580119613558, 9.00382878555996, 10.30836238121236, 10.036624166053185, 9.348947265332509, 9.94444967781179, 8.214546942583357, 10.132826635763616, 10.678737981297422, 8.56116384186252, 6.634375095063367, 8.999289926524268, 7.467771617713528, 9.819430659992728, 10.346460258427774, 9.360995718873307, 10.630580919900655, 10.295691860313458, 10.244846559488508, 9.985355081752866, 10.0918071958822, 10.2930634782433, 9.308087685716849, 10.202266117336391, 8.461355085549531, 10.548560820387785, 10.43354350277858, 10.159416171227594, 10.736622954581046, 9.987788486722591, 8.731874726023399, 8.81603400628755, 10.230929020542348, 10.51646497702118, 10.527801655471395, 10.11634240434732, 9.385758111939845, 10.158331720652996, 3.597582542425211, 10.171346176950887, 7.734872040271424, 10.329093050439692, 8.926266393237597, 7.786416740999709, 10.054267770925671, 9.238707714848747, 10.579493741273033, 9.761393611999843, 10.014907672189118, 9.65926939847489, 10.537840701296597, 9.473935251812089, 10.296383838628891, 10.487962679427067, 10.605927064711215, 10.7465437156227, 10.282433653216932, 10.124401215427246, 9.98430865441107, 6.253211536429812, 10.572552898184322, 10.100389151825663, 7.472267751297045, 10.295289887420434, 9.878180640179016, 9.769637822529367, 10.427671536764306, 10.292694116396145, 10.4454023234482, 10.339855098202678, 10.438659615567818, 9.349310072692933, 9.29598613118375, 5.902222807490231, 10.11068454246733, 9.673516904678372, 10.39357654144288, 10.404112199315549, 9.859359810477114, 9.752495856496362, 9.9208410251003, 9.71922226660003, 9.957954342059748, 9.819292483494335, 10.279648648499553, 7.229264406539121, 10.456040774819645, 10.446941159673807, 9.774080333766118, 9.598512178182144, 10.168943381244587, 10.727855281865029, 10.318412845018486, 10.853842056935063, 9.091123384499667, 10.309282867479464, 10.354386444622511, 10.031799465124191, 10.178935663265325, 10.44729825268965, 10.087256520647895, 10.395390877908337, 10.293539045754974, 9.75804641064874, 10.262090691155114, 10.075169267276657, 9.004398794469079, 10.493161288393557, 9.951935365690336, 10.21192514983217, 10.300580102675092, 10.630331878047643, 9.027161118525683, 10.189972777354635, 10.47507405115745, 10.268026473064841, 10.129597845970025, 10.303751245530782, 10.458204146028086, 9.812419055714582, 8.226903316811821, 10.266818030521593, 6.319367713741644, 10.52082110821765, 10.528791557407349, 10.404467663386953, 10.613328548351062, 10.156015013395129, 10.073561032492226, 10.221834112122886, 10.137898547171089, 1.345622174615821, 6.996275805322611, 9.972180120411833, 10.335669849651454, 9.804563291059512, 10.177880040294243, 9.948653870416676, 10.231296274529956, 10.14700297216654, 10.22706837462063, 10.288031722618864, 10.241467856223977, 9.84631381491274, 7.623690781263165, 10.443909659262168, 10.191355049612172, 10.061449838673955, 10.280445908674238, 10.354636875338143, 10.079373499069309, 8.721346582530115, 9.76077290241623, 10.568593697749227, 10.03805366595582, 9.762293100801854, 10.045961572347194, 10.231922500765705, 9.638131809123779, 8.212728657260694, 9.000191888750528, 10.42057780522108, 10.174622728120859, 10.765411156658509, 8.569520393743405, 10.373849128103812, 8.952952450435301, 10.31945109363702, 10.26741051127938, 10.208894967840113, 10.623395334025657, 9.416909747721666, 9.53622910095492, 9.493681442805535, 10.334540372588949, 10.2923640768805, 9.739817456463621, 9.94037378033291, 10.141134280043886, 10.299205155599243, 9.686604950040365, 7.2337232589809215, 10.221055419121384, 10.271826828740835, 10.272361033865382, 7.189895604607269, 9.850095702519585, 8.65320228197507, 10.181367472773479, 9.446403095882959, 10.887230824166425, 10.003724710346404, 10.014369107127218, 10.541528486838974, 9.94242920848684, 9.745170343882476, 10.27108885790982, 10.339455018679667, 10.43410681162983, 10.352121159934443, 10.284304532575469, 10.384829402575168, 10.504318862583972, 9.517706921659684, 9.625132298530911, 8.858901007551653, 10.274941797580324, 10.377843535695476, 9.892163717860493, 9.1781370540215, 10.485447643101741, 9.56057574851256, 10.324705754319728, 10.057450716824833, 10.306849045667121, 10.519167496904895, 8.079225942758539, 10.144744037771071, 10.207294806876234, 10.303653295019718, 10.37949038979731, 10.044168119885185, 10.575797681043325, 10.059063936410356, 8.70171631473671, 10.173003792339982, 10.275162776243029, 10.012707809884741, 10.127733373636566, 10.305180356890927, 10.085422996037025, 10.030819025502131, 10.197171514017928, 10.402568735580115, 10.523360577204214, 10.143593202792994, 10.151727093099973, 10.46375789994004, 10.476429115807328, 10.6582467318687, 10.070521047207821, 10.06461090084853, 9.903830637683598, 10.489555463856544, 5.507165213683088, 10.029056831915259, 9.755846664640623, 9.476384078995958, 10.28071072872117, 8.48971502008415, 10.152169159948045, 10.415423284424621, 10.344838550534341, 10.63090446076356, 9.94750509612848, 9.64057956518844, 9.940084516368234, 9.892883070118948, 10.155801872826366, 9.921483227842762, 10.383019866032496, 9.246804918428758, 10.317930650339502, 10.116574369889417, 10.552606988543939, 10.648357374993603, 9.947661702748592, 10.155804577483039, 10.087762021704515, 10.110507613992437, 9.922259435275018, 10.391319738277527, 9.97465629887938, 10.448067210655466, 10.329418479471466, 10.403575627356059, 10.423754870557621, 10.071959159124999, 8.083407744422683, 8.235682656993857, 7.079101991001244, 9.175777773076215, 8.211355502976028, 8.94059648006172, 10.593356561294458, 10.358062873876591, 10.3730773575235, 10.168688175367308, 10.436159476372211, 9.98728851166832, 10.459689391749135, 10.1583525562488, 10.123837580627631, 10.279832233083717, 10.557342166550235, 10.03429608293561, 10.570522004582168, 6.820138623640233, 8.910315154578125, 10.728541444785229, 10.128836064559156, 8.295353701808189, 10.430886916194531, 10.17731334707802, 10.55697466602106, 10.162524789939342, 10.405853362960803, 4.68252767982876, 4.006042422361978, 10.078064363534253, 10.189836114778458, 10.286753691934145, 10.130198703033376, 10.423388903667929, 8.122333349764261, 9.987839372173031, 10.279002377399433, 10.05408491012548, 10.39737524572728, 9.774188246384853, 10.40140590375311, 10.129642362663002, 10.333246246248624, 9.837380638361394, 10.67288921631406, 9.978279836249454, 9.998117532025041, 10.403677984691951, 9.548470341725437, 10.243121065753837, 8.79794895415328, 10.015314791764778, 5.549019342094028, 10.371012717457873, 10.130538584089985, 10.054040794341995, 9.95881805460261, 10.14567905388273, 9.91124912619353, 10.331569854294939, 9.792871386595348, 10.323376350103175, 10.389376121083941, 10.099496774723644, 10.54865404224775, 9.707458834456942, 10.45142622443326, 9.95594328810176, 10.219744844226458, 9.717013582192516, 10.571764674975269, 9.455963581712926, 7.671691232794967, 9.177284707862613, 9.943366111101279, 10.09070729056593, 4.159686067900914, 10.028106837259365, 10.260369608630832, 9.323053204446788, 10.355295640723334, 10.395996073317018, 10.175356422162933, 10.142345310832061, 10.066902005423282, 10.209613946108082, 10.16655085871733, 9.634716000412409, 9.698511388439666, 10.217761984518607, 10.294332090003369, 9.807372444932334, 9.944414732054815, 10.377379377030566, 10.23866430458995, 9.874920914433297, 8.806121025951654, 10.26303146243845, 9.775660158385323, 10.130213512285339, 10.255757232997876, 9.415060146558142, 10.167678196820711, 8.870182163624985, 9.883430650016319, 10.449628017137872, 10.135474117361312, 10.033113029053972, 10.444104495915537, 10.076076261189089, 8.730599770940477, 10.540344575269375, 10.392185170793766, 10.208321863493355, 10.10454606855027, 9.512311900276918, 10.097635702847823, 9.862000812684741, 10.289418371013806, 10.251255822103152, 10.129288448370627, 9.901673018406038, 10.36439049121987, 10.306750828787365, 10.292053977525775, 10.27871407567322, 10.497839318978789, 10.012606165458216, 10.243196187788246, 10.520126291518178, 7.670122180713563, 10.155028916536878, 10.440821810684838, 10.148528203152972, 10.17601195570308, 9.74033369920179, 10.347818302081624, 10.126187927924638, 9.887187898220382, 10.189886495791233, 10.18147262083346, 8.870015728988271, 10.196851757512764, 9.687876489045019, 9.78716814602091, 10.201954829559797, 10.404315200360625, 10.068968483257862, 9.943864180104132]
-
-
-'''
-
-################################
-################################
-# COMPARATIVE CASE: GENERATE RANDOM PATHS AND ALLOCATIONS AND COMPARE WITH THE UTILITY OF OUR INITIAL FEASIBLE SOLUTION
-################################
-################################
-comparepathsdict = {}
-# Choose 2|D|+1 feasible paths
-np.random.seed(55893)
-numcomparepaths = 2*len(deptNames)+277
-compare_pathinds = np.random.choice(np.arange(numPath),size=numcomparepaths,replace=False)
-compare_pathinds.sort()
-comparepathsdict.update({'pathinds':compare_pathinds})
-# Iterate through each path and designate visited districts
-compare_visiteddistinds = []
-compare_allocvecs = []
-pathstoadd = 0 # For ensuring we end up with 93 feasible paths
-for pathind in comparepathsdict['pathinds'].tolist():
-    curr_distaccess = [0 for x in range(numTN)]
-    curr_regs = paths_df.iloc[pathind]['Sequence']
-    for r in curr_regs:
-        if r == 0: # Flip coin for HQ region
-            possDists = GetDeptChildren(regNames[r], dept_df)
-            possDistsInds = [deptNames.index(x) for x in possDists]
-            for distInd in possDistsInds:
-                curr_distaccess[distInd] = np.random.binomial(n=1,p=0.25)
-        else:
-            # Guarantee one district is visited
-            possDists = GetDeptChildren(regNames[r], dept_df)
-            defVisitDist = possDists[np.random.choice(np.arange(len(possDists)))]
-            curr_distaccess[deptNames.index(defVisitDist)] = 1
-            possDists.remove(defVisitDist)
-            possDistsInds = [deptNames.index(x) for x in possDists]
-            for distInd in possDistsInds:
-                curr_distaccess[distInd] = np.random.binomial(1, 0.25)
-    compare_visiteddistinds.append(curr_distaccess)
-    # Add one test to each visited district
-    curr_n = np.array(curr_distaccess)
-    # Check if budget is feasible
-    budgetcost = np.sum(np.array(curr_distaccess) * f_dept) + paths_df.iloc[pathind]['Cost'] + curr_n.sum()*ctest
-    if budgetcost > B:
-        pathstoadd += 1
-    else: # Expend rest of budget on tests at random locations
-        teststoadd = int(np.floor((B-budgetcost)/ctest))
-        multinom_num = curr_n.sum()
-        multinom_vec = np.random.multinomial(n=teststoadd,pvals=np.ones(multinom_num)/multinom_num)
-        curraddind = 0
-        for t_ind in range(curr_n.shape[0]):
-            if curr_n[t_ind] > 0:
-                curr_n[t_ind] += multinom_vec[curraddind]
-                curraddind += 1
-    compare_allocvecs.append(curr_n)
-comparepathsdict.update({'visiteddistinds':compare_visiteddistinds})
-comparepathsdict.update({'allocvecs':compare_allocvecs})
-print(numcomparepaths-pathstoadd) # Target is 93
-
-# Save comparative paths dictionary
-'''
-comparepathsdict.update({'lossevals':[[] for x in range(numcomparepaths)]})
-with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
-    pickle.dump(comparepathsdict, fp)
-'''
-
-#########
-# Load previous runs and append to those
-with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'rb') as fp:
-    comparepathsdict = pickle.load(fp)
-
-# Now loop through feasible budgets and get loss evaluations
-start_i = 201 # Denote which comparison path to begin with
-for temp_i, pathind in enumerate(comparepathsdict['pathinds'].tolist()):
-    budgetcost = (np.array(np.array(comparepathsdict['visiteddistinds']).tolist()[temp_i])*f_dept).sum() +\
-                 paths_df['Cost'].tolist()[pathind] +\
-                 np.array(np.array(comparepathsdict['allocvecs']).tolist()[temp_i]).sum()*ctest
-    if budgetcost <= B and temp_i >= start_i: # Get utility
-        print('Getting utility for comparative path '+str(temp_i)+'...')
-        curr_n = comparepathsdict['allocvecs'][temp_i]
-        currlosslist = sampf.sampling_plan_loss_list(curr_n/curr_n.sum(), curr_n.sum(), lgdict, paramdict)
-        comparepathsdict['lossevals'][temp_i] = comparepathsdict['lossevals'][temp_i] + currlosslist
-
-with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
-    pickle.dump(comparepathsdict, fp)
-
-# Plot a histogram
-utilhistvals = []
-for i in range(len(comparepathsdict['pathinds'].tolist())):
-    utilhistvals.append(paramdict['baseloss'] - np.average(comparepathsdict['lossevals'][i]))
-
-fig, ax = plt.subplots()
-plt.hist(utilhistvals, color='dimgray', density=True)
-plt.title('Histogram of utilities for benchmark plans',
-          fontsize=14)
-plt.xlabel('Utility', fontsize=12)
-plt.ylabel('Density', fontsize=12)
-plt.axvline(x=2.7690379399483853, color='royalblue') # Approximation
-plt.axvline(x=2.184450706985116, color='black') # Evaluated utility
-ax.text(1.79,5,'$U(n^{Best})$',fontsize=11)
-ax.text(2.24,5,r'$\sum_{d}\tilde{U}_{d}(n_{d}^{Best})$',fontsize=11,color='royalblue')
-plt.show()
 
 
 ###################
@@ -1373,55 +1563,18 @@ distCutIndsList = [9]
 ####################
 # PART 2: TRY SOME RANDOM PATHS AND CHECK THEIR UTILITY
 ####################
+####################
+####################
 UB = spoOutput.fun*-1
 
-# Solve RP while setting each path to 1
-def GetConstraintsWithPathCut(numVar, pathInd):
-    """
-    Returns constraint object for use with scipy optimize, where each district in distIndsList must be 0
-    """
-    newconstraintmat = np.zeros((1, numVar)) # size of new constraints matrix
-    newconstraintmat[0, numTN*3 + pathInd] = 1.
-    return spo.LinearConstraint(newconstraintmat, np.ones(1), np.ones(1))
 
-# Prep a new paths dataframe
-
-# Or load
-# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
-
-phase2paths_df = paths_df.copy()
-phase2paths_df.insert(3, 'RPobj', np.zeros(numPath).tolist(), True)
-phase2paths_df.insert(4, 'DistCost', np.zeros(numPath).tolist(), True) # Add column to store RP district costs
-phase2paths_df.insert(5, 'Uoracle', np.zeros(numPath).tolist(), True) # Add column for oracle evals
-phase2paths_df.insert(6, 'UoracleCIlo', [0 for i in range(numPath)], True) # Add column for oracle eval CIs
-phase2paths_df.insert(7, 'UoracleCIhi', [0 for i in range(numPath)], True) # Add column for oracle eval CIs
-
-
-# List of eligible path indices
-eligPathInds = []
-
-# RP for each path
-for pathind in range(numPath):
-    pathconstraint = GetConstraintsWithPathCut(numPath+numTN*3, pathind)
-    curr_spoOutput = milp(c=optobjvec, constraints=(optconstraints, pathconstraint),
-                          integrality=optintegrality, bounds=optbounds)
-    phase2paths_df.iloc[pathind, 3] = curr_spoOutput.fun*-1
-    phase2paths_df.iloc[pathind, 4] = (curr_spoOutput.x[:numTN] * f_dept).sum()
-    if curr_spoOutput.fun*-1 > LB:
-        eligPathInds.append(pathind)
-        scipytoallocation(np.round(curr_spoOutput.x), True)
-        #print('Path cost: ' + str(phase2paths_df.iloc[pathind, 1]))
-        #print('Path RP utility: ' + str(phase2paths_df.iloc[pathind, 3]))
-
-# Save to avoid generating later
-phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
 '''
 len(eligPathInds) = 30
 eligPathInds = [1, 13, 14, 15, 18, 25, 26, 29, 31, 32, 33, 34, 35, 91, 92, 95, 97, 100, 157, 160, 165, 169, 174, 195, 376, 384, 388, 393, 409, 412, 
 '''
 
 # Sort 30 remaining eligible paths by transit/collection trade-off distance from initial solution tradeoff
-initPathInd = np.where(soln[numTN * 3:] == 1)[0][0]
+initPathInd = np.where(soln_loBudget[numTN * 3:] == 1)[0][0]
 eligPathInds.remove(initPathInd) # Don't need to reevaluate this
 
 initPathCost = phase2paths_df.iloc[initPathInd, 1] + phase2paths_df.iloc[initPathInd, 4]
