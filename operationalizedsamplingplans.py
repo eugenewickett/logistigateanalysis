@@ -1230,6 +1230,36 @@ LB = u_init
 #todo: 13-MAR-24: 4.239 with 100k/100 draws
 #todo: 13-MAR-24: 4.164 with 200k/100 draws
 
+# todo: TEMPORARY STUDY 13-MAR; REMOVE LATER
+z_init = soln_hiBudget[:numTN]
+# Get new interpolations with more data draws and see if this helps with inverted gap
+util_lo, util_lo_CI = [], []
+util_hi, util_hi_CI = [], []
+for i in range(len(deptNames)):
+    if z_init[i] == 1:
+        currbd = int(deptallocbds[i])
+        print('Getting utility for ' + deptNames[i] + ', at 1 test...')
+        n = np.zeros(numTN)
+        n[i] = 1
+        currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
+        print(currlo, currlo_CI)
+        util_lo.append(currlo)
+        util_lo_CI.append(currlo_CI)
+        print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
+        n[i] = currbd
+        currhi, currhi_CI = getUtilityEstimate(n, lgdict, paramdict)
+        print(currhi, currhi_CI)
+        util_hi.append(currhi)
+        util_hi_CI.append(currhi_CI)
+
+# Compare resulting interp values with currently used ones here
+
+
+
+
+
+
+
 
 
 
