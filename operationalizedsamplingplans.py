@@ -3,6 +3,7 @@ from logistigate.logistigate import methods
 from logistigate.logistigate.priors import prior_normal_assort
 from logistigate.logistigate import lossfunctions as lf
 from logistigate.logistigate import samplingplanfunctions as sampf
+from logistigate.logistigate import orienteering as opf
 
 import os
 import pickle
@@ -256,8 +257,6 @@ lgdict['postSamples'] = tempobj
 # Print inference from initial data
 util.plotPostSamples(lgdict, 'int90')
 
-
-
 # Generate Q via bootstrap sampling of known traces
 numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'],axis=1))
 numboot = 20 # Average across each department in original data
@@ -279,7 +278,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 60000, 1000
+numtruthdraws, numdatadraws = 200000, 200
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -667,6 +666,250 @@ util_df.insert(6, 'Util_81_CI', util_81_CI)
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
 
 
+''' 14-MAR-24 COMPARISON OF INTERPOLATED UTILITY POINTS: 60K/1000 VS 200K/200
+util_lo_60 = np.array([0.03344591, 0.03446701, 0.03066869, 0.03730135, 0.00453539,
+                       0.00422144, 0.00522252, 0.00231574, 0.03305749, 0.03061265,
+                       0.04035724, 0.0223767 , 0.032466  , 0.00347499, 0.02463909,
+                       0.01918473, 0.00561556, 0.00807742, 0.01002169, 0.00462278,
+                       0.01424308, 0.00203755, 0.00183784, 0.00595836, 0.02330756,
+                       0.0446292 , 0.03696385, 0.00171342, 0.03962201, 0.00401421,
+                       0.03131379, 0.02061252, 0.01409668, 0.04275234, 0.00901496,
+                       0.04311047, 0.00145227, 0.00207412, 0.01286778, 0.03405235,
+                       0.01369974, 0.00228068, 0.0017215 , 0.0086946 , 0.00993675,
+                       0.03577284])
+util_lo_60_CI = np.array([[0.03147292, 0.0354189 ],
+       [0.03195029, 0.03698372],
+       [0.02772584, 0.03361154],
+       [0.03480121, 0.03980148],
+       [0.00293373, 0.00613706],
+       [0.00364864, 0.00479423],
+       [0.00429602, 0.00614902],
+       [0.00176791, 0.00286357],
+       [0.03050272, 0.03561226],
+       [0.02884772, 0.03237758],
+       [0.0382347 , 0.04247979],
+       [0.01976218, 0.02499121],
+       [0.02939688, 0.03553513],
+       [0.00289235, 0.00405762],
+       [0.02214466, 0.02713352],
+       [0.01611166, 0.0222578 ],
+       [0.00449114, 0.00673999],
+       [0.00698744, 0.00916739],
+       [0.00838262, 0.01166076],
+       [0.00353465, 0.00571092],
+       [0.011471  , 0.01701515],
+       [0.00133816, 0.00273694],
+       [0.00134013, 0.00233556],
+       [0.00323716, 0.00867955],
+       [0.02013414, 0.02648098],
+       [0.04349307, 0.04576533],
+       [0.03432852, 0.03959918],
+       [0.00123777, 0.00218906],
+       [0.03740724, 0.04183677],
+       [0.00322302, 0.0048054 ],
+       [0.02909401, 0.03353357],
+       [0.01698735, 0.02423769],
+       [0.011657  , 0.01653636],
+       [0.04106823, 0.04443644],
+       [0.00674657, 0.01128336],
+       [0.04176224, 0.04445871],
+       [0.00123559, 0.00166895],
+       [0.00156203, 0.00258622],
+       [0.01033355, 0.01540201],
+       [0.03179264, 0.03631206],
+       [0.01030859, 0.01709089],
+       [0.00162424, 0.00293712],
+       [0.00127589, 0.00216712],
+       [0.00741716, 0.00997203],
+       [0.0093994 , 0.0104741 ],
+       [0.03402675, 0.03751893]])
+util_hi_60 = np.array([0.43105884, 0.70318883, 0.37932139, 0.46840999, 0.19396183,
+       0.14442076, 0.73320741, 0.4526506 , 0.78708533, 0.61100776,
+       0.77685478, 0.29077391, 0.39911443, 0.35022837, 0.35502769,
+       0.1849252 , 0.31661005, 0.76937927, 0.21169124, 0.18660776,
+       0.92007944, 0.21282808, 0.16130279, 0.88937613, 0.46542938,
+       0.5828677 , 0.47925974, 0.30697219, 0.53908748, 0.29882365,
+       0.34785669, 0.7957092 , 0.34415312, 0.60390663, 0.36804362,
+       0.45226213, 0.16007126, 0.35734395, 0.30815765, 0.36192727,
+       0.44651105, 0.2581032 , 0.17842593, 0.28019711, 0.21054458,
+       0.42718289])
+util_hi_CI_60 = np.array([[0.42315654, 0.43896114],
+       [0.65970264, 0.74667502],
+       [0.36999728, 0.38864551],
+       [0.44730532, 0.48951467],
+       [0.18843369, 0.19948996],
+       [0.14172687, 0.14711464],
+       [0.68652414, 0.77989068],
+       [0.43015147, 0.47514972],
+       [0.73794278, 0.83622787],
+       [0.5739668 , 0.64804871],
+       [0.73134173, 0.82236783],
+       [0.28527536, 0.29627246],
+       [0.38910398, 0.40912488],
+       [0.324663  , 0.37579373],
+       [0.34520037, 0.36485501],
+       [0.1779138 , 0.1919366 ],
+       [0.30659026, 0.32662985],
+       [0.71673544, 0.8220231 ],
+       [0.20366583, 0.21971664],
+       [0.18183733, 0.19137818],
+       [0.86480568, 0.9753532 ],
+       [0.2065733 , 0.21908285],
+       [0.15421666, 0.16838892],
+       [0.84154046, 0.93721181],
+       [0.43889158, 0.49196718],
+       [0.54798307, 0.61775234],
+       [0.45752274, 0.50099673],
+       [0.29423109, 0.31971329],
+       [0.50769694, 0.57047803],
+       [0.28595349, 0.31169381],
+       [0.34286325, 0.35285012],
+       [0.76097627, 0.83044212],
+       [0.32833374, 0.3599725 ],
+       [0.57631653, 0.63149674],
+       [0.36054774, 0.37553949],
+       [0.43945515, 0.46506911],
+       [0.15167964, 0.16846287],
+       [0.3264682 , 0.3882197 ],
+       [0.3010332 , 0.3152821 ],
+       [0.35467181, 0.36918273],
+       [0.43037366, 0.46264845],
+       [0.24579102, 0.27041539],
+       [0.17022303, 0.18662884],
+       [0.2692235 , 0.29117072],
+       [0.20662048, 0.21446868],
+       [0.41682005, 0.43754573]])
+util_lo_200 = np.array([0.02916269, 0.02986046, 0.02280912, 0.03360276, 0.00531194,
+       0.00366224, 0.00426673, 0.0024488 , 0.03645808, 0.03191844,
+       0.03780569, 0.02099417, 0.03519477, 0.00458397, 0.02389095,
+       0.02251109, 0.00710643, 0.0080562 , 0.00832719, 0.00430041,
+       0.01436194, 0.00249929, 0.00258331, 0.01075591, 0.01758466,
+       0.04457001, 0.03343373, 0.00194465, 0.03831309, 0.00367313,
+       0.03336207, 0.02242953, 0.00558529, 0.04466725, 0.01000271,
+       0.04286662, 0.00153833, 0.00292113, 0.00863356, 0.03342741,
+       0.01438087, 0.00388379, 0.00211993, 0.00559007, 0.01082955,
+       0.0345706 ])
+util_lo_200_CI = np.array([[ 0.02374176,  0.03458362],
+       [ 0.02405018,  0.03567074],
+       [ 0.01557861,  0.03003964],
+       [ 0.02845014,  0.03875538],
+       [ 0.0014258 ,  0.00919808],
+       [ 0.00146328,  0.00586119],
+       [ 0.00239688,  0.00613658],
+       [ 0.00115668,  0.00374091],
+       [ 0.03076452,  0.04215164],
+       [ 0.02672348,  0.0371134 ],
+       [ 0.03347464,  0.04213674],
+       [ 0.01526087,  0.02672747],
+       [ 0.02966219,  0.04072735],
+       [ 0.00352447,  0.00564346],
+       [ 0.01801714,  0.02976476],
+       [ 0.01646361,  0.02855856],
+       [ 0.0054977 ,  0.00871516],
+       [ 0.00510191,  0.01101049],
+       [ 0.00434285,  0.01231152],
+       [ 0.00180327,  0.00679755],
+       [ 0.00855906,  0.02016482],
+       [ 0.00085589,  0.0041427 ],
+       [ 0.00134921,  0.00381741],
+       [ 0.0055793 ,  0.01593253],
+       [ 0.01086436,  0.02430496],
+       [ 0.04177298,  0.04736704],
+       [ 0.02785621,  0.03901125],
+       [ 0.0003699 ,  0.0035194 ],
+       [ 0.0335931 ,  0.04303309],
+       [ 0.00192898,  0.00541728],
+       [ 0.02766663,  0.03905752],
+       [ 0.01510733,  0.02975172],
+       [-0.0019367 ,  0.01310729],
+       [ 0.04183919,  0.04749531],
+       [ 0.0054169 ,  0.01458852],
+       [ 0.03947336,  0.04625987],
+       [ 0.00088668,  0.00218999],
+       [ 0.0018509 ,  0.00399135],
+       [ 0.00184258,  0.01542454],
+       [ 0.02781397,  0.03904086],
+       [ 0.00704583,  0.0217159 ],
+       [ 0.00287864,  0.00488894],
+       [ 0.00121556,  0.00302431],
+       [ 0.00226235,  0.00891779],
+       [ 0.01002425,  0.01163484],
+       [ 0.02964206,  0.03949914]])
+
+util_hi_200 = np.array([0.37188409, 0.3472088 , 0.29046848, 0.29896709, 0.13418097,
+       0.1040221 , 0.21037333, 0.1437602 , 0.34802587, 0.29961495,
+       0.36701737, 0.23343354, 0.30578103, 0.12450043, 0.22782834,
+       0.16437348, 0.18729798, 0.30628096, 0.1411846 , 0.1462066 ,
+       0.28661909, 0.14749196, 0.09411836, 0.34026474, 0.26278081,
+       0.34163264, 0.29867486, 0.12684136, 0.29122923, 0.14753854,
+       0.34717121, 0.36797902, 0.22149696, 0.31806562, 0.25209148,
+       0.33839784, 0.06571512, 0.12146227, 0.27920259, 0.33397687,
+       0.24516908, 0.13125581, 0.0767291 , 0.16996685, 0.20791195,
+       0.31383499])
+util_hi_200_CI = np.array([[0.35990119, 0.38386699],
+       [0.33328247, 0.36113513],
+       [0.27877266, 0.3021643 ],
+       [0.29075496, 0.30717921],
+       [0.12802413, 0.14033782],
+       [0.09884948, 0.10919472],
+       [0.19734519, 0.22340146],
+       [0.13395377, 0.15356663],
+       [0.33493226, 0.36111948],
+       [0.2889594 , 0.31027051],
+       [0.35268281, 0.38135194],
+       [0.22608113, 0.24078595],
+       [0.29370282, 0.31785923],
+       [0.11747668, 0.13152417],
+       [0.22126998, 0.2343867 ],
+       [0.15352857, 0.1752184 ],
+       [0.17893702, 0.19565895],
+       [0.29396261, 0.31859931],
+       [0.1341091 , 0.14826009],
+       [0.13693995, 0.15547326],
+       [0.27396173, 0.29927645],
+       [0.13669349, 0.15829042],
+       [0.08835816, 0.09987856],
+       [0.324842  , 0.35568747],
+       [0.25192751, 0.27363412],
+       [0.33101901, 0.35224626],
+       [0.28854371, 0.308806  ],
+       [0.11753258, 0.13615013],
+       [0.2821493 , 0.30030917],
+       [0.14135615, 0.15372094],
+       [0.33630217, 0.35804026],
+       [0.35304913, 0.38290892],
+       [0.20834926, 0.23464466],
+       [0.30929871, 0.32683253],
+       [0.24330177, 0.2608812 ],
+       [0.32839709, 0.34839858],
+       [0.06079875, 0.07063148],
+       [0.11449782, 0.12842671],
+       [0.2652926 , 0.29311259],
+       [0.32130054, 0.34665319],
+       [0.23121661, 0.25912155],
+       [0.12284913, 0.13966249],
+       [0.0714067 , 0.08205151],
+       [0.16448112, 0.17545257],
+       [0.20088792, 0.21493597],
+       [0.30470123, 0.32296874]])
+       
+plt.scatter(util_lo_60, util_lo_200)
+plt.plot(np.arange(100)/2000,np.arange(100)/2000, color='gray')
+plt.title('Scatter plot of 1-test utilities, 60k vs 200k truthdraws')
+plt.ylabel('200k truth draws')
+plt.xlabel('60k truth draws')
+plt.show()
+
+plt.scatter(util_hi_60, util_hi_200)
+plt.plot(np.arange(100)/100,np.arange(100)/100, color='gray')
+plt.title('Scatter plot of 81-test utilities, 60k vs 200k truthdraws')
+plt.ylabel('200k truth draws')
+plt.xlabel('60k truth draws')
+plt.xlim([0,1])
+plt.ylim([0,1])
+plt.show()
+'''
+
 ''' RUNS 7-MAR (81 tests at all districts)
 Bakel               0.3804905943479593 (0.37531994211371256, 0.385661246582206)
 Bambey              0.3537908316260996 (0.3474585325224755, 0.3601231307297237)
@@ -950,7 +1193,7 @@ for ind, row in util_df.iterrows():
     bds.append(currBound)
     lovals.append(loval)
     hivals.append(hival)
-    
+
 # What is the curvature, kappa, for our estimates?
 kappavec = [1-m2vec[i]/m1vec[i] for i in range(len(m2vec))]
 plt.hist(kappavec)
@@ -1042,37 +1285,154 @@ optintegrality = np.ones_like(optobjvec)
 
 # Solve
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
-soln_loBudget = spoOutput.x
+soln_loBudget, UB_loBudget = spoOutput.x, spoOutput.fun*-1
+# 13-MAR-24: 1.419
 
-# Make function for turning scipy output into our case study
-def scipytoallocation(spo_x, eliminateZeros=False):
-    z = np.round(spo_x[:numTN])
-    n1 = np.round(spo_x[numTN:numTN * 2])
-    n2 = np.round(spo_x[numTN * 2:numTN * 3])
-    x = np.round(spo_x[numTN * 3:]) # Solver sometimes gives non-integer solutions
-    path = seqlist_trim.iloc[np.where(x == 1)[0][0],0]
-    # Print district name with
-    for distind, distname in enumerate(deptNames):
-        if not eliminateZeros:
-            print(str(distname)+':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
-        else: # Remove zeros
-            if int(z[distind])==1:
-                print(str(distname)+ ':', str(int(z[distind])), str(int(n1[distind])), str(int(n2[distind])))
-    pathstr = ''
-    for regind in path:
-        pathstr = pathstr + str(regNames[regind]) + ' '
-    print('Path: '+ pathstr)
-    return
+# Evaluate utility of solution
+n1 = soln_loBudget[numTN:numTN * 2]
+n2 = soln_loBudget[numTN * 2:numTN * 3]
+n_init = n1+n2
+u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
+# 13-MAR-24: (1.3250307414145919, (1.2473679675065128, 1.402693515322671))
+LB_loBudget = u_init
 
-scipytoallocation(soln_loBudget, eliminateZeros=True)
+opf.scipytoallocation(soln_loBudget, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 ##########################
 ##########################
 # Generate 30 additional candidates for lo budget
 ##########################
 ##########################
+# Solve IP-RP while setting each path to 1
+def GetConstraintsWithPathCut(numVar, numTN, pathInd):
+    """
+    Returns constraint object for use with scipy optimize, where the path variable must be 1 at pathInd
+    """
+    newconstraintmat = np.zeros((1, numVar)) # size of new constraints matrix
+    newconstraintmat[0, numTN*3 + pathInd] = 1.
+    return spo.LinearConstraint(newconstraintmat, np.ones(1), np.ones(1))
 
-# TODO: DO THIS
+# Identify candidate paths with sufficiently high IP-RP objectives
+def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_integ, opt_bds, f_dist, LB,
+                        seqlist_trim_df, printUpdate=True):
+    """Returns list of path indices for paths with upper bounds above the current lower bound"""
+    numPath = paths_df.shape[0]
+    numTN = len(distNames)
+    # List of eligible path indices
+    eligPathInds = []
+    # Dataframe of paths and their IP-RP objectives
+    candpaths_df = paths_df.copy()
+    candpaths_df.insert(3, 'RPobj', np.zeros(numPath).tolist(), True)
+    candpaths_df.insert(4, 'DistCost', np.zeros(numPath).tolist(), True)  # Add column to store RP district costs
+    candpaths_df.insert(5, 'Uoracle', np.zeros(numPath).tolist(), True)  # Add column for oracle evals
+    candpaths_df.insert(6, 'UoracleCIlo', np.zeros(numPath).tolist(), True)  # Add column for oracle eval CIs
+    candpaths_df.insert(7, 'UoracleCIhi', np.zeros(numPath).tolist(), True)  # Add column for oracle eval CIs
+    # IP-RP for each path
+    for pathind in range(numPath):
+        pathconstraint = GetConstraintsWithPathCut(numPath + numTN * 3, numTN, pathind)
+        curr_spoOutput = milp(c=opt_obj, constraints=(opt_constr, pathconstraint),
+                              integrality=opt_integ, bounds=opt_bds)
+        candpaths_df.iloc[pathind, 3] = curr_spoOutput.fun * -1
+        candpaths_df.iloc[pathind, 4] = (curr_spoOutput.x[:numTN] * f_dist).sum()
+        if curr_spoOutput.fun * -1 > LB:
+            eligPathInds.append(pathind)
+            opf.scipytoallocation(np.round(curr_spoOutput.x), distNames, regNames, seqlist_trim_df, True)
+            if printUpdate:
+                print('Path ' + str(pathind) + ' cost: ' + str(candpaths_df.iloc[pathind, 1]))
+                print('Path ' + str(pathind) + ' RP utility: ' + str(candpaths_df.iloc[pathind, 3]))
+    return eligPathInds, candpaths_df
+
+eligPathInds, candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints,
+                                                     optintegrality, optbounds, f_dept, LB_loBudget, seqlist_trim)
+
+# Save to avoid generating later
+candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'candpaths_df_700.pkl'))
+
+##########################
+##########################
+# Calculate utility for candidates and benchmarks
+##########################
+##########################
+def GetAllocVecFromLists(distNames, distList, allocList):
+    """Function for generating allocation vector for benchmarks, only using names and a list of test levels"""
+    numDist = len(distNames)
+    n = np.zeros(numDist)
+    for distElem, dist in enumerate(distList):
+        distind = distNames.index(dist)
+        n[distind] = allocList[distElem]
+    return n
+
+util.print_param_checks(paramdict)
+
+### Benchmarks ###
+# LeastVisited
+deptList_LeastVisited = ['Keur Massar', 'Pikine', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
+allocList_LeastVisited = [20, 20, 20, 19, 19, 19, 19]
+n_LeastVisited = GetAllocVecFromLists(deptNames, deptList_LeastVisited, allocList_LeastVisited)
+util_LeastVisited_unif, util_LeastVisited_unif_CI = getUtilityEstimate(n_LeastVisited, lgdict, paramdict)
+print(util_LeastVisited_unif, util_LeastVisited_unif_CI)
+# 13-MAR
+# 1.6657163547317921 (1.5262975507763805, 1.8051351586872038)
+
+# MostSFPs (uniform)
+deptList_MostSFPs_unif = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
+allocList_MostSFPs_unif = [20, 19, 19, 19, 19]
+n_MostSFPs_unif = GetAllocVecFromLists(deptNames, deptList_MostSFPs_unif, allocList_MostSFPs_unif)
+util_MostSFPs_unif, util_MostSFPs_unif_CI = getUtilityEstimate(n_MostSFPs_unif, lgdict, paramdict)
+print(util_MostSFPs_unif, util_MostSFPs_unif_CI)
+# 13-MAR
+# 0.30966532049070494 (0.29526214617659896, 0.3240684948048109)
+
+# MostSFPs (weighted)
+deptList_MostSFPs_wtd = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
+allocList_MostSFPs_wtd = [15, 19, 12, 14, 36]
+n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs_wtd, allocList_MostSFPs_wtd)
+util_MostSFPs_wtd, util_MostSFPs_wtd_CI = getUtilityEstimate(n_MostSFPs_wtd, lgdict, paramdict)
+print(util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
+# 13-MAR
+# 0.3204636852594689 (0.30767399388703787, 0.3332533766318999)
+
+# MoreDistricts (uniform)
+deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
+allocList_MoreDist_unif = [9, 9, 9, 9, 8, 8, 8, 8, 8, 8, 8]
+n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
+util_MoreDist_unif, util_MoreDist_unif_CI = getUtilityEstimate(n_MoreDist_unif, lgdict, paramdict)
+print(util_MoreDist_unif, util_MoreDist_unif_CI)
+# 13-MAR
+# 0.6867008491005695 (0.6669912197701802, 0.7064104784309588)
+
+# MoreDistricts (weighted)
+deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
+allocList_MoreDist_wtd = [6, 5, 13, 13, 6, 5, 6, 7, 5, 13, 13]
+n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
+util_MoreDist_wtd, util_MoreDist_wtd_CI = getUtilityEstimate(n_MoreDist_wtd, lgdict, paramdict)
+print(util_MoreDist_wtd, util_MoreDist_wtd_CI)
+# 13-MAR
+# 0.7747075043342289 (0.7534452384396939, 0.7959697702287638)
+
+# MoreTests (uniform)
+deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune']
+allocList_MoreTests_unif = [22, 22, 22, 22, 22, 22, 22, 22]
+n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allocList_MoreTests_unif)
+util_MoreTests_unif, util_MoreTests_unif_CI = getUtilityEstimate(n_MoreTests_unif, lgdict, paramdict)
+print(util_MoreTests_unif, util_MoreTests_unif_CI)
+# 13-MAR
+# 0.7406350853193722 (0.6913757247389984, 0.7898944458997459)
+
+# MoreTests (weighted)
+deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune']
+allocList_MoreTests_wtd = [13, 14, 43, 43, 15, 14, 15, 19]
+n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocList_MoreTests_wtd)
+util_MoreTests_wtd, util_MoreTests_wtd_CI = getUtilityEstimate(n_MoreTests_wtd, lgdict, paramdict)
+print(util_MoreTests_wtd, util_MoreTests_wtd_CI)
+# 13-MAR
+# 0.7494513457669925 (0.721643929353533, 0.7772587621804519)
+
+
 
 
 
@@ -1203,7 +1563,7 @@ optintegrality = np.ones_like(optobjvec)
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 soln_hiBudget, UB_hiBudget = spoOutput.x, spoOutput.fun*-1
 
-scipytoallocation(soln_hiBudget, eliminateZeros=True)
+opf.scipytoallocation(soln_hiBudget, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 
 ##########################
@@ -1263,14 +1623,8 @@ for i in range(len(deptNames)):
 
 
 
-# Solve IP-RP while setting each path to 1
-def GetConstraintsWithPathCut(numVar, pathInd):
-    """
-    Returns constraint object for use with scipy optimize, where each district in distIndsList must be 0
-    """
-    newconstraintmat = np.zeros((1, numVar)) # size of new constraints matrix
-    newconstraintmat[0, numTN*3 + pathInd] = 1.
-    return spo.LinearConstraint(newconstraintmat, np.ones(1), np.ones(1))
+
+
 
 # Prep a new paths dataframe
 
@@ -1289,14 +1643,14 @@ eligPathInds = []
 
 # IP-RP for each path
 for pathind in range(numPath):
-    pathconstraint = GetConstraintsWithPathCut(numPath+numTN*3, pathind)
+    pathconstraint = GetConstraintsWithPathCut(numPath+numTN*3, numTN, pathind)
     curr_spoOutput = milp(c=optobjvec, constraints=(optconstraints, pathconstraint),
                           integrality=optintegrality, bounds=optbounds)
     phase2paths_df.iloc[pathind, 3] = curr_spoOutput.fun*-1
     phase2paths_df.iloc[pathind, 4] = (curr_spoOutput.x[:numTN] * f_dept).sum()
     if curr_spoOutput.fun*-1 > LB:
         eligPathInds.append(pathind)
-        scipytoallocation(np.round(curr_spoOutput.x), True)
+        opf.scipytoallocation(np.round(curr_spoOutput.x), deptNames, regNames, seqlist_trim, True)
         print('Path ' + str(pathind) + ' cost: ' + str(phase2paths_df.iloc[pathind, 1]))
         print('Path ' + str(pathind) + ' RP utility: ' + str(phase2paths_df.iloc[pathind, 3]))
 
@@ -1556,7 +1910,7 @@ def AvoidCorrelatedDistricts(solTuple, solUtil, constrToAdd=None):
             curr_spoOutput = milp(c=optobjvec,
                                   constraints=(optconstraints, cutconstraints, constrToAdd),
                                   integrality=optintegrality, bounds=optbounds)
-        scipytoallocation(curr_spoOutput.x, eliminateZeros=True)
+        opf.scipytoallocation(curr_spoOutput.x, deptNames, regNames, seqlist_trim, eliminateZeros=True)
         curr_n1 = curr_spoOutput.x[numTN:numTN * 2]
         curr_n2 = curr_spoOutput.x[numTN * 2:numTN * 3]
         curr_n = curr_n1 + curr_n2
@@ -1638,7 +1992,7 @@ eligPathInds_sort = [eligPathInds[x] for x in np.argsort(eligPathRatioDists).tol
 
 for currpathind in eligPathInds_sort:
     print('On path index: '+ str(currpathind)+'...')
-    pathconstraint = GetConstraintsWithPathCut(numPath + numTN * 3, currpathind)
+    pathconstraint = GetConstraintsWithPathCut(numPath + numTN * 3, numTN, currpathind)
     currpath_spoOutput = milp(c=optobjvec, constraints=(optconstraints, pathconstraint),
                           integrality=optintegrality, bounds=optbounds)
     curr_n = currpath_spoOutput.x[numTN:numTN*2] + currpath_spoOutput.x[numTN*2:numTN*3]
