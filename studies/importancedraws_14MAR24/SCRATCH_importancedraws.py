@@ -273,17 +273,18 @@ for numtruthdraws in truthdrawslist:
     print(utilavg, (utilCIlo, utilCIhi))
 
 '''18-MAR-24
-util_list = [1.928953581133419, 1.3653450593217058, 1.19049988687896,
- 1.0274356559783024, 0.9809383681292192, 0.905028881148298]
-utilCI_list = [(1.7511708056790125, 2.1067363565878257), (1.197911050025763, 1.5327790686176486),
- (1.0437844208013858, 1.3372153529565343), (0.9135623498567207, 1.1413089620998842),
- (0.8610240620046747, 1.1008526742537637), (0.8048188986619182, 1.0052388636346778)]
+util_list = [0.9603319830270349,  0.6643353895719342,
+ 0.626035598447455,  0.46986298569528584,
+ 0.4724290016766588,  0.44825931109091455]
+utilCI_list = [(0.842242948212069, 1.0784210178420008),  (0.5585907279654458, 0.7700800511784225),
+ (0.537830726986563, 0.7142404699083471),  (0.4414494273097662, 0.49827654408080546),
+ (0.4376701304279651, 0.5071878729253525),  (0.4232933005606201, 0.473225321621209)]
 '''
 
 # Plot of estimates under current method
 utilerrs = np.array([utilCI_list[i][1] - util_list[i] for i in range(len(truthdrawslist))])
 plt.errorbar(truthdrawslist, util_list, yerr=utilerrs, ms=15, mfc='red', mew=1, mec='red', capsize=2)
-plt.ylim([0, 2.2])
+plt.ylim([0, 1.1])
 plt.xlim([0, 80000])
 plt.title('Utility estimates vs. truth draws\nCurrent method')
 plt.xlabel('Truth Draws')
@@ -295,6 +296,12 @@ plt.show()
 # Now generate new estimation with MCMC importance draws
 #################################
 #################################
+
+design = n/n.sum()
+numtests = n.sum()
+priordatadict = lgdict.copy()
+numdatadrawsforimportance = 10
+numimportdraws = 10000
 
 def importance_method_loss_list(design, numtests, priordatadict, paramdict, numdatadrawsforimportance, numimportdraws):
     """
@@ -330,24 +337,48 @@ def importance_method_loss_list(design, numtests, priordatadict, paramdict, numd
     tempdict = priordatadict.copy()
     tempdict['N'], tempdict['Y'] = priordatadict['N'] + NMatAvg, priordatadict['Y'] + YMatAvg
     # Generate a new MCMC importance set
-
-
-
-
+    tempdict['numPostSamples'] = numimportdraws
+    tempdict = methods.GeneratePostSamples(tempdict, maxTime=5000)
+    importancedraws = tempdict['postSamples'].copy()
     # Get weights matrix
-    W = sampf.build_weights_matrix(paramdict['truthdraws'], paramdict['datadraws'], sampMat, priordatadict)
+    Wimport = sampf.build_weights_matrix(importancedraws, paramdict['datadraws'], sampMat, priordatadict)
     # Get risk matrix
-    R = lf.risk_check_array(paramdict['truthdraws'], paramdict['riskdict'])
+    Rimport = lf.risk_check_array(importancedraws, paramdict['riskdict'])
     # Get critical ratio
     q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+    # Get likelihood weights WRT original data set
+    zMatImport = util.zProbTrVec(numSN, importancedraws, sens=s, spec=r)  # Matrix of SFP probabilities along each trace
+    NMatPrior, YMatPrior = priordatadict['N'], priordatadict['Y']
+    Vimport = np.zeros(shape = numimportdraws)
+    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if NMatPrior[tnInd, snInd] > 0:
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                combNYtemp = np.reshape(np.tile(spsp.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                                                numimportdraws), (numimportdraws, 1))
+                Vimport += np.squeeze( (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                    combNYtemp))
+    Vimport = np.exp(Vimport)
+
+    '''
+    def cand_obj_val_importance(x, truthdraws, Wvec, paramdict, riskmat):
+        """Objective for optimization step"""
+        # scoremat stores the loss (ignoring the risk) for x against the draws in truthdraws
+        scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, truthdraws[0].shape[0]), paramdict['scoredict'])[0]
+        return np.sum(np.sum(scoremat * riskmat * paramdict['marketvec'], axis=1) * Wvec)
+    '''
+
     # Compile list of optima
     minslist = []
-    for j in range(W.shape[1]):
-        est = bayesest_critratio(paramdict['truthdraws'], W[:, j], q)
-        minslist.append(cand_obj_val(est, paramdict['truthdraws'], W[:, j], paramdict, R))
+    for j in range(Wimport.shape[1]):
+        est = sampf.bayesest_critratio(importancedraws, Wimport[:, j]*Vimport, q)
+        minslist.append(sampf.cand_obj_val(est, importancedraws, Wimport[:, j], paramdict, Rimport))
     return minslist
 
-def getImportanceUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
+def getImportanceUtilityEstimate(n, lgdict, paramdict, numdatadrawsforimportance, numimportdraws, zlevel=0.95):
     """
     Return a utility estimate average and confidence interval for allocation array n, using a second MCMC set of
     'importance' draws
@@ -355,12 +386,23 @@ def getImportanceUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     testnum = int(np.sum(n))
     des = n/testnum
     # TODO: FOCUS IS HERE
-    currlosslist = importance_method_loss_list(des, testnum, lgdict, paramdict)
+    currlosslist = importance_method_loss_list(des, testnum, lgdict, paramdict, numdatadrawsforimportance,
+                                               numimportdraws)
     # TODO: END OF FOCUS
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
 
 
+datadrawsforimportancelist = [10]
+numimportdrawslist = [100, 500, 1000, 5000, 10000]
+
+utilavgstore, utilCIstore = [], []
+for numimportdraws in numimportdrawslist:
+    currutilavg, (currutilCIlo, currutilCIhi) = getImportanceUtilityEstimate(n, lgdict, paramdict,
+                                                                             numdatadrawsforimportance=10,
+                                                                     numimportdraws=numimportdraws)
+    utilavgstore.append(currutilavg)
+    utilCIstore.append((currutilCIlo, currutilCIhi))
 
 
 
