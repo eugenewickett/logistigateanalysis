@@ -743,18 +743,22 @@ def importance_method_loss_list2(design, numtests, priordatadict, paramdict, num
     minslist = []
     for j in range(Wimport.shape[1]):
         tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
-        #tempwtarray[np.where(tempwtarray>20)] = 20
+        # Remove inds for top 1% of weights
+        tempremoveinds = np.where(tempwtarray>np.quantile(tempwtarray, 0.99))
+        tempwtarray = np.delete(tempwtarray, tempremoveinds)
         tempwtarray = tempwtarray/np.sum(tempwtarray)
-        est = sampf.bayesest_critratio(importancedraws, tempwtarray, q)
-        minslist.append(sampf.cand_obj_val(est, importancedraws,
+        tempimportancedraws = np.delete(importancedraws, tempremoveinds, axis=0)
+        tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+        est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+        minslist.append(sampf.cand_obj_val(est, tempimportancedraws,
                                            tempwtarray,
                                            #Wimport[:, j]*Vimport_norm / np.sum(Wimport[:, j]*Vimport_norm),
-                                           paramdict, Rimport))
+                                           paramdict, tempRimport))
     plt.plot(minslist)
     plt.show()
     plt.close()
 
-    print(paramdict['baseloss']-np.average(minslist))
+    #print(paramdict['baseloss']-np.average(minslist))
 
     return minslist
 
@@ -791,7 +795,7 @@ for rep in range(5):
     plt.errorbar(truthdrawslist, util_list, yerr=utilerrs, ms=15, color='black', mew=1, mec='black', capsize=2)
     utilerrs2 = np.array([utilCI_list2[i][1] - util_list2[i] for i in range(len(truthdrawslist))])
     plt.errorbar(truthdrawslist, util_list2, yerr=utilerrs2, ms=15, color='black', mew=1, mec='black', capsize=2)
-    for j in range(len(utilavgstore_mast)):
+    '''for j in range(len(utilavgstore_mast)):
         utilerrs_new = np.array([utilCIstore_mast[j][i][1] - utilavgstore_mast[j][i] for i in range(len(numimportdrawslist))])
         plt.errorbar(numimportdrawslist, utilavgstore_mast[j], yerr=utilerrs_new, ms=15, mew=1, capsize=2, alpha=0.1)
     for j in range(len(utilavgstore_mast2)):
@@ -799,7 +803,7 @@ for rep in range(5):
         plt.errorbar(numimportdrawslist2, utilavgstore_mast2[j], yerr=utilerrs_new, ms=15, mew=1, capsize=2, alpha=0.2)
     for j in range(len(utilavgstore_mast3)):
         utilerrs_new = np.array([utilCIstore_mast3[j][i][1] - utilavgstore_mast3[j][i] for i in range(len(numimportdrawslist2))])
-        plt.errorbar(numimportdrawslist2, utilavgstore_mast3[j], yerr=utilerrs_new, ms=15, mew=1, capsize=2, alpha=0.3)
+        plt.errorbar(numimportdrawslist2, utilavgstore_mast3[j], yerr=utilerrs_new, ms=15, mew=1, capsize=2, alpha=0.3)'''
     for j in range(len(utilavgstore_mast4)):
         utilerrs_new = np.array([utilCIstore_mast4[j][i][1] - utilavgstore_mast4[j][i] for i in range(len(numimportdrawslist2))])
         plt.errorbar(numimportdrawslist2, utilavgstore_mast4[j], yerr=utilerrs_new, ms=15, mew=1, capsize=2)
