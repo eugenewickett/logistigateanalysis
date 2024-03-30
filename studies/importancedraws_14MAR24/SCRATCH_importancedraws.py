@@ -616,10 +616,14 @@ for rep in range(20):
 # Slightly different estimation method
 #################################
 #################################
-def importance_method_loss_list2(design, numtests, priordatadict, paramdict, numdatadrawsforimportance, numimportdraws):
+def importance_method_loss_list2(design, numtests, priordatadict, paramdict, numimportdraws,
+                                 numdatadrawsforimportance=1000, impweightoutlierprop=0.01):
     """
-    Produces a list of sampling plan losses for a test budget under a given data set and specified parameters, using
-    the fast estimation algorithm with direct optimization (instead of a loss matrix).
+    Produces a list of sampling plan losses, a la sampling_plan_loss_list(). This method uses the importance
+    sampling approach, using numdatadrawsforimportance draws to produce an 'average' data set. An MCMC set of
+    numimportdraws is produced assuming this average data set; this MCMC set should be closer to the important region
+    of SFP rates for this design.
+
     design: sampling probability vector along all test nodes/traces
     numtests: test budget
     priordatadict: logistigate data dictionary capturing known data
@@ -635,7 +639,8 @@ def importance_method_loss_list2(design, numtests, priordatadict, paramdict, num
     #todo: KEY NEW STUFF ADDED HERE
     (numTN, numSN), Q, s, r = priordatadict['N'].shape, priordatadict['Q'], priordatadict['diagSens'], priordatadict['diagSpec']
     importancedatadrawinds = np.random.choice(np.arange(paramdict['datadraws'].shape[0]),
-                                              size = numdatadrawsforimportance, replace=False)
+                                              size = numdatadrawsforimportance,
+                                              replace=paramdict['datadraws'].shape[0] < numdatadrawsforimportance)
     importancedatadraws = paramdict['datadraws'][importancedatadrawinds]
     #numtruthdraws = paramdict['truthdraws'].shape[0]
     #zMatTruth = util.zProbTrVec(numSN, paramdict['truthdraws'], sens=s, spec=r)  # Matrix of SFP probabilities, as a function of SFP rate draws
@@ -683,8 +688,6 @@ def importance_method_loss_list2(design, numtests, priordatadict, paramdict, num
                 tempW += (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
                     combNYtemp)
     Wimport = np.exp(tempW)
-    #Wimport = sampf.build_weights_matrix(importancedraws, paramdict['datadraws'], sampMat, priordatadict)
-
 
     # Get risk matrix
     Rimport = lf.risk_check_array(importancedraws, paramdict['riskdict'])
@@ -706,7 +709,7 @@ def importance_method_loss_list2(design, numtests, priordatadict, paramdict, num
                 Vimport += np.squeeze( (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
                     combNYtemp))
     Vimport = np.exp(Vimport)
-    Vimport_norm = Vimport / np.sum(Vimport)
+    #Vimport_norm = Vimport / np.sum(Vimport)
     ####
     # Get likelihood weights WRT average data set
     #zMatImport = util.zProbTrVec(numSN, importancedraws, sens=s, spec=r)  # Matrix of SFP probabilities along each trace
@@ -726,43 +729,35 @@ def importance_method_loss_list2(design, numtests, priordatadict, paramdict, num
                     (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
                         combNYtemp))
     Uimport = np.exp(Uimport)
-    Uimport_norm = Uimport / np.sum(Uimport)
 
+    # Importance likelihood ratio for importance draws
     VoverU = (Vimport / Uimport)
-    VoverU_norm = VoverU * numimportdraws / np.sum(VoverU)
-
-    '''
-    def cand_obj_val_importance(x, truthdraws, Wvec, paramdict, riskmat):
-        """Objective for optimization step"""
-        # scoremat stores the loss (ignoring the risk) for x against the draws in truthdraws
-        scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, truthdraws[0].shape[0]), paramdict['scoredict'])[0]
-        return np.sum(np.sum(scoremat * riskmat * paramdict['marketvec'], axis=1) * Wvec)
-    '''
 
     # Compile list of optima
     minslist = []
     for j in range(Wimport.shape[1]):
         tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
-        # Remove inds for top 1% of weights
-        tempremoveinds = np.where(tempwtarray>np.quantile(tempwtarray, 0.99))
+        #plt.plot(j, np.quantile(tempwtarray, 0.5), 'x', color='black')
+        #plt.plot(j, np.quantile(tempwtarray, 0.999), 'o', color='blue')
+        #plt.plot(j, np.max(tempwtarray), '^', color='red')
+    #plt.title('Importance Weight Quantiles\nBlack x=Median, Blue Circle=0.999, Red Triangle=Max')
+    #plt.xlabel('Data simulation index')
+    #plt.ylim([0,2000])
+    #plt.show()
+    #plt.close()
+        # Remove inds for top impweightoutlierprop of weights
+        tempremoveinds = np.where(tempwtarray>np.quantile(tempwtarray, 1-impweightoutlierprop))
         tempwtarray = np.delete(tempwtarray, tempremoveinds)
         tempwtarray = tempwtarray/np.sum(tempwtarray)
         tempimportancedraws = np.delete(importancedraws, tempremoveinds, axis=0)
         tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
         est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
-        minslist.append(sampf.cand_obj_val(est, tempimportancedraws,
-                                           tempwtarray,
-                                           #Wimport[:, j]*Vimport_norm / np.sum(Wimport[:, j]*Vimport_norm),
-                                           paramdict, tempRimport))
-    plt.plot(minslist)
-    plt.show()
-    plt.close()
-
-    #print(paramdict['baseloss']-np.average(minslist))
+        minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
 
     return minslist
 
-def getImportanceUtilityEstimate2(n, lgdict, paramdict, numdatadrawsforimportance, numimportdraws, zlevel=0.95):
+def getImportanceUtilityEstimate2(n, lgdict, paramdict, numimportdraws, numdatadrawsforimportance=1000,
+                                  impweightoutlierprop=0.01, zlevel=0.95):
     """
     Return a utility estimate average and confidence interval for allocation array n, using a second MCMC set of
     'importance' draws
