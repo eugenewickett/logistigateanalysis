@@ -12,8 +12,7 @@ import time
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-plt.rcParams["mathtext.fontset"] = "dejavuserif"
-plt.rcParams["font.family"] = "serif"
+
 import matplotlib.ticker as mtick
 
 import pandas as pd
@@ -27,6 +26,9 @@ import scipy.special as spsp
 import scipy.optimize as spo
 from scipy.optimize import LinearConstraint
 from scipy.optimize import milp
+
+plt.rcParams["mathtext.fontset"] = "dejavuserif"
+plt.rcParams["font.family"] = "serif"
 
 # Pull data from analysis of first paper
 def GetSenegalDataMatrices(deidentify=False):
