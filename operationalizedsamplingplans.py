@@ -226,7 +226,42 @@ priorObj = prior_normal_assort(priorMean, priorCovar)
 lgdict['prior'] = priorObj
 
 # Set up MCMC
-lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 1000, 'delta': 0.4}
+
+
+
+def GetMCMCTracePlots(lgdict, numburnindraws=2000, numdraws=1000):
+    """
+    Provides a grid of trace plots across all nodes for numdraws draws of the corresponding SFP rates
+    """
+    # Generate MCMC draws
+    templgdict = lgdict.copy()
+    templgdict['MCMCdict'].update({'Madapt':numburnindraws, 'numPostSamples': numdraws})
+    templgdict = methods.GeneratePostSamples(templgdict, maxTime=5000)
+    # Make a grid of subplots
+    numTN, numSN = lgdict['TNnum'], lgdict['SNnum']
+    dim1 = int(np.ceil(np.sqrt(numTN + numSN)))
+    dim2 = int(np.ceil((numTN + numSN) / dim1))
+
+    plotrownum, plotcolnum = 4, 4
+    numloops = int(np.ceil((numTN + numSN) / (plotrownum * plotcolnum)))
+
+    currnodeind = 0
+
+    for currloop in range(numloops):
+        fig, ax = plt.subplots(nrows=plotrownum, ncols=plotcolnum, figsize=(10,10))
+        for row in ax:
+            for col in row:
+                if currnodeind < numTN + numSN:
+                    col.plot(templgdict['postSamples'][:, currnodeind], linewidth=0.5)
+                    col.title.set_text('Node ' + str(currnodeind))
+                    col.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
+                    col.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
+                    currnodeind += 1
+        plt.tight_layout()
+        plt.show()
+
+    return
 
 '''
 # TODO: INSPECT CHOICE HERE LATER
@@ -250,9 +285,13 @@ file_stats = os.stat(file_name)
 print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
 '''
 
+#methods.GetMCMCTracePlots(lgdict, numburnindraws=1000, numdraws=1000)
+
+lgdict['numPostSamples'] = 100000
+
 # Load draws from files
 tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
-for drawgroupind in range(2, 41):
+for drawgroupind in range(2, 21):
     newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) +'.npy'))
     tempobj = np.concatenate((tempobj, newobj))
 lgdict['postSamples'] = tempobj
@@ -280,7 +319,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 200000, 200
+numtruthdraws, numdatadraws = 100000, 500
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -299,6 +338,105 @@ def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     currlosslist = sampf.sampling_plan_loss_list(des, testnum, lgdict, paramdict)
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
+
+##########################
+##########################
+# Calculate utility for candidates and benchmarks
+##########################
+##########################
+def GetAllocVecFromLists(distNames, distList, allocList):
+    """Function for generating allocation vector for benchmarks, only using names and a list of test levels"""
+    numDist = len(distNames)
+    n = np.zeros(numDist)
+    for distElem, dist in enumerate(distList):
+        distind = distNames.index(dist)
+        n[distind] = allocList[distElem]
+    return n
+
+util.print_param_checks(paramdict)
+
+### Benchmarks ###
+# LeastVisited
+deptList_LeastVisited = ['Keur Massar', 'Pikine', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
+allocList_LeastVisited = [20, 20, 20, 19, 19, 19, 19]
+n_LeastVisited = GetAllocVecFromLists(deptNames, deptList_LeastVisited, allocList_LeastVisited)
+util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEstimate(n_LeastVisited, lgdict,
+                                                                paramdict, numimportdraws=30000)
+print(util_LeastVisited_unif, util_LeastVisited_unif_CI)
+# 1-APR
+# 
+
+#util_LeastVisited_unif, util_LeastVisited_unif_CI = getUtilityEstimate(n_LeastVisited, lgdict, paramdict)
+#print(util_LeastVisited_unif, util_LeastVisited_unif_CI)
+# 13-MAR
+# 1.6657163547317921 (1.5262975507763805, 1.8051351586872038)
+
+# MostSFPs (uniform)
+deptList_MostSFPs_unif = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
+allocList_MostSFPs_unif = [20, 19, 19, 19, 19]
+n_MostSFPs_unif = GetAllocVecFromLists(deptNames, deptList_MostSFPs_unif, allocList_MostSFPs_unif)
+util_MostSFPs_unif, util_MostSFPs_unif_CI = getUtilityEstimate(n_MostSFPs_unif, lgdict, paramdict)
+print(util_MostSFPs_unif, util_MostSFPs_unif_CI)
+# 13-MAR
+# 0.30966532049070494 (0.29526214617659896, 0.3240684948048109)
+
+# MostSFPs (weighted)
+deptList_MostSFPs_wtd = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
+allocList_MostSFPs_wtd = [15, 19, 12, 14, 36]
+n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs_wtd, allocList_MostSFPs_wtd)
+util_MostSFPs_wtd, util_MostSFPs_wtd_CI = getUtilityEstimate(n_MostSFPs_wtd, lgdict, paramdict)
+print(util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
+# 13-MAR
+# 0.3204636852594689 (0.30767399388703787, 0.3332533766318999)
+
+# MoreDistricts (uniform)
+deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
+allocList_MoreDist_unif = [9, 9, 9, 9, 8, 8, 8, 8, 8, 8, 8]
+n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
+util_MoreDist_unif, util_MoreDist_unif_CI = getUtilityEstimate(n_MoreDist_unif, lgdict, paramdict)
+print(util_MoreDist_unif, util_MoreDist_unif_CI)
+# 13-MAR
+# 0.6867008491005695 (0.6669912197701802, 0.7064104784309588)
+
+# MoreDistricts (weighted)
+deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
+allocList_MoreDist_wtd = [6, 5, 13, 13, 6, 5, 6, 7, 5, 13, 13]
+n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
+util_MoreDist_wtd, util_MoreDist_wtd_CI = getUtilityEstimate(n_MoreDist_wtd, lgdict, paramdict)
+print(util_MoreDist_wtd, util_MoreDist_wtd_CI)
+# 13-MAR
+# 0.7747075043342289 (0.7534452384396939, 0.7959697702287638)
+
+# MoreTests (uniform)
+deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune']
+allocList_MoreTests_unif = [22, 22, 22, 22, 22, 22, 22, 22]
+n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allocList_MoreTests_unif)
+util_MoreTests_unif, util_MoreTests_unif_CI = getUtilityEstimate(n_MoreTests_unif, lgdict, paramdict)
+print(util_MoreTests_unif, util_MoreTests_unif_CI)
+# 13-MAR
+# 0.7406350853193722 (0.6913757247389984, 0.7898944458997459)
+
+# MoreTests (weighted)
+deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune']
+allocList_MoreTests_wtd = [13, 14, 43, 43, 15, 14, 15, 19]
+n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocList_MoreTests_wtd)
+util_MoreTests_wtd, util_MoreTests_wtd_CI = getUtilityEstimate(n_MoreTests_wtd, lgdict, paramdict)
+print(util_MoreTests_wtd, util_MoreTests_wtd_CI)
+# 13-MAR
+# 0.7494513457669925 (0.721643929353533, 0.7772587621804519)
+
+
+
+##########################
+##########################
+# END calculate utility for candidates and benchmarks
+##########################
+##########################
+
 
 
 '''
@@ -667,6 +805,51 @@ util_df.insert(6, 'Util_81_CI', util_81_CI)
 # Load previously calculated lower and upper utility evaluations
 util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
 
+
+
+####
+# todo: REMOVE LATER; CHECKING AGAINST OLD UTILITY ESTIMATES
+####
+util_lo, util_lo_CI = [], []
+util_hi, util_hi_CI = [], []
+util_lo_imp, util_lo_CI_imp = [], []
+util_hi_imp, util_hi_CI_imp = [], []
+for i in range(len(deptNames)):
+    currbd = int(deptallocbds[i])
+    print('Getting utility for ' + deptNames[i] + ', at 1 test...')
+    n = np.zeros(numTN)
+    n[i] = 1
+    currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
+    print(currlo, currlo_CI)
+    util_lo.append(currlo)
+    util_lo_CI.append(currlo_CI)
+    print('Getting utility under importance sampling...')
+    currlo_imp, currlo_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict,
+                                                           numimportdraws=30000)
+    print(currlo_imp, currlo_CI_imp)
+    util_lo_imp.append(currlo_imp)
+    util_lo_CI_imp.append(currlo_CI_imp)
+    print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
+    n[i] = currbd
+    currhi, currhi_CI = getUtilityEstimate(n, lgdict, paramdict)
+    print(currhi, currhi_CI)
+    util_hi.append(currhi)
+    util_hi_CI.append(currhi_CI)
+    print('Getting utility under importance sampling...')
+    currhi_imp, currhi_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict,
+                                                           numimportdraws=30000)
+    print(currhi_imp, currhi_CI_imp)
+    util_hi_imp.append(currhi_imp)
+    util_hi_CI_imp.append(currhi_CI_imp)
+
+util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
+                        'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
+
+util_df.to_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+
+####
+# todo: END REMOVE
+####
 
 ''' 14-MAR-24 COMPARISON OF INTERPOLATED UTILITY POINTS: 60K/1000 VS 200K/200
 util_lo_60 = np.array([0.03344591, 0.03446701, 0.03066869, 0.03730135, 0.00453539,
@@ -1350,89 +1533,7 @@ eligPathInds, candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNam
 # Save to avoid generating later
 candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'candpaths_df_700.pkl'))
 
-##########################
-##########################
-# Calculate utility for candidates and benchmarks
-##########################
-##########################
-def GetAllocVecFromLists(distNames, distList, allocList):
-    """Function for generating allocation vector for benchmarks, only using names and a list of test levels"""
-    numDist = len(distNames)
-    n = np.zeros(numDist)
-    for distElem, dist in enumerate(distList):
-        distind = distNames.index(dist)
-        n[distind] = allocList[distElem]
-    return n
 
-util.print_param_checks(paramdict)
-
-### Benchmarks ###
-# LeastVisited
-deptList_LeastVisited = ['Keur Massar', 'Pikine', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
-allocList_LeastVisited = [20, 20, 20, 19, 19, 19, 19]
-n_LeastVisited = GetAllocVecFromLists(deptNames, deptList_LeastVisited, allocList_LeastVisited)
-util_LeastVisited_unif, util_LeastVisited_unif_CI = getUtilityEstimate(n_LeastVisited, lgdict, paramdict)
-print(util_LeastVisited_unif, util_LeastVisited_unif_CI)
-# 13-MAR
-# 1.6657163547317921 (1.5262975507763805, 1.8051351586872038)
-
-# MostSFPs (uniform)
-deptList_MostSFPs_unif = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
-allocList_MostSFPs_unif = [20, 19, 19, 19, 19]
-n_MostSFPs_unif = GetAllocVecFromLists(deptNames, deptList_MostSFPs_unif, allocList_MostSFPs_unif)
-util_MostSFPs_unif, util_MostSFPs_unif_CI = getUtilityEstimate(n_MostSFPs_unif, lgdict, paramdict)
-print(util_MostSFPs_unif, util_MostSFPs_unif_CI)
-# 13-MAR
-# 0.30966532049070494 (0.29526214617659896, 0.3240684948048109)
-
-# MostSFPs (weighted)
-deptList_MostSFPs_wtd = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
-allocList_MostSFPs_wtd = [15, 19, 12, 14, 36]
-n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs_wtd, allocList_MostSFPs_wtd)
-util_MostSFPs_wtd, util_MostSFPs_wtd_CI = getUtilityEstimate(n_MostSFPs_wtd, lgdict, paramdict)
-print(util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
-# 13-MAR
-# 0.3204636852594689 (0.30767399388703787, 0.3332533766318999)
-
-# MoreDistricts (uniform)
-deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
-                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
-allocList_MoreDist_unif = [9, 9, 9, 9, 8, 8, 8, 8, 8, 8, 8]
-n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
-util_MoreDist_unif, util_MoreDist_unif_CI = getUtilityEstimate(n_MoreDist_unif, lgdict, paramdict)
-print(util_MoreDist_unif, util_MoreDist_unif_CI)
-# 13-MAR
-# 0.6867008491005695 (0.6669912197701802, 0.7064104784309588)
-
-# MoreDistricts (weighted)
-deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
-                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
-allocList_MoreDist_wtd = [6, 5, 13, 13, 6, 5, 6, 7, 5, 13, 13]
-n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
-util_MoreDist_wtd, util_MoreDist_wtd_CI = getUtilityEstimate(n_MoreDist_wtd, lgdict, paramdict)
-print(util_MoreDist_wtd, util_MoreDist_wtd_CI)
-# 13-MAR
-# 0.7747075043342289 (0.7534452384396939, 0.7959697702287638)
-
-# MoreTests (uniform)
-deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
-                          'Mbour', 'Tivaoune']
-allocList_MoreTests_unif = [22, 22, 22, 22, 22, 22, 22, 22]
-n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allocList_MoreTests_unif)
-util_MoreTests_unif, util_MoreTests_unif_CI = getUtilityEstimate(n_MoreTests_unif, lgdict, paramdict)
-print(util_MoreTests_unif, util_MoreTests_unif_CI)
-# 13-MAR
-# 0.7406350853193722 (0.6913757247389984, 0.7898944458997459)
-
-# MoreTests (weighted)
-deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
-                          'Mbour', 'Tivaoune']
-allocList_MoreTests_wtd = [13, 14, 43, 43, 15, 14, 15, 19]
-n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocList_MoreTests_wtd)
-util_MoreTests_wtd, util_MoreTests_wtd_CI = getUtilityEstimate(n_MoreTests_wtd, lgdict, paramdict)
-print(util_MoreTests_wtd, util_MoreTests_wtd_CI)
-# 13-MAR
-# 0.7494513457669925 (0.721643929353533, 0.7772587621804519)
 
 
 
