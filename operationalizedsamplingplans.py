@@ -500,7 +500,7 @@ util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEs
                                                                 paramdict, numimportdraws=50000)
 print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
 # 2-APR
-#
+# 1.2424693100089677 (1.2265451101386144, 1.2583935098793209)
 
 # MostSFPs (uniform)
 deptList_MostSFPs_unif = ['Dakar', 'Guediawaye', 'Tambacounda', 'Koumpentoum', 'Diourbel', 'Saint-Louis',
@@ -511,7 +511,7 @@ util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
 # 2-APR
-#
+# 0.3526096663592213 (0.34461075498647453, 0.3606085777319681)
 
 # MostSFPs (weighted)
 deptList_MostSFPs_wtd = ['Dakar', 'Guediawaye', 'Tambacounda', 'Koumpentoum', 'Diourbel', 'Saint-Louis',
