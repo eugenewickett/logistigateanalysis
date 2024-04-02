@@ -319,7 +319,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 100000, 500
+numtruthdraws, numdatadraws = 100000, 300
 # Get random subsets for truth and data draws
 np.random.seed(56)
 truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
@@ -356,27 +356,45 @@ def GetAllocVecFromLists(distNames, distList, allocList):
 util.print_param_checks(paramdict)
 
 ### Benchmarks ###
+# IP-RP allocation
+deptList_IPRP = ['Dakar', 'Keur Massar', 'Pikine', 'Diourbel', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
+allocList_IPRP = [42, 21, 7, 9, 10, 7, 11, 10, 9]
+n_IPRP = GetAllocVecFromLists(deptNames, deptList_IPRP, allocList_IPRP)
+util_IPRP, util_IPRP_CI = sampf.getImportanceUtilityEstimate(n_IPRP, lgdict, paramdict,
+                                                             numimportdraws=50000)
+print('IPRP:',util_IPRP, util_IPRP_CI)
+# 1-APR
+# 1.3243255437720034 (1.316541769717496, 1.3321093178265109); 30k imp draws
+# 1.2904046058091616 (1.2813122416196538, 1.2994969699986694); 30k imp draws
+# 1.2760568950591367 (1.2660982924974853, 1.286015497620788); 40k imp draws
+# 1.2611624389549885 (1.2501537348147433, 1.2721711430952336) ; 40k imp draws
+# 1.2797496694612303 (1.2687891323652405, 1.29071020655722);  50k imp draws
+# 1.2545274151656152 (1.2430224985475427, 1.2660323317836877); 50k imp draws
+
 # LeastVisited
 deptList_LeastVisited = ['Keur Massar', 'Pikine', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
 allocList_LeastVisited = [20, 20, 20, 19, 19, 19, 19]
 n_LeastVisited = GetAllocVecFromLists(deptNames, deptList_LeastVisited, allocList_LeastVisited)
 util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEstimate(n_LeastVisited, lgdict,
-                                                                paramdict, numimportdraws=30000)
-print(util_LeastVisited_unif, util_LeastVisited_unif_CI)
+                                                                paramdict, numimportdraws=50000)
+print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
 # 1-APR
-# 
-
-#util_LeastVisited_unif, util_LeastVisited_unif_CI = getUtilityEstimate(n_LeastVisited, lgdict, paramdict)
-#print(util_LeastVisited_unif, util_LeastVisited_unif_CI)
-# 13-MAR
+# 1.5218729881054482 (1.513759868559136, 1.5299861076517605); 30k imp draws
+# 1.437412029402573 (1.427261393737913, 1.4475626650672329); 50k imp draws
+# 13-MAR (non-importance method)
 # 1.6657163547317921 (1.5262975507763805, 1.8051351586872038)
 
 # MostSFPs (uniform)
 deptList_MostSFPs_unif = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
 allocList_MostSFPs_unif = [20, 19, 19, 19, 19]
 n_MostSFPs_unif = GetAllocVecFromLists(deptNames, deptList_MostSFPs_unif, allocList_MostSFPs_unif)
-util_MostSFPs_unif, util_MostSFPs_unif_CI = getUtilityEstimate(n_MostSFPs_unif, lgdict, paramdict)
-print(util_MostSFPs_unif, util_MostSFPs_unif_CI)
+util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
+# 1-APR
+# 0.38828699159535596 (0.3823685276019546, 0.3942054555887573); 30k imp draws
+# 0.3816474185896155 (0.37388162429673777, 0.3894132128824932); 50k imp draws
+#
 # 13-MAR
 # 0.30966532049070494 (0.29526214617659896, 0.3240684948048109)
 
@@ -384,8 +402,12 @@ print(util_MostSFPs_unif, util_MostSFPs_unif_CI)
 deptList_MostSFPs_wtd = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
 allocList_MostSFPs_wtd = [15, 19, 12, 14, 36]
 n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs_wtd, allocList_MostSFPs_wtd)
-util_MostSFPs_wtd, util_MostSFPs_wtd_CI = getUtilityEstimate(n_MostSFPs_wtd, lgdict, paramdict)
-print(util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
+util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
+# 1-APR
+# 0.34918678364697797 (0.34304262230816285, 0.3553309449857931); 30k imp draws
+# 0.35769999295502153 (0.3507887967383443, 0.36461118917169877); 50k imp draws
 # 13-MAR
 # 0.3204636852594689 (0.30767399388703787, 0.3332533766318999)
 
@@ -394,8 +416,12 @@ deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufis
                           'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
 allocList_MoreDist_unif = [9, 9, 9, 9, 8, 8, 8, 8, 8, 8, 8]
 n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
-util_MoreDist_unif, util_MoreDist_unif_CI = getUtilityEstimate(n_MoreDist_unif, lgdict, paramdict)
-print(util_MoreDist_unif, util_MoreDist_unif_CI)
+util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreDistricts (unform):', util_MoreDist_unif, util_MoreDist_unif_CI)
+# 1-APR
+# 0.710156152751491 (0.7019020118087091, 0.7184102936942729); 30k imp draws
+# 0.7240902233604256 (0.7148199316185551, 0.7333605151022962); 50k imp draws
 # 13-MAR
 # 0.6867008491005695 (0.6669912197701802, 0.7064104784309588)
 
@@ -404,8 +430,12 @@ deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisq
                           'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
 allocList_MoreDist_wtd = [6, 5, 13, 13, 6, 5, 6, 7, 5, 13, 13]
 n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
-util_MoreDist_wtd, util_MoreDist_wtd_CI = getUtilityEstimate(n_MoreDist_wtd, lgdict, paramdict)
-print(util_MoreDist_wtd, util_MoreDist_wtd_CI)
+util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
+# 1-APR
+# 0.9026503512504966 (0.8959903094438921, 0.9093103930571012); 30k imp draws
+# 0.9249762109211606 (0.9174564360443753, 0.9324959857979458); 50k imp draws
 # 13-MAR
 # 0.7747075043342289 (0.7534452384396939, 0.7959697702287638)
 
@@ -414,8 +444,12 @@ deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufi
                           'Mbour', 'Tivaoune']
 allocList_MoreTests_unif = [22, 22, 22, 22, 22, 22, 22, 22]
 n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allocList_MoreTests_unif)
-util_MoreTests_unif, util_MoreTests_unif_CI = getUtilityEstimate(n_MoreTests_unif, lgdict, paramdict)
-print(util_MoreTests_unif, util_MoreTests_unif_CI)
+util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostTests (unform):', util_MoreTests_unif, util_MoreTests_unif_CI)
+# 1-APR
+# 0.7721902436053156 (0.7661619199797141, 0.7782185672309172); 30k imp draws
+# 0.7498919095152168 (0.741868438680191, 0.7579153803502425); 50k imp draws
 # 13-MAR
 # 0.7406350853193722 (0.6913757247389984, 0.7898944458997459)
 
@@ -424,11 +458,14 @@ deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufis
                           'Mbour', 'Tivaoune']
 allocList_MoreTests_wtd = [13, 14, 43, 43, 15, 14, 15, 19]
 n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocList_MoreTests_wtd)
-util_MoreTests_wtd, util_MoreTests_wtd_CI = getUtilityEstimate(n_MoreTests_wtd, lgdict, paramdict)
-print(util_MoreTests_wtd, util_MoreTests_wtd_CI)
+util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
+# 1-APR
+# 0.7775824854956621 (0.7709527122132069, 0.7842122587781173); 30k imp draws
+#
 # 13-MAR
 # 0.7494513457669925 (0.721643929353533, 0.7772587621804519)
-
 
 
 ##########################
