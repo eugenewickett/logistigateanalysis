@@ -565,7 +565,7 @@ util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 # 2-APR
-#
+# 1.921811949535421 (1.91282492725934, 1.9307989718115017)
 
 
 ##########################

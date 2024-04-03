@@ -201,7 +201,7 @@ def PrintDataSummary(datadict):
     print('Tests at TNs: ' + str(np.sum(N, axis=1)) + '\nSFPs at TNs: ' + str(np.sum(Y, axis=1)) + '\nSFP rates: '+str(
             (np.sum(Y, axis=1) / np.sum(N, axis=1)).round(4)))
     return
-# printDataSummary(testdatadict)
+# PrintDataSummary(testdatadict)
 
 # Set up logistigate dictionary
 lgdict = util.initDataDict(testdatadict['N'], testdatadict['Y'])
@@ -284,7 +284,7 @@ def GenerateMCMCBatch(lgdict, batchsize, filedest):
     np.save(filedest, lgdict['postSamples'])
     return
 # GenerateMCMCBatch(lgdict, 5000, 300, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf1_1'))
-GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_2'))
+#GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_2'))
 
 
 def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring):
@@ -359,3 +359,6 @@ def GetAllocVecFromLists(distNames, distList, allocList):
     return n
 
 util.print_param_checks(paramdict)
+
+for i in range(numTN):
+    print(deptNames[i], np.sum(lgdict['N'],axis=1)[i], np.sum(lgdict['Y'],axis=1)[i])
