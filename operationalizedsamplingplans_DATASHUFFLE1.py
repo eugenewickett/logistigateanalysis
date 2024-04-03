@@ -297,7 +297,7 @@ def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring):
     lgdict.update({'postSamples': tempobj, 'numPostSamples': tempobj.shape[0]})
     return
 # Pull previously generated MCMC draws
-RetrieveMCMCBatches(lgdict, 20, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'))
+RetrieveMCMCBatches(lgdict, 20, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf1_'))
 # util.plotPostSamples(lgdict, 'int90')
 
 def AddBootstrapQ(lgdict, numboot, randseed):
