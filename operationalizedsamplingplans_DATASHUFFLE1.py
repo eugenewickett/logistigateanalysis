@@ -284,8 +284,9 @@ def GenerateMCMCBatch(lgdict, batchsize, filedest):
     np.save(filedest, lgdict['postSamples'])
     return
 # GenerateMCMCBatch(lgdict, 5000, 300, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf1_1'))
-GenerateMCMCBatch(lgdict, 5000,
-                  os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf1_3'))
+for j in range(4,21):
+    GenerateMCMCBatch(lgdict, 5000,
+                  os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf1_'+str(j)))
 
 
 def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring):

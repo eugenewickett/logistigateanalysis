@@ -939,49 +939,45 @@ util_df.insert(6, 'Util_81_CI', util_81_CI)
 '''
 
 # Load previously calculated lower and upper utility evaluations
-util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+#util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
 
 
 
 ####
 # todo: REMOVE LATER; CHECKING AGAINST OLD UTILITY ESTIMATES
 ####
-util_lo, util_lo_CI = [], []
-util_hi, util_hi_CI = [], []
 util_lo_imp, util_lo_CI_imp = [], []
 util_hi_imp, util_hi_CI_imp = [], []
-for i in range(len(deptNames)):
-    currbd = int(deptallocbds[i])
-    print('Getting utility for ' + deptNames[i] + ', at 1 test...')
-    n = np.zeros(numTN)
-    n[i] = 1
-    currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
-    print(currlo, currlo_CI)
-    util_lo.append(currlo)
-    util_lo_CI.append(currlo_CI)
-    print('Getting utility under importance sampling...')
-    currlo_imp, currlo_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict,
-                                                           numimportdraws=30000)
-    print(currlo_imp, currlo_CI_imp)
-    util_lo_imp.append(currlo_imp)
-    util_lo_CI_imp.append(currlo_CI_imp)
-    print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
-    n[i] = currbd
-    currhi, currhi_CI = getUtilityEstimate(n, lgdict, paramdict)
-    print(currhi, currhi_CI)
-    util_hi.append(currhi)
-    util_hi_CI.append(currhi_CI)
-    print('Getting utility under importance sampling...')
-    currhi_imp, currhi_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict,
-                                                           numimportdraws=30000)
-    print(currhi_imp, currhi_CI_imp)
-    util_hi_imp.append(currhi_imp)
-    util_hi_CI_imp.append(currhi_CI_imp)
+for reps in range(10):
+    for i in range(10):
+        currbd = int(deptallocbds[i])
+        n = np.zeros(numTN)
+        '''    
+        print('Getting utility for ' + deptNames[i] + ', at 1 test...')    
+        n[i] = 1
+        currlo_imp, currlo_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=30000)
+        print(currlo_imp, currlo_CI_imp)
+        util_lo_imp.append(currlo_imp)
+        util_lo_CI_imp.append(currlo_CI_imp)
+        '''
+        print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
+        n[i] = currbd
+        currhi_imp, currhi_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=50000)
+        print(currhi_imp, currhi_CI_imp)
+        util_hi_imp.append(currhi_imp)
+        util_hi_CI_imp.append(currhi_CI_imp)
+'''
+# 1st run: 30k imp draws
+util_hi_imp = [0.3906806364519433, 0.37900277450375164, 0.3125001286929532, 0.29495861975553517, 0.1484237775864603, 0.11712893687658266, 0.2491887695057997, 0.18748908632695382, 0.37597343292086194, 0.3138836003083476, 0.37269612148611486, 0.26872878180024884, 0.35535587179775696, 0.16475204125187837, 0.24957612548629804, 0.16849467150581354, 0.16117134264092492, 0.2886873340956626, 0.15584807336130346, 0.19014490579459498, 0.3088897890583908, 0.16660470044417508, 0.12478914780106365, 0.36051397028615995, 0.2885597926524781, 0.3547341887416735, 0.35240183304921757, 0.16846768737411466, 0.28431504530094287, 0.15322035049142357, 0.31073053682450613, 0.3497771893559207, 0.23278279534773816, 0.30563854854423056, 0.2656809525105466, 0.35366903855184617, 0.0806069387652677, 0.1263231406305021, 0.2527240768625827, 0.35659808113103253, 0.25586223074083314, 0.1431744020501, 0.08642080227579108, 0.19829483675732185, 0.2071626763841259, 0.2899497353746412]
+util_hi_CI_imp = [(0.38595297319382027, 0.3954082997100663), (0.3737541827074189, 0.3842513663000844), (0.30760789372496156, 0.3173923636609448), (0.28937533040854113, 0.3005419091025292), (0.1453044707311033, 0.1515430844418173), (0.1149831792953222, 0.11927469445784311), (0.2444668838519597, 0.25391065515963973), (0.1827902244125621, 0.19218794824134555), (0.3698319690289136, 0.3821148968128103), (0.3075489483672875, 0.3202182522494077), (0.3675744038969153, 0.3778178390753144), (0.26498536578303344, 0.27247219781746423), (0.35097738641657195, 0.359734357178942), (0.16173954667756085, 0.16776453582619588), (0.2458965718139794, 0.2532556791586167), (0.16611500466456697, 0.17087433834706012), (0.15744929656400686, 0.16489338871784298), (0.2837714137486138, 0.2936032544427114), (0.15367938221318767, 0.15801676450941926), (0.18710790492263385, 0.1931819066665561), (0.30331019705173645, 0.3144693810650452), (0.16192871188237667, 0.17128068900597349), (0.12145381603180816, 0.12812447957031914), (0.3545193854481834, 0.3665085551241365), (0.2840071496511545, 0.29311243565380174), (0.34993061230100153, 0.3595377651823455), (0.347354331763265, 0.3574493343351701), (0.16491138703167785, 0.17202398771655147), (0.28005389912150314, 0.2885761914803826), (0.1489806549171444, 0.15746004606570274), (0.3064495556393023, 0.31501151800970995), (0.34505136122100843, 0.354503017490833), (0.22828351222859844, 0.23728207846687788), (0.30202778632840577, 0.30924931076005535), (0.2618305305709505, 0.26953137445014264), (0.35012701544012614, 0.3572110616635662), (0.0786704100236264, 0.082543467506909), (0.12290000760660647, 0.12974627365439773), (0.2486159239967929, 0.2568322297283725), (0.3512152326217226, 0.36198092964034245), (0.25096023628613295, 0.26076422519553333), (0.13971234526516696, 0.14663645883503307), (0.08370010288294871, 0.08914150166863344), (0.19418115614387332, 0.20240851737077037), (0.20394652854265694, 0.21037882422559484), (0.2860116507042836, 0.2938878200449988)]
+# 2nd run: 50k imp draws
 
-util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
-                        'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
+'''
+util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo_imp, 'Util_lo_CI':util_lo_CI_imp,
+                        'Util_hi':util_hi_imp, 'Util_hi_CI':util_hi_CI_imp})
 
-util_df.to_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+util_df.to_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'), index=False)
 
 ####
 # todo: END REMOVE
