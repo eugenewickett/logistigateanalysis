@@ -173,63 +173,64 @@ def GetSenegalCSVData():
     # Get testing results
     testresults_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/dataresults.csv', header=0)
     manufNames = testresults_df.Manufacturer.sort_values().unique().tolist()
+    deptNames = dept_df['Department'].sort_values().tolist()
+    testdatadict = {'dataTbl': testresults_df.values.tolist(), 'type': 'Tracked', 'TNnames': deptNames,
+                    'SNnames': manufNames}
+    testdatadict = util.GetVectorForms(testdatadict)
 
-    return dept_df, regcost_mat, testresults_df, regNames, manufNames
+    return dept_df, regcost_mat, regNames, deptNames, manufNames, len(regNames), testdatadict
 
-# Pull district-level Senegal data
-# N, Y, SNnames, TNprovs, TNnames = GetSenegalDataMatrices(deidentify=False)
-dept_df, regcost_mat, testresults_df, regNames, manufNames = GetSenegalCSVData()
-deptNames = dept_df['Department'].sort_values().tolist()
-numReg = len(regNames)
-testdatadict = {'dataTbl':testresults_df.values.tolist(), 'type':'Tracked', 'TNnames':deptNames, 'SNnames':manufNames}
-testdatadict = util.GetVectorForms(testdatadict)
-N, Y, TNnames, SNnames = testdatadict['N'], testdatadict['Y'], testdatadict['TNnames'], testdatadict['SNnames']
-(numTN, numSN) = N.shape # For later use
+dept_df, regcost_mat, regNames, deptNames, manufNames, numReg, testdatadict = GetSenegalCSVData()
+(numTN, numSN) = testdatadict['N'].shape # For later use
 
 def GetRegion(dept_str, dept_df):
     """Retrieves the region associated with a department"""
     return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
+
 def GetDeptChildren(reg_str, dept_df):
     """Retrieves the departments associated with a region"""
     return dept_df.loc[dept_df['Region']==reg_str,'Department'].values.tolist()
 
-##############
-### Print some data summaries
-# Overall data
-print('TNs by SNs: ' + str(N.shape) + '\nNumber of Obsvns: ' + str(N.sum()) + '\nNumber of SFPs: ' + str(Y.sum()) + '\nSFP rate: ' + str(round(
-    Y.sum() / N.sum(), 4)))
-# TN-specific data
-print('Tests at TNs: ' + str(np.sum(N, axis=1)) + '\nSFPs at TNs: ' + str(np.sum(Y, axis=1)) + '\nSFP rates: ' + str(
-    (np.sum(Y, axis=1) / np.sum(N, axis=1)).round(4)))
+def PrintDataSummary(datadict):
+    """print data summaries for datadict which should have keys 'N' and 'Y' """
+    N, Y = datadict['N'], datadict['Y']
+    # Overall data
+    print('TNs by SNs: ' + str(N.shape) + '\nNumber of Obsvns: ' + str(N.sum()) + '\nNumber of SFPs: ' + str(
+        Y.sum()) + '\nSFP rate: ' + str(round(Y.sum() / N.sum(), 4)))
+    # TN-specific data
+    print('Tests at TNs: ' + str(np.sum(N, axis=1)) + '\nSFPs at TNs: ' + str(np.sum(Y, axis=1)) + '\nSFP rates: '+str(
+            (np.sum(Y, axis=1) / np.sum(N, axis=1)).round(4)))
+    return
+# printDataSummary(testdatadict)
 
 # Set up logistigate dictionary
-lgdict = util.initDataDict(N, Y)
-lgdict.update({'TNnames':TNnames, 'SNnames':SNnames})
+lgdict = util.initDataDict(testdatadict['N'], testdatadict['Y'])
+lgdict.update({'TNnames':deptNames, 'SNnames':manufNames})
 
-##############
+def SetupSenegalPriors(lgdict, randseed=15):
+    """Set up priors for SFP rates at nodes"""
+    numTN, numSN = lgdict['TNnum'], lgdict['SNnum']
+    # All SNs are `Moderate'
+    SNpriorMean = np.repeat(spsp.logit(0.1), numSN)
+    # TNs are randomly assigned risk, such that 5% are in the 1st and 7th levels, 10% are in the 2nd and 6th levels,
+    #   20% are in the 3rd and 5th levels, and 30% are in the 4th level
+    np.random.seed(randseed)
+    tempCategs = np.random.multinomial(n=1, pvals=[0.05, 0.1, 0.2, 0.3, 0.2, 0.1, 0.05], size=numTN)
+    riskMeans = [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25]
+    randriskinds = np.mod(np.where(tempCategs.flatten() == 1), len(riskMeans))[0]
+    TNpriorMean = spsp.logit(np.array([riskMeans[randriskinds[i]] for i in range(numTN)]))
+    # Concatenate prior means
+    priorMean = np.concatenate((SNpriorMean, TNpriorMean))
+    TNvar, SNvar = 2., 3.  # Variances for use with prior; supply nodes are wider due to unknown risk assessments
+    priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
+    priorObj = prior_normal_assort(priorMean, priorCovar)
+    lgdict['prior'] = priorObj
+    return
+
 # Set up priors for SFP rates at nodes
-# TODO: INSPECT CHOICE HERE LATER
-# All SNs are `Moderate'
-SNpriorMean = np.repeat(spsp.logit(0.1), numSN)
-# TNs are randomly assigned risk, such that 5% are in the 1st and 7th levels, 10% are in the 2nd and 6th levels,
-#   20% are in the 3rd and 5th levels, and 30% are in the 4th level
-np.random.seed(15)
-tempCategs = np.random.multinomial(n=1, pvals=[0.05,0.1,0.2,0.3,0.2,0.1,0.05], size=numTN)
-riskMeans = [0.01,0.02,0.05,0.1,0.15,0.2,0.25]
-randriskinds = np.mod(np.where(tempCategs.flatten()==1), len(riskMeans))[0]
-TNpriorMean = spsp.logit(np.array([riskMeans[randriskinds[i]] for i in range(numTN)]))
-# Concatenate prior means
-priorMean = np.concatenate((SNpriorMean, TNpriorMean))
-TNvar, SNvar = 2., 3.  # Variances for use with prior; supply nodes are wider due to unknown risk assessments
-priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
-priorObj = prior_normal_assort(priorMean, priorCovar)
-lgdict['prior'] = priorObj
+SetupSenegalPriors(lgdict)
 
-# Set up MCMC
-lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 1000, 'delta': 0.4}
-
-
-
+# Use this function to identify good choice of Madapt
 def GetMCMCTracePlots(lgdict, numburnindraws=2000, numdraws=1000):
     """
     Provides a grid of trace plots across all nodes for numdraws draws of the corresponding SFP rates
@@ -262,73 +263,66 @@ def GetMCMCTracePlots(lgdict, numburnindraws=2000, numdraws=1000):
         plt.show()
 
     return
-
-'''
-# TODO: INSPECT CHOICE HERE LATER
-numdraws = 5000
-lgdict['numPostSamples'] = numdraws
-
-np.random.seed(300) # For first 4 sets of 5k draws
-np.random.seed(301) # For second 17 sets of 5k draws
-np.random.seed(410) # For third 11 sets of 5k draws
-np.random.seed(466) # For fourth XX sets of 5k draws
-
-time0 = time.time()
-lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
-print(time.time()-time0)
-
-tempobj = lgdict['postSamples']
-np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws40'),tempobj)
-
-file_name = "operationalizedsamplingplans/numpy_objects/draws35.npy"
-file_stats = os.stat(file_name)
-print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
-'''
-
 #methods.GetMCMCTracePlots(lgdict, numburnindraws=1000, numdraws=1000)
 
-lgdict['numPostSamples'] = 100000
+# Set up MCMC
+lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 1000, 'delta': 0.4}
 
-# Load draws from files
-tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
-for drawgroupind in range(2, 21):
-    newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) +'.npy'))
-    tempobj = np.concatenate((tempobj, newobj))
-lgdict['postSamples'] = tempobj
-# Print inference from initial data
-util.plotPostSamples(lgdict, 'int90')
+# Generate batch of MCMC samples
+def GenerateMCMCBatch(lgdict, batchsize, randseed, filedest):
+    """Generates a batch of MCMC draws and saves it to the specified file destination"""
+    lgdict['numPostSamples'] = batchsize
+    lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
+    np.save(filedest, lgdict['postSamples'])
+    return
+# GenerateMCMCBatch(lgdict, 5000, 300, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1'))
 
-# Generate Q via bootstrap sampling of known traces
-numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'],axis=1))
-numboot = 20 # Average across each department in original data
-SNprobs = np.sum(lgdict['N'], axis=0) / np.sum(lgdict['N']) # SN sourcing probabilities across original data
-np.random.seed(44)
-Qvecs = np.random.multinomial(numboot, SNprobs, size=numTN - numvisitedTNs) / numboot
-# Only update rows with no observed traces
-Qindcount = 0
-tempQ = lgdict['Q'].copy()
-for i in range(tempQ.shape[0]):
-    if lgdict['Q'][i].sum() == 0:
-        tempQ[i] = Qvecs[Qindcount]
-        Qindcount += 1
-lgdict.update({'Q':tempQ})
+def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring):
+    """Adds previously generated MCMC draws to lgdict, using the file destination marked by filedest_leadstring"""
+    tempobj = np.load(filedest_leadstring + '1.npy')
+    for drawgroupind in range(2, numbatches+1):
+        newobj = np.load(filedest_leadstring + str(drawgroupind) + '.npy')
+        tempobj = np.concatenate((tempobj, newobj))
+    lgdict.update({'postSamples': tempobj, 'numPostSamples': tempobj.shape[0]})
+    return
+# Pull previously generated MCMC draws
+RetrieveMCMCBatches(lgdict, 20, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'))
+# util.plotPostSamples(lgdict, 'int90')
+
+def AddBootstrapQ(lgdict, numboot, randseed):
+    """Add bootstrap-sampled sourcing vectors for unvisited test nodes"""
+
+    numvisitedTNs = np.count_nonzero(np.sum(lgdict['Q'], axis=1))
+    SNprobs = np.sum(lgdict['N'], axis=0) / np.sum(lgdict['N'])
+    np.random.seed(randseed)
+    Qvecs = np.random.multinomial(numboot, SNprobs, size=lgdict['TNnum'] - numvisitedTNs) / numboot
+    Qindcount = 0
+    tempQ = lgdict['Q'].copy()
+    for i in range(tempQ.shape[0]):
+        if lgdict['Q'][i].sum() == 0:
+            tempQ[i] = Qvecs[Qindcount]
+            Qindcount += 1
+    lgdict.update({'Q': tempQ})
+    return
+# Add boostrap-sampled sourcing vectors for non-tested test nodes
+AddBootstrapQ(lgdict, numboot=20, randseed=44)
 
 # Loss specification
-# TODO: INSPECT CHOICE HERE LATER, ESP MARKETVEC
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
 
-# Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 100000, 300
-# Get random subsets for truth and data draws
-np.random.seed(56)
-truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
-paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
-# Get base loss
-paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
-
+def SetupParameterDictionary(paramdict, numtruthdraws, numdatadraws, randseed):
+    """Sets up parameter dictionary with desired truth and data draws"""
+    np.random.seed(randseed)
+    truthdraws, datadraws = util.distribute_truthdata_draws(lgdict['postSamples'], numtruthdraws, numdatadraws)
+    paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
+    paramdict.update({'baseloss': sampf.baseloss(paramdict['truthdraws'], paramdict)})
+    return
+# Set up parameter dictionary
+SetupParameterDictionary(paramdict, 100000, 300, randseed=56)
 util.print_param_checks(paramdict)  # Check of used parameters
 
+# Non-importance sampling estimate of utility
 def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     """
     Return a utility estimate average and confidence interval for allocation array n
@@ -338,6 +332,7 @@ def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     currlosslist = sampf.sampling_plan_loss_list(des, testnum, lgdict, paramdict)
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
+
 
 ##########################
 ##########################
@@ -522,12 +517,12 @@ util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
 # 2-APR
-#
+# 0.39343331638029966 (0.3847083229547188, 0.4021583098058805)
 
 # MoreDistricts (uniform)
 deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
                           'Mbour', 'Tivaoune', 'Kaolack', 'Guinguineo', 'Nioro du Rip', 'Kaffrine',
-                          'Birkilane', 'Koungheul', 'Malem Hoddar',  'Diourbel', 'Bambey', 'Mbacke'
+                          'Birkilane', 'Koungheul', 'Malem Hoddar',  'Diourbel', 'Bambey', 'Mbacke',
                           'Fatick', 'Foundiougne', 'Gossas']
 allocList_MoreDist_unif = [8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 7, 7]
 n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
@@ -535,14 +530,14 @@ util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MoreDistricts (unform):', util_MoreDist_unif, util_MoreDist_unif_CI)
 # 2-APR
-#
+# 1.7779186722467752 (1.7643080846741288, 1.7915292598194217)
 
 # MoreDistricts (weighted)
-deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
                           'Mbour', 'Tivaoune', 'Kaolack', 'Guinguineo', 'Nioro du Rip', 'Kaffrine',
-                          'Birkilane', 'Koungheul', 'Malem Hoddar',  'Diourbel', 'Bambey', 'Mbacke'
+                          'Birkilane', 'Koungheul', 'Malem Hoddar',  'Diourbel', 'Bambey', 'Mbacke',
                           'Fatick', 'Foundiougne', 'Gossas']
-allocList_MoreDist_unif = [4, 5, 9, 9, 5, 5, 5, 6, 5, 9, 9, 7, 9, 9, 9, 4, 10, 10, 10, 10, 10]
+allocList_MoreDist_wtd = [4, 5, 9, 9, 5, 5, 5, 6, 5, 9, 9, 7, 9, 9, 9, 4, 10, 10, 10, 10, 10]
 n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
 util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_wtd, lgdict,
                                                                 paramdict, numimportdraws=50000)
@@ -552,7 +547,7 @@ print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
 
 # MoreTests (uniform)
 deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
-                           'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke' 'Fatick', 'Foundiougne', 'Gossas']
+                           'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
 allocList_MoreTests_unif = [27, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26]
 n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allocList_MoreTests_unif)
 util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_unif, lgdict,
@@ -596,7 +591,6 @@ utilavg, (utilCIlo, utilCIhi) =
 # Now set up functions for constraints and variables of our program
 ##################
 # Set these parameters per the program described in the paper
-# TODO: INSPECT CHOICES HERE LATER, ESP bigM
 batchcost, batchsize, B, ctest = 0, 700, 700, 2
 batchsize = B
 bigM = B*ctest
@@ -633,7 +627,7 @@ def GetUpperBounds(optparamdict, alpha=1.0):
 
 deptallocbds = GetUpperBounds(optparamdict)
 # Lower upper bounds to maximum of observed prior tests at any district
-maxpriortests = int(np.max(np.sum(N,axis=1)))
+maxpriortests = int(np.max(np.sum(lgdict['N'],axis=1)))
 deptallocbds = np.array([min(deptallocbds[i], maxpriortests) for i in range(deptallocbds.shape[0])])
 
 print(deptNames[np.argmin(deptallocbds)], min(deptallocbds))
