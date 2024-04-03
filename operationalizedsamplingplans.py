@@ -543,7 +543,7 @@ util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
                                                                 paramdict, numimportdraws=50000)
 print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
 # 2-APR
-#
+# 1.9895474436100677 (1.977327771086971, 2.0017671161331645)
 
 # MoreTests (uniform)
 deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
@@ -554,11 +554,11 @@ util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate
                                                                 paramdict, numimportdraws=50000)
 print('MostTests (unform):', util_MoreTests_unif, util_MoreTests_unif_CI)
 # 2-APR
-#
+# 1.9490316484024035 (1.9400068838417859, 1.9580564129630211)
 
 # MoreTests (weighted)
 deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
-                           'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke' 'Fatick', 'Foundiougne', 'Gossas']
+                           'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
 allocList_MoreTests_wtd = [15, 16, 36, 36, 16, 16, 16, 19, 15, 36, 36, 36, 36, 36]
 n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocList_MoreTests_wtd)
 util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_wtd, lgdict,
