@@ -235,6 +235,7 @@ def SetupSenegalPriors(lgdict, randseed=15):
     return
 
 # Set up priors for SFP rates at nodes
+
 # TODO: Different seed for prior
 SetupSenegalPriors(lgdict, randseed=17)
 
