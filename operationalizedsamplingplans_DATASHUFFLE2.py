@@ -284,8 +284,8 @@ def GenerateMCMCBatch(lgdict, batchsize, filedest):
     np.save(filedest, lgdict['postSamples'])
     return
 # GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_2'))
-for j in range(1,21):
-    GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_'+str(j)))
+#for j in range(1,21):
+#    GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws_shuf2_'+str(j)))
 
 def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring):
     """Adds previously generated MCMC draws to lgdict, using the file destination marked by filedest_leadstring"""
@@ -343,12 +343,32 @@ def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
 
+# For identifying benchmark allocations
+def FindTSPPathForGivenNodes(reglist, f_reg):
+    """
+    Returns an sequence of indices corresponding to the shortest path through all indices, per the traversal costs
+    featured in f_reg; uses brute force, so DO NOT use with lists larger than 10 elements or so
+    Uses first index as the HQ region, and assumes all paths must start and end at this region
+    """
+    HQind = reglist[0]
+    nonHQindlist = reglist[1:]
+    permutlist = list(itertools.permutations(nonHQindlist))
+    currbestcost = np.inf
+    currbesttup = 0
+    for permuttuple in permutlist:
+        currind = HQind
+        currpermutcost = 0
+        for ind in permuttuple:
+            currpermutcost += f_reg[currind, ind]
+            currind = ind
+        currpermutcost += f_reg[currind,HQind]
+        if currpermutcost < currbestcost:
+            currbestcost = currpermutcost
+            currbesttup = permuttuple
+    besttuplist = [currbesttup[i] for i in range(len(currbesttup))]
+    besttuplist.insert(0,HQind)
+    return besttuplist, currbestcost
 
-##########################
-##########################
-# Calculate utility for candidates and benchmarks
-##########################
-##########################
 def GetAllocVecFromLists(distNames, distList, allocList):
     """Function for generating allocation vector for benchmarks, only using names and a list of test levels"""
     numDist = len(distNames)
@@ -358,7 +378,214 @@ def GetAllocVecFromLists(distNames, distList, allocList):
         n[distind] = allocList[distElem]
     return n
 
+# Orienteering parameters
+batchcost, batchsize, B, ctest = 0, 700, 700, 2
+batchsize = B
+bigM = B*ctest
+
+dept_df_sort = dept_df.sort_values('Department')
+
+FTEcostperday = 200
+f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
+f_reg = np.array(regcost_mat)*FTEcostperday
+
+##########################
+##########################
+# Calculate utility for candidates and benchmarks
+##########################
+##########################
+
 util.print_param_checks(paramdict)
 
-for i in range(numTN):
-    print(deptNames[i], np.sum(lgdict['N'],axis=1)[i], np.sum(lgdict['Y'],axis=1)[i])
+######
+# B=700
+######
+
+# LeastVisited
+reglist_LeastVisited = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Fatick'),
+                        regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Matam')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+deptList_LeastVisited = ['Guediawaye', 'Rufisque', 'Mbour', 'Tivaoune', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne',
+                         'Gossas']
+allocList_LeastVisited = [11, 11, 11, 11, 11, 11, 11, 11, 10]
+n_LeastVisited = GetAllocVecFromLists(deptNames, deptList_LeastVisited, allocList_LeastVisited)
+util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEstimate(n_LeastVisited, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
+# 3-APR
+#
+
+# MostSFPs
+reglist_MostSFPs = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Louga'),
+                    regNames.index('Kaffrine'), regNames.index('Tambacounda'), regNames.index('Kolda')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MostSFPs, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+deptList_MostSFPs = ['Dakar', 'Keur Massar', 'Thies', 'Louga', 'Kebemer', 'Linguere', 'Diourbel']
+allocList_MostSFPs_unif = [9, 9, 9, 9, 9, 8, 8]
+n_MostSFPs_unif = GetAllocVecFromLists(deptNames, deptList_MostSFPs, allocList_MostSFPs_unif)
+util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostSFPs (uniform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
+# 3-APR
+#
+
+allocList_MostSFPs_wtd = [7, 10, 6, 11, 11, 10, 7]
+n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs, allocList_MostSFPs_wtd)
+util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostSFPs (weighted):',util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
+# 3-APR
+#
+
+# MoreDistricts (uniform)
+deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
+allocList_MoreDist_unif = [9, 9, 9, 9, 8, 8, 8, 8, 8, 8, 8]
+n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
+util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreDistricts (uniform):', util_MoreDist_unif, util_MoreDist_unif_CI)
+# 3-APR
+#
+
+# MoreDistricts (weighted)
+deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
+allocList_MoreDist_wtd = [5, 10, 5, 8, 10, 5, 11, 11, 5, 11, 11]
+n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
+util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
+# 3-APR
+#
+
+# MoreTests (uniform)
+deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune']
+allocList_MoreTests_unif = [22, 22, 22, 22, 22, 22, 22, 22]
+n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allocList_MoreTests_unif)
+util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostTests (uniform):', util_MoreTests_unif, util_MoreTests_unif_CI)
+# 3-APR
+#
+
+# MoreTests (weighted)
+deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune']
+allocList_MoreTests_wtd = [12, 29, 13, 21, 29, 12, 30, 30]
+n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocList_MoreTests_wtd)
+util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
+# 3-APR
+#
+
+######
+# B=1400
+######
+
+# LeastVisited
+reglist_LeastVisited = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Fatick'),
+                        regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Saint-Louis'),
+                        regNames.index('Matam')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+deptList_LeastVisited = ['Guediawaye', 'Rufisque', 'Mbour', 'Tivaoune', 'Guinguineo', 'Nioro du Rip',
+                         'Birkilane', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas', 'Matam', 'Kanel']
+allocList_LeastVisited = [8, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7]
+n_LeastVisited = GetAllocVecFromLists(deptNames, deptList_LeastVisited, allocList_LeastVisited)
+util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEstimate(n_LeastVisited, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
+# 3-APR
+#
+
+# MostSFPs (uniform)
+reglist_MostSFPs = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Kaolack'),
+                    regNames.index('Louga'), regNames.index('Saint-Louis'), regNames.index('Tambacounda')]
+currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MostSFPs, f_reg)
+for regind in currRegList:
+    print(regNames[regind])
+print(currRegCost)
+
+deptList_MostSFPs_unif = ['Dakar', 'Keur Massar', 'Thies', 'Louga', 'Kebemer', 'Linguere', 'Tambacounda',
+                          'Kaffrine', 'Diourbel', 'Velingara']
+allocList_MostSFPs_unif = [8, 8, 8, 8, 7, 7, 7, 7, 7, 7]
+n_MostSFPs_unif = GetAllocVecFromLists(deptNames, deptList_MostSFPs_unif, allocList_MostSFPs_unif)
+util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
+# 2-APR
+#
+
+# MostSFPs (weighted)
+deptList_MostSFPs_wtd = ['Dakar', 'Keur Massar', 'Thies', 'Louga', 'Kebemer', 'Linguere', 'Tambacounda',
+                          'Kaffrine', 'Diourbel', 'Velingara']
+allocList_MostSFPs_wtd = [6, 9, 5, 10, 10, 9, 6, 6, 6, 7]
+n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs_wtd, allocList_MostSFPs_wtd)
+util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
+# 2-APR
+#
+
+# MoreDistricts (uniform)
+deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Kaolack', 'Guinguineo', 'Nioro du Rip', 'Kaffrine',
+                          'Birkilane', 'Koungheul', 'Malem Hoddar',  'Diourbel', 'Bambey', 'Mbacke',
+                          'Fatick', 'Foundiougne', 'Gossas']
+allocList_MoreDist_unif = [8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 7, 7]
+n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
+util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreDistricts (uniform):', util_MoreDist_unif, util_MoreDist_unif_CI)
+# 2-APR
+#
+
+# MoreDistricts (weighted)
+deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+                          'Mbour', 'Tivaoune', 'Kaolack', 'Guinguineo', 'Nioro du Rip', 'Kaffrine',
+                          'Birkilane', 'Koungheul', 'Malem Hoddar',  'Diourbel', 'Bambey', 'Mbacke',
+                          'Fatick', 'Foundiougne', 'Gossas']
+allocList_MoreDist_wtd = [4, 9, 5, 7, 9, 4, 9, 9, 5, 9, 10, 4, 10, 6, 5, 4, 10, 10, 10, 10, 10]
+n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
+util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
+# 2-APR
+#
+
+# MoreTests (uniform)
+deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
+                           'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
+allocList_MoreTests_unif = [27, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26]
+n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allocList_MoreTests_unif)
+util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_unif, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MostTests (uniform):', util_MoreTests_unif, util_MoreTests_unif_CI)
+# 2-APR
+#
+
+# MoreTests (weighted)
+deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
+                           'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
+allocList_MoreTests_wtd = [14, 31, 15, 23, 31, 14, 31, 32, 14, 32, 32, 32, 32, 32]
+n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocList_MoreTests_wtd)
+util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_wtd, lgdict,
+                                                                paramdict, numimportdraws=50000)
+print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
+# 2-APR
+#
+
+
