@@ -333,6 +333,16 @@ def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
 
+# Set these parameters per the program described in the paper
+batchcost, batchsize, B, ctest = 0, 700, 700, 2
+batchsize = B
+bigM = B*ctest
+
+dept_df_sort = dept_df.sort_values('Department')
+
+FTEcostperday = 200
+f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
+f_reg = np.array(regcost_mat)*FTEcostperday
 
 ##########################
 ##########################
@@ -574,33 +584,37 @@ print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 ##########################
 ##########################
 
+# What are the upper bounds for our allocation variables?
+def GetUpperBounds(optparamdict, alpha=1.0):
+    """
+    Returns a numpy vector of upper bounds for an inputted parameter dictionary. alpha determines the proportion of the
+    budget that can be dedicated to any one district
+    """
+    B, f_dept, f_reg = optparamdict['budget']*alpha, optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
+    batchcost, ctest, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
+    deptnames, regnames, dept_df = optparamdict['deptnames'], optparamdict['regnames'], optparamdict['dept_df']
+    retvec = np.zeros(f_dept.shape[0])
+    for i in range(f_dept.shape[0]):
+        regparent = GetRegion(deptnames[i], dept_df)
+        regparentind = regnames.index(regparent)
+        if regparentind == reghqind:
+            retvec[i] = np.floor((B-f_dept[i]-batchcost)/ctest)
+        else:
+            regfixedcost = f_reg[reghqind,regparentind] + f_reg[regparentind, reghqind]
+            retvec[i] = np.floor((B-f_dept[i]-batchcost-regfixedcost)/ctest)
+    return retvec
+
+deptallocbds = GetUpperBounds(optparamdict)
+# Lower upper bounds to maximum of observed prior tests at any district
+maxpriortests = int(np.max(np.sum(lgdict['N'],axis=1)))
+deptallocbds = np.array([min(deptallocbds[i], maxpriortests) for i in range(deptallocbds.shape[0])])
 
 
-'''
-time0 = time.time()
-utilavg, (utilCIlo, utilCIhi) = getUtilityEstimate(n, lgdict, paramdict)
-print(time.time() - time0)
 
-With numtruthdraws, numdatadraws = 10000, 500:
-~160 seconds
-utilavg, (utilCIlo, utilCIhi) =
-0.4068438943300112, (0.3931478722114097, 0.42053991644861277)
-0.42619338638365, (0.40593452427234133, 0.4464522484949587)
-'''
+
 ##################
 # Now set up functions for constraints and variables of our program
 ##################
-# Set these parameters per the program described in the paper
-batchcost, batchsize, B, ctest = 0, 700, 700, 2
-batchsize = B
-bigM = B*ctest
-
-dept_df_sort = dept_df.sort_values('Department')
-
-FTEcostperday = 200
-f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
-f_reg = np.array(regcost_mat)*FTEcostperday
-
 optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconstant':bigM, 'batchsize':batchsize,
                 'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
