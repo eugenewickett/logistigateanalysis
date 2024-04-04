@@ -417,6 +417,7 @@ util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEs
 print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
 # 3-APR
 # 0.7278474498511986 (0.7147762719858832, 0.7409186277165141)
+# 0.7730593679934668 (0.7605848548689256, 0.7855338811180079)
 
 # MostSFPs
 reglist_MostSFPs = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Kaolack'),
@@ -433,7 +434,8 @@ util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (uniform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
 # 3-APR
-#  0.19979340319738448 (0.1941252962122828, 0.20546151018248615)
+# 0.19979340319738448 (0.1941252962122828, 0.20546151018248615)
+# 0.1745024941571245 (0.16872464940383658, 0.1802803389104124)
 
 allocList_MostSFPs_wtd = [7, 5, 7, 5, 4, 4]
 n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs, allocList_MostSFPs_wtd)
@@ -441,7 +443,8 @@ util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (weighted):',util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
 # 3-APR
-#  0.1874164826813356 (0.18149126731374388, 0.1933416980489273)
+# 0.1874164826813356 (0.18149126731374388, 0.1933416980489273)
+# 0.1884238005633918 (0.1826504831433926, 0.194197117983391)
 
 # MoreDistricts (uniform)
 deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -453,6 +456,7 @@ util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n
 print('MoreDistricts (uniform):', util_MoreDist_unif, util_MoreDist_unif_CI)
 # 3-APR
 # 1.097901374992679 (1.0883369471734898, 1.107465802811868)
+# 1.100621111946376 (1.0904241829061174, 1.1108180409866346)
 
 # MoreDistricts (weighted)
 deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -464,6 +468,7 @@ util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n
 print('MoreDistricts (weighted):', util_MoreDist_unif, util_MoreDist_unif_CI)
 # 3-APR
 # 1.1499090127184903 (1.1405389375620807, 1.1592790878749)
+# 1.1692559434343668 (1.160178594480767, 1.1783332923879666)
 
 # MoreTests (uniform)
 deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -475,6 +480,7 @@ util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate
 print('MostTests (uniform):', util_MoreTests_unif, util_MoreTests_unif_CI)
 # 3-APR
 # 1.2634860610115375 (1.2549002545907246, 1.2720718674323503)
+# 1.2801337489084634 (1.2708842065197103, 1.2893832912972165)
 
 # MoreTests (weighted)
 deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -486,6 +492,7 @@ util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n
 print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 # 3-APR
 # 1.3578140938057182 (1.3491147209875933, 1.366513466623843)
+# 1.3317990083561195 (1.3236876668685973, 1.3399103498436418)
 
 ######
 # B=1400
@@ -510,6 +517,7 @@ util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEs
 print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
 # 3-APR
 # 1.320567052079845 (1.305219961370975, 1.335914142788715)
+# 1.3066436075231245 (1.2918677410837915, 1.3214194739624574)
 
 # MostSFPs (uniform)
 reglist_MostSFPs = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Kaolack'),
@@ -528,6 +536,7 @@ util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n
 print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
 # 2-APR
 # 0.3303070425714889 (0.32320823354960737, 0.33740585159337044)
+# 0.3430698551334377 (0.3359789629780199, 0.3501607472888555)
 
 # MostSFPs (weighted)
 deptList_MostSFPs_wtd = ['Thies', 'Kebemer', 'Bakel', 'Kaolack', 'Nioro du Rip', 'Bambey', 'Mbacke',
@@ -539,6 +548,7 @@ util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
 print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
 # 2-APR
 # 0.3657066138154761 (0.3590590841139001, 0.3723541435170521)
+# 0.3373247622433002 (0.33071009578692134, 0.3439394286996791)
 
 # MoreDistricts (uniform)
 deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -552,6 +562,7 @@ util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n
 print('MoreDistricts (uniform):', util_MoreDist_unif, util_MoreDist_unif_CI)
 # 2-APR
 # 1.924807917228767 (1.9127570077576923, 1.9368588266998419)
+# 1.899272363954779 (1.8867183172416269, 1.9118264106679312)
 
 # MoreDistricts (weighted)
 deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -565,6 +576,7 @@ util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
 print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
 # 2-APR
 # 1.9651710125263655 (1.9539074988060658, 1.9764345262466652)
+# 1.9675294800407013 (1.955550487903265, 1.9795084721781375)
 
 # MoreTests (uniform)
 deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
@@ -576,6 +588,7 @@ util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate
 print('MostTests (uniform):', util_MoreTests_unif, util_MoreTests_unif_CI)
 # 2-APR
 # 2.230707381240432 (2.221698573185467, 2.2397161892953967)
+# 2.2395853657537224 (2.228983114316108, 2.2501876171913366)
 
 # MoreTests (weighted)
 deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
@@ -587,3 +600,4 @@ util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n
 print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 # 2-APR
 # 2.2692339314785706 (2.259691080220824, 2.2787767827363172)
+# 2.260540916285702 (2.2515382871631626, 2.2695435454082418)
