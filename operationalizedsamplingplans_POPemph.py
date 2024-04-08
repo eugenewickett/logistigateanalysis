@@ -403,7 +403,7 @@ util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEs
                                                                 paramdict, numimportdraws=50000)
 print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
 # 1-APR
-#
+# 0.04784057673965639 (0.047594640260225946, 0.04808651321908683)
 
 # MostSFPs (uniform)
 deptList_MostSFPs_unif = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
@@ -413,7 +413,7 @@ util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
 # 1-APR
-#
+# 0.010956411108269476 (0.010742722014419781, 0.011170100202119171)
 
 # MostSFPs (weighted)
 deptList_MostSFPs_wtd = ['Dakar', 'Guediawaye', 'Diourbel', 'Saint-Louis', 'Podor']
@@ -423,7 +423,7 @@ util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
 # 1-APR
-#
+# 0.010961974127764479 (0.01077507395058483, 0.011148874304944129)
 
 # MoreDistricts (uniform)
 deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -434,7 +434,7 @@ util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MoreDistricts (unform):', util_MoreDist_unif, util_MoreDist_unif_CI)
 # 1-APR
-#
+# 0.03487329297659561 (0.034500880961306934, 0.035245704991884286)
 
 # MoreDistricts (weighted)
 deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -445,7 +445,7 @@ util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
                                                                 paramdict, numimportdraws=50000)
 print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
 # 1-APR
-#
+# 0.04041733581488166 (0.040113396967800335, 0.040721274661962986)
 
 # MoreTests (uniform)
 deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -456,7 +456,7 @@ util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate
                                                                 paramdict, numimportdraws=50000)
 print('MostTests (unform):', util_MoreTests_unif, util_MoreTests_unif_CI)
 # 1-APR
-#
+# 0.033304344916621514 (0.03299251457617433, 0.0336161752570687)
 
 # MoreTests (weighted)
 deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -467,7 +467,7 @@ util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 # 1-APR
-#
+# 0.033894531832126235 (0.03365304958378598, 0.03413601408046649)
 
 #######
 # B=1400
@@ -483,7 +483,8 @@ util_IPRP, util_IPRP_CI = sampf.getImportanceUtilityEstimate(n_IPRP, lgdict, par
                                                              numimportdraws=50000)
 print('IPRP:',util_IPRP, util_IPRP_CI)
 # 2-APR
-#
+# todo: REDO WITH ACTUAL ALLOCATION
+# 0.05858327396559182 (0.05826771188799568, 0.05889883604318796)
 
 # LeastVisited
 deptList_LeastVisited = ['Keur Massar', 'Pikine', 'Louga', 'Linguere', 'Goudiry', 'Guinguineo',
@@ -495,7 +496,7 @@ util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEs
                                                                 paramdict, numimportdraws=50000)
 print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
 # 2-APR
-#
+# 0.031127324901809417 (0.03068967451678134, 0.03156497528683749)
 
 # MostSFPs (uniform)
 deptList_MostSFPs_unif = ['Dakar', 'Guediawaye', 'Tambacounda', 'Koumpentoum', 'Diourbel', 'Saint-Louis',
@@ -506,7 +507,7 @@ util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
 # 2-APR
-#
+# 0.011734175871547181 (0.01155340644162367, 0.011914945301470692)
 
 # MostSFPs (weighted)
 deptList_MostSFPs_wtd = ['Dakar', 'Guediawaye', 'Tambacounda', 'Koumpentoum', 'Diourbel', 'Saint-Louis',
@@ -517,7 +518,7 @@ util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
                                                                 paramdict, numimportdraws=50000)
 print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
 # 2-APR
-#
+# 0.012075337455851098 (0.011868067684215527, 0.01228260722748667)
 
 # MoreDistricts (uniform)
 deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -530,7 +531,7 @@ util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MoreDistricts (unform):', util_MoreDist_unif, util_MoreDist_unif_CI)
 # 2-APR
-#
+# 0.04940463339032217 (0.04899799097719651, 0.049811275803447824)
 
 # MoreDistricts (weighted)
 deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
@@ -543,7 +544,7 @@ util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
                                                                 paramdict, numimportdraws=50000)
 print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
 # 2-APR
-#
+# 0.05238071426032029 (0.052055640018728894, 0.05270578850191168)
 
 # MoreTests (uniform)
 deptList_MoreTests_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
@@ -554,7 +555,7 @@ util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate
                                                                 paramdict, numimportdraws=50000)
 print('MostTests (unform):', util_MoreTests_unif, util_MoreTests_unif_CI)
 # 2-APR
-#
+# 0.06307546492869659 (0.0628312850684451, 0.06331964478894808)
 
 # MoreTests (weighted)
 deptList_MoreTests_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies', 'Mbour',
@@ -565,7 +566,7 @@ util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n
                                                                 paramdict, numimportdraws=50000)
 print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 # 2-APR
-#
+# 0.06506214588601253 (0.0648192516010622, 0.06530504017096286)
 
 
 ##########################
