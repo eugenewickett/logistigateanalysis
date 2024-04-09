@@ -183,6 +183,7 @@ def GetSenegalCSVData():
 dept_df, regcost_mat, regNames, deptNames, manufNames, numReg, testdatadict = GetSenegalCSVData()
 (numTN, numSN) = testdatadict['N'].shape # For later use
 
+'''
 def GetRegion(dept_str, dept_df):
     """Retrieves the region associated with a department"""
     return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
@@ -190,6 +191,7 @@ def GetRegion(dept_str, dept_df):
 def GetDeptChildren(reg_str, dept_df):
     """Retrieves the departments associated with a region"""
     return dept_df.loc[dept_df['Region']==reg_str,'Department'].values.tolist()
+'''
 
 def PrintDataSummary(datadict):
     """print data summaries for datadict which should have keys 'N' and 'Y' """
@@ -584,68 +586,320 @@ print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 ##########################
 ##########################
 
-# What are the upper bounds for our allocation variables?
-def GetUpperBounds(optparamdict, alpha=1.0):
-    """
-    Returns a numpy vector of upper bounds for an inputted parameter dictionary. alpha determines the proportion of the
-    budget that can be dedicated to any one district
-    """
-    B, f_dept, f_reg = optparamdict['budget']*alpha, optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
-    batchcost, ctest, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
-    deptnames, regnames, dept_df = optparamdict['deptnames'], optparamdict['regnames'], optparamdict['dept_df']
-    retvec = np.zeros(f_dept.shape[0])
-    for i in range(f_dept.shape[0]):
-        regparent = GetRegion(deptnames[i], dept_df)
-        regparentind = regnames.index(regparent)
-        if regparentind == reghqind:
-            retvec[i] = np.floor((B-f_dept[i]-batchcost)/ctest)
-        else:
-            regfixedcost = f_reg[reghqind,regparentind] + f_reg[regparentind, reghqind]
-            retvec[i] = np.floor((B-f_dept[i]-batchcost-regfixedcost)/ctest)
-    return retvec
-
-deptallocbds = GetUpperBounds(optparamdict)
-# Lower upper bounds to maximum of observed prior tests at any district
-maxpriortests = int(np.max(np.sum(lgdict['N'],axis=1)))
-deptallocbds = np.array([min(deptallocbds[i], maxpriortests) for i in range(deptallocbds.shape[0])])
-
-
-
 
 ##################
+##################
 # Now set up functions for constraints and variables of our program
+##################
 ##################
 optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconstant':bigM, 'batchsize':batchsize,
                 'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
 # What are the upper bounds for our allocation variables?
-def GetUpperBounds(optparamdict, alpha=1.0):
-    """
-    Returns a numpy vector of upper bounds for an inputted parameter dictionary. alpha determines the proportion of the
-    budget that can be dedicated to any one district
-    """
-    B, f_dept, f_reg = optparamdict['budget']*alpha, optparamdict['deptfixedcostvec'], optparamdict['arcfixedcostmat']
-    batchcost, ctest, reghqind = optparamdict['batchcost'], optparamdict['pertestcost'], optparamdict['reghqind']
-    deptnames, regnames, dept_df = optparamdict['deptnames'], optparamdict['regnames'], optparamdict['dept_df']
-    retvec = np.zeros(f_dept.shape[0])
-    for i in range(f_dept.shape[0]):
-        regparent = GetRegion(deptnames[i], dept_df)
-        regparentind = regnames.index(regparent)
-        if regparentind == reghqind:
-            retvec[i] = np.floor((B-f_dept[i]-batchcost)/ctest)
-        else:
-            regfixedcost = f_reg[reghqind,regparentind] + f_reg[regparentind, reghqind]
-            retvec[i] = np.floor((B-f_dept[i]-batchcost-regfixedcost)/ctest)
-    return retvec
-
-deptallocbds = GetUpperBounds(optparamdict)
+deptallocbds = opf.GetUpperBounds(optparamdict)
 # Lower upper bounds to maximum of observed prior tests at any district
 maxpriortests = int(np.max(np.sum(lgdict['N'],axis=1)))
 deptallocbds = np.array([min(deptallocbds[i], maxpriortests) for i in range(deptallocbds.shape[0])])
 
 print(deptNames[np.argmin(deptallocbds)], min(deptallocbds))
 print(deptNames[np.argmax(deptallocbds)], max(deptallocbds))
+
+def GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, csvpath):
+    """
+    Evaluate utility at 1 test and deptallocbds tests for each district, and save the resulting data frame as a CSV to
+    csvpath. NOTE: This function may take a long time to run, depending on the number of districts and the parameters
+    contained in paramdict.
+    """
+    numTN = lgdict['TNnum']
+    util_lo, util_lo_CI = [], []
+    util_hi, util_hi_CI = [], []
+    for i in range(len(deptnames)):
+        currbd = int(deptallocbds[i])
+        print('Getting utility for ' + deptnames[i] + ', at 1 test...')
+        n = np.zeros(numTN)
+        n[i] = 1
+        currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
+        print(currlo, currlo_CI)
+        util_lo.append(currlo)
+        util_lo_CI.append(currlo_CI)
+        print('Getting utility for ' + deptnames[i] + ', at ' + str(currbd) + ' tests...')
+        n[i] = currbd
+        # Use the importance method for the upper allocation bound
+        currhi, currhi_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=50000)
+        print(currhi, currhi_CI)
+        util_hi.append(currhi)
+        util_hi_CI.append(currhi_CI)
+
+    util_df = pd.DataFrame({'DeptName': deptnames, 'Bounds': deptallocbds, 'Util_lo': util_lo, 'Util_lo_CI': util_lo_CI,
+                            'Util_hi': util_hi, 'Util_hi_CI': util_hi_CI})
+    util_df.to_csv(csvpath, index=False)
+    return
+
+# GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+
+# Retrieve previously generated interpolation points
+util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+
+### GENERATE PATHS FOR CASE STUDY ###
+# What is the upper bound on the number of regions in any feasible tour that uses at least one test?
+maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
+print('Number of regions in any feasible path:',maxregnum)
+
+mastlist = []
+for regamt in range(1, maxregnum):
+    mastlist = mastlist + list(itertools.combinations(np.arange(1,numReg).tolist(), regamt))
+print('Number of feasible region combinations:',len(mastlist))
+
+def GenerateNondominatedPaths(mastlist, optparamdict, csvpath):
+    """
+    Stores a data frame of non-dominated paths in a CSV file.
+    """
+    f_reg, deptNames, regNames = optparamdict['arcfixedcostmat'], optparamdict['deptnames'], optparamdict['regnames']
+    ctest, dept_df, f_dept = optparamdict['pertestcost'], optparamdict['dept_df'], optparamdict['deptfixedcostvec']
+    # For storing best sequences and their corresponding costs
+    seqlist, seqcostlist = [], []
+    for tup in mastlist:
+        tuplist = [tup[i] for i in range(len(tup))]
+        tuplist.insert(0, 0)  # Add HQind to front of list
+        bestseqlist, bestseqcost = opf.FindTSPPathForGivenNodes(tuplist, f_reg)
+        seqlist.append(bestseqlist)
+        seqcostlist.append(bestseqcost)
+    # For each path, generate a binary vector indicating if each district is accessible on that path
+    # First get sorted names of accessible districts
+    distaccesslist = []
+    for seq in seqlist:
+        currdistlist = []
+        for ind in seq:
+            currdist = opf.GetDeptChildren(regNames[ind], dept_df)
+            currdistlist = currdistlist + currdist
+        currdistlist.sort()
+        distaccesslist.append(currdistlist)
+    # Next translate each list of district names to binary vectors
+    bindistaccessvectors = []
+    for distlist in distaccesslist:
+        distbinvec = [int(i in distlist) for i in deptNames]
+        bindistaccessvectors.append(distbinvec)
+    # Store in a data frame
+    paths_df_all = pd.DataFrame({'Sequence': seqlist, 'Cost': seqcostlist, 'DistAccessBinaryVec': bindistaccessvectors})
+
+    # Remove all paths with cost exceeding budget - min{district access} - sampletest
+    paths_df = paths_df_all[paths_df_all['Cost'] < optparamdict['budget']].copy()
+
+    # Remaining paths require at least one district and one test in each visited region
+    boolevec = [True for i in range(paths_df.shape[0])]
+    for i in range(paths_df.shape[0]):
+        rowseq, rowcost = paths_df.iloc[i]['Sequence'], paths_df.iloc[i]['Cost']
+        mindistcost = 0
+        for reg in rowseq:
+            if reg != 0: # Pick the least expensive district to access
+                mindistcost += f_dept[[deptNames.index(x) for x in opf.GetDeptChildren(regNames[reg], dept_df)]].min()
+        # Add district costs, testing costs, and path cost
+        mincost = mindistcost + (len(rowseq) - 1) * ctest + rowcost
+        if mincost > B:
+            boolevec[i] = False
+
+    paths_df = paths_df[boolevec]
+
+    paths_df.to_csv(csvpath, index=False)
+
+    return
+
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+
+# Load previously generated paths data frame
+paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+
+def GetPathSequenceAndCost(paths_df):
+    """Retrieves optimization-ready lists pertaining to path sequences and costs"""
+    seqlist = paths_df['Sequence'].copy()
+    seqcostlist = paths_df['Cost'].copy()
+    bindistaccessvectors = np.array(paths_df['DistAccessBinaryVec'].tolist())
+    bindistaccessvectors = np.array([eval(x) for x in bindistaccessvectors])
+    seqlist = seqlist.reset_index()
+    seqlist = seqlist.drop(columns='index')
+    seqcostlist = seqcostlist.reset_index()
+    seqcostlist = seqcostlist.drop(columns='index')
+
+    return seqlist, seqcostlist, bindistaccessvectors
+
+seqlist_trim, seqcostlist_trim, bindistaccessvectors_trim = GetPathSequenceAndCost(paths_df)
+
+# Build interpolated objective slopes
+def GetInterpVectors(util_df):
+    """Build needed interpolation vectors for use with relaxed program"""
+    lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
+    for ind in range(util_df.shape[0]):
+        row = util_df.iloc[ind]
+        currBound, loval, hival = row['Bounds'], row['Util_lo'], row['Util_hi']
+        # Get interpolation values
+        _, _, l, k, m1, m2 = opf.GetTriangleInterpolation([0, 1, currBound], [0, loval, hival])
+        lvec.append(l)
+        juncvec.append(k)
+        m1vec.append(m1)
+        m2vec.append(m2)
+        bds.append(currBound)
+        lovals.append(loval)
+        hivals.append(hival)
+
+    return lvec, juncvec, m1vec, m2vec, bds, lovals, hivals
+
+# Get vectors of zero intercepts, junctures, and interpolation slopes for each of our Utilde evals at each district
+lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(util_df)
+
+def PlotInterpHist(lvec, juncvec, m1vec, m2vec, bds):
+    """Make histograms of interpolation values"""
+    # What is the curvature, kappa, for our estimates?
+    kappavec = [1 - m2vec[i] / m1vec[i] for i in range(len(m2vec))]
+    plt.hist(kappavec)
+    plt.title('Histogram of $\kappa$ curvature at each district')
+    plt.show()
+
+    # Make histograms of our interpolated values
+    plt.hist(lvec, color='darkorange', density=True)
+    plt.title("Histogram of interpolation intercepts\n($l$ values)",
+              fontsize=14)
+    plt.xlabel(r'$l$', fontsize=12)
+    plt.ylabel('Density', fontsize=12)
+    plt.show()
+
+    # interpolated junctures
+    plt.hist(juncvec, color='darkgreen', density=True)
+    plt.title('Histogram of interpolation slope junctures\n($j$ values)',
+              fontsize=14)
+    plt.xlabel(r'$j$', fontsize=12)
+    plt.ylabel('Density', fontsize=12)
+    plt.show()
+
+    # interpolated junctures, as percentage of upper bound
+    juncvecperc = [juncvec[i] / bds[i] for i in range(len(juncvec))]
+    plt.hist(juncvecperc, color='darkgreen', density=True)
+    plt.title('Histogram of interpolation junctures vs. allocation bounds\n($h_d/' + r'n^{max}_d$ values)',
+              fontsize=14)
+    plt.xlabel(r'$h_d/n^{max}_d$', fontsize=12)
+    plt.ylabel('Density', fontsize=12)
+    plt.show()
+
+    plt.hist(m1vec, color='purple', density=True)
+    plt.title('Histogram of first interpolation slopes\n($m^{(1)}$ values)'
+              , fontsize=14)
+    plt.xlabel('$m^{(1)}$', fontsize=12)
+    plt.ylabel('Density', fontsize=12)
+    plt.xlim([0, np.max(m1vec)*1.05])
+    plt.show()
+
+    plt.hist(m2vec, color='orchid', density=True)
+    plt.title('Histogram of second interpolation slopes\n($m^{(2)}$ values)'
+              , fontsize=14)
+    plt.xlabel('$m^{(2)}$', fontsize=12)
+    plt.ylabel('Density', fontsize=12)
+    plt.xlim([0, np.max(m1vec)*1.05])
+    plt.show()
+
+    return
+
+#PlotInterpHist(lvec, juncvec, m1vec, m2vec, bds)
+
+###################################
+###################################
+# MAIN OPTIMIZATION BLOCK
+###################################
+###################################
+# We construct our various program vectors and matrices per the scipy standards
+numPath = paths_df.shape[0]
+
+# todo: Variable vectors are in form (z, n, x) [districts, allocations, paths]
+# Variable bounds
+def GetVarBds(numTN, numPath, juncvec, util_df):
+    lbounds = np.concatenate((np.zeros(numTN * 3), np.zeros(numPath)))
+    ubounds = np.concatenate((np.ones(numTN),
+                              np.array([juncvec[i] - 1 for i in range(numTN)]),
+                              np.array(util_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
+                              np.ones(numPath)))
+    return spo.Bounds(lbounds, ubounds)
+
+optbounds = GetVarBds(numTN, numPath, juncvec, util_df)
+
+# Objective vector
+def GetObjective(lvec, m1vec, m2vec, numPath):
+    """Negative-ed as milp requires minimization"""
+    return -np.concatenate((np.array(lvec), np.array(m1vec), np.array(m2vec), np.zeros(numPath)))
+
+optobjvec = GetObjective(lvec, m1vec, m2vec, numPath)
+
+# Constraints
+def GetConstraints(optparamdict, juncvec, seqcostlist, bindistaccessvectors):
+    numTN, B, ctest = len(optparamdict['deptnames']), optparamdict['budget'], optparamdict['pertestcost']
+    f_dept, bigM = optparamdict['deptfixedcostvec'], optparamdict['Mconstant']
+    # Build lower and upper inequality values
+    optconstrlower = np.concatenate(( np.ones(numTN*4+1) * -np.inf, np.array([1])))
+    optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN*2), np.array(juncvec), np.zeros(numTN), np.array([1])))
+    # Build A matrix, from left to right
+    # Build z district binaries first
+    optconstraintmat1 = np.vstack((f_dept, -bigM * np.identity(numTN), np.identity(numTN), 0 * np.identity(numTN),
+                                   np.identity(numTN), np.zeros(numTN)))
+    # n^' matrices
+    optconstraintmat2 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN), np.identity(numTN),
+                                   0 * np.identity(numTN), np.zeros(numTN)))
+    # n^'' matrices
+    optconstraintmat3 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN),
+                                   0 * np.identity(numTN), 0 * np.identity(numTN), np.zeros(numTN)))
+    # path matrices
+    optconstraintmat4 = np.vstack((np.array(seqcostlist).T, np.zeros((numTN * 3, numPath)),
+                                   (-bindistaccessvectors).T, np.ones(numPath)))
+
+    optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4))
+    return spo.LinearConstraint(optconstraintmat, optconstrlower, optconstrupper)
+
+optconstraints = GetConstraints(optparamdict, juncvec, seqcostlist_trim, bindistaccessvectors_trim)
+
+def GetIntegrality(optobjvec):
+    return np.ones_like(optobjvec)
+
+# Define integrality for all variables
+optintegrality = GetIntegrality(optobjvec)
+
+# Solve
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+initsoln_lo, initsoln_obj  = spoOutput.x, spoOutput.fun*-1
+# 9-APR-24: 1.54840
+
+def GetAllocationFromOpt(soln, numTN):
+    """Turn optimization solution into an allocation whose utility can be evaluated"""
+    n1, n2 = soln[numTN:numTN * 2], soln[numTN * 2:numTN * 3]
+    return n1 + n2
+
+init_n = GetAllocationFromOpt(initsoln_lo, numTN)
+
+
+# Evaluate utility of solution
+n1 = soln_loBudget[numTN:numTN * 2]
+n2 = soln_loBudget[numTN * 2:numTN * 3]
+n_init = n1+n2
+u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
+# 13-MAR-24: (1.3250307414145919, (1.2473679675065128, 1.402693515322671))
+LB_loBudget = u_init
+
+opf.scipytoallocation(soln_loBudget, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # TODO: INSPECT CHOICES HERE LATER
 # Example set of variables to inspect validity
@@ -685,6 +939,7 @@ varsetdict = {'batch_int':v_batch, 'regaccessvec_bin':z_reg, 'deptaccessvec_bin'
 ##########
 # Add functions for all constraints; they return True if satisfied, False otherwise
 ##########
+'''
 def ConstrBudget(varsetdict, optparamdict):
     """Indicates if the budget constraint is satisfied"""
     flag = False
@@ -701,7 +956,7 @@ def ConstrRegionAccess(varsetdict, optparamdict):
     flag = True
     bigM = optparamdict['Mconstant']
     for aind, a in enumerate(optparamdict['deptnames']):
-        parentreg = GetRegion(a, optparamdict['dept_df'])
+        parentreg = opf.GetRegion(a, optparamdict['dept_df'])
         parentregind = optparamdict['regnames'].index(parentreg)
         if varsetdict['allocvec_int'][aind] > bigM*varsetdict['regaccessvec_bin'][parentregind]:
             flag = False
@@ -801,9 +1056,9 @@ def GetTours(varsetdict, optparamdict):
     return tourlist
 
 def GetSubtour(x):
-    '''
+    """
     Returns a subtour for incidence matrix x
-    '''
+    """
     tourlist = []
     startind = (np.sum(x, axis=1) != 0).argmax()
     tourlist.append(startind)
@@ -812,41 +1067,6 @@ def GetSubtour(x):
         tourlist.append(nextind)
         nextind = np.where(x[nextind] == 1)[0][0]
     return tourlist
-
-def GetSubtourMaxCardinality(optparamdict):
-    """Provide an upper bound on the number of regions included in any tour; HQ region is included"""
-    mincostvec = [] # initialize
-    dept_df = optparamdict['dept_df']
-    ctest, B, batchcost = optparamdict['pertestcost'], optparamdict['budget'], optparamdict['batchcost']
-    for r in range(len(optparamdict['regnames'])):
-        if r != optparamdict['reghqind']:
-            currReg = optparamdict['regnames'][r]
-            currmindeptcost = np.max(optparamdict['deptfixedcostvec'])
-            deptchildren = GetDeptChildren(currReg, dept_df)
-            for currdept in deptchildren:
-                currdeptind = optparamdict['deptnames'].index(currdept)
-                if optparamdict['deptfixedcostvec'][currdeptind] < currmindeptcost:
-                    currmindeptcost = optparamdict['deptfixedcostvec'][currdeptind]
-            currminentry = optparamdict['arcfixedcostmat'][np.where(optparamdict['arcfixedcostmat'][:, r] > 0,
-                                                                    optparamdict['arcfixedcostmat'][:, r],
-                                                                    np.inf).argmin(), r]
-            currminexit = optparamdict['arcfixedcostmat'][r, np.where(optparamdict['arcfixedcostmat'][r] > 0,
-                                                                    optparamdict['arcfixedcostmat'][r],
-                                                                    np.inf).argmin()]
-            mincostvec.append(currmindeptcost + currminentry + currminexit + ctest)
-        else:
-            mincostvec.append(0) # HQ is always included
-    # Now add regions until the budget is reached
-    currsum = 0
-    numregions = 0
-    nexttoadd = np.array(mincostvec).argmin()
-    while currsum + mincostvec[nexttoadd] <= B - batchcost:
-        currsum += mincostvec[nexttoadd]
-        numregions += 1
-        _ = mincostvec.pop(nexttoadd)
-        nexttoadd = np.array(mincostvec).argmin()
-
-    return numregions
 
 def GetTriangleInterpolation(xlist, flist):
     """
@@ -907,727 +1127,15 @@ def FindTSPPathForGivenNodes(reglist, f_reg):
     besttuplist = [currbesttup[i] for i in range(len(currbesttup))]
     besttuplist.insert(0,HQind)
     return besttuplist, currbestcost
-
-'''
-# Here we obtain utility evaluations for 1 and n_bound tests at each department
-deptallocbds = GetUpperBounds(optparamdict)
-util_lo, util_lo_CI = [], []
-util_hi, util_hi_CI = [], []
-for i in range(len(deptNames)):
-    currbd = int(deptallocbds[i])
-    print('Getting utility for ' + deptNames[i] + ', at 1 test...')
-    n = np.zeros(numTN)
-    n[i] = 1
-    currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
-    print(currlo, currlo_CI)
-    util_lo.append(currlo)
-    util_lo_CI.append(currlo_CI)
-    print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
-    n[i] = currbd
-    currhi, currhi_CI = getUtilityEstimate(n, lgdict, paramdict)
-    print(currhi, currhi_CI)
-    util_hi.append(currhi)
-    util_hi_CI.append(currhi_CI)
-
-util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
-                        'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
-
-util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
-
-#####
-# ADDED 7-MAR: Add bounds for 81 tests at each department
-util_81, util_81_CI = [], []
-for i in range(len(deptNames)):
-    n = np.zeros(numTN)
-    currbd = maxpriortests
-    print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
-    n[i] = currbd
-    curr81, curr81_CI = getUtilityEstimate(n, lgdict, paramdict)
-    print(curr81, curr81_CI)
-    util_81.append(curr81)
-    util_81_CI.append(curr81_CI)
-    
-util_df.insert(5, 'Util_81', util_81)
-util_df.insert(6, 'Util_81_CI', util_81_CI)
-######
 '''
 
-# Load previously calculated lower and upper utility evaluations
-#util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
 
 
 
-####
-# todo: REMOVE LATER; CHECKING AGAINST OLD UTILITY ESTIMATES
-####
-util_lo_imp, util_lo_CI_imp = [], []
-util_hi_imp, util_hi_CI_imp = [], []
-for reps in range(10):
-    for i in range(10):
-        currbd = int(deptallocbds[i])
-        n = np.zeros(numTN)
-        '''    
-        print('Getting utility for ' + deptNames[i] + ', at 1 test...')    
-        n[i] = 1
-        currlo_imp, currlo_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=30000)
-        print(currlo_imp, currlo_CI_imp)
-        util_lo_imp.append(currlo_imp)
-        util_lo_CI_imp.append(currlo_CI_imp)
-        '''
-        print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
-        n[i] = currbd
-        currhi_imp, currhi_CI_imp = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=50000)
-        print(currhi_imp, currhi_CI_imp)
-        util_hi_imp.append(currhi_imp)
-        util_hi_CI_imp.append(currhi_CI_imp)
-'''
-# 1st run: 30k imp draws
-util_hi_imp = [0.3906806364519433, 0.37900277450375164, 0.3125001286929532, 0.29495861975553517, 0.1484237775864603, 0.11712893687658266, 0.2491887695057997, 0.18748908632695382, 0.37597343292086194, 0.3138836003083476, 0.37269612148611486, 0.26872878180024884, 0.35535587179775696, 0.16475204125187837, 0.24957612548629804, 0.16849467150581354, 0.16117134264092492, 0.2886873340956626, 0.15584807336130346, 0.19014490579459498, 0.3088897890583908, 0.16660470044417508, 0.12478914780106365, 0.36051397028615995, 0.2885597926524781, 0.3547341887416735, 0.35240183304921757, 0.16846768737411466, 0.28431504530094287, 0.15322035049142357, 0.31073053682450613, 0.3497771893559207, 0.23278279534773816, 0.30563854854423056, 0.2656809525105466, 0.35366903855184617, 0.0806069387652677, 0.1263231406305021, 0.2527240768625827, 0.35659808113103253, 0.25586223074083314, 0.1431744020501, 0.08642080227579108, 0.19829483675732185, 0.2071626763841259, 0.2899497353746412]
-util_hi_CI_imp = [(0.38595297319382027, 0.3954082997100663), (0.3737541827074189, 0.3842513663000844), (0.30760789372496156, 0.3173923636609448), (0.28937533040854113, 0.3005419091025292), (0.1453044707311033, 0.1515430844418173), (0.1149831792953222, 0.11927469445784311), (0.2444668838519597, 0.25391065515963973), (0.1827902244125621, 0.19218794824134555), (0.3698319690289136, 0.3821148968128103), (0.3075489483672875, 0.3202182522494077), (0.3675744038969153, 0.3778178390753144), (0.26498536578303344, 0.27247219781746423), (0.35097738641657195, 0.359734357178942), (0.16173954667756085, 0.16776453582619588), (0.2458965718139794, 0.2532556791586167), (0.16611500466456697, 0.17087433834706012), (0.15744929656400686, 0.16489338871784298), (0.2837714137486138, 0.2936032544427114), (0.15367938221318767, 0.15801676450941926), (0.18710790492263385, 0.1931819066665561), (0.30331019705173645, 0.3144693810650452), (0.16192871188237667, 0.17128068900597349), (0.12145381603180816, 0.12812447957031914), (0.3545193854481834, 0.3665085551241365), (0.2840071496511545, 0.29311243565380174), (0.34993061230100153, 0.3595377651823455), (0.347354331763265, 0.3574493343351701), (0.16491138703167785, 0.17202398771655147), (0.28005389912150314, 0.2885761914803826), (0.1489806549171444, 0.15746004606570274), (0.3064495556393023, 0.31501151800970995), (0.34505136122100843, 0.354503017490833), (0.22828351222859844, 0.23728207846687788), (0.30202778632840577, 0.30924931076005535), (0.2618305305709505, 0.26953137445014264), (0.35012701544012614, 0.3572110616635662), (0.0786704100236264, 0.082543467506909), (0.12290000760660647, 0.12974627365439773), (0.2486159239967929, 0.2568322297283725), (0.3512152326217226, 0.36198092964034245), (0.25096023628613295, 0.26076422519553333), (0.13971234526516696, 0.14663645883503307), (0.08370010288294871, 0.08914150166863344), (0.19418115614387332, 0.20240851737077037), (0.20394652854265694, 0.21037882422559484), (0.2860116507042836, 0.2938878200449988)]
-# 2nd run: 50k imp draws
-
-'''
-util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo_imp, 'Util_lo_CI':util_lo_CI_imp,
-                        'Util_hi':util_hi_imp, 'Util_hi_CI':util_hi_CI_imp})
-
-util_df.to_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'), index=False)
-
-####
-# todo: END REMOVE
-####
-
-''' 14-MAR-24 COMPARISON OF INTERPOLATED UTILITY POINTS: 60K/1000 VS 200K/200
-util_lo_60 = np.array([0.03344591, 0.03446701, 0.03066869, 0.03730135, 0.00453539,
-                       0.00422144, 0.00522252, 0.00231574, 0.03305749, 0.03061265,
-                       0.04035724, 0.0223767 , 0.032466  , 0.00347499, 0.02463909,
-                       0.01918473, 0.00561556, 0.00807742, 0.01002169, 0.00462278,
-                       0.01424308, 0.00203755, 0.00183784, 0.00595836, 0.02330756,
-                       0.0446292 , 0.03696385, 0.00171342, 0.03962201, 0.00401421,
-                       0.03131379, 0.02061252, 0.01409668, 0.04275234, 0.00901496,
-                       0.04311047, 0.00145227, 0.00207412, 0.01286778, 0.03405235,
-                       0.01369974, 0.00228068, 0.0017215 , 0.0086946 , 0.00993675,
-                       0.03577284])
-util_lo_60_CI = np.array([[0.03147292, 0.0354189 ],
-       [0.03195029, 0.03698372],
-       [0.02772584, 0.03361154],
-       [0.03480121, 0.03980148],
-       [0.00293373, 0.00613706],
-       [0.00364864, 0.00479423],
-       [0.00429602, 0.00614902],
-       [0.00176791, 0.00286357],
-       [0.03050272, 0.03561226],
-       [0.02884772, 0.03237758],
-       [0.0382347 , 0.04247979],
-       [0.01976218, 0.02499121],
-       [0.02939688, 0.03553513],
-       [0.00289235, 0.00405762],
-       [0.02214466, 0.02713352],
-       [0.01611166, 0.0222578 ],
-       [0.00449114, 0.00673999],
-       [0.00698744, 0.00916739],
-       [0.00838262, 0.01166076],
-       [0.00353465, 0.00571092],
-       [0.011471  , 0.01701515],
-       [0.00133816, 0.00273694],
-       [0.00134013, 0.00233556],
-       [0.00323716, 0.00867955],
-       [0.02013414, 0.02648098],
-       [0.04349307, 0.04576533],
-       [0.03432852, 0.03959918],
-       [0.00123777, 0.00218906],
-       [0.03740724, 0.04183677],
-       [0.00322302, 0.0048054 ],
-       [0.02909401, 0.03353357],
-       [0.01698735, 0.02423769],
-       [0.011657  , 0.01653636],
-       [0.04106823, 0.04443644],
-       [0.00674657, 0.01128336],
-       [0.04176224, 0.04445871],
-       [0.00123559, 0.00166895],
-       [0.00156203, 0.00258622],
-       [0.01033355, 0.01540201],
-       [0.03179264, 0.03631206],
-       [0.01030859, 0.01709089],
-       [0.00162424, 0.00293712],
-       [0.00127589, 0.00216712],
-       [0.00741716, 0.00997203],
-       [0.0093994 , 0.0104741 ],
-       [0.03402675, 0.03751893]])
-util_hi_60 = np.array([0.43105884, 0.70318883, 0.37932139, 0.46840999, 0.19396183,
-       0.14442076, 0.73320741, 0.4526506 , 0.78708533, 0.61100776,
-       0.77685478, 0.29077391, 0.39911443, 0.35022837, 0.35502769,
-       0.1849252 , 0.31661005, 0.76937927, 0.21169124, 0.18660776,
-       0.92007944, 0.21282808, 0.16130279, 0.88937613, 0.46542938,
-       0.5828677 , 0.47925974, 0.30697219, 0.53908748, 0.29882365,
-       0.34785669, 0.7957092 , 0.34415312, 0.60390663, 0.36804362,
-       0.45226213, 0.16007126, 0.35734395, 0.30815765, 0.36192727,
-       0.44651105, 0.2581032 , 0.17842593, 0.28019711, 0.21054458,
-       0.42718289])
-util_hi_CI_60 = np.array([[0.42315654, 0.43896114],
-       [0.65970264, 0.74667502],
-       [0.36999728, 0.38864551],
-       [0.44730532, 0.48951467],
-       [0.18843369, 0.19948996],
-       [0.14172687, 0.14711464],
-       [0.68652414, 0.77989068],
-       [0.43015147, 0.47514972],
-       [0.73794278, 0.83622787],
-       [0.5739668 , 0.64804871],
-       [0.73134173, 0.82236783],
-       [0.28527536, 0.29627246],
-       [0.38910398, 0.40912488],
-       [0.324663  , 0.37579373],
-       [0.34520037, 0.36485501],
-       [0.1779138 , 0.1919366 ],
-       [0.30659026, 0.32662985],
-       [0.71673544, 0.8220231 ],
-       [0.20366583, 0.21971664],
-       [0.18183733, 0.19137818],
-       [0.86480568, 0.9753532 ],
-       [0.2065733 , 0.21908285],
-       [0.15421666, 0.16838892],
-       [0.84154046, 0.93721181],
-       [0.43889158, 0.49196718],
-       [0.54798307, 0.61775234],
-       [0.45752274, 0.50099673],
-       [0.29423109, 0.31971329],
-       [0.50769694, 0.57047803],
-       [0.28595349, 0.31169381],
-       [0.34286325, 0.35285012],
-       [0.76097627, 0.83044212],
-       [0.32833374, 0.3599725 ],
-       [0.57631653, 0.63149674],
-       [0.36054774, 0.37553949],
-       [0.43945515, 0.46506911],
-       [0.15167964, 0.16846287],
-       [0.3264682 , 0.3882197 ],
-       [0.3010332 , 0.3152821 ],
-       [0.35467181, 0.36918273],
-       [0.43037366, 0.46264845],
-       [0.24579102, 0.27041539],
-       [0.17022303, 0.18662884],
-       [0.2692235 , 0.29117072],
-       [0.20662048, 0.21446868],
-       [0.41682005, 0.43754573]])
-util_lo_200 = np.array([0.02916269, 0.02986046, 0.02280912, 0.03360276, 0.00531194,
-       0.00366224, 0.00426673, 0.0024488 , 0.03645808, 0.03191844,
-       0.03780569, 0.02099417, 0.03519477, 0.00458397, 0.02389095,
-       0.02251109, 0.00710643, 0.0080562 , 0.00832719, 0.00430041,
-       0.01436194, 0.00249929, 0.00258331, 0.01075591, 0.01758466,
-       0.04457001, 0.03343373, 0.00194465, 0.03831309, 0.00367313,
-       0.03336207, 0.02242953, 0.00558529, 0.04466725, 0.01000271,
-       0.04286662, 0.00153833, 0.00292113, 0.00863356, 0.03342741,
-       0.01438087, 0.00388379, 0.00211993, 0.00559007, 0.01082955,
-       0.0345706 ])
-util_lo_200_CI = np.array([[ 0.02374176,  0.03458362],
-       [ 0.02405018,  0.03567074],
-       [ 0.01557861,  0.03003964],
-       [ 0.02845014,  0.03875538],
-       [ 0.0014258 ,  0.00919808],
-       [ 0.00146328,  0.00586119],
-       [ 0.00239688,  0.00613658],
-       [ 0.00115668,  0.00374091],
-       [ 0.03076452,  0.04215164],
-       [ 0.02672348,  0.0371134 ],
-       [ 0.03347464,  0.04213674],
-       [ 0.01526087,  0.02672747],
-       [ 0.02966219,  0.04072735],
-       [ 0.00352447,  0.00564346],
-       [ 0.01801714,  0.02976476],
-       [ 0.01646361,  0.02855856],
-       [ 0.0054977 ,  0.00871516],
-       [ 0.00510191,  0.01101049],
-       [ 0.00434285,  0.01231152],
-       [ 0.00180327,  0.00679755],
-       [ 0.00855906,  0.02016482],
-       [ 0.00085589,  0.0041427 ],
-       [ 0.00134921,  0.00381741],
-       [ 0.0055793 ,  0.01593253],
-       [ 0.01086436,  0.02430496],
-       [ 0.04177298,  0.04736704],
-       [ 0.02785621,  0.03901125],
-       [ 0.0003699 ,  0.0035194 ],
-       [ 0.0335931 ,  0.04303309],
-       [ 0.00192898,  0.00541728],
-       [ 0.02766663,  0.03905752],
-       [ 0.01510733,  0.02975172],
-       [-0.0019367 ,  0.01310729],
-       [ 0.04183919,  0.04749531],
-       [ 0.0054169 ,  0.01458852],
-       [ 0.03947336,  0.04625987],
-       [ 0.00088668,  0.00218999],
-       [ 0.0018509 ,  0.00399135],
-       [ 0.00184258,  0.01542454],
-       [ 0.02781397,  0.03904086],
-       [ 0.00704583,  0.0217159 ],
-       [ 0.00287864,  0.00488894],
-       [ 0.00121556,  0.00302431],
-       [ 0.00226235,  0.00891779],
-       [ 0.01002425,  0.01163484],
-       [ 0.02964206,  0.03949914]])
-
-util_hi_200 = np.array([0.37188409, 0.3472088 , 0.29046848, 0.29896709, 0.13418097,
-       0.1040221 , 0.21037333, 0.1437602 , 0.34802587, 0.29961495,
-       0.36701737, 0.23343354, 0.30578103, 0.12450043, 0.22782834,
-       0.16437348, 0.18729798, 0.30628096, 0.1411846 , 0.1462066 ,
-       0.28661909, 0.14749196, 0.09411836, 0.34026474, 0.26278081,
-       0.34163264, 0.29867486, 0.12684136, 0.29122923, 0.14753854,
-       0.34717121, 0.36797902, 0.22149696, 0.31806562, 0.25209148,
-       0.33839784, 0.06571512, 0.12146227, 0.27920259, 0.33397687,
-       0.24516908, 0.13125581, 0.0767291 , 0.16996685, 0.20791195,
-       0.31383499])
-util_hi_200_CI = np.array([[0.35990119, 0.38386699],
-       [0.33328247, 0.36113513],
-       [0.27877266, 0.3021643 ],
-       [0.29075496, 0.30717921],
-       [0.12802413, 0.14033782],
-       [0.09884948, 0.10919472],
-       [0.19734519, 0.22340146],
-       [0.13395377, 0.15356663],
-       [0.33493226, 0.36111948],
-       [0.2889594 , 0.31027051],
-       [0.35268281, 0.38135194],
-       [0.22608113, 0.24078595],
-       [0.29370282, 0.31785923],
-       [0.11747668, 0.13152417],
-       [0.22126998, 0.2343867 ],
-       [0.15352857, 0.1752184 ],
-       [0.17893702, 0.19565895],
-       [0.29396261, 0.31859931],
-       [0.1341091 , 0.14826009],
-       [0.13693995, 0.15547326],
-       [0.27396173, 0.29927645],
-       [0.13669349, 0.15829042],
-       [0.08835816, 0.09987856],
-       [0.324842  , 0.35568747],
-       [0.25192751, 0.27363412],
-       [0.33101901, 0.35224626],
-       [0.28854371, 0.308806  ],
-       [0.11753258, 0.13615013],
-       [0.2821493 , 0.30030917],
-       [0.14135615, 0.15372094],
-       [0.33630217, 0.35804026],
-       [0.35304913, 0.38290892],
-       [0.20834926, 0.23464466],
-       [0.30929871, 0.32683253],
-       [0.24330177, 0.2608812 ],
-       [0.32839709, 0.34839858],
-       [0.06079875, 0.07063148],
-       [0.11449782, 0.12842671],
-       [0.2652926 , 0.29311259],
-       [0.32130054, 0.34665319],
-       [0.23121661, 0.25912155],
-       [0.12284913, 0.13966249],
-       [0.0714067 , 0.08205151],
-       [0.16448112, 0.17545257],
-       [0.20088792, 0.21493597],
-       [0.30470123, 0.32296874]])
-       
-plt.scatter(util_lo_60, util_lo_200)
-plt.plot(np.arange(100)/2000,np.arange(100)/2000, color='gray')
-plt.title('Scatter plot of 1-test utilities, 60k vs 200k truthdraws')
-plt.ylabel('200k truth draws')
-plt.xlabel('60k truth draws')
-plt.show()
-
-plt.scatter(util_hi_60, util_hi_200)
-plt.plot(np.arange(100)/100,np.arange(100)/100, color='gray')
-plt.title('Scatter plot of 81-test utilities, 60k vs 200k truthdraws')
-plt.ylabel('200k truth draws')
-plt.xlabel('60k truth draws')
-plt.xlim([0,1])
-plt.ylim([0,1])
-plt.show()
-'''
-
-''' RUNS 7-MAR (81 tests at all districts)
-Bakel               0.3804905943479593 (0.37531994211371256, 0.385661246582206)
-Bambey              0.3537908316260996 (0.3474585325224755, 0.3601231307297237)
-Bignona             0.303304650040106 (0.2975468347532466, 0.30906246532696535)
-Birkilane           0.30183608790021665 (0.29794423499694034, 0.30572794080349297)
-Bounkiling          0.13796590865289637 (0.13071163145257358, 0.14522018585321916)
-Dagana              0.10617503170720077 (0.10383079104924242, 0.10851927236515913)
-Dakar               0.22373887063283782 (0.21817512842645392, 0.2293026128392217)
-Diourbel            0.15011867225809894 (0.14573581193779894, 0.15450153257839894)
-Fatick              0.36544388135986416 (0.35752176288448645, 0.3733659998352419)
-Foundiougne         0.3149454272197083 (0.31022985081163945, 0.31966100362777716)
-Gossas              0.38013122163191326 (0.3726337331724885, 0.38762871009133804)
-Goudiry             0.23679760643748615 (0.23286394366552798, 0.24073126920944432)
-Goudoump            0.327926416525667 (0.3222128401148101, 0.3336399929365239)
-Guediawaye          0.12678496714767284 (0.1233906005998513, 0.1301793336954944)
-Guinguineo          0.22963783064008148 (0.22679676719415554, 0.23247889408600741)
-Kaffrine            0.16052526719445837 (0.1562230766027355, 0.16482745778618124)
-Kanel               0.1939563786495757 (0.19066492103026178, 0.19724783626888964)
-Kaolack             0.3146963006621952 (0.3082350976922825, 0.32115750363210793)
-Kebemer             0.1449245487831039 (0.14152012880917297, 0.14832896875703483)
-Kedougou            0.15031593463413095 (0.14607722324234196, 0.15455464602591995)
-Keur Massar         0.3090183459309941 (0.3027306635924152, 0.315306028269573)
-Kolda               0.1564661415465327 (0.15152531714038808, 0.16140696595267734)
-Koumpentoum         0.09916213199920776 (0.09633754780882953, 0.10198671618958599)
-Koungheul           0.3639154928606363 (0.35134468929145335, 0.37648629642981923)
-Linguere            0.27414127359790363 (0.2690590390256844, 0.27922350817012287)
-Louga               0.34476435295838925 (0.339767604724031, 0.3497611011927475)
-Malem Hoddar        0.3091165949825321 (0.3022180910157495, 0.3160150989493147)
-Matam               0.1341658013164153 (0.12862327785507865, 0.13970832477775197)
-Mbacke              0.293752165195567 (0.28868280074570407, 0.29882152964542996)
-Mbour               0.1461594728108544 (0.1433399413509271, 0.1489790042707817)
-Medina Yoro Foulah  0.3765023693473264 (0.37114678736181617, 0.3818579513328366)
-Nioro du Rip        0.38460948750299195 (0.3763234905639887, 0.3928954844419952)
-Oussouye            0.24461286092555845 (0.23811357237739195, 0.25111214947372495)
-Pikine              0.3222567851834839 (0.3179078574511127, 0.32660571291585505)
-Podor               0.2742522651800421 (0.26581043772924673, 0.28269409263083745)
-Ranerou Ferlo       0.3394313127669566 (0.33297046963369326, 0.34589215590021993)
-Rufisque            0.07124513033692992 (0.06922921125947745, 0.07326104941438238)
-Saint-Louis         0.12586430746292088 (0.12216911472668102, 0.12955950019916074)
-Salemata            0.29759841099845374 (0.2811954020445331, 0.3140014199523744)
-Saraya              0.33683449620171935 (0.33037365665778573, 0.34329533574565296)
-Sedhiou             0.272007403464686 (0.2628897141959552, 0.2811250927334168)
-Tambacounda         0.12905557231962206 (0.12494546402022877, 0.13316568061901535)
-Thies               0.08009970771387387 (0.07744959931028816, 0.08274981611745957)
-Tivaoune            0.1733016776058509 (0.16927234523031487, 0.17733100998138696)
-Velingara           0.2341150853530749 (0.23025985898946466, 0.23797031171668515)
-Ziguinchor          0.3201464489800685 (0.3131644019882689, 0.3271284959718681)
-'''
-
-''' RUNS 29-DEC
-Bakel       0.03344590816593218 (0.03147292119474443, 0.03541889513711993), 
-105         0.43105884100510217 (0.4231565417533414, 0.43896114025686295)
-Bambey      0.03446700691774751 (0.031950294730139106, 0.03698371910535592)
-269         0.7031888278193428 (0.65970263766636, 0.7466750179723256)
-Bignona     0.030668690359265227 (0.02772583763711367, 0.033611543081416784)
-140         0.37932139488912675 (0.3699972836620251, 0.3886455061162284)
-Birkilane   0.03730134595455681 (0.034801214687281146, 0.03980147722183247)
-238         0.4684099921669258 (0.4473053150611417, 0.4895146692727099)
-Bounkiling  0.00453539247349255 (0.002933726625375499, 0.006137058321609601)
-160         0.19396182550914354 (0.18843369234668472, 0.19948995867160235)
-Dagana      0.004221436878848905 (0.003648644574480997, 0.004794229183216814)
-195         0.14442075719252045 (0.14172686992181838, 0.14711464446322253)
-Dakar       0.005222521081899245 (0.00429602215599445, 0.00614902000780404)
-345         0.7332074114707208 (0.6865241407062364, 0.7798906822352052)
-Diourbel    0.0023157423073154604 (0.0017679128534258126, 0.002863571761205108)
-279         0.4526505991558132 (0.43015147401770193, 0.47514972429392444)
-Fatick      0.033057486817286375 (0.030502717710007232, 0.03561225592456552)
-273         0.7870853278437675 (0.7379427810124408, 0.8362278746750942)
-Foundiougne 0.030612648885227856 (0.028847718182849036, 0.032377579587606675)
-262         0.6110077584821685 (0.5739668037064192, 0.6480487132579178)
-
-Gossas      0.04035724365910198 (0.03823470069321111, 0.042479786624992855)
-257         0.7768547796500158 (0.7313417312562365, 0.8223678280437952)
-Goudiry     0.022376695174909145 (0.0197621780011783, 0.02499121234863999)
-152         0.29077391079703396 (0.28527535885379685, 0.2962724627402711)
-Goudoump    0.03246600245761755 (0.029396877391432596, 0.0355351275238025)
-124         0.3991144287361781 (0.3891039816752997, 0.4091248757970565)
-Guediawaye  0.003474985346775483 (0.00289235462568449, 0.004057616067866476)
-337         0.3502283652990581 (0.32466299834520385, 0.37579373225291235)
-Guinguineo  0.02463908710868168 (0.022144656133576746, 0.027133518083786612)
-249         0.3550276878136227 (0.34520036788485875, 0.36485500774238666)
-Kaffrine    0.019184733052625802 (0.016111662656829395, 0.02225780344842221)
-246         0.1849251993905554 (0.1779138024370006, 0.1919365963441102)
-Kanel       0.005615564431058928 (0.004491138016824436, 0.00673999084529342)
-175         0.3166100525107627 (0.30659025767436177, 0.3266298473471636)
-Kaolack     0.008077416250422687 (0.006987441620362134, 0.00916739088048324)
-260         0.7693792703784261 (0.7167354411006137, 0.8220230996562385)
-Kebemer     0.010021691126443244 (0.008382621588113537, 0.011660760664772951)
-244         0.21169123555459635 (0.2036658292848088, 0.21971664182438388)
-Kedougou    0.004622782266665126 (0.003534646565491073, 0.00571091796783918)
-117         0.18660775557903442 (0.1818373281647503, 0.19137818299331855)
-
-Keur Massar 0.014243077724529485 (0.011471001293502425, 0.017015154155556544)
-331         0.9200794423858429 (0.8648056849066883, 0.9753531998649976)
-Kolda       0.002037553399144798 (0.0013381624829147398, 0.0027369443153748563)
-112         0.21282807614512578 (0.20657330231725624, 0.21908284997299532)
-Koumpentoum 0.001837844117927645 (0.0013401330073055107, 0.0023355552285497794)
-155         0.16130278944481447 (0.15421666366154518, 0.16838891522808375)
-Koungheul   0.005958355996412479 (0.0032371586407347053, 0.008679553352090252)
-220         0.8893761338488027 (0.8415404583036743, 0.937211809393931)
-Linguere    0.023307561121377773 (0.020134139803062112, 0.026480982439693435)
-220         0.4654293821834443 (0.4388915848036472, 0.49196717956324143)
-Louga       0.04462919926853459 (0.0434930674904237, 0.045765331046645485)
-256         0.5828677042452295 (0.5479830671754176, 0.6177523413150414)
-Malem Hoddar 0.036963849376093094 (0.03432851841861506, 0.03959918033357113)
-223         0.47925973508820086 (0.4575227352029838, 0.5009967349734179)
-Matam       0.0017134181987543684 (0.0012377717127680654, 0.0021890646847406714)
-186         0.30697219152920674 (0.29423108868685155, 0.31971329437156193)
-Mbacke      0.03962200876619093 (0.03740724300849685, 0.04183677452388501)
-262         0.539087483444483 (0.5076969390261539, 0.5704780278628121)
-Mbour       0.004014208828177601 (0.0032230176553138534, 0.004805400001041349)
-266         0.2988236526257886 (0.2859534915793649, 0.31169381367221227)
-
-Medina Yoro Foulah  0.031313789620442734 (0.029094008390853077, 0.03353357085003239)
-70          0.3478566858681411 (0.3428632527540856, 0.35285011898219665)
-Nioro du Rip    0.020612520831246428 (0.01698734956440795, 0.024237692098084906)
-237         0.7957091962059106 (0.7609762725154461, 0.8304421198963752)
-Oussouye    0.014096679242264543 (0.011656996567028344, 0.01653636191750074)
-139         0.3441531228927115 (0.32833374427729645, 0.35997250150812654)
-Pikine      0.04275233768036024 (0.04106823091015954, 0.04443644445056094)
-336         0.6039066333258916 (0.5763165260770453, 0.6314967405747378)
-Podor       0.009014961850546399 (0.006746567570228734, 0.011283356130864064)
-164         0.36804361762671434 (0.36054774036625226, 0.3755394948871764)
-Ranerou Ferlo  0.043110473939085736 (0.04176223564747694, 0.04445871223069453)
-156         0.4522621316194151 (0.4394551485590643, 0.46506911467976586)
-Rufisque    0.0014522699815096018 (0.001235590164801792, 0.0016689497982174117)
-331         0.16007125628290986 (0.15167964313722138, 0.16846286942859834)
-Saint-Louis 0.0020741220800317706 (0.001562028404910265, 0.002586215755153276)
-236         0.357343950511666 (0.3264681997601997, 0.3882197012631323)
-Salemata    0.012867779656367873 (0.010333547338657212, 0.015402011974078533)
-88          0.3081576517058906 (0.3010332020937021, 0.3152821013180791)
-Saraya      0.03405235123314121 (0.03179264426409212, 0.0363120582021903)
-96          0.3619272721051523 (0.35467181345444665, 0.36918273075585795)
-
-Sedhiou     0.013699743194225178 (0.010308593634334784, 0.017090892754115572)
-180         0.446511053424965 (0.43037365667027494, 0.46264845017965506)
-Tambacounda 0.002280675983080016 (0.0016242354636233358, 0.0029371165025366963)
-184         0.258103204929494 (0.24579102463791713, 0.2704153852210709)
-Thies       0.0017215048828003177 (0.0012758859177921522, 0.002167123847808483)
-286         0.1784259311634564 (0.17022302576640413, 0.18662883656050866)
-Tivaoune    0.008694595616617562 (0.007417164487003802, 0.009972026746231322)
-273         0.2801971121810034 (0.2692235029128298, 0.291170721449177)
-Velingara   0.009936752611013233 (0.00939940371292991, 0.010474101509096556)
-69          0.2105445784493476 (0.20662048135186772, 0.21446867554682747)
-Ziguinchor  0.0357728378865243 (0.034026750551074514, 0.037518925221974087)
-155         0.4271828935412305 (0.41682005238472186, 0.43754573469773916)
-'''
-
-# How different are the ultimate h_d*n_d vals when using old bounds vs new bounds (81 tests)?
-k_list_old, k_list_new = [], []
-utileval_list_old, utileval_list_new = [], []
-names_list = []
-#lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
-for ind, row in util_df.iterrows():
-    currBound, loval, oldhival, newhival = row[1], row[2], row[6], row[4]
-    # Get interpolation values
-    _, _, l_old, k_old, m1_old, m2_old = GetTriangleInterpolation([0, 1, currBound], [0, loval, oldhival])
-    _, _, l_new, k_new, m1_new, m2_new = GetTriangleInterpolation([0, 1, 81], [0, loval, newhival])
-    k_list_old.append(k_old)
-    k_list_new.append(k_new)
-    utileval_list_old.append(l_old+k_new * m1_old)
-    utileval_list_new.append(l_new + k_new * m1_new)
-    names_list.append(row[0])
-
-# How do the k values compare?
-fig, ax = plt.subplots()
-plt.scatter(k_list_old, k_list_new)
-plt.plot(np.arange(200),np.arange(200),alpha=0.2,color='gray')
-plt.ylim([0,200])
-plt.xlim([0,200])
-for i in range(numTN):
-    ax.text(k_list_old[i], k_list_new[i], names_list[i], size=7)
-plt.title('Plot of $h_d$ junctures')
-plt.xlabel('Budget-based (hi) bound')
-plt.ylabel('Prior data-based (lo) bound')
-plt.show()
-
-# How do the resulting separable utility values compare?
-fig, ax = plt.subplots()
-plt.scatter(utileval_list_old, utileval_list_new)
-plt.plot(np.arange(100)/100,np.arange(100)/100,alpha=0.2,color='gray')
-plt.ylim([0,0.4])
-plt.xlim([0,0.4])
-for i in range(numTN):
-    ax.text(utileval_list_old[i], utileval_list_new[i], names_list[i], size=7)
-plt.title('Plot of separable utility estimates at lo-based $h_d$ junctures')
-plt.xlabel('Budget-based (hi) bound')
-plt.ylabel('Prior data-based (lo) bound')
-plt.show()
-
-### GENERATE PATHS FOR CASE STUDY ###
-# What is the upper bound on the number of regions in any feasible tour that uses at least one test?
-maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
-
-mastlist = []
-for regamt in range(1, maxregnum):
-    mastlist = mastlist + list(itertools.combinations(np.arange(1,numReg).tolist(), regamt))
-
-print('Number of feasible region combinations:',len(mastlist))
-
-# For storing best sequences and their corresponding costs
-seqlist, seqcostlist = [], []
-
-for tup in mastlist:
-    tuplist = [tup[i] for i in range(len(tup))]
-    tuplist.insert(0,0) # Add HQind to front of list
-    bestseqlist, bestseqcost = FindTSPPathForGivenNodes(tuplist, f_reg)
-    seqlist.append(bestseqlist)
-    seqcostlist.append(bestseqcost)
-
-# For each path, generate a binary vector indicating if each district is accessible on that path
-# First get names of accessible districts
-distaccesslist = []
-for seq in seqlist:
-    currdistlist = []
-    for ind in seq:
-        currdist = GetDeptChildren(regNames[ind],dept_df)
-        currdistlist = currdistlist+currdist
-    currdistlist.sort()
-    distaccesslist.append(currdistlist)
-
-# Next translate each list of district names to binary vectors
-bindistaccessvectors = []
-for distlist in distaccesslist:
-    distbinvec = [int(i in distlist) for i in deptNames]
-    bindistaccessvectors.append(distbinvec)
-
-paths_df_all = pd.DataFrame({'Sequence':seqlist,'Cost':seqcostlist,'DistAccessBinaryVec':bindistaccessvectors})
-
-# Remove all paths with cost exceeding budget - min{district access} - sampletest
-paths_df = paths_df_all[paths_df_all['Cost'] < B].copy()
-# Remaining paths require at least one district and one test in each visited region
-boolevec = [True for i in range(paths_df.shape[0])]
-for i in range(paths_df.shape[0]):
-    rowseq, rowcost = paths_df.iloc[i]['Sequence'], paths_df.iloc[i]['Cost']
-    mindistcost = 0
-    for reg in rowseq:
-        if reg != 0:
-            mindistcost += f_dept[[deptNames.index(x) for x in GetDeptChildren(regNames[reg], dept_df)]].min()
-    # Add district costs, testing costs, and path cost
-    mincost = mindistcost + (len(rowseq)-1)*ctest + rowcost
-    if mincost > B:
-        boolevec[i] = False
-
-paths_df = paths_df[boolevec]
-
-# Update cost list and district access vectors to reflect these dropped paths
-seqlist_trim = paths_df['Sequence'].copy()
-seqcostlist_trim = paths_df['Cost'].copy()
-bindistaccessvectors_trim = np.array(paths_df['DistAccessBinaryVec'].tolist())
-seqlist_trim = seqlist_trim.reset_index()
-seqlist_trim = seqlist_trim.drop(columns='index')
-seqcostlist_trim = seqcostlist_trim.reset_index()
-seqcostlist_trim = seqcostlist_trim.drop(columns='index')
 
 
 
-# Save to avoid generating later
-# paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
 
-# paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
-###################################
-###################################
-###################################
-# MAIN OPTIMIZATION BLOCK
-###################################
-###################################
-###################################
-
-# First need to obtain vectors of zero intercepts, junctures, and interpolation slopes for each of our Utilde evals
-#   at each district
-lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
-for ind, row in util_df.iterrows():
-    currBound, loval, hival = row[1], row[2], row[4]
-    # Get interpolation values
-    _, _, l, k, m1, m2 = GetTriangleInterpolation([0, 1, currBound], [0, loval, hival])
-    lvec.append(l)
-    juncvec.append(k)
-    m1vec.append(m1)
-    m2vec.append(m2)
-    bds.append(currBound)
-    lovals.append(loval)
-    hivals.append(hival)
-
-# What is the curvature, kappa, for our estimates?
-kappavec = [1-m2vec[i]/m1vec[i] for i in range(len(m2vec))]
-plt.hist(kappavec)
-plt.title('Histogram of $\kappa$ curvature at each district')
-plt.show()
-
-# Make histograms of our interpolated values
-plt.hist(lvec,color='darkorange', density=True)
-plt.title("Histogram of interpolation intercepts\n($l$ values)",
-          fontsize=14)
-plt.xlabel(r'$l$',fontsize=12)
-plt.ylabel('Density', fontsize=12)
-plt.show()
-
-# interpolated junctures
-plt.hist(juncvec, color='darkgreen', density=True)
-plt.title('Histogram of interpolation slope junctures\n($j$ values)',
-          fontsize=14)
-plt.xlabel(r'$j$',fontsize=12)
-plt.ylabel('Density',fontsize=12)
-plt.show()
-
-# interpolated junctures, as percentage of upper bound
-juncvecperc = [juncvec[i]/bds[i] for i in range(len(juncvec))]
-plt.hist(juncvecperc, color='darkgreen', density=True)
-plt.title('Histogram of interpolation junctures vs. allocation bounds\n($h_d/'+r'n^{max}_d$ values)',
-          fontsize=14)
-plt.xlabel(r'$h_d/n^{max}_d$',fontsize=12)
-plt.ylabel('Density',fontsize=12)
-plt.show()
-
-plt.hist(m1vec,color='purple', density=True)
-plt.title('Histogram of first interpolation slopes\n($m^{(1)}$ values)'
-          , fontsize=14)
-plt.xlabel('$m^{(1)}$', fontsize=12)
-plt.ylabel('Density', fontsize=12)
-plt.xlim([0,0.025])
-plt.show()
-
-plt.hist(m2vec,color='orchid', density=True)
-plt.title('Histogram of second interpolation slopes\n($m^{(2)}$ values)'
-          , fontsize=14)
-plt.xlabel('$m^{(2)}$', fontsize=12)
-plt.ylabel('Density', fontsize=12)
-plt.xlim([0,0.025])
-plt.show()
-
-# Now we construct our various program vectors and matrices per the scipy standards
-numPath = paths_df.shape[0]
-
-# Variable bounds
-# Variable vectors are in form (z, n, x) [districts, allocations, paths]
-lbounds = np.concatenate((np.zeros(numTN*3), np.zeros(numPath)))
-ubounds = np.concatenate((np.ones(numTN),
-                          np.array([juncvec[i]-1 for i in range(numTN)]),
-                          np.array(util_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
-                          np.ones(numPath)))
-
-optbounds = spo.Bounds(lbounds, ubounds)
-
-# Objective vector; negated as milp requires minimization
-optobjvec = -np.concatenate((np.array(lvec), np.array(m1vec), np.array(m2vec), np.zeros(numPath)))
-
-### Constraints
-# Build lower and upper inequality values
-optconstrlower = np.concatenate(( np.ones(numTN*4+1) * -np.inf, np.array([1])))
-optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN*2), np.array(juncvec), np.zeros(numTN), np.array([1])))
-
-# Build A matrix, from left to right
-# Build z district binaries first
-optconstraintmat1 = np.vstack((f_dept, -bigM*np.identity(numTN), np.identity(numTN), 0*np.identity(numTN),
-                              np.identity(numTN), np.zeros(numTN)))
-# n^' matrices
-optconstraintmat2 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), np.identity(numTN),
-                              0*np.identity(numTN), np.zeros(numTN)))
-# n^'' matrices
-optconstraintmat3 = np.vstack((ctest*np.ones(numTN), np.identity(numTN), -np.identity(numTN), 0*np.identity(numTN),
-                              0*np.identity(numTN), np.zeros(numTN)))
-# path matrices
-optconstraintmat4 = np.vstack((np.array(seqcostlist_trim).T, np.zeros((numTN*3, numPath)),
-                               (-bindistaccessvectors_trim).T, np.ones(numPath)))
-
-optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4))
-
-optconstraints = spo.LinearConstraint(optconstraintmat, optconstrlower, optconstrupper)
-
-# Define integrality for all variables
-optintegrality = np.ones_like(optobjvec)
-
-# Solve
-spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
-soln_loBudget, UB_loBudget = spoOutput.x, spoOutput.fun*-1
-# 13-MAR-24: 1.419
-
-# Evaluate utility of solution
-n1 = soln_loBudget[numTN:numTN * 2]
-n2 = soln_loBudget[numTN * 2:numTN * 3]
-n_init = n1+n2
-u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
-# 13-MAR-24: (1.3250307414145919, (1.2473679675065128, 1.402693515322671))
-LB_loBudget = u_init
-
-opf.scipytoallocation(soln_loBudget, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 ##########################
 ##########################
@@ -1691,12 +1199,13 @@ candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_o
 ###################
 ###################
 B = 1400
+bigM = B*ctest
 
 optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconstant':bigM, 'batchsize':batchsize,
                 'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
-maxregnum = GetSubtourMaxCardinality(optparamdict=optparamdict)
+maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
 
 # TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 9 REGIONS
 maxregnum = maxregnum - 1
@@ -1715,7 +1224,7 @@ for tup in mastlist:
     kiter += 1
     tuplist = [tup[i] for i in range(len(tup))]
     tuplist.insert(0,0) # Add HQind to front of list
-    bestseqlist, bestseqcost = FindTSPPathForGivenNodes(tuplist, f_reg)
+    bestseqlist, bestseqcost = opf.FindTSPPathForGivenNodes(tuplist, f_reg)
     seqlist.append(bestseqlist)
     seqcostlist.append(bestseqcost)
     if np.mod(kiter+1,250)==0:
@@ -1727,7 +1236,7 @@ distaccesslist = []
 for seq in seqlist:
     currdistlist = []
     for ind in seq:
-        currdist = GetDeptChildren(regNames[ind],dept_df)
+        currdist = opf.GetDeptChildren(regNames[ind],dept_df)
         currdistlist = currdistlist+currdist
     currdistlist.sort()
     distaccesslist.append(currdistlist)
@@ -1749,7 +1258,7 @@ for i in range(paths_df.shape[0]):
     mindistcost = 0
     for reg in rowseq:
         if reg != 0:
-            mindistcost += f_dept[[deptNames.index(x) for x in GetDeptChildren(regNames[reg], dept_df)]].min()
+            mindistcost += f_dept[[deptNames.index(x) for x in opf.GetDeptChildren(regNames[reg], dept_df)]].min()
     # Add district costs, testing costs, and path cost
     mincost = mindistcost + (len(rowseq)-1)*ctest + rowcost
     if mincost > B:
@@ -1971,28 +1480,28 @@ def getUtilityEstimateSequential(n, lgdict, paramdict, zlevel=0.95, datadrawsite
 # First for B=700
 # LeastVisited
 reglist_LeastVisited = [0, regNames.index('Diourbel'), regNames.index('Fatick')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
 
 # MostSFPs
 reglist_MostSFP = [0, regNames.index('Diourbel'), regNames.index('Saint-Louis')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
 
 # MoreDistricts
 reglist_MoreDistrict = [0, regNames.index('Diourbel'), regNames.index('Thies')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreDistrict, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_MoreDistrict, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
 
 # MoreTests
 reglist_MoreTest = [0, regNames.index('Thies')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreTest, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_MoreTest, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
@@ -2001,7 +1510,7 @@ print(currRegCost)
 # LeastVisited
 reglist_LeastVisited = [0, regNames.index('Fatick'), regNames.index('Diourbel'), regNames.index('Kaolack'),
                         regNames.index('Kaffrine'), regNames.index('Louga'), regNames.index('Tambacounda')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_LeastVisited, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
@@ -2009,7 +1518,7 @@ print(currRegCost)
 # MostSFPs
 reglist_MostSFP = [0, regNames.index('Tambacounda'), regNames.index('Diourbel'),regNames.index('Saint-Louis'),
                    regNames.index('Kolda'),regNames.index('Matam')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_MostSFP, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
@@ -2018,18 +1527,18 @@ print(currRegCost)
 ''' INCLUDES LOUGA
 reglist_MoreDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),regNames.index('Louga'),
                    regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Fatick')]
-FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
+opf.FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
 '''
 reglist_MoreDistricts = [0, regNames.index('Thies'), regNames.index('Diourbel'),
                    regNames.index('Kaolack'), regNames.index('Kaffrine'), regNames.index('Fatick')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_MoreDistricts, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
 
 # MoreTests
 reglist_MoreTests = [0, regNames.index('Thies'), regNames.index('Diourbel'), regNames.index('Fatick')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_MoreTests, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_MoreTests, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
@@ -2037,7 +1546,7 @@ print(currRegCost)
 # Opt Soln
 reglist_optSoln = [0, regNames.index('Louga'), regNames.index('Diourbel'), regNames.index('Fatick'),
                    regNames.index('Kaffrine'), regNames.index('Kaolack')]
-currRegList, currRegCost = FindTSPPathForGivenNodes(reglist_optSoln, f_reg)
+currRegList, currRegCost = opf.FindTSPPathForGivenNodes(reglist_optSoln, f_reg)
 for regind in currRegList:
     print(regNames[regind])
 print(currRegCost)
