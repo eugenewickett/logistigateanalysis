@@ -986,8 +986,43 @@ initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(i
 # 9-APR-24:
 # 2.384194894524951, (2.3736819834182015, 2.3947078056317004)
 
+def MakeAllocationHeatMap(n, optparamdict, plotTitle='', sortby='districtcost'):
+    """Generate an allocation heat map"""
+    distNames = optparamdict['deptnames']
+    # Sort regions by distance to HQ, taken to be row 0
+    reg_sortinds = np.argsort(optparamdict['arcfixedcostmat'][0])
+    regNames_sort = [optparamdict['regnames'][x] for x in reg_sortinds]
+    # District list for each region of regNames_sort
+    dist_df = optparamdict['dept_df']
+    distinreglist = []
+    for currReg in regNames_sort:
+        currDists = opf.GetDeptChildren(currReg, dist_df)
+        # todo: CAN SORT BY OTHER THINGS HERE
+        currDistFixedCosts = [dist_df.loc[dist_df['Department'] == x]['DeptFixedCostDays'].to_numpy()[0] for x in currDists]
+        distinreglist.append([currDists[x] for x in np.argsort(currDistFixedCosts)])
+    listlengths = [len(x) for x in distinreglist]
+    maxdistnum = max(listlengths)
+    # Initialize storage matrix
+    dispmat = np.zeros((len(regNames_sort), maxdistnum)) - 10
+
+    for distind, curralloc in enumerate(n):
+        currDistName = distNames[distind]
+        currRegName = opf.GetRegion(currDistName, dist_df)
+        regmatind = regNames_sort.index(currRegName)
+        distmatind = distinreglist[regmatind].index(currDistName)
+        dispmat[regmatind, distmatind] = curralloc
+
+    plt.imshow(dispmat, cmap='hot', interpolation='nearest')
+    plt.ylabel('Distance from HQ region')
+    plt.xlabel('Distance from regional capital')
+    plt.title(plotTitle)
+    plt.tight_layout()
+    plt.show()
+    return
 
 
+MakeAllocationHeatMap(init_n_700, optparamdict, plotTitle='B=700, base setting', sortby='districtcost')
+MakeAllocationHeatMap(init_n_1400, optparamdict, plotTitle='B=1400, base setting', sortby='districtcost')
 
 
 

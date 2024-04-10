@@ -1012,7 +1012,7 @@ optconstraints, optintegrality = GetConstraints(optparamdict, juncvec, seqcostli
 
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 initsoln_1400, initsoln_1400_obj  = spoOutput.x, spoOutput.fun*-1
-# 9-APR-24:
+# 9-APR-24: 2.4940528270499973
 
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_1400, deptNames, regNames, seqlist_trim, eliminateZeros=True)
