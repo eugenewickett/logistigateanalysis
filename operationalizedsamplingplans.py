@@ -855,6 +855,7 @@ initsoln_700, initsoln_700_obj  = spoOutput.x, spoOutput.fun*-1
 # 9-APR-24: 1.54840
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_700, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+print('Path cost: '+ str(np.sum(np.array(paths_df['Cost'])*initsoln_700[numTN*3:])))
 
 def GetAllocationFromOpt(soln, numTN):
     """Turn optimization solution into an allocation whose utility can be evaluated"""
@@ -975,6 +976,7 @@ initsoln_1400, initsoln_1400_obj  = spoOutput.x, spoOutput.fun*-1
 
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_1400, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+print('Path cost: '+ str(np.sum(np.array(paths_df['Cost'])*initsoln_1400[numTN*3:])))
 
 init_n_1400 = GetAllocationFromOpt(initsoln_1400, numTN)
 
