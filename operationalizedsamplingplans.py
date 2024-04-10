@@ -183,16 +183,6 @@ def GetSenegalCSVData():
 dept_df, regcost_mat, regNames, deptNames, manufNames, numReg, testdatadict = GetSenegalCSVData()
 (numTN, numSN) = testdatadict['N'].shape # For later use
 
-'''
-def GetRegion(dept_str, dept_df):
-    """Retrieves the region associated with a department"""
-    return dept_df.loc[dept_df['Department']==dept_str,'Region'].values[0]
-
-def GetDeptChildren(reg_str, dept_df):
-    """Retrieves the departments associated with a region"""
-    return dept_df.loc[dept_df['Region']==reg_str,'Department'].values.tolist()
-'''
-
 def PrintDataSummary(datadict):
     """print data summaries for datadict which should have keys 'N' and 'Y' """
     N, Y = datadict['N'], datadict['Y']
@@ -861,286 +851,26 @@ optintegrality = GetIntegrality(optobjvec)
 
 # Solve
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
-initsoln_lo, initsoln_obj  = spoOutput.x, spoOutput.fun*-1
+initsoln_700, initsoln_700_obj  = spoOutput.x, spoOutput.fun*-1
 # 9-APR-24: 1.54840
+# Convert solution to legible format
+opf.scipytoallocation(initsoln_700, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 def GetAllocationFromOpt(soln, numTN):
     """Turn optimization solution into an allocation whose utility can be evaluated"""
     n1, n2 = soln[numTN:numTN * 2], soln[numTN * 2:numTN * 3]
     return n1 + n2
 
-init_n = GetAllocationFromOpt(initsoln_lo, numTN)
+init_n = GetAllocationFromOpt(initsoln_700, numTN)
 
-
-# Evaluate utility of solution
-n1 = soln_loBudget[numTN:numTN * 2]
-n2 = soln_loBudget[numTN * 2:numTN * 3]
-n_init = n1+n2
-u_init, u_init_CI = getUtilityEstimate(n_init, lgdict, paramdict)
-# 13-MAR-24: (1.3250307414145919, (1.2473679675065128, 1.402693515322671))
-LB_loBudget = u_init
-
-opf.scipytoallocation(soln_loBudget, deptNames, regNames, seqlist_trim, eliminateZeros=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# TODO: INSPECT CHOICES HERE LATER
-# Example set of variables to inspect validity
-v_batch = B
-n_alloc = np.zeros(numTN)
-n_alloc[36] = 20 # Rufisque, Dakar
-n_alloc[25] = 20 # Louga, Louga
-n_alloc[24] = 20 # Linguere, Louga
-n_alloc[2] = 20 # Bignona, Ziguinchor
-n_alloc[32] = 20 # Oussouye, Ziguinchor
-n_alloc[8] = 10 # Fatick, Fatick
-n_alloc[9] = 10 # Foundiougne, Fatick
-n_alloc[10] = 0 # Gossas, Fatick
-z_reg = np.zeros(numReg)
-z_reg[0] = 1 # Dakar
-z_reg[7] = 1 # Louga
-z_reg[13] = 1 # Ziguinchor
-z_reg[2] = 1 # Fatick
-z_dept = np.zeros(numTN)
-z_dept[36] = 1 # Rufisque, Dakar
-z_dept[25] = 1 # Louga, Louga
-z_dept[24] = 1 # Linguere, Louga
-z_dept[2] = 1 # Bignona, Ziguinchor
-z_dept[32] = 1 # Oussouye, Ziguinchor
-z_dept[8] = 1 # Fatick, Fatick
-z_dept[9] = 1 # Foundiougne, Fatick
-z_dept[10] = 0 # Gossas, Fatick
-
-x = np.zeros((numReg, numReg))
-x[0, 7] = 1 # Dakar to Louga
-x[7, 13] = 1 # Louga to Ziguinchor
-x[13, 2] = 1 # Ziguinchor to Fatick
-x[2, 0] = 1 # Fatick to Dakar
-# Generate a dictionary for variables
-varsetdict = {'batch_int':v_batch, 'regaccessvec_bin':z_reg, 'deptaccessvec_bin':z_dept, 'arcmat_bin':x,
-              'allocvec_int':n_alloc}
-##########
-# Add functions for all constraints; they return True if satisfied, False otherwise
-##########
-'''
-def ConstrBudget(varsetdict, optparamdict):
-    """Indicates if the budget constraint is satisfied"""
-    flag = False
-    budgetcost = varsetdict['batch_int']*optparamdict['batchcost'] + \
-        np.sum(varsetdict['deptaccessvec_bin']*optparamdict['deptfixedcostvec']) + \
-        np.sum(varsetdict['allocvec_int'] * optparamdict['pertestcost']) + \
-        np.sum(varsetdict['arcmat_bin'] * optparamdict['arcfixedcostmat'])
-    if budgetcost <= optparamdict['budget']: # Constraint satisfied
-        flag = True
-    return flag
-
-def ConstrRegionAccess(varsetdict, optparamdict):
-    """Indicates if the regional access constraints are satisfied"""
-    flag = True
-    bigM = optparamdict['Mconstant']
-    for aind, a in enumerate(optparamdict['deptnames']):
-        parentreg = opf.GetRegion(a, optparamdict['dept_df'])
-        parentregind = optparamdict['regnames'].index(parentreg)
-        if varsetdict['allocvec_int'][aind] > bigM*varsetdict['regaccessvec_bin'][parentregind]:
-            flag = False
-    return flag
-
-def ConstrHQRegionAccess(varsetdict, optparamdict):
-    """Indicates if the regional HQ access is set"""
-    flag = True
-    reghqind = optparamdict['reghqind']
-    if varsetdict['regaccessvec_bin'][reghqind] != 1:
-        flag = False
-    return flag
-
-def ConstrLocationAccess(varsetdict, optparamdict):
-    """Indicates if the location/department access constraints are satisfied"""
-    flag = True
-    bigM = optparamdict['Mconstant']
-    for aind, a in enumerate(optparamdict['deptnames']):
-        if varsetdict['allocvec_int'][aind] > bigM*varsetdict['deptaccessvec_bin'][aind]:
-            flag = False
-    return flag
-
-def ConstrBatching(varsetdict, optparamdict):
-    """Indicates if the location/department access constraints are satisfied"""
-    flag = True
-    if optparamdict['batchsize']*varsetdict['batch_int'] < np.sum(varsetdict['allocvec_int']):
-        flag = False
-    return flag
-
-def ConstrArcsLeaveOnce(varsetdict, optparamdict):
-    """Each region can only be exited once"""
-    flag = True
-    x =  varsetdict['arcmat_bin']
-    for rind in range(len(optparamdict['regnames'])):
-        if np.sum(x[rind]) > 1:
-            flag = False
-    return flag
-
-def ConstrArcsPassThruHQ(varsetdict, optparamdict):
-    """Path must pass through the HQ region"""
-    flag = True
-    x =  varsetdict['arcmat_bin']
-    reghqind = optparamdict['reghqind']
-    reghqsum = np.sum(x[reghqind])*optparamdict['Mconstant']
-    if np.sum(x) > reghqsum:
-        flag = False
-    return flag
-
-def ConstrArcsFlowBalance(varsetdict, optparamdict):
-    """Each region must be entered and exited the same number of times"""
-    flag = True
-    x =  varsetdict['arcmat_bin']
-    for rind in range(len(optparamdict['regnames'])):
-        if np.sum(x[rind]) != np.sum(x[:, rind]):
-            flag = False
-    return flag
-
-def ConstrArcsRegAccess(varsetdict, optparamdict):
-    """Accessed regions must be on the path"""
-    flag = True
-    x =  varsetdict['arcmat_bin']
-    reghqind = optparamdict['reghqind']
-    for rind in range(len(optparamdict['regnames'])):
-        if (rind != reghqind) and varsetdict['regaccessvec_bin'][rind] > np.sum(x[rind]):
-            flag = False
-    return flag
-
-def CheckSubtour(varsetdict, optparamdict):
-    """Checks if matrix x of varsetdict has multiple tours"""
-    x = varsetdict['arcmat_bin']
-    tourlist = []
-    flag = True
-    if np.sum(x) == 0:
-        return flag
-    else:
-        # Start from HQ ind
-        reghqind = optparamdict['reghqind']
-        tourlist.append(reghqind)
-        nextregind = np.where(x[reghqind] == 1)[0][0]
-        while nextregind not in tourlist:
-            tourlist.append(nextregind)
-            nextregind = np.where(x[nextregind] == 1)[0][0]
-    if len(tourlist) < np.sum(x):
-        flag = False
-    return flag
-
-def GetTours(varsetdict, optparamdict):
-    """Return a list of lists, each of which is a tour of the arcs matrix in varsetdict"""
-    x = varsetdict['arcmat_bin']
-    tourlist = []
-    flag = True
-    tempx = x.copy()
-    while np.sum(tempx) > 0:
-        currtourlist = GetSubtour(tempx)
-        tourlist.append(currtourlist)
-        tempx[currtourlist] = tempx[currtourlist]*0
-    return tourlist
-
-def GetSubtour(x):
-    """
-    Returns a subtour for incidence matrix x
-    """
-    tourlist = []
-    startind = (np.sum(x, axis=1) != 0).argmax()
-    tourlist.append(startind)
-    nextind = np.where(x[startind] == 1)[0][0]
-    while nextind not in tourlist:
-        tourlist.append(nextind)
-        nextind = np.where(x[nextind] == 1)[0][0]
-    return tourlist
-
-def GetTriangleInterpolation(xlist, flist):
-    """
-    Produces a concave interpolation for integers using the inputs x and function evaluations f_x.
-    xlist should have three values: [x_0, x_0 + 1, x_max], and f_x should have evaluations corresponding to these
-        three points.
-    Returns x and f_x lists for the inclusive range x = [x_0, x_max], as well as intercept l, slope juncture k, and
-        slopes m1 and m2
-    """
-    retx = np.arange(xlist[0], xlist[2]+1)
-    # First get left line
-    leftlineslope = (flist[1]-flist[0]) / (xlist[1]-xlist[0])
-    leftline = leftlineslope * np.array([retx[i]-retx[0] for i in range(retx.shape[0])]) + flist[0]
-    # Next get bottom line
-    bottomlineslope = (flist[2]-flist[1]) / (xlist[2]-xlist[1])
-    bottomline = bottomlineslope * np.array([retx[i] - retx[1] for i in range(retx.shape[0])]) + flist[1]
-    # Top line is just the largest value
-    topline = np.ones(retx.shape[0]) * flist[2]
-    # Upper vals is minimum of left and top lines
-    uppervals = np.minimum(leftline, topline)
-    # Interpolation is midpoint between upper and bottom lines
-    retf = np.average(np.vstack((uppervals, bottomline)),axis=0)
-    retf[0] = flist[0]  # Otherwise we are changing the first value
-
-    # Identify slope juncture k, where the line "bends", which is where leftline meets topline
-    # k is the first index where the new slope takes hold
-    k = leftline.tolist().index( next(x for x in leftline if x > topline[0]))
-    # Slopes can be identified using this k
-    # todo: WARNING: THIS MIGHT BREAK DOWN FOR EITHER VERY STRAIGHT OR VERY CURVED INTERPOLATIONS
-    m1 = retf[k-1] - retf[k-2]
-    m2 = retf[k+1] - retf[k]
-    # l is the zero intercept, using m1
-    l = retf[1] - m1
-
-    return retx, retf, l, k, m1, m2
-
-def FindTSPPathForGivenNodes(reglist, f_reg):
-    """
-    Returns an sequence of indices corresponding to the shortest path through all indices, per the traversal costs
-    featured in f_reg; uses brute force, so DO NOT use with lists larger than 10 elements or so
-    Uses first index as the HQ region, and assumes all paths must start and end at this region
-    """
-    HQind = reglist[0]
-    nonHQindlist = reglist[1:]
-    permutlist = list(itertools.permutations(nonHQindlist))
-    currbestcost = np.inf
-    currbesttup = 0
-    for permuttuple in permutlist:
-        currind = HQind
-        currpermutcost = 0
-        for ind in permuttuple:
-            currpermutcost += f_reg[currind, ind]
-            currind = ind
-        currpermutcost += f_reg[currind,HQind]
-        if currpermutcost < currbestcost:
-            currbestcost = currpermutcost
-            currbesttup = permuttuple
-    besttuplist = [currbesttup[i] for i in range(len(currbesttup))]
-    besttuplist.insert(0,HQind)
-    return besttuplist, currbestcost
-'''
-
-
-
-
-
-
-
+# todo: COMP2 Evaluate utility with importance sampling
+initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n, lgdict, paramdict, numimportdraws=50000)
+# 9-APR-24:
+# (1.3250307414145919, (1.2473679675065128, 1.402693515322671))
 
 
 ##########################
-##########################
-# Generate 30 additional candidates for lo budget
-##########################
+# Generate additional candidates for 700 budget
 ##########################
 # Solve IP-RP while setting each path to 1
 def GetConstraintsWithPathCut(numVar, numTN, pathInd):
@@ -1157,40 +887,49 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
     """Returns list of path indices for paths with upper bounds above the current lower bound"""
     numPath = paths_df.shape[0]
     numTN = len(distNames)
-    # List of eligible path indices
-    eligPathInds = []
     # Dataframe of paths and their IP-RP objectives
     candpaths_df = paths_df.copy()
-    candpaths_df.insert(3, 'RPobj', np.zeros(numPath).tolist(), True)
-    candpaths_df.insert(4, 'DistCost', np.zeros(numPath).tolist(), True)  # Add column to store RP district costs
-    candpaths_df.insert(5, 'Uoracle', np.zeros(numPath).tolist(), True)  # Add column for oracle evals
-    candpaths_df.insert(6, 'UoracleCIlo', np.zeros(numPath).tolist(), True)  # Add column for oracle eval CIs
-    candpaths_df.insert(7, 'UoracleCIhi', np.zeros(numPath).tolist(), True)  # Add column for oracle eval CIs
+    candpaths_df.insert(3, 'IPRPobj', np.zeros(numPath).tolist(), True)
+    candpaths_df.insert(4, 'Allocation', np.zeros((numPath,numTN)).tolist(), True)
+    candpaths_df.insert(5, 'DistCost', np.zeros(numPath).tolist(), True)  # Add column to store RP district costs
+    candpaths_df.insert(6, 'Uoracle', np.zeros(numPath).tolist(), True)  # Add column for oracle evals
+    candpaths_df.insert(7, 'UoracleCIlo', np.zeros(numPath).tolist(), True)  # Add column for oracle eval CIs
+    candpaths_df.insert(8, 'UoracleCIhi', np.zeros(numPath).tolist(), True)  # Add column for oracle eval CIs
     # IP-RP for each path
     for pathind in range(numPath):
         pathconstraint = GetConstraintsWithPathCut(numPath + numTN * 3, numTN, pathind)
         curr_spoOutput = milp(c=opt_obj, constraints=(opt_constr, pathconstraint),
                               integrality=opt_integ, bounds=opt_bds)
-        candpaths_df.iloc[pathind, 3] = curr_spoOutput.fun * -1
-        candpaths_df.iloc[pathind, 4] = (curr_spoOutput.x[:numTN] * f_dist).sum()
+        candpaths_df.at[pathind, 'IPRPobj'] = curr_spoOutput.fun * -1
+        candpaths_df.at[pathind, 'Allocation'] = GetAllocationFromOpt(curr_spoOutput.x, numTN)
+        candpaths_df.at[pathind, 'DistCost'] = (curr_spoOutput.x[:numTN] * f_dist).sum()
         if curr_spoOutput.fun * -1 > LB:
-            eligPathInds.append(pathind)
             opf.scipytoallocation(np.round(curr_spoOutput.x), distNames, regNames, seqlist_trim_df, True)
             if printUpdate:
                 print('Path ' + str(pathind) + ' cost: ' + str(candpaths_df.iloc[pathind, 1]))
                 print('Path ' + str(pathind) + ' RP utility: ' + str(candpaths_df.iloc[pathind, 3]))
-    return eligPathInds, candpaths_df
+    return candpaths_df
 
-eligPathInds, candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints,
-                                                     optintegrality, optbounds, f_dept, LB_loBudget, seqlist_trim)
+candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
+                                       optbounds, f_dept, initsoln_700_util, seqlist_trim, printUpdate=True)
 
 # Save to avoid generating later
-candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'candpaths_df_700.pkl'))
+# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
 
-
-
-
-
+def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict):
+    for pathind in range(candpaths_df.shape[0]):
+        # Evaluate the IP-RP allocation for each designated eligible path
+        if candpaths_df.at[pathind, 'IPRPobj'] > LB:
+            print('Evaluating utility for path ' + candpaths_df.at[pathind, 'Sequence'])
+            candsoln_util, candsoln_util_CI = sampf.getImportanceUtilityEstimate(candpaths_df.at[pathind, 'Allocation'], lgdict,
+                                                                       paramdict, numimportdraws=50000)
+            candpaths_df.at[pathind, 'Uoracle'] = candsoln_util
+            candpaths_df.at[pathind, 'UoracleCIlo'] = candsoln_util_CI[0]
+            candpaths_df.at[pathind, 'UoracleCIhi'] = candsoln_util_CI[1]
+    return
+# todo: COMP2 Evaluate utility with importance sampling
+EvaluateCandidateUtility(candpaths_df_700, initsoln_700_util, lgdict, paramdict)
 
 
 ###################
@@ -1205,16 +944,59 @@ optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconsta
                 'deptfixedcostvec':f_dept, 'arcfixedcostmat': f_reg, 'reghqname':'Dakar', 'reghqind':0,
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
-maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
+# Retrieve previously generated interpolation points
+util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
 
-# TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 9 REGIONS
-maxregnum = maxregnum - 1
+maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
+# TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 8 REGIONS; OTHERWISE TOO MANY PATHS ARE GENERATED
+maxregnum = maxregnum - 2
 
 mastlist = []
 for regamt in range(1, maxregnum):
     mastlist = mastlist + list(itertools.combinations(np.arange(1,numReg).tolist(), regamt))
-
 print('Number of feasible region combinations:',len(mastlist))
+
+# Get the data frame of non-dominated paths
+GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+# Load previously generated paths data frame
+paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+# Get necessary path vectors for IP-RP
+seqlist_trim, seqcostlist_trim, bindistaccessvectors_trim = GetPathSequenceAndCost(paths_df)
+# Get interpolation vectors
+lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(util_df)
+# Build IP-RP
+numPath = paths_df.shape[0]
+optbounds, optobjvec = GetVarBds(numTN, numPath, juncvec, util_df), GetObjective(lvec, m1vec, m2vec, numPath)
+optconstraints, optintegrality = GetConstraints(optparamdict, juncvec, seqcostlist_trim,
+                                                bindistaccessvectors_trim), GetIntegrality(optobjvec)
+
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+initsoln_1400, initsoln_1400_obj  = spoOutput.x, spoOutput.fun*-1
+# 9-APR-24:
+
+# Convert solution to legible format
+opf.scipytoallocation(initsoln_1400, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+
+init_n_1400 = GetAllocationFromOpt(initsoln_700, numTN)
+
+# todo: COMP2 Evaluate utility with importance sampling
+initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(init_n_1400, lgdict,
+                                                                             paramdict, numimportdraws=50000)
+# 9-APR-24:
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # For storing best sequences and their corresponding costs
 seqlist, seqcostlist = [], []
@@ -1348,29 +1130,8 @@ LB = u_init
 #todo: 13-MAR-24: 4.239 with 100k/100 draws
 #todo: 13-MAR-24: 4.164 with 200k/100 draws
 
-# todo: TEMPORARY STUDY 13-MAR; REMOVE LATER
-z_init = soln_hiBudget[:numTN]
-# Get new interpolations with more data draws and see if this helps with inverted gap
-util_lo, util_lo_CI = [], []
-util_hi, util_hi_CI = [], []
-for i in range(len(deptNames)):
-    if z_init[i] == 1:
-        currbd = int(deptallocbds[i])
-        print('Getting utility for ' + deptNames[i] + ', at 1 test...')
-        n = np.zeros(numTN)
-        n[i] = 1
-        currlo, currlo_CI = getUtilityEstimate(n, lgdict, paramdict)
-        print(currlo, currlo_CI)
-        util_lo.append(currlo)
-        util_lo_CI.append(currlo_CI)
-        print('Getting utility for ' + deptNames[i] + ', at ' + str(currbd) + ' tests...')
-        n[i] = currbd
-        currhi, currhi_CI = getUtilityEstimate(n, lgdict, paramdict)
-        print(currhi, currhi_CI)
-        util_hi.append(currhi)
-        util_hi_CI.append(currhi_CI)
 
-# Compare resulting interp values with currently used ones here
+
 
 
 
