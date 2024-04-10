@@ -983,7 +983,7 @@ init_n_1400 = GetAllocationFromOpt(initsoln_1400, numTN)
 initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(init_n_1400, lgdict,
                                                                              paramdict, numimportdraws=50000)
 # 9-APR-24:
-# 
+# 2.384194894524951, (2.3736819834182015, 2.3947078056317004)
 
 
 
