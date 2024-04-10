@@ -851,9 +851,10 @@ optintegrality = GetIntegrality(optobjvec)
 # Solve
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 initsoln_700, initsoln_700_obj  = spoOutput.x, spoOutput.fun*-1
-# 9-APR-24: 1.54840
+# 9-APR-24: 0.05353352764207486
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_700, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+print('Path cost: '+ str(np.sum(np.array(paths_df['Cost'])*initsoln_700[numTN*3:])))
 
 def GetAllocationFromOpt(soln, numTN):
     """Turn optimization solution into an allocation whose utility can be evaluated"""
@@ -943,7 +944,7 @@ optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconsta
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
 # Retrieve previously generated interpolation points
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_POPemph.csv'))
 
 maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
 # TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 8 REGIONS; OTHERWISE TOO MANY PATHS ARE GENERATED
@@ -970,10 +971,11 @@ optconstraints, optintegrality = GetConstraints(optparamdict, juncvec, seqcostli
 
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 initsoln_1400, initsoln_1400_obj  = spoOutput.x, spoOutput.fun*-1
-# 9-APR-24: 2.8785152859812526
+# 9-APR-24: 0.09120042444149079
 
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_1400, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+print('Path cost: '+ str(np.sum(np.array(paths_df['Cost'])*initsoln_1400[numTN*3:])))
 
 init_n_1400 = GetAllocationFromOpt(initsoln_1400, numTN)
 
