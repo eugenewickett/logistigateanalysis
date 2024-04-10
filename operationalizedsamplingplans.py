@@ -861,10 +861,10 @@ def GetAllocationFromOpt(soln, numTN):
     n1, n2 = soln[numTN:numTN * 2], soln[numTN * 2:numTN * 3]
     return n1 + n2
 
-init_n = GetAllocationFromOpt(initsoln_700, numTN)
+init_n_700 = GetAllocationFromOpt(initsoln_700, numTN)
 
 # todo: COMP2 Evaluate utility with importance sampling
-initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n, lgdict, paramdict, numimportdraws=50000)
+initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n_700, lgdict, paramdict, numimportdraws=50000)
 # 9-APR-24:
 # (1.3250307414145919, (1.2473679675065128, 1.402693515322671))
 
@@ -910,8 +910,8 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
                 print('Path ' + str(pathind) + ' RP utility: ' + str(candpaths_df.iloc[pathind, 3]))
     return candpaths_df
 
-candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
-                                       optbounds, f_dept, initsoln_700_util, seqlist_trim, printUpdate=True)
+# candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
+#                                       optbounds, f_dept, initsoln_700_util, seqlist_trim, printUpdate=True)
 
 # Save to avoid generating later
 # candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
@@ -949,7 +949,7 @@ util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility'
 
 maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
 # TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 8 REGIONS; OTHERWISE TOO MANY PATHS ARE GENERATED
-maxregnum = maxregnum - 2
+maxregnum = maxregnum - 1
 
 mastlist = []
 for regamt in range(1, maxregnum):
@@ -957,7 +957,7 @@ for regamt in range(1, maxregnum):
 print('Number of feasible region combinations:',len(mastlist))
 
 # Get the data frame of non-dominated paths
-GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
 # Load previously generated paths data frame
 paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
 # Get necessary path vectors for IP-RP
