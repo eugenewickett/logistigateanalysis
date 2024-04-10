@@ -881,7 +881,7 @@ optintegrality = GetIntegrality(optobjvec)
 # Solve
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 initsoln_700, initsoln_700_obj  = spoOutput.x, spoOutput.fun*-1
-# 9-APR-24:
+# 9-APR-24: 1.4655542019875003
 
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_700, deptNames, regNames, seqlist_trim, eliminateZeros=True)
@@ -897,7 +897,7 @@ init_n_700 = GetAllocationFromOpt(initsoln_700, numTN)
 # todo: COMP2 Evaluate utility with importance sampling
 initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n_700, lgdict, paramdict, numimportdraws=50000)
 # 9-APR-24:
-#
+# (0.8497169946558216, (0.840646952994442, 0.8587870363172012))
 
 ##########################
 # Generate additional candidates for 700 budget
@@ -1024,6 +1024,6 @@ init_n_1400 = GetAllocationFromOpt(initsoln_1400, numTN)
 initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(init_n_1400, lgdict,
                                                                              paramdict, numimportdraws=50000)
 # 9-APR-24:
-#
+# (1.5877794362587974, (1.577825070701218, 1.5977338018163767))
 
 
