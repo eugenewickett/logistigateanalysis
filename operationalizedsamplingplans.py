@@ -866,7 +866,7 @@ init_n_700 = GetAllocationFromOpt(initsoln_700, numTN)
 # todo: COMP2 Evaluate utility with importance sampling
 initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n_700, lgdict, paramdict, numimportdraws=50000)
 # 9-APR-24:
-# (1.3250307414145919, (1.2473679675065128, 1.402693515322671))
+# (1.3213765763534866, (1.3112104189824265, 1.3315427337245467)
 
 
 ##########################
@@ -972,18 +972,18 @@ optconstraints, optintegrality = GetConstraints(optparamdict, juncvec, seqcostli
 
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
 initsoln_1400, initsoln_1400_obj  = spoOutput.x, spoOutput.fun*-1
-# 9-APR-24:
+# 9-APR-24: 2.8785152859812526
 
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_1400, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
-init_n_1400 = GetAllocationFromOpt(initsoln_700, numTN)
+init_n_1400 = GetAllocationFromOpt(initsoln_1400, numTN)
 
 # todo: COMP2 Evaluate utility with importance sampling
 initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(init_n_1400, lgdict,
                                                                              paramdict, numimportdraws=50000)
 # 9-APR-24:
-#
+# 
 
 
 
