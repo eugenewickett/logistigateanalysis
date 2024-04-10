@@ -986,7 +986,10 @@ initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(i
 # 9-APR-24:
 # 2.384194894524951, (2.3736819834182015, 2.3947078056317004)
 
-def MakeAllocationHeatMap(n, optparamdict, plotTitle='', sortby='districtcost'):
+
+optparamdict
+
+def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray', vlist='NA', sortby='districtcost'):
     """Generate an allocation heat map"""
     distNames = optparamdict['deptnames']
     # Sort regions by distance to HQ, taken to be row 0
@@ -1003,7 +1006,7 @@ def MakeAllocationHeatMap(n, optparamdict, plotTitle='', sortby='districtcost'):
     listlengths = [len(x) for x in distinreglist]
     maxdistnum = max(listlengths)
     # Initialize storage matrix
-    dispmat = np.zeros((len(regNames_sort), maxdistnum)) - 10
+    dispmat = np.zeros((len(regNames_sort), maxdistnum))
 
     for distind, curralloc in enumerate(n):
         currDistName = distNames[distind]
@@ -1011,18 +1014,91 @@ def MakeAllocationHeatMap(n, optparamdict, plotTitle='', sortby='districtcost'):
         regmatind = regNames_sort.index(currRegName)
         distmatind = distinreglist[regmatind].index(currDistName)
         dispmat[regmatind, distmatind] = curralloc
-
-    plt.imshow(dispmat, cmap='hot', interpolation='nearest')
-    plt.ylabel('Distance from HQ region')
-    plt.xlabel('Distance from regional capital')
+    if vlist != 'NA':
+        plt.imshow(dispmat, cmap=cmapstr, interpolation='nearest', vmin=vlist[0], vmax=vlist[1])
+    else:
+        plt.imshow(dispmat, cmap=cmapstr, interpolation='nearest')
+    plt.ylabel('Ranked distance from HQ region')
+    plt.xlabel('Ranked distance from regional capital')
     plt.title(plotTitle)
     plt.tight_layout()
     plt.show()
     return
 
+# Base allocations
+init_n_700_BASE = np.array([ 0., 12.,  0.,  0.,  0.,  0., 57.,  0., 10.,  9.,  9.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0., 21.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  7.,  0.,  0.,  0.,  0.,  6.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.])
+init_n_1400_BASE = np.array([ 0., 12.,  0.,  8.,  0.,  0., 58.,  0., 10.,  9.,  9.,  0.,  0.,
+        0., 10.,  7.,  0., 35.,  0.,  0., 21.,  0.,  0., 59.,  0.,  0.,
+       10.,  0.,  7.,  0.,  0., 15.,  0.,  6.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.])
 
-MakeAllocationHeatMap(init_n_700, optparamdict, plotTitle='B=700, base setting', sortby='districtcost')
-MakeAllocationHeatMap(init_n_1400, optparamdict, plotTitle='B=1400, base setting', sortby='districtcost')
+n_LeastVisited_700_BASE = np.array([ 0., 20.,  0.,  0.,  0.,  0.,  0.,  0., 19., 19., 19.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0., 20.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0., 19.,  0.,  0.,  0.,  0., 20.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.])
+n_MostSFPs_unif_700_BASE = np.array([ 0.,  0.,  0.,  0.,  0.,  0., 20., 19.,  0.,  0.,  0.,  0.,  0.,
+       19.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0., 19.,  0.,  0., 19.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.])
+n_MostSFPs_wtd_700_BASE = np.array([ 0.,  0.,  0.,  0.,  0.,  0., 15., 12.,  0.,  0.,  0.,  0.,  0.,
+       19.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.,  0., 36.,  0.,  0., 14.,  0.,
+        0.,  0.,  0.,  0.,  0.,  0.,  0.])
+n_MoreDist_unif_700_BASE = np.array([0., 8., 0., 0., 0., 0., 9., 8., 0., 0., 0., 0., 0., 9., 0., 0., 0.,
+       0., 0., 0., 9., 0., 0., 0., 0., 0., 0., 0., 8., 8., 0., 0., 0., 9.,
+       0., 0., 8., 0., 0., 0., 0., 0., 8., 8., 0., 0.])
+n_MoreDist_wtd_700_BASE = np.array([ 0., 13.,  0.,  0.,  0.,  0.,  6.,  5.,  0.,  0.,  0.,  0.,  0.,
+        5.,  0.,  0.,  0.,  0.,  0.,  0., 13.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0., 13.,  6.,  0.,  0.,  0., 13.,  0.,  0.,  6.,  0.,  0.,
+        0.,  0.,  0.,  5.,  7.,  0.,  0.])
+n_MoreTests_unif_700_BASE = np.array([ 0.,  0.,  0.,  0.,  0.,  0., 22.,  0.,  0.,  0.,  0.,  0.,  0.,
+       22.,  0.,  0.,  0.,  0.,  0.,  0., 22.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0., 22.,  0.,  0.,  0., 22.,  0.,  0., 22.,  0.,  0.,
+        0.,  0.,  0., 22., 22.,  0.,  0.])
+n_MoreTests_wtd_700_BASE = np.array([ 0.,  0.,  0.,  0.,  0.,  0., 13.,  0.,  0.,  0.,  0.,  0.,  0.,
+       14.,  0.,  0.,  0.,  0.,  0.,  0., 43.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0.,  0., 15.,  0.,  0.,  0., 43.,  0.,  0., 15.,  0.,  0.,
+        0.,  0.,  0., 14., 19.,  0.,  0.])
+
+n_LeastVisited_1400_BASE = np.array([0., 4., 0., 4., 0., 0., 0., 0., 4., 4., 4., 4., 0., 0., 4., 0., 0.,
+       0., 0., 0., 5., 0., 0., 4., 4., 4., 4., 0., 4., 0., 0., 4., 0., 4.,
+       0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
+n_MostSFPs_unif_1400_BASE = np.array([0., 0., 0., 0., 0., 0., 8., 7., 0., 0., 0., 0., 0., 8., 0., 0., 7.,
+       0., 0., 0., 0., 7., 7., 0., 0., 0., 0., 7., 0., 0., 0., 0., 0., 0.,
+       7., 0., 0., 7., 0., 0., 0., 8., 0., 0., 7., 0.])
+n_MostSFPs_wtd_1400_BASE = np.array([ 0.,  0.,  0.,  0.,  0.,  0.,  6.,  5.,  0.,  0.,  0.,  0.,  0.,
+        8.,  0.,  0.,  8.,  0.,  0.,  0.,  0.,  5.,  8.,  0.,  0.,  0.,
+        0.,  6.,  0.,  0.,  0.,  0.,  0.,  0., 14.,  0.,  0.,  5.,  0.,
+        0.,  0.,  6.,  0.,  0.,  9.,  0.])
+n_MoreDist_unif_1400_BASE = np.array([0., 8., 0., 7., 0., 0., 8., 8., 8., 7., 7., 0., 0., 8., 7., 7., 0.,
+       7., 0., 0., 8., 0., 0., 7., 0., 0., 7., 0., 8., 8., 0., 7., 0., 8.,
+       0., 0., 8., 0., 0., 0., 0., 0., 8., 8., 0., 0.])
+n_MoreDist_wtd_1400_BASE = np.array([ 0., 10.,  0.,  9.,  0.,  0.,  4.,  4., 10., 10., 10.,  0.,  0.,
+        5.,  9.,  7.,  0.,  5.,  0.,  0.,  9.,  0.,  0.,  9.,  0.,  0.,
+        9.,  0., 10.,  5.,  0.,  9.,  0.,  9.,  0.,  0.,  5.,  0.,  0.,
+        0.,  0.,  0.,  5.,  6.,  0.,  0.])
+n_MoreTests_unif_1400_BASE = np.array([ 0., 26.,  0.,  0.,  0.,  0., 27., 26., 26., 26., 26.,  0.,  0.,
+       26.,  0.,  0.,  0.,  0.,  0.,  0., 26.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0., 26., 26.,  0.,  0.,  0., 26.,  0.,  0., 26.,  0.,  0.,
+        0.,  0.,  0., 26., 26.,  0.,  0.])
+n_MoreTests_wtd_1400_BASE = np.array([ 0., 36.,  0.,  0.,  0.,  0., 15., 15., 36., 36., 36.,  0.,  0.,
+       16.,  0.,  0.,  0.,  0.,  0.,  0., 36.,  0.,  0.,  0.,  0.,  0.,
+        0.,  0., 36., 16.,  0.,  0.,  0., 36.,  0.,  0., 16.,  0.,  0.,
+        0.,  0.,  0., 16., 19.,  0.,  0.])
+
+# First shuffle
+
+
+col = 'Purples'
+vmax=100
+MakeAllocationHeatMap(init_n_700, optparamdict, plotTitle='B=700, base setting', cmapstr=col,
+                      sortby='districtcost', vlist=[0,vmax])
+MakeAllocationHeatMap(init_n_1400, optparamdict, plotTitle='B=1400, base setting', cmapstr=col,
+                      sortby='districtcost', vlist=[0,vmax])
+
 
 
 
