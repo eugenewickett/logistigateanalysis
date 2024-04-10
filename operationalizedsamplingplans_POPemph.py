@@ -865,7 +865,7 @@ init_n_700 = GetAllocationFromOpt(initsoln_700, numTN)
 
 # todo: COMP2 Evaluate utility with importance sampling
 initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n_700, lgdict, paramdict, numimportdraws=50000)
-# 9-APR-24:
+# 9-APR-24: (0.04766966450185664, (0.04737648171110889, 0.04796284729260439))
 #
 
 ##########################
@@ -983,5 +983,5 @@ init_n_1400 = GetAllocationFromOpt(initsoln_1400, numTN)
 initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(init_n_1400, lgdict,
                                                                              paramdict, numimportdraws=50000)
 # 9-APR-24:
-#
+# (0.06712108732644667, (0.06686417741494169, 0.06737799723795165))
 
