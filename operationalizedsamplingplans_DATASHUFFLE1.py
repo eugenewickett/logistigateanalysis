@@ -459,13 +459,13 @@ print('MoreDistricts (uniform):', util_MoreDist_unif, util_MoreDist_unif_CI)
 # 1.100621111946376 (1.0904241829061174, 1.1108180409866346)
 
 # MoreDistricts (weighted)
-deptList_MoreDist_unif = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
+deptList_MoreDist_wtd = ['Dakar', 'Guediawaye', 'Keur Massar', 'Pikine', 'Rufisque', 'Thies',
                           'Mbour', 'Tivaoune', 'Diourbel', 'Bambey', 'Mbacke']
-allocList_MoreDist_unif = [10, 10, 10, 6, 10, 6, 10, 10, 10, 5, 5]
-n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocList_MoreDist_unif)
-util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_unif, lgdict,
+allocList_MoreDist_wtd = [10, 10, 10, 6, 10, 6, 10, 10, 10, 5, 5]
+n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocList_MoreDist_wtd)
+util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_wtd, lgdict,
                                                                 paramdict, numimportdraws=50000)
-print('MoreDistricts (weighted):', util_MoreDist_unif, util_MoreDist_unif_CI)
+print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
 # 3-APR
 # 1.1499090127184903 (1.1405389375620807, 1.1592790878749)
 # 1.1692559434343668 (1.160178594480767, 1.1783332923879666)
