@@ -6487,7 +6487,8 @@ def MQDdataScript():
     import scipy.special as sps
     import numpy as np
     import os
-    SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+    #SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+    SCRIPT_DIR = os.getcwd()
     filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
     outputFileName = os.path.join(filesPath, 'pickleOutput')
     #sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate', 'exmples','data')))

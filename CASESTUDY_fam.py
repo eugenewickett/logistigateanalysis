@@ -1,3 +1,6 @@
+"""
+Utility estimates for the 'existing' setting
+"""
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
 from logistigate.logistigate.priors import prior_normal_assort
@@ -77,6 +80,49 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict)  # Check of used parameters
 
+# TEST THAT IMPORTANCE SAMPLING IS WORKING AS EXPECTED
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+for reps in range(10):
+    n = np.array([30,90,0,0])
+
+    uEst, uCI = sampf.getImportanceUtilityEstimate(n, csdict_fam, paramdict, numimportdraws=50000, numdatadrawsforimportance=1000,
+                                      impweightoutlierprop=0.01, zlevel=0.95)
+    print(uCI)
+'''
+n = np.array([0,20,0,0])
+basic method: (0.15485069147878416, 0.16180554729293029)
+imp method, 5k: (0.15829377402469902, 0.16394741405461755)
+imp method, 25k: (0.1640837936618489, 0.16969239341317088)
+imp method, 70k: (0.1758604459345512, 0.18075470909683622)
+
+n = np.array([30,90,0,0])
+basic method: (0.4987593570451616, 0.5097299074978237)
+imp method, 5k: (0.5019468886767082, 0.5090838442627799)
+imp method, 25k: (0.5044585260556864, 0.5108398461912593)
+imp method, 70k: (0.487326114458986, 0.4931929537382993)
+imp method, 5k: (0.5122422019768191, 0.5189348919589116)
+                (0.5255941117260712, 0.5319491154816347)
+                (0.49904387249604865, 0.5057974983751081)
+                (0.5414205810418111, 0.5482604270359901)
+                (0.5061389581206663, 0.5133623232472941)
+                (0.5209600295270844, 0.5270071370792504)
+                (0.5133683186165274, 0.5198186677291663)
+                (0.5106304799110062, 0.5174843688397013)
+                (0.49869442833495703, 0.505594987666049)
+                (0.5021666726116905, 0.5090284350612235)
+imp method, 50k:(0.4979937690759486, 0.5042273433669855)
+                (0.4889175566395392, 0.4952324319656132) 
+                (0.4969157497779435, 0.5031477601089833)
+                (0.4956875372903966, 0.5020303932500181)
+                (0.49847694353418226, 0.5047172923867953)
+                (0.4882644471929325, 0.4945589030961175)
+                (0.493988097471288, 0.4999428389960616)
+                (0.49017850585920586, 0.4962521808529643)
+                (0.4986508215823773, 0.5051075550246633)
+                (0.48635355306417605, 0.4928010474946811)
+'''
 ###############
 # UPDATED HEURISTIC
 ###############

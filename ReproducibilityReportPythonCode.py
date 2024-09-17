@@ -110,14 +110,14 @@ def generateSyntheticData():
     lgDict.update({'diagSens': 1.0, 'diagSpec': 1.0, 'numPostSamples': numPostSamps,
                    'prior': methods.prior_laplace(mu=priorMean, scale=priorScale), 'MCMCdict': MCMCdict})
     lgDict = lg.runlogistigate(lgDict)
-    numSN, numTN = lgDict['importerNum'], lgDict['outletNum']
+    numSN, numTN = lgDict['SNnum'], lgDict['TNnum']
 
     floorVal = 0.05 # Classification lines
     ceilVal = 0.25
 
     # Supply-node plot
     SNindsSubset = range(numSN)
-    SNnames = [lgDict['importerNames'][i] for i in SNindsSubset]
+    SNnames = [lgDict['SNnames'][i] for i in SNindsSubset]
     SNlowers = [np.quantile(lgDict['postSamples'][:, l], lowerQuant) for l in SNindsSubset]
     SNuppers = [np.quantile(lgDict['postSamples'][:, l], upperQuant) for l in SNindsSubset]
     # First group
@@ -183,7 +183,7 @@ def generateSyntheticData():
 
     # Test-node plot
     TNindsSubset = range(numTN)
-    TNnames = [lgDict['outletNames'][i] for i in TNindsSubset]
+    TNnames = [lgDict['TNnames'][i] for i in TNindsSubset]
     TNlowers = [np.quantile(lgDict['postSamples'][:, numSN + l], lowerQuant) for l in TNindsSubset]
     TNuppers = [np.quantile(lgDict['postSamples'][:, numSN + l], upperQuant) for l in TNindsSubset]
     # First group
