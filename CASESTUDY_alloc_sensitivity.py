@@ -55,11 +55,30 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
 testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
+# How many data draws should we use for importance sampling? Plot proportion of data set for each trace vs.
+    # number of data points, across the data set size, for a uniform allocation across test nodes
+
+des = np.ones(numTN) / numTN
+datasim_max, datasim_by = 20000,500
+flatarr = np.empty((numTN*numSN, int(datasim_max/datasim_by)))
+for reps in range(20):
+    for numdatadrawsforimp_ind, numdatadrawsforimp in enumerate(range(datasim_by, datasim_max, datasim_by)):
+        sampMat = util.generate_sampling_array(des, testmax, roundalg = 'lo')
+        NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], csdict_fam['Q'][tnInd], size=numdatadrawsforimp)
+                                     for tnInd in range(numTN)]), 1, 0).astype(int)
+        # Get average rounded data set from these few draws
+        NMatAvg = np.round(np.average(NMat, axis=0)).astype(int)
+        flatarr[:, numdatadrawsforimp_ind] = NMatAvg.flatten()
+
+    plt.plot(range(datasim_by,datasim_max+datasim_by,datasim_by), flatarr.T, color="black", linewidth=0.2)
+
+plt.show() # 10k seems like enough
+
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 2000
+numtruthdraws, numdatadraws = 75000, 3000
 
 numReps = 10
-for rep in range(numReps):
+for rep in range(1, numReps):
     print('Rep: '+str(rep))
     # Get new MCMC draws
     np.random.seed(2000+rep)
@@ -71,6 +90,8 @@ for rep in range(numReps):
     paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
     util.print_param_checks(paramdict) # Check of used parameters
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                    numimpdraws=35000, numdatadrawsforimp=10000,
+                                                                    impwtoutlierprop=0.01,
                                                                     plotupdate=False)
     # Store
     np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_'+str(rep)), alloc)
