@@ -252,6 +252,8 @@ plt.show()
 # UPDATED HEURISTIC
 ###############
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+                                                                numimpdraws=60000, numdatadrawsforimp=5000,
+                                                                impwtoutlierprop=0.005,
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Familiar Setting')
 ''' 21-JUN
