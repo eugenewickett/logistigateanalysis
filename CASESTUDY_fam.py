@@ -104,12 +104,26 @@ for currTN in range(numTN):  # Loop through each test node and identify best dir
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
     print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
 
+alloc = np.zeros((numTN, int(testmax / testint) + 1))
+testaddseq = np.array([1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+ 3, 3, 2, 2, 1, 1, 1, 1, 1, 1,
+ 1, 1, 1, 1, 1, 3, 3, 3, 3, 3,
+ 3, 3, 3, 3, 3, 3, 3, 3, 1, 1])
+for tempind, temp in enumerate(testaddseq):
+    alloc[temp,tempind+1:] += 1
+util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint)
+
+for reps in range(10): # Smooth out utilty estimates by averaging multiple replications
+    pass
+
 
 ''' 23-SEP
 [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 
  3, 3, 2, 2, 1, 1, 1, 1, 1, 1, 
  1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 
- 3, 3, 3, 3, 3, 3, 3, 3, 1, ]
+ 3, 3, 3, 3, 3, 3, 3, 3, 1, 1]
+
+
 
 21-JUN
 [1, 1, 1, 1, 1, 0, 1, 1, 0,
