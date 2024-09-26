@@ -97,7 +97,7 @@ for currTN in range(numTN):  # Loop through each test node and identify best dir
     curralloc = bestalloc.copy()
     curralloc[currTN] += 1  # Increment 1 at current test node
     currdes = curralloc / np.sum(curralloc)  # Make a proportion design
-    currlosslist = sampf.sampling_plan_loss_list_importance(currdes, 400, csdict_fam, paramdict,
+    currlosslist = sampf.sampling_plan_loss_list_importance(currdes, testmax, csdict_fam, paramdict,
                                                       numimportdraws=60000,
                                                       numdatadrawsforimportance=5000,
                                                       impweightoutlierprop=.005)

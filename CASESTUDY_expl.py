@@ -79,9 +79,18 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 util.print_param_checks(paramdict) # Check of used parameters
 
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
+                                                                numimpdraws=60000, numdatadrawsforimp=5000,
+                                                                impwtoutlierprop=0.005,
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Exploratory Setting')
+
+
 '''
+25-SEP
+[4, 6, 5, 1, 7, 7, 7, 5, 0, 5
+ 7, 4, 4, 6, 6, 6, ]
+
+BEFORE 
 [4, 6, 7, 5, 1, 1, 6, 7, 1,
  4, 5, 1, 5, 7, 4, 1, 7, 6,
  1, 0, 1, 4, 7, 0, 0, 4, 4,
