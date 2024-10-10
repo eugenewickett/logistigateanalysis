@@ -78,11 +78,92 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
 
+''' 9-OCT-24
+Want an interruptible/restartable greedy allocation loop here
+'''
+# Read in the current allocation
+alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
+
+util_list = [(0.17292519603501644, 0.1765185733995387), (0.33400992816135666, 0.33827880128424326),
+             (0.4428727535222894, 0.4483219432850918), (0.548368922617267, 0.5541303009419316),
+             (0.6536904869826925, 0.6604919430997489), (0.7079470548279652, 0.7145842198883123),
+             (0.7581483734176326, 0.7641238996313393), (0.8159737055554528, 0.8218362612259336),
+             (0.8514697071128663, 0.8574239383134583), (0.8949279030608981, 0.9006034053837357),
+             (0.908111654832028, 0.9138951324961444), (0.9310866366195478, 0.9367561268209803),
+             (0.9599606087782844, 0.9656282382182848), (1.002549891406391, 1.0085190419883179),
+             (1.0305208309164757, 1.036071034150901), (1.0556741075265523, 1.0613291280826194),
+             (1.1023959156977847, 1.1075447642129106), (1.1070408289239597, 1.1124140441756425),
+             (1.1180054941582118, 1.1233125539163304), (1.1373542226310782, 1.1430296172115222)]
+
+util_avg = [np.average(u) for u in util_list]
+
+
+
+np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc'), alloc)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'allprov_util_avg'), util_avg)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'allprov_util_hi'), util_hi)
+np.save(os.path.join('casestudyoutputs', 'exploratory', 'allprov_util_lo'), util_lo)
+
+
+# Initialize the return arrays: zlevel CIs on utility, and an allocation array
+util_avg, util_hi, util_lo = np.zeros((int(testmax / testint) + 1)), \
+                             np.zeros((int(testmax / testint) + 1)), \
+                             np.zeros((int(testmax / testint) + 1))
+alloc = np.zeros((numTN, int(testmax / testint) + 1))
+for testnumind, testnum in enumerate(range(testint, testmax + 1, testint)):
+    # Iterate from previous best allocation
+    bestalloc = alloc[:, testnumind]
+    nextTN = -1
+    currbestloss_avg, currbestloss_CI = -1, (-1, -1)
+    for currTN in range(numTN):  # Loop through each test node and identify best direction via lowest avg loss
+        curralloc = bestalloc.copy()
+        curralloc[currTN] += 1  # Increment 1 at current test node
+        currdes = curralloc / np.sum(curralloc)  # Make a proportion design
+        if distW > 0:
+            tempdatadraws = paramdict['datadraws'].copy()
+            currlosslist = []
+            for Wind in range(int(np.ceil(tempdatadraws.shape[0] / distW))):
+                currdatadraws = tempdatadraws[Wind * distW:(Wind + 1) * distW]
+                paramdict.update({'datadraws': currdatadraws})
+                currlosslist = currlosslist + sampling_plan_loss_list(currdes, testnum, priordatadict, paramdict)
+            paramdict.update({'datadraws': tempdatadraws})
+        else:
+            currlosslist = sampling_plan_loss_list_importance(currdes, testnum, priordatadict, paramdict,
+                                                              numimportdraws=numimpdraws,
+                                                              numdatadrawsforimportance=numdatadrawsforimp,
+                                                              impweightoutlierprop=impwtoutlierprop)
+            #currlosslist = sampling_plan_loss_list(currdes, testnum, priordatadict, paramdict)
+        currloss_avg, currloss_CI = process_loss_list(currlosslist, zlevel=zlevel)
+        if printupdate:
+            print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
+        if nextTN == -1 or currloss_avg < currbestloss_avg:  # Update with better loss
+            nextTN = currTN
+            currbestloss_avg = currloss_avg
+            currbestloss_CI = currloss_CI
+    # Store best results
+    alloc[:, testnumind + 1] = bestalloc.copy()
+    alloc[nextTN, testnumind + 1] += 1
+    util_avg[testnumind + 1] = paramdict['baseloss'] - currbestloss_avg
+    util_hi[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[0]
+    util_lo[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[1]
+    if printupdate:
+        print('TN ' + str(nextTN) + ' added, with utility CI of (' + str(util_lo[testnumind + 1]) + ', ' +
+              str(util_hi[testnumind + 1]) + ') for ' + str(testnum) + ' tests')
+    if plotupdate:
+        numint = util_avg.shape[0]
+        util.plot_marg_util_CI(util_avg.reshape(1, numint), util_hi.reshape(1, numint), util_lo.reshape(1, numint),
+                               testmax, testint,titlestr=plottitlestr)
+        util.plot_plan(alloc, np.arange(0, testmax + 1, testint),testint,titlestr=plottitlestr)
+#    return alloc, util_avg, util_hi, util_lo
+
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
                                                                 numimpdraws=60000, numdatadrawsforimp=5000,
                                                                 impwtoutlierprop=0.005,
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Exploratory Setting')
+
+
+
 
 
 '''
