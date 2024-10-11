@@ -182,7 +182,7 @@ np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_avg'), util_a
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_hi'), util_hi)
 np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_lo'), util_lo)
 
-''' 9-OCT-24
+''' 10-OCT-24
 Want an interruptible/restartable utility estimation loop here
 '''
 numreps = 10
