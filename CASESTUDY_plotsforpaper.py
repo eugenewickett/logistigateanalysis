@@ -132,13 +132,13 @@ def example_planutility():
                     plt.text(testmax * 1.01, deltaArr[tnind, -1], labels[tnind].ljust(15), fontsize=5)
         plt.legend()
         plt.ylim([0., yMax])
-        plt.xlabel('Number of Tests, $N$')
+        plt.xlabel('Number of tests, $N$')
         if type == 'delta':
             plt.ylabel('Marginal Utility Gain')
             plt.title('Marginal Utility vs. Increasing Tests\n' + titlestr)
         else:
-            plt.ylabel('Utility')
-            plt.title('Utility vs. Increasing Tests\n' + titlestr)
+            plt.ylabel('Utility, $U$')
+            plt.title('Utility vs. tests\n' + titlestr)
         plt.show()
         plt.close()
         return
@@ -153,10 +153,10 @@ def example_planutility():
     # Per comment, cut off at 40 tests instead in order to capture more interesting elements
     testmax=40
     plot_marg_util(baseutil_arr[:, :-5], testmax=testmax, testint=testint,
-                        colors=['blue', 'red', 'green'], titlestr='$v=1$',
+                        colors=['blue', 'red', 'green'], titlestr='Underestimation equal to overestimation $(v=1)$',
                         labels=['Least Tested', 'Uniform', 'Highest SFPs'])
     plot_marg_util(adjutil_arr[:, :-5], testmax=testmax, testint=testint,
-                        colors=['blue', 'red', 'green'], titlestr='$v=10$',
+                        colors=['blue', 'red', 'green'], titlestr='Underestimation more significant than overestimation $(v=10)$',
                         labels=['Least Tested', 'Uniform', 'Highest SFPs'])
     return
 
