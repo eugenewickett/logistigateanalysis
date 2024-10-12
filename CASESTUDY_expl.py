@@ -189,7 +189,7 @@ numreps = 10
 stop = False
 while not stop:
     # We want 10 evaluations of utility for each plan and testnum
-    util_avg_unif, util_hi_unif, util_lo_unif = np.empty((numreps, int(testmax / testint) + 1)), \
+    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.empty((numreps, int(testmax / testint) + 1)), \
         np.empty((numreps, int(testmax / testint) + 1)), \
         np.empty((numreps, int(testmax / testint) + 1))
     util_avg_unif, util_hi_unif, util_lo_unif = np.empty((numreps, int(testmax / testint) + 1)), \
@@ -198,6 +198,8 @@ while not stop:
     util_avg_rudi, util_hi_rudi, util_lo_rudi = np.zeros((numreps, int(testmax / testint) + 1)), \
         np.empty((numreps, int(testmax / testint) + 1)), \
         np.empty((numreps, int(testmax / testint) + 1))
+
+    np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi'), util_lo_rudi)
 
     # Read in the current allocation
     alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
