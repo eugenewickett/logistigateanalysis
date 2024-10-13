@@ -189,63 +189,90 @@ numreps = 10
 stop = False
 while not stop:
     # We want 10 evaluations of utility for each plan and testnum
-    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.empty((numreps, int(testmax / testint) + 1)), \
-        np.empty((numreps, int(testmax / testint) + 1)), \
-        np.empty((numreps, int(testmax / testint) + 1))
-    util_avg_unif, util_hi_unif, util_lo_unif = np.empty((numreps, int(testmax / testint) + 1)), \
-        np.empty((numreps, int(testmax / testint) + 1)), \
-        np.empty((numreps, int(testmax / testint) + 1))
-    util_avg_rudi, util_hi_rudi, util_lo_rudi = np.zeros((numreps, int(testmax / testint) + 1)), \
-        np.empty((numreps, int(testmax / testint) + 1)), \
-        np.empty((numreps, int(testmax / testint) + 1))
-
-    np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi'), util_lo_rudi)
-
-    # Read in the current allocation
     alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
-    util_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_avg.npy'))
-    util_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_hi.npy'))
-    util_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_lo.npy'))
-    # Stop if the last allocation column is empty
-    if np.sum(alloc[:, -1]) > 0:
+    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy.npy'))
+    util_avg_unif, util_hi_unif, util_lo_unif = np.load(
+        os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif.npy'))
+    util_avg_rudi, util_hi_rudi, util_lo_rudi = np.load(
+        os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi.npy'))
+
+    # Stop if the last utility column isn't zero
+    if util_avg_greedy[-1, -1] > 0:
         stop = True
-    else:
-        testnumind = np.argmax(np.sum(alloc, axis=0))
-        bestalloc = alloc[:, testnumind]
-        nextTN = -1 # Initialize next best node
-        currbestloss_avg, currbestloss_CI = -1, (-1, -1) # Initialize next best utility
-        for currTN in range(numTN):  # Loop through each test node and identify best direction via lowest avg loss
-            curralloc = bestalloc.copy()
-            curralloc[currTN] += 1  # Increment 1 at current test node
-            testnum = np.sum(curralloc) * testint
-            currdes = curralloc / np.sum(curralloc)  # Make a proportion design
-            currlosslist = sampf.sampling_plan_loss_list_importance(currdes, testnum, csdict_expl, paramdict,
-                                                              numimportdraws=60000,
-                                                              numdatadrawsforimportance=5000,
-                                                              impweightoutlierprop=0.005)
-            currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-            print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
-            if nextTN == -1 or currloss_avg < currbestloss_avg:  # Update with better loss
-                nextTN = currTN
-                currbestloss_avg = currloss_avg
-                currbestloss_CI = currloss_CI
-        # Store best results
-        alloc[:, testnumind + 1] = bestalloc.copy()
-        alloc[nextTN, testnumind + 1] += 1
-        util_avg[testnumind + 1] = paramdict['baseloss'] - currbestloss_avg
-        util_hi[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[0]
-        util_lo[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[1]
-        # Save as numpy objects
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc'), alloc)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_avg'), util_avg)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_hi'), util_hi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_lo'), util_lo)
-        print('TN ' + str(nextTN) + ' added, with utility CI of (' + str(util_lo[testnumind + 1]) + ', ' +
-              str(util_hi[testnumind + 1]) + ') for ' + str(testnum) + ' tests')
-        numint = util_avg.shape[0]
-        util.plot_marg_util_CI(util_avg.reshape(1, numint), util_hi.reshape(1, numint), util_lo.reshape(1, numint),
-                               testmax, testint, titlestr='')
-        util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint, titlestr='')
+    else: # Do a set of utility estimates at the next zero
+        # Index skips first column, which should be zeros for all
+        currtup = (np.where(util_avg_greedy[:, 1:] == 0)[0][0], np.where(util_avg_greedy[:, 1:] == 0)[1][0])
+        currrep = currtup[0]
+        currbudgetind = currtup[1]
+        currbudget = testarr[currbudgetind]
+        # Identify allocation to measure
+        curralloc = alloc[:, currbudgetind + 1]
+        des_greedy = curralloc / np.sum(curralloc)
+        des_unif = util.round_design_low(np.ones(numTN) / numTN, currbudget) / currbudget
+        des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), currbudget) / currbudget
+
+        # Greedy
+        currlosslist = sampf.sampling_plan_loss_list_importance(des_greedy, currbudget, csdict_expl, paramdict,
+                                                                numimportdraws=60000,
+                                                                numdatadrawsforimportance=5000,
+                                                                impweightoutlierprop=0.005)
+        avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_greedy[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
+        util_lo_greedy[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
+        util_hi_greedy[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
+        print(des_greedy)
+        print('Utility at ' + str(currbudget) + ' tests, Greedy: ' + str(util_avg_greedy[currrep, currbudgetind + 1]))
+
+        # Uniform
+        currlosslist = sampf.sampling_plan_loss_list_importance(des_unif, currbudget, csdict_expl, paramdict,
+                                                 numimportdraws=60000,
+                                                 numdatadrawsforimportance=5000,
+                                                 impweightoutlierprop=0.005)
+        avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_unif[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
+        util_lo_unif[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
+        util_hi_unif[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
+        print(des_unif)
+        print('Utility at ' + str(currbudget) + ' tests, Uniform: ' + str(util_avg_unif[currrep, currbudgetind + 1]))
+
+        # Rudimentary
+        currlosslist = sampf.sampling_plan_loss_list_importance(des_rudi, currbudget, csdict_expl, paramdict,
+                                                                numimportdraws=60000,
+                                                                numdatadrawsforimportance=5000,
+                                                                impweightoutlierprop=0.005)
+        avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_rudi[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
+        util_lo_rudi[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
+        util_hi_rudi[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
+        print(des_rudi)
+        print('Utility at ' + str(currbudget) + ' tests, Rudimentary: ' + str(util_avg_rudi[currrep, currbudgetind + 1]))
+
+        # Save updated objects
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy'), util_avg_greedy)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy'), util_hi_greedy)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy'), util_lo_greedy)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif'), util_avg_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif'), util_hi_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif'), util_lo_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi'), util_avg_rudi)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi'), util_hi_rudi)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi'), util_lo_rudi)
+    # Plot utilities
+    util_avg_arr = np.vstack((np.average(util_avg_greedy, axis=0), np.average(util_avg_unif, axis=0), np.average(util_avg_rudi, axis=0)))
+    util_hi_arr = np.vstack((np.average(util_hi_greedy, axis=0), np.average(util_hi_unif, axis=0), np.average(util_hi_rudi, axis=0)))
+    util_lo_arr = np.vstack((np.average(util_lo_greedy, axis=0), np.average(util_lo_unif, axis=0), np.average(util_lo_rudi, axis=0)))
+    # Plot
+    util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
+                           titlestr='All-provinces setting, comparison with other approaches')
+
+
+
 '''
 END RESTARTABLE UTILITY ESTIMATION
 '''
