@@ -209,6 +209,7 @@ while not stop:
         # Index skips first column, which should be zeros for all
         currtup = (np.where(util_avg_greedy[:, 1:] == 0)[0][0], np.where(util_avg_greedy[:, 1:] == 0)[1][0])
         currrep = currtup[0]
+        print("Current rep: "+str(currrep))
         currbudgetind = currtup[1]
         currbudget = testarr[currbudgetind]
         # Identify allocation to measure
@@ -216,6 +217,10 @@ while not stop:
         des_greedy = curralloc / np.sum(curralloc)
         des_unif = util.round_design_low(np.ones(numTN) / numTN, currbudget) / currbudget
         des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), currbudget) / currbudget
+
+        # Generate new base MCMC draws
+        np.random.seed(1000+currrep)
+        csdict_expl = methods.GeneratePostSamples(csdict_expl)
 
         # Greedy
         currlosslist = sampf.sampling_plan_loss_list_importance(des_greedy, currbudget, csdict_expl, paramdict,
@@ -264,13 +269,28 @@ while not stop:
         np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi'), util_hi_rudi)
         np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi'), util_lo_rudi)
     # Plot utilities
+    util_avg_arr = np.vstack(
+        (np.concatenate((np.array([0]), np.true_divide(util_avg_greedy[:, 1:].sum(0), (util_avg_greedy[:, 1:]!=0).sum(0)))), 
+         np.concatenate((np.array([0]), np.true_divide(util_avg_unif[:, 1:].sum(0), (util_avg_unif[:, 1:]!=0).sum(0)))), 
+         np.concatenate((np.array([0]), np.true_divide(util_avg_rudi[:, 1:].sum(0), (util_avg_rudi[:, 1:]!=0).sum(0))))))
+    util_hi_arr = np.vstack(
+        (np.concatenate((np.array([0]), np.true_divide(util_hi_greedy[:, 1:].sum(0), (util_hi_greedy[:, 1:]!=0).sum(0)))), 
+         np.concatenate((np.array([0]), np.true_divide(util_hi_unif[:, 1:].sum(0), (util_hi_unif[:, 1:]!=0).sum(0)))), 
+         np.concatenate((np.array([0]), np.true_divide(util_hi_rudi[:, 1:].sum(0), (util_hi_rudi[:, 1:]!=0).sum(0))))))
+    util_lo_arr = np.vstack(
+        (np.concatenate((np.array([0]), np.true_divide(util_lo_greedy[:, 1:].sum(0), (util_lo_greedy[:, 1:]!=0).sum(0)))), 
+         np.concatenate((np.array([0]), np.true_divide(util_lo_unif[:, 1:].sum(0), (util_lo_unif[:, 1:]!=0).sum(0)))), 
+         np.concatenate((np.array([0]), np.true_divide(util_lo_rudi[:, 1:].sum(0), (util_lo_rudi[:, 1:]!=0).sum(0))))))
+
+    '''
     util_avg_arr = np.vstack((np.average(util_avg_greedy, axis=0), np.average(util_avg_unif, axis=0), np.average(util_avg_rudi, axis=0)))
     util_hi_arr = np.vstack((np.average(util_hi_greedy, axis=0), np.average(util_hi_unif, axis=0), np.average(util_hi_rudi, axis=0)))
     util_lo_arr = np.vstack((np.average(util_lo_greedy, axis=0), np.average(util_lo_unif, axis=0), np.average(util_lo_rudi, axis=0)))
+    '''
+
     # Plot
     util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
                            titlestr='All-provinces setting, comparison with other approaches')
-
 
 
 '''
