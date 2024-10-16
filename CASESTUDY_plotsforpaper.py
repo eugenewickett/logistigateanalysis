@@ -423,13 +423,13 @@ def casestudyplots_exploratory():
     Cleaned up plots for use in case study in paper
     """
     testmax, testint = 400, 10
-    TNnames = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)',
-              'ModeratelyHighUnex(1)', 'ModerateUnex(1)', 'ModeratelyHighUnex(2)', 'ModerateUnex(2)']
+    TNnames = ['Moderate (39)', 'Moderate (17)', 'Moderately High (95)', 'Moderately High (26)',
+              'Moderately High (New #1)', 'Moderate (New #1)', 'Moderately High (New #2)', 'Moderate (New #2)']
     numTN = len(TNnames)
 
     # Size of figure layout for all figures
     figtup = (7.5, 5)
-    titleSz, axSz, labelSz = 12, 10, 9
+    titleSz, axSz, labelSz = 15, 11, 11
     xMax = 450
 
     '''
@@ -464,7 +464,7 @@ def casestudyplots_exploratory():
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_alloc.npy'))
+    allocArr = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorsset2 = plt.get_cmap('Dark2')
     colorinds = [6, 1, 2, 3, 4, 0, 5, 7]
@@ -483,24 +483,26 @@ def casestudyplots_exploratory():
     # allocMax = allocArr.max() * testInt * 1.1
     allocMax = 120
     for tnind in range(numTN):
-        delt=4
+        delt = 2
         if tnind==0:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint - delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
+            plt.text(testmax * 0.945, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
+        elif tnind==4:
+            plt.text(testmax * 0.9, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
         elif tnind==6:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
-        elif tnind==2:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.2*delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
+            plt.text(testmax * 0.9, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
+        elif tnind==3:
+            plt.text(testmax * 0.945, allocArr[tnind, -1] * testint - 3*delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
         #elif tnind==3:
         #    plt.text(testmax * 1.01, allocArr[tnind, -1] * testint + 0.2*delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
         else:
-            plt.text(testmax * 1.01, allocArr[tnind, -1] * testint, labels[tnind].ljust(15), fontsize=labelSz - 1)
+            plt.text(testmax * 0.945, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
 
     plt.legend(fontsize=labelSz, loc='upper left')
     plt.ylim([0., allocMax])
     plt.xlim([0., xMax])
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget\nAll-Provinces Setting', fontsize=titleSz)
+    plt.title('Sampling Plan vs. Budget: All-Provinces Setting', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -508,15 +510,25 @@ def casestudyplots_exploratory():
 
     #######################
     # Policy utility comparison
-    util_arr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl.npy'))
-    util_arr_hi = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl.npy'))
-    util_arr_lo = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl.npy'))
-    heur_util = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_avg.npy'))
-    heur_util_hi = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_hi.npy'))
-    heur_util_lo = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_lo.npy'))
-    util_arr = np.vstack((heur_util,util_arr))
-    util_arr_hi = np.vstack((heur_util_hi, util_arr_hi))
-    util_arr_lo = np.vstack((heur_util_lo, util_arr_lo))
+    util_avg_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy.npy'))[0]
+    util_hi_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy.npy'))[0]
+    util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy.npy'))[0]
+    util_avg_unif = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif.npy'))[0]
+    util_hi_unif = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif.npy'))[0]
+    util_lo_unif = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif.npy'))[0]
+    util_avg_rudi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi.npy'))[0]
+    util_hi_rudi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi.npy'))[0]
+    util_lo_rudi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi.npy'))[0]
+
+    util_arr = np.load(os.path.join('utilitypaper', 'exploratory', 'util_avg_arr_expl.npy'))
+    util_arr_hi = np.load(os.path.join('utilitypaper', 'exploratory', 'util_hi_arr_expl.npy'))
+    util_arr_lo = np.load(os.path.join('utilitypaper', 'exploratory', 'util_lo_arr_expl.npy'))
+    heur_util = np.load(os.path.join('utilitypaper', 'exploratory', 'expl_util_avg.npy'))
+    heur_util_hi = np.load(os.path.join('utilitypaper', 'exploratory', 'expl_util_hi.npy'))
+    heur_util_lo = np.load(os.path.join('utilitypaper', 'exploratory', 'expl_util_lo.npy'))
+    util_arr = np.vstack((util_avg_greedy, util_avg_unif, util_avg_rudi))
+    util_arr_hi = np.vstack((util_hi_greedy, util_hi_unif, util_hi_rudi))
+    util_arr_lo = np.vstack((util_lo_greedy, util_lo_unif, util_lo_rudi))
     # Utility comparison plot
     colorsset = plt.get_cmap('Accent')
     colorinds = [0, 1, 2]
