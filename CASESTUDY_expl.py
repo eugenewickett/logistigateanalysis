@@ -185,22 +185,23 @@ np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_lo'), util_lo
 ''' 10-OCT-24
 Want an interruptible/restartable utility estimation loop here
 '''
+
 numreps = 10
 stop = False
 while not stop:
     # We want 10 evaluations of utility for each plan and testnum
     alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
-    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy.npy'))
+    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_5k.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_5k.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_5k.npy'))
     util_avg_unif, util_hi_unif, util_lo_unif = np.load(
-        os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif.npy'))
+        os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_5k.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_5k.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_5k.npy'))
     util_avg_rudi, util_hi_rudi, util_lo_rudi = np.load(
-        os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi.npy'))
+        os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_5k.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_5k.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_5k.npy'))
 
     # Stop if the last utility column isn't zero
     if util_avg_greedy[-1, -1] > 0:
@@ -259,16 +260,17 @@ while not stop:
         print('Utility at ' + str(currbudget) + ' tests, Rudimentary: ' + str(util_avg_rudi[currrep, currbudgetind + 1]))
 
         # Save updated objects
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy'), util_avg_greedy)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy'), util_hi_greedy)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy'), util_lo_greedy)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif'), util_avg_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif'), util_hi_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif'), util_lo_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi'), util_avg_rudi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi'), util_hi_rudi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi'), util_lo_rudi)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_5k'), util_avg_greedy)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_5k'), util_hi_greedy)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_5k'), util_lo_greedy)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_5k'), util_avg_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_5k'), util_hi_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_5k'), util_lo_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_5k'), util_avg_rudi)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_5k'), util_hi_rudi)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_5k'), util_lo_rudi)
     # Plot utilities
+    '''
     util_avg_arr = np.vstack(
         (np.concatenate((np.array([0]), np.true_divide(util_avg_greedy[:, 1:].sum(0), (util_avg_greedy[:, 1:]!=0).sum(0)))), 
          np.concatenate((np.array([0]), np.true_divide(util_avg_unif[:, 1:].sum(0), (util_avg_unif[:, 1:]!=0).sum(0)))), 
@@ -286,7 +288,7 @@ while not stop:
     util_avg_arr = np.vstack((np.average(util_avg_greedy, axis=0), np.average(util_avg_unif, axis=0), np.average(util_avg_rudi, axis=0)))
     util_hi_arr = np.vstack((np.average(util_hi_greedy, axis=0), np.average(util_hi_unif, axis=0), np.average(util_hi_rudi, axis=0)))
     util_lo_arr = np.vstack((np.average(util_lo_greedy, axis=0), np.average(util_lo_unif, axis=0), np.average(util_lo_rudi, axis=0)))
-    '''
+
 
     # Plot
     util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,

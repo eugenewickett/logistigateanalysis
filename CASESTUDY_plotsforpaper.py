@@ -166,47 +166,17 @@ def casestudyplots_familiar():
     Cleaned up plots for use in case study in paper
     """
     testmax, testint = 400, 10
-    TNnames = ['Moderate(39)', 'Moderate(17)', 'ModeratelyHigh(95)', 'ModeratelyHigh(26)']
+    TNnames = ['Moderate (39)', 'Moderate (17)', 'Moderately High (95)', 'Moderately High (26)']
     numTN = len(TNnames)
 
     # Size of figure layout for all figures
-    figtup = (7, 5)
-    titleSz, axSz, labelSz = 12, 10, 9
+    figtup = (7.5, 5)
+    titleSz, axSz, labelSz = 15, 11, 11
     xMax = 450
-
-    '''
-    #######################
-    # Plot of marginal utilities
-    colors = cm.rainbow(np.linspace(0, 0.5, numTN))
-    labels = [TNnames[ind] for ind in range(numTN)]
-
-    x = range(testint, testmax + 1, testint)
-    deltaArr = np.zeros((heur_util.shape[0], heur_util.shape[1] - 1))
-    for rw in range(deltaArr.shape[0]):
-        for col in range(deltaArr.shape[1]):
-            deltaArr[rw, col] = heur_util[rw, col + 1] - heur_util[rw, col]
-    yMax = np.max(deltaArr) * 1.1
-
-    _ = plt.figure(figsize=figtup)
-    for tnind in range(numTN):
-        plt.plot(x, deltaArr[tnind], linewidth=2, color=colors[tnind],
-                 label=labels[tnind], alpha=0.6)
-    for tnind in range(numTN):
-        plt.text(testint * 1.1, deltaArr[tnind, 0], labels[tnind].ljust(15), fontsize=labelSz - 1)
-    plt.legend(fontsize=labelSz)
-    plt.ylim([0., yMax])
-    plt.xlim([0., xMax])
-    plt.xlabel('Number of Tests', fontsize=axSz)
-    plt.ylabel('Marginal Utility Gain', fontsize=axSz)
-    plt.title('Marginal Utility with Increasing Tests\nFamiliar Setting', fontsize=titleSz)
-    plt.show()
-    plt.close()
-    #######################
-    '''
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_alloc.npy'))
+    allocArr = np.load(os.path.join('utilitypaper', 'existing', 'exist_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorinds = [6, 1, 2, 3]
     colors = np.array([colorsset(i) for i in colorinds])
@@ -217,15 +187,20 @@ def casestudyplots_familiar():
         plt.plot(x, allocArr[tnind] * testint, linewidth=3, color=colors[tnind],
                  label=labels[tnind], alpha=0.6)
     # allocMax = allocArr.max() * testInt * 1.1
-    allocMax = 185
+    allocMax = 240
+    delt = 3
     for tnind in range(numTN):
-        plt.text(testmax * 1.01, allocArr[tnind, -1] * testint, labels[tnind].ljust(15), fontsize=labelSz - 1)
+        if tnind in [0, 1]:
+            plt.text(testmax * 0.995, allocArr[tnind, -1] * testint+delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
+        else:
+            plt.text(testmax * 0.97, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15),
+                     fontsize=labelSz - 1)
     plt.legend(fontsize=labelSz)
     plt.ylim([0., allocMax])
     plt.xlim([0., xMax])
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget\nExisting Setting', fontsize=titleSz)
+    plt.title('Sampling Plan vs. Budget: Existing Setting', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -431,36 +406,6 @@ def casestudyplots_exploratory():
     figtup = (7.5, 5)
     titleSz, axSz, labelSz = 15, 11, 11
     xMax = 450
-
-    '''
-    #######################
-    # Plot of marginal utilities
-    colors = cm.rainbow(np.linspace(0, 0.5, numTN))
-    labels = [TNnames[ind] for ind in range(numTN)]
-
-    x = range(testint, testmax + 1, testint)
-    deltaArr = np.zeros((heur_util.shape[0], heur_util.shape[1] - 1))
-    for rw in range(deltaArr.shape[0]):
-        for col in range(deltaArr.shape[1]):
-            deltaArr[rw, col] = heur_util[rw, col + 1] - heur_util[rw, col]
-    yMax = np.max(deltaArr) * 1.1
-
-    _ = plt.figure(figsize=figtup)
-    for tnind in range(numTN):
-        plt.plot(x, deltaArr[tnind], linewidth=2, color=colors[tnind],
-                 label=labels[tnind], alpha=0.6)
-    for tnind in range(numTN):
-        plt.text(testint * 1.1, deltaArr[tnind, 0], labels[tnind].ljust(15), fontsize=labelSz - 1)
-    plt.legend(fontsize=labelSz)
-    plt.ylim([0., yMax])
-    plt.xlim([0., xMax])
-    plt.xlabel('Number of Tests', fontsize=axSz)
-    plt.ylabel('Marginal Utility Gain', fontsize=axSz)
-    plt.title('Marginal Utility with Increasing Tests\nFamiliar Setting', fontsize=titleSz)
-    plt.show()
-    plt.close()
-    #######################
-    '''
 
     #######################
     # Allocation plot

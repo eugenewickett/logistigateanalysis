@@ -112,6 +112,8 @@ testaddseq = np.array([1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
 for tempind, temp in enumerate(testaddseq):
     alloc[temp,tempind+1:] += 1
 util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint)
+np.save(os.path.join('utilitypaper', 'existing', 'exist_alloc'), alloc)
+
 
 for reps in range(10): # Smooth out utilty estimates by averaging multiple replications
     pass
