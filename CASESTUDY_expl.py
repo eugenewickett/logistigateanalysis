@@ -54,7 +54,7 @@ csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorM
 # Set up MCMC
 csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
-numdraws = 75000
+numdraws = 75000 # 75000
 csdict_expl['numPostSamples'] = numdraws
 np.random.seed(1000) # To replicate draws later
 csdict_expl = methods.GeneratePostSamples(csdict_expl)
@@ -186,30 +186,68 @@ np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_lo'), util_lo
 Want an interruptible/restartable utility estimation loop here
 '''
 
+def unif_design_mat(numTN, testmax, testint=1):
+    """
+    Generates a design matrix that allocates tests uniformly across all test nodes, for a max number of tests (testmax),
+    a testing interval (testint), and a number of test nodes (numTN)
+    """
+    numcols = int(testmax/testint)
+    testarr = np.arange(testint, testmax + testint, testint)
+    des = np.zeros((numTN, int(testmax/testint)))
+    for j in range(numcols):
+        des[:, j] = np.ones(numTN) * np.floor(testarr[j]/numTN)
+        numtoadd = testarr[j] - np.sum(des[:, j])
+        if numtoadd > 0:
+            for k in range(int(numtoadd)):
+                des[k, j] += 1
+
+    return des / testarr
+
+def rudi_design_mat(numTN, testmax, testint=1):
+    """
+    Generates a design matrix that allocates tests uniformly across all test nodes, for a max number of tests (testmax),
+    a testing interval (testint), and a number of test nodes (numTN)
+    """
+    numcols = int(testmax/testint)
+    testarr = np.arange(testint, testmax + testint, testint)
+    des = np.zeros((numTN, int(testmax/testint)))
+    for j in range(numcols):
+        des[:, j] = np.floor(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl))*testarr[j])
+        numtoadd = testarr[j] - np.sum(des[:, j])
+        if numtoadd > 0:
+            for k in range(int(numtoadd)):
+                des[k, j] += 1
+
+    return des / testarr
+
+
+unif_mat = unif_design_mat(numTN, testmax, testint)
+rudi_mat = rudi_design_mat(numTN, testmax, testint)
+
 numreps = 10
 stop = False
 lastrep = 0
 while not stop:
     # We want 10 evaluations of utility for each plan and testnum
     alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
-    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_5k.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_5k.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_5k.npy'))
+    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_noout.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_noout.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_noout.npy'))
     util_avg_unif, util_hi_unif, util_lo_unif = np.load(
-        os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_5k.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_5k.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_5k.npy'))
+        os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_noout.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_noout.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_noout.npy'))
     util_avg_rudi, util_hi_rudi, util_lo_rudi = np.load(
-        os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_5k.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_5k.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_5k.npy'))
+        os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_noout.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_noout.npy')), \
+        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_noout.npy'))
 
     # Stop if the last utility column isn't zero
-    if util_avg_greedy[-1, -1] > 0:
+    if util_avg_unif[-1, -1] > 0:
         stop = True
     else: # Do a set of utility estimates at the next zero
         # Index skips first column, which should be zeros for all
-        currtup = (np.where(util_avg_greedy[:, 1:] == 0)[0][0], np.where(util_avg_greedy[:, 1:] == 0)[1][0])
+        currtup = (np.where(util_avg_unif[:, 1:] == 0)[0][0], np.where(util_avg_unif[:, 1:] == 0)[1][0])
         currrep = currtup[0]
         print("Current rep: "+str(currrep))
         currbudgetind = currtup[1]
@@ -217,23 +255,17 @@ while not stop:
         # Identify allocation to measure
         curralloc = alloc[:, currbudgetind + 1]
         des_greedy = curralloc / np.sum(curralloc)
-        des_unif = util.round_design_low(np.ones(numTN) / numTN, currbudget) / currbudget
-        des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), currbudget) / currbudget
+        des_unif = unif_mat[:, currbudgetind]
+        des_rudi = rudi_mat[:, currbudgetind]
 
         # Generate new base MCMC draws
         if lastrep != currrep: # Only generate again if we have moved to a new replication
             print("Generating base set of truth draws...")
             np.random.seed(1000+currrep)
             csdict_expl = methods.GeneratePostSamples(csdict_expl)
-            print(csdict_expl['postSamples'][0])
-            '''
-            [0.04400348 0.00581661 0.58085982 0.65628931 0.70193958 0.56146013
- 0.38171015 0.03063889 0.14011437 0.01322196 0.45054474 0.52205687
- 0.94530605 0.02341045 0.09903016 0.05267244 0.13616509 0.24904491
- 0.49491093 0.54153475 0.04993844]
-            '''
             lastrep = currrep
 
+        '''
         # Greedy
         currlosslist = sampf.sampling_plan_loss_list_importance(des_greedy, currbudget, csdict_expl, paramdict,
                                                                 numimportdraws=10000,
@@ -245,12 +277,13 @@ while not stop:
         util_hi_greedy[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
         print(des_greedy)
         print('Utility at ' + str(currbudget) + ' tests, Greedy: ' + str(util_avg_greedy[currrep, currbudgetind + 1]))
+        '''
 
         # Uniform
         currlosslist = sampf.sampling_plan_loss_list_importance(des_unif, currbudget, csdict_expl, paramdict,
                                                  numimportdraws=10000,
                                                  numdatadrawsforimportance=5000,
-                                                 impweightoutlierprop=0.005)
+                                                 impweightoutlierprop=0.000)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_unif[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
         util_lo_unif[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
@@ -262,7 +295,7 @@ while not stop:
         currlosslist = sampf.sampling_plan_loss_list_importance(des_rudi, currbudget, csdict_expl, paramdict,
                                                                 numimportdraws=10000,
                                                                 numdatadrawsforimportance=5000,
-                                                                impweightoutlierprop=0.005)
+                                                                impweightoutlierprop=0.000)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_rudi[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
         util_lo_rudi[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
@@ -271,15 +304,15 @@ while not stop:
         print('Utility at ' + str(currbudget) + ' tests, Rudimentary: ' + str(util_avg_rudi[currrep, currbudgetind + 1]))
 
         # Save updated objects
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_5k'), util_avg_greedy)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_5k'), util_hi_greedy)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_5k'), util_lo_greedy)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_5k'), util_avg_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_5k'), util_hi_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_5k'), util_lo_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_5k'), util_avg_rudi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_5k'), util_hi_rudi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_5k'), util_lo_rudi)
+        #np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_noout'), util_avg_greedy)
+        #np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_noout'), util_hi_greedy)
+        #np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_noout'), util_lo_greedy)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_noout'), util_avg_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_noout'), util_hi_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_noout'), util_lo_unif)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_noout'), util_avg_rudi)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_noout'), util_hi_rudi)
+        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_noout'), util_lo_rudi)
     # Plot utilities
 
     '''
@@ -314,7 +347,30 @@ while not stop:
         plt.plot(util_avg_rudi[i])
     plt.show()
 
+
+
+
 # PLot average
+util_avg_rudi[4][37] = np.nan
+plt.plot(np.average(util_avg_greedy, axis=0))
+plt.plot(np.average(util_avg_unif, axis=0))
+plt.plot(np.nanmean(util_avg_rudi, axis=0))
+plt.show()
+
+# Look at allocations at odd points
+b = 19
+np.average(util_avg_unif, axis=0)[b]
+np.average(util_avg_greedy, axis=0)[b]
+alloc[:, 19]
+# unif
+util.round_design_low(np.ones(numTN) / numTN, b*testint) / b*testint
+# rudi
+util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), b*testint) / b*testint
+
+
+
+
+
 '''
 END RESTARTABLE UTILITY ESTIMATION
 '''
