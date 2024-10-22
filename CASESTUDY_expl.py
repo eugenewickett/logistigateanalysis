@@ -188,6 +188,7 @@ Want an interruptible/restartable utility estimation loop here
 
 numreps = 10
 stop = False
+lastrep = 0
 while not stop:
     # We want 10 evaluations of utility for each plan and testnum
     alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
@@ -220,12 +221,22 @@ while not stop:
         des_rudi = util.round_design_low(np.divide(np.sum(Nexpl, axis=1), np.sum(Nexpl)), currbudget) / currbudget
 
         # Generate new base MCMC draws
-        np.random.seed(1000+currrep)
-        csdict_expl = methods.GeneratePostSamples(csdict_expl)
+        if lastrep != currrep: # Only generate again if we have moved to a new replication
+            print("Generating base set of truth draws...")
+            np.random.seed(1000+currrep)
+            csdict_expl = methods.GeneratePostSamples(csdict_expl)
+            print(csdict_expl['postSamples'][0])
+            '''
+            [0.04400348 0.00581661 0.58085982 0.65628931 0.70193958 0.56146013
+ 0.38171015 0.03063889 0.14011437 0.01322196 0.45054474 0.52205687
+ 0.94530605 0.02341045 0.09903016 0.05267244 0.13616509 0.24904491
+ 0.49491093 0.54153475 0.04993844]
+            '''
+            lastrep = currrep
 
         # Greedy
         currlosslist = sampf.sampling_plan_loss_list_importance(des_greedy, currbudget, csdict_expl, paramdict,
-                                                                numimportdraws=60000,
+                                                                numimportdraws=10000,
                                                                 numdatadrawsforimportance=5000,
                                                                 impweightoutlierprop=0.005)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
@@ -237,7 +248,7 @@ while not stop:
 
         # Uniform
         currlosslist = sampf.sampling_plan_loss_list_importance(des_unif, currbudget, csdict_expl, paramdict,
-                                                 numimportdraws=60000,
+                                                 numimportdraws=10000,
                                                  numdatadrawsforimportance=5000,
                                                  impweightoutlierprop=0.005)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
@@ -249,7 +260,7 @@ while not stop:
 
         # Rudimentary
         currlosslist = sampf.sampling_plan_loss_list_importance(des_rudi, currbudget, csdict_expl, paramdict,
-                                                                numimportdraws=60000,
+                                                                numimportdraws=10000,
                                                                 numdatadrawsforimportance=5000,
                                                                 impweightoutlierprop=0.005)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
@@ -270,6 +281,7 @@ while not stop:
         np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_5k'), util_hi_rudi)
         np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_5k'), util_lo_rudi)
     # Plot utilities
+
     '''
     util_avg_arr = np.vstack(
         (np.concatenate((np.array([0]), np.true_divide(util_avg_greedy[:, 1:].sum(0), (util_avg_greedy[:, 1:]!=0).sum(0)))), 
@@ -283,18 +295,26 @@ while not stop:
         (np.concatenate((np.array([0]), np.true_divide(util_lo_greedy[:, 1:].sum(0), (util_lo_greedy[:, 1:]!=0).sum(0)))), 
          np.concatenate((np.array([0]), np.true_divide(util_lo_unif[:, 1:].sum(0), (util_lo_unif[:, 1:]!=0).sum(0)))), 
          np.concatenate((np.array([0]), np.true_divide(util_lo_rudi[:, 1:].sum(0), (util_lo_rudi[:, 1:]!=0).sum(0))))))
+    '''
 
     '''
     util_avg_arr = np.vstack((np.average(util_avg_greedy, axis=0), np.average(util_avg_unif, axis=0), np.average(util_avg_rudi, axis=0)))
     util_hi_arr = np.vstack((np.average(util_hi_greedy, axis=0), np.average(util_hi_unif, axis=0), np.average(util_hi_rudi, axis=0)))
     util_lo_arr = np.vstack((np.average(util_lo_greedy, axis=0), np.average(util_lo_unif, axis=0), np.average(util_lo_rudi, axis=0)))
-
+    
 
     # Plot
     util.plot_marg_util_CI(util_avg_arr, util_hi_arr, util_lo_arr, testmax=testmax, testint=testint,
                            titlestr='All-provinces setting, comparison with other approaches')
+    '''
 
+    for i in range(numreps):
+        plt.plot(util_avg_greedy[i])
+        plt.plot(util_avg_unif[i])
+        plt.plot(util_avg_rudi[i])
+    plt.show()
 
+# PLot average
 '''
 END RESTARTABLE UTILITY ESTIMATION
 '''
