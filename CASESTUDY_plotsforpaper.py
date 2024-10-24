@@ -30,14 +30,14 @@ def showriskvalues():
     import matplotlib.ticker as mtick
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     ax.tick_params(axis='both',labelsize=12)
-    plt.title('Values for selected weight terms\n$l=30\%$', fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
+    plt.title('Values for selected weight terms, for $t=30\%$', fontdict={'fontsize': 18, 'fontname': 'Trebuchet MS'})
     plt.ylabel('Weight value', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
     plt.xlabel('SFP rate', fontdict={'fontsize': 16, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.97, '$m=0.05$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.84, '$m=0.2$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.675, '$m=0.4$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.50, '$m=0.6$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
-    plt.text(0.84, 0.21, '$m=0.95$', fontdict={'fontsize': 14, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.97, '$m=0.05$', fontdict={'fontsize': 15, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.84, '$m=0.2$', fontdict={'fontsize': 15, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.675, '$m=0.4$', fontdict={'fontsize': 15, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.50, '$m=0.6$', fontdict={'fontsize': 15, 'fontname': 'Trebuchet MS'})
+    plt.text(0.84, 0.21, '$m=0.95$', fontdict={'fontsize': 15, 'fontname': 'Trebuchet MS'})
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -198,9 +198,9 @@ def casestudyplots_familiar():
     plt.legend(fontsize=labelSz)
     plt.ylim([0., allocMax])
     plt.xlim([0., xMax])
-    plt.xlabel('Sampling Budget', fontsize=axSz)
-    plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget: Existing Setting', fontsize=titleSz)
+    plt.xlabel('Sampling budget', fontsize=axSz)
+    plt.ylabel('Test node allocation', fontsize=axSz)
+    plt.title('Sampling plan vs. budget: Existing setting', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -242,11 +242,11 @@ def casestudyplots_familiar():
     # plt.xlim(0,x[-1]*1.12)
     plt.xlim([0., xMax])
     leg = plt.legend(loc='upper left', fontsize=labelSz)
-    for legobj in leg.legendHandles:
+    for legobj in leg.legend_handles:
         legobj.set_linewidth(1.0)
-    plt.xlabel('Sampling Budget', fontsize=axSz)
-    plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Utility-Informed, Uniform and Fixed Allocations\nExisting Setting', fontsize=titleSz)
+    plt.xlabel('Sampling budget', fontsize=axSz)
+    plt.ylabel('Plan utility', fontsize=axSz)
+    plt.title('Utility comparison: Existing setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 132, 156
     iv = 0.015
@@ -371,7 +371,7 @@ def casestudyplots_familiar_market():
     # plt.xlim(0,x[-1]*1.12)
     plt.xlim([0., xMax])
     leg = plt.legend(loc='upper left', fontsize=labelSz)
-    for legobj in leg.legendHandles:
+    for legobj in leg.legend_handles:
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
@@ -445,9 +445,9 @@ def casestudyplots_exploratory():
     plt.legend(fontsize=labelSz, loc='upper left')
     plt.ylim([0., allocMax])
     plt.xlim([0., xMax])
-    plt.xlabel('Sampling Budget', fontsize=axSz)
-    plt.ylabel('Test Node Allocation', fontsize=axSz)
-    plt.title('Sampling Plan vs. Budget: All-Provinces Setting', fontsize=titleSz)
+    plt.xlabel('Sampling budget', fontsize=axSz)
+    plt.ylabel('Test node allocation', fontsize=axSz)
+    plt.title('Sampling plan vs. budget: All-provinces setting', fontsize=titleSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
@@ -455,6 +455,7 @@ def casestudyplots_exploratory():
 
     #######################
     # Policy utility comparison
+    '''
     util_avg_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy.npy'))[0]
     util_hi_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy.npy'))[0]
     util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy.npy'))[0]
@@ -471,9 +472,21 @@ def casestudyplots_exploratory():
     heur_util = np.load(os.path.join('utilitypaper', 'exploratory', 'expl_util_avg.npy'))
     heur_util_hi = np.load(os.path.join('utilitypaper', 'exploratory', 'expl_util_hi.npy'))
     heur_util_lo = np.load(os.path.join('utilitypaper', 'exploratory', 'expl_util_lo.npy'))
+    '''
+    util_arr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl.npy'))
+    util_arr_hi = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl.npy'))
+    util_arr_lo = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl.npy'))
+    heur_util = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_avg.npy'))
+    heur_util_hi = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_hi.npy'))
+    heur_util_lo = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_lo.npy'))
+    util_arr = np.vstack((heur_util, util_arr))
+    util_arr_hi = np.vstack((heur_util_hi, util_arr_hi))
+    util_arr_lo = np.vstack((heur_util_lo, util_arr_lo))
+    '''
     util_arr = np.vstack((util_avg_greedy, util_avg_unif, util_avg_rudi))
     util_arr_hi = np.vstack((util_hi_greedy, util_hi_unif, util_hi_rudi))
     util_arr_lo = np.vstack((util_lo_greedy, util_lo_unif, util_lo_rudi))
+    '''
     # Utility comparison plot
     colorsset = plt.get_cmap('Accent')
     colorinds = [0, 1, 2]
@@ -499,11 +512,11 @@ def casestudyplots_exploratory():
     # plt.xlim(0,x[-1]*1.12)
     plt.xlim([0., xMax])
     leg = plt.legend(loc='upper left', fontsize=labelSz)
-    for legobj in leg.legendHandles:
+    for legobj in leg.legend_handles:
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
-    plt.title('Utility from Utility-Informed, Uniform and Fixed Allocations\nAll-Provinces Setting', fontsize=titleSz)
+    plt.title('Utility comparison: All-provinces setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 120, 331
     iv = 0.03
@@ -657,7 +670,7 @@ def casestudyplots_exploratory_market():
     # plt.xlim(0,x[-1]*1.12)
     plt.xlim([0., xMax])
     leg = plt.legend(loc='upper left', fontsize=labelSz)
-    for legobj in leg.legendHandles:
+    for legobj in leg.legend_handles:
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
@@ -1271,7 +1284,7 @@ def casestudyplots_exploratory_OLD():
     # plt.xlim(0,x[-1]*1.12)
     plt.xlim([0., xMax])
     leg = plt.legend(loc='upper left', fontsize=labelSz)
-    for legobj in leg.legendHandles:
+    for legobj in leg.legend_handles:
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
@@ -1953,7 +1966,7 @@ def casestudyplots_exploratory_market_OLD():
     # plt.xlim(0,x[-1]*1.12)
     plt.xlim([0., xMax])
     leg = plt.legend(loc='upper left', fontsize=labelSz)
-    for legobj in leg.legendHandles:
+    for legobj in leg.legend_handles:
         legobj.set_linewidth(1.0)
     plt.xlabel('Sampling Budget', fontsize=axSz)
     plt.ylabel('Plan Utility', fontsize=axSz)
