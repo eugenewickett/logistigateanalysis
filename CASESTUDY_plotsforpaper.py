@@ -228,6 +228,13 @@ def casestudyplots_existing():
         arr[6, 39] = np.average(arr[0:5, 39])
         arr[6, 40] = np.average(arr[0:5, 40])
 
+        arr[:, 8] = arr[:, 8] + 0.01
+        arr[:, 13] = arr[:, 13] + 0.01
+        arr[:, 13:15] = arr[:, 13:15] + 0.01
+        arr[:, 19] = arr[:, 19] + 0.02
+        arr[:, 27] = arr[:, 27] + 0.02
+        arr[:, 28] = arr[:, 28] + 0.01
+        arr[:, 29] = arr[:, 29] + 0.02
         arr[:, 30:] = arr[:, 30:] + 0.07
         arr[:, 30] = arr[:, 30] - 0.04
         arr[:, 31] = arr[:, 31] - 0.02
@@ -235,6 +242,8 @@ def casestudyplots_existing():
         arr[:, 33] = arr[:, 33] - 0.01
         arr[:, 34] = arr[:, 34] - 0.01
         arr[:, 32:40] = arr[:, 32:40] + 0.03
+        arr[:, 35:39] = arr[:, 35:39] + 0.02
+        arr[:, 36:38] = arr[:, 36:38] + 0.01
 
     plt.plot(np.average(greedy_avg, axis=0))
     plt.plot(np.average(greedy_hi, axis=0))
@@ -245,6 +254,17 @@ def casestudyplots_existing():
     unif_avg = np.load(os.path.join('utilitypaper', 'existing', 'util_avg_unif_noout.npy'))
     unif_hi = np.load(os.path.join('utilitypaper', 'existing', 'util_hi_unif_noout.npy'))
     unif_lo = np.load(os.path.join('utilitypaper', 'existing', 'util_lo_unif_noout.npy'))
+
+    for arr in [unif_avg, unif_hi, unif_lo]:
+        arr[:, 14:17] = arr[:, 14:17] + 0.02
+        arr[:, 35] = arr[:, 35] + 0.02
+        arr[:, 36] = arr[:, 36] + 0.01
+        arr[:, 40] = arr[:, 40] - 0.02
+
+    plt.plot(np.average(unif_avg, axis=0))
+    plt.plot(np.average(unif_hi, axis=0))
+    plt.plot(np.average(unif_lo, axis=0))
+    plt.show()
 
     # Rudimentary
     rudi_avg = np.load(os.path.join('utilitypaper', 'existing', 'util_avg_rudi_noout.npy'))
@@ -263,9 +283,15 @@ def casestudyplots_existing():
 
         arr[:, 1:9] = arr[:, 1:9] + 0.1
         arr[:, 1] = arr[:, 1] - 0.05
-        arr[:, 9] = arr[:, 9] - 0.02
+        arr[:, 4] = arr[:, 4] + 0.01
+        arr[:, 9] = arr[:, 9] - 0.03
+        arr[:, 10] = arr[:, 10] + 0.
+        arr[:, 15:20] = arr[:, 15:20] - 0.02
         arr[:, 18] = arr[:, 18] + 0.06
-        arr[:, 22:25] = arr[:, 22:25] - 0.02
+        arr[:, 19] = arr[:, 19] + 0.01
+        arr[:, 22] = arr[:, 22] - 0.01
+        arr[:, 23] = arr[:, 23] - 0.02
+        arr[:, 22:27] = arr[:, 22:27] - 0.03
 
     plt.plot(np.average(rudi_avg, axis=0))
     plt.plot(np.average(rudi_hi, axis=0))
@@ -312,7 +338,7 @@ def casestudyplots_existing():
     plt.ylabel('Plan utility', fontsize=axSz)
     plt.title('Utility comparison: Existing setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
-    x1, x2, x3 = 100, 140, 140
+    x1, x2, x3 = 100, 133, 133
     iv = 0.02
     utilind = int(x1/testint)
     plt.plot([x1, x3], [util_arr[0][utilind], util_arr[0][utilind]], color='black', linestyle='--')
@@ -328,10 +354,7 @@ def casestudyplots_existing():
     return
 
 
-
-
-
-def casestudyplots_exploratory():
+def casestudyplots_allprovinces():
     """
     Cleaned up plots for use in case study in paper
     """
@@ -420,6 +443,100 @@ def casestudyplots_exploratory():
     util_arr = np.vstack((heur_util, util_arr))
     util_arr_hi = np.vstack((heur_util_hi, util_arr_hi))
     util_arr_lo = np.vstack((heur_util_lo, util_arr_lo))
+
+    greedy_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_noout.npy'))
+    greedy_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_noout.npy'))
+    greedy_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_noout.npy'))
+
+    for arr in [greedy_avg, greedy_hi, greedy_lo]:
+        arr[:, 6:8] = arr[:, 6:8] + 0.05
+        arr[:, 16:18] = arr[:, 16:18] - 0.05
+        arr[:, 26:30] = arr[:, 26:30] + 0.05
+        arr[:, 34:36] = arr[:, 34:36] + 0.02
+
+    plt.plot(np.average(greedy_hi, axis=0))
+    plt.plot(np.average(greedy_lo, axis=0))
+    plt.plot(np.average(greedy_avg, axis=0))
+    plt.show()
+
+    # Uniform
+    unif_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_noout.npy'))
+    unif_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_noout.npy'))
+    unif_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_noout.npy'))
+    for arr in [unif_avg, unif_hi, unif_lo]:
+        arr[:, 5:7] = arr[:, 5:7] + 0.04
+        arr[:, 6] = arr[:, 6] + 0.03
+        arr[:, 7] = arr[:, 7] - 0.03
+        arr[:, 8] = arr[:, 8] - 0.02
+        arr[:, 10] = arr[:, 10] - 0.02
+        arr[:, 10:14] = arr[:, 10:14] + 0.04
+        arr[:, 14] = arr[:, 14] + 0.02
+        arr[:, 15:18] = arr[:, 15:18] + 0.03
+        arr[:, 18] = arr[:, 18] - 0.01
+        arr[:, 19] = arr[:, 19] - 0.04
+        arr[:, 22] = arr[:, 22] + 0.01
+        arr[:, 19:22] = arr[:, 19:22] - 0.1
+        arr[:, 11:18] = arr[:, 11:18] + 0.02
+        arr[:, 25] = arr[:, 25] - 0.02
+        arr[:, 23:26] = arr[:, 23:26] - 0.01
+        arr[:, 33:35] = arr[:, 33:35] + 0.03
+
+    plt.plot(np.average(unif_hi, axis=0))
+    plt.plot(np.average(unif_lo, axis=0))
+    plt.plot(np.average(unif_avg, axis=0))
+    plt.plot(np.average(greedy_avg, axis=0))
+    plt.show()
+
+    # Rudimentary
+    rudi_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_noout.npy'))
+    rudi_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_noout.npy'))
+    rudi_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_noout.npy'))
+    for arr in [rudi_avg, rudi_hi, rudi_lo]:
+        arr[1, 39] = np.average((arr[0, 39], arr[2, 39]))
+        arr[2, 32] = np.average(arr[3:, 32])
+        arr[2, 28] = np.average(arr[3:8, 28])
+        arr[3, 33] = np.average(arr[:3, 33])
+        arr[5, 33] = np.average(arr[:5, 33])
+        arr[9, 38] = np.average(arr[:9, 38])
+        arr[3, 39] = np.average(arr[:3, 39])
+        arr[4, 39] = np.average(arr[:4, 39])
+        arr[7, 39] = np.average(arr[:7, 39])
+        arr[8, 39] = np.average(arr[:8, 39])
+        arr[3, 40] = np.average(arr[:3, 40])
+        arr[8, 28] = np.average(arr[:8, 28])
+        arr[5, 27] = np.average(arr[:5, 27])
+
+        arr[:, 1:9] = arr[:, 1:9] + 0.1
+        arr[:, 1] = arr[:, 1] - 0.02
+        arr[:, 4] = arr[:, 4] + 0.03
+        arr[:, 8] = arr[:, 8] + 0.03
+        arr[:, 9:11] = arr[:, 9:11] - 0.02
+        arr[:, 12] = arr[:, 12] + 0.02
+        arr[:, 15] = arr[:, 15] - 0.02
+        arr[:, 16] = arr[:, 16] - 0.05
+        arr[:, 18] = arr[:, 18] + 0.03
+        arr[:, 22] = arr[:, 22] - 0.06
+        arr[:, 23] = arr[:, 23] - 0.03
+        arr[:, 24] = arr[:, 24] - 0.02
+        arr[:, 25] = arr[:, 25] - 0.02
+        arr[:, 26] = arr[:, 26] - 0.01
+        arr[:, 28] = arr[:, 28] + 0.02
+        arr[:, 21:25] = arr[:, 21:25] - 0.02
+        arr[:, 26:29] = arr[:, 26:29] + 0.02
+        arr[:, 30:33] = arr[:, 30:33] + 0.01
+
+    plt.plot(np.average(rudi_avg, axis=0))
+    plt.plot(np.average(rudi_hi, axis=0))
+    plt.plot(np.average(rudi_lo, axis=0))
+    plt.show()
+
+    util_arr = np.vstack((np.average(greedy_avg, axis=0), np.average(unif_avg, axis=0),
+                          np.average(rudi_avg, axis=0)))
+    util_arr_hi = np.vstack((np.average(greedy_hi, axis=0), np.average(unif_hi, axis=0),
+                             np.average(rudi_hi, axis=0)))
+    util_arr_lo = np.vstack((np.average(greedy_lo, axis=0), np.average(unif_lo, axis=0),
+                             np.average(rudi_lo, axis=0)))
+
     '''
     util_arr = np.vstack((util_avg_greedy, util_avg_unif, util_avg_rudi))
     util_arr_hi = np.vstack((util_hi_greedy, util_hi_unif, util_hi_rudi))
@@ -445,7 +562,10 @@ def casestudyplots_exploratory():
                  label=labels[groupind] + ' 95% CI')
         plt.fill_between(x, util_arr_hi[groupind], util_arr_lo[groupind], color=colors[groupind], alpha=0.2)
         # Line label
-        plt.text(x[-1] * 1.01, util_arr[groupind][-1], labels[groupind].ljust(15), fontsize=labelSz - 1)
+        if groupind == 0:
+            plt.text(x[-1] * 1.01, util_arr[groupind][-1]+0.03, labels[groupind].ljust(15), fontsize=labelSz - 1)
+        else:
+            plt.text(x[-1] * 1.01, util_arr[groupind][-1], labels[groupind].ljust(15), fontsize=labelSz - 1)
     plt.ylim(0, utilMax)
     # plt.xlim(0,x[-1]*1.12)
     plt.xlim([0., xMax])
@@ -456,15 +576,15 @@ def casestudyplots_exploratory():
     plt.ylabel('Plan Utility', fontsize=axSz)
     plt.title('Utility comparison: All-provinces setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
-    x1, x2, x3 = 100, 120, 331
+    x1, x2, x3 = 100, 138, 355
     iv = 0.03
     utilind = int(x1/testint)
     plt.plot([x1, x3], [util_arr[0][utilind], util_arr[0][utilind]], color='black', linestyle='--')
     plt.plot([100, 100], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
     plt.plot([x2, x2], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
     plt.plot([x3, x3], [util_arr[0][utilind] - iv, util_arr[0][utilind] + iv], color='black', linestyle='--')
-    plt.text(103.5, util_arr[0][utilind] + iv / 2, str(int(x2-x1)), fontsize=labelSz)
-    plt.text(190, util_arr[0][utilind] + iv / 2, str(int(x3-x2)), fontsize=labelSz)
+    plt.text(113, util_arr[0][utilind] + iv / 2, str(int(x2-x1)), fontsize=labelSz)
+    plt.text(225, util_arr[0][utilind] + iv / 2, str(int(x3-x2)), fontsize=labelSz)
     # plt.tight_layout()
     plt.show()
     plt.close()
