@@ -166,13 +166,13 @@ def casestudyplots_existing():
     Cleaned up plots for use in case study in paper
     """
     testmax, testint = 400, 10
-    TNnames = ['Moderate (39)', 'Moderate (17)', 'Moderately High (95)', 'Moderately High (26)']
+    TNnames = ['Mod (39)', 'Mod (17)', 'Mod High (95)', 'Mod High (26)']
     numTN = len(TNnames)
 
     # Size of figure layout for all figures
     figtup = (7.5, 5)
-    titleSz, axSz, labelSz = 15, 11, 11
-    xMax = 450
+    titleSz, axSz, tickSz, labelSz = 20, 16, 12, 16
+    xMax = 430
 
     #######################
     # Allocation plot
@@ -192,12 +192,16 @@ def casestudyplots_existing():
     for tnind in range(numTN):
         if tnind in [0, 1]:
             plt.text(testmax * 0.995, allocArr[tnind, -1] * testint+delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
+        elif tnind in [2]:
+            plt.text(testmax * 0.92, allocArr[tnind, -1] * testint+3*delt, labels[tnind].ljust(15), fontsize=labelSz - 1)
         else:
-            plt.text(testmax * 0.97, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15),
+            plt.text(testmax * 0.92, allocArr[tnind, -1] * testint + delt, labels[tnind].ljust(15),
                      fontsize=labelSz - 1)
-    plt.legend(fontsize=labelSz)
+    #plt.legend(fontsize=labelSz)
     plt.ylim([0., allocMax])
     plt.xlim([0., xMax])
+    plt.xticks(fontsize=tickSz)
+    plt.yticks(fontsize=tickSz)
     plt.xlabel('Sampling budget', fontsize=axSz)
     plt.ylabel('Test node allocation', fontsize=axSz)
     plt.title('Sampling plan vs. budget: Existing setting', fontsize=titleSz)
@@ -310,7 +314,8 @@ def casestudyplots_existing():
     colorinds = [0, 1, 2]
     colors = np.array([colorsset(i) for i in colorinds])
     #colors = cm.rainbow(np.linspace(0, 0.8, 3))
-    labels = ['Utility-Informed', 'Uniform', 'Fixed']
+    labels = ['Util-Inf', 'Uniform', 'Fixed']
+    labelSz = 16
     x = range(0, testmax + 1, testint)
     utilMax = -1
     for lst in util_arr:
@@ -327,15 +332,19 @@ def casestudyplots_existing():
         # Line label
         if groupind == 0:
             plt.text(x[-1] * 1.01, util_arr[groupind][-1]+0.02, labels[groupind].ljust(15), fontsize=labelSz - 1)
+        elif groupind == 2:
+            plt.text(x[-1] * 1.01, util_arr[groupind][-1]-0.02, labels[groupind].ljust(15), fontsize=labelSz - 1)
         else:
             plt.text(x[-1] * 1.01, util_arr[groupind][-1], labels[groupind].ljust(15), fontsize=labelSz - 1)
     plt.ylim(0, utilMax)
     plt.xlim([0., xMax])
-    leg = plt.legend(loc='upper left', fontsize=labelSz)
-    for legobj in leg.legend_handles:
-        legobj.set_linewidth(1.0)
+    #leg = plt.legend(loc='upper left', fontsize=labelSz)
+    #for legobj in leg.legend_handles:
+    #    legobj.set_linewidth(1.0)
     plt.xlabel('Sampling budget', fontsize=axSz)
     plt.ylabel('Plan utility', fontsize=axSz)
+    plt.xticks(fontsize=tickSz)
+    plt.yticks(fontsize=tickSz)
     plt.title('Utility comparison: Existing setting', fontsize=titleSz)
     # Add text for budgetary savings vs other policies at 100 tests
     x1, x2, x3 = 100, 133, 133
