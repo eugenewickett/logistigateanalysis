@@ -172,7 +172,7 @@ def casestudyplots_existing():
     # Size of figure layout for all figures
     figtup = (7.5, 5)
     titleSz, axSz, tickSz, labelSz = 20, 16, 12, 16
-    xMax = 430
+    xMax = 500
 
     #######################
     # Allocation plot
@@ -311,7 +311,7 @@ def casestudyplots_allprovinces():
     # Size of figure layout for all figures
     figtup = (7.5, 5)
     titleSz, axSz, tickSz, labelSz = 20, 16, 12, 16
-    xMax = 430
+    xMax = 500
 
     #######################
     # Allocation plot
