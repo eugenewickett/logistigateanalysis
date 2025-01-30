@@ -69,9 +69,9 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 util.print_param_checks(paramdict) # Check of used parameters
 
 # Load matrices for KS heuristic
-util_avg = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_fam.npy'))
-util_hi = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_hi_fam.npy'))
-util_lo = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_lo_fam.npy'))
+util_avg = np.load(os.path.join('../casestudyoutputs', '31MAY', 'util_avg_fam.npy'))
+util_hi = np.load(os.path.join('../casestudyoutputs', '31MAY', 'util_hi_fam.npy'))
+util_lo = np.load(os.path.join('../casestudyoutputs', '31MAY', 'util_lo_fam.npy'))
 
 # Plot
 util.plot_marg_util_CI(util_avg, margutilarr_hi=util_hi, margutilarr_lo=util_lo, testmax=testmax, testint=testint,
@@ -257,7 +257,7 @@ for testind in range(testarr.shape[0]):
                                titlestr='Familiar Setting, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_fam'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_fam'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_fam'), util_lo_arr)
+np.save(os.path.join('../casestudyoutputs', '31MAY', 'util_avg_arr_fam'), util_avg_arr)
+np.save(os.path.join('../casestudyoutputs', '31MAY', 'util_hi_arr_fam'), util_hi_arr)
+np.save(os.path.join('../casestudyoutputs', '31MAY', 'util_lo_arr_fam'), util_lo_arr)
 
