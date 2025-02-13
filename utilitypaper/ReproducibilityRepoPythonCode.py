@@ -117,9 +117,9 @@ util.plot_marg_util(util_avg_arr, testmax=testmax, testint=testint,
                            labels=['Focused', 'Uniform', 'Adapted'])
 
 # If needed, store utility estimates
-np.save(os.path.join('casestudyoutputs', 'util_avg_arr_example_base'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', 'util_hi_arr_example_base'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', 'util_lo_arr_example_base'), util_lo_arr)
+np.save(os.path.join('../casestudyoutputs', 'util_avg_arr_example_base'), util_avg_arr)
+np.save(os.path.join('../casestudyoutputs', 'util_hi_arr_example_base'), util_hi_arr)
+np.save(os.path.join('../casestudyoutputs', 'util_lo_arr_example_base'), util_lo_arr)
 
 ######################
 # CHANGE THE LOSS SPECIFICATION AND REDO
@@ -181,6 +181,6 @@ util.plot_marg_util(util_avg_arr, testmax=testmax, testint=testint,
                            colors=['blue', 'red', 'green'], titlestr='Example supply chain, loss change',
                            labels=['Focused', 'Uniform', 'Adapted'])
 
-np.save(os.path.join('casestudyoutputs', 'util_avg_arr_example_adj'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', 'util_hi_arr_example_adj'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', 'util_lo_arr_example_adj'), util_lo_arr)
+np.save(os.path.join('../casestudyoutputs', 'util_avg_arr_example_adj'), util_avg_arr)
+np.save(os.path.join('../casestudyoutputs', 'util_hi_arr_example_adj'), util_hi_arr)
+np.save(os.path.join('../casestudyoutputs', 'util_lo_arr_example_adj'), util_lo_arr)

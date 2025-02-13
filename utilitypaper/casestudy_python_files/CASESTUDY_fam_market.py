@@ -88,10 +88,10 @@ alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, test
 (0.07780930388860322, 0.07942828192463991), (0.07875109354011652, 0.08040265401131814), (0.07978567868256958, 0.08149820765597462),
 (0.08144101149483135, 0.0832346775162082)]
 '''
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_market_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_market_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_market_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_market_util_lo'), util_lo)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_util_lo'), util_lo)
 
 # Evaluate utility for uniform and rudimentary
 util_avg_unif, util_hi_unif, util_lo_unif = np.zeros((int(testmax / testint) + 1)), \
@@ -129,9 +129,9 @@ for testind in range(testarr.shape[0]):
                                titlestr='Familiar Setting with Market Term, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_fam_market'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_fam_market'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_fam_market'), util_lo_arr)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'util_avg_arr_fam_market'), util_avg_arr)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'util_hi_arr_fam_market'), util_hi_arr)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'util_lo_arr_fam_market'), util_lo_arr)
 
 targind = 5 # where do we want to gauge budget savings?
 targval = util_avg_arr[0][targind]

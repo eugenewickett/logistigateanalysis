@@ -101,10 +101,10 @@ alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, tes
 ]
 '''
 
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_lo'), util_lo)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_util_lo'), util_lo)
 
 # Evaluate utility for uniform and rudimentary
 util_avg_unif, util_hi_unif, util_lo_unif = np.zeros((int(testmax / testint) + 1)), \
@@ -142,9 +142,9 @@ for testind in range(testarr.shape[0]):
                                titlestr='Exploratory Setting with Market Term, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl_market'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl_market'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl_market'), util_lo_arr)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'util_avg_arr_expl_market'), util_avg_arr)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'util_hi_arr_expl_market'), util_hi_arr)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'util_lo_arr_expl_market'), util_lo_arr)
 
 targind = 5 # where do we want to gauge budget savings?
 targval = util_avg_arr[0][targind]

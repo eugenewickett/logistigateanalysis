@@ -124,7 +124,7 @@ def cleanMQD():
     import os
     import pandas as pd
     SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
-    filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
+    filesPath = os.path.join(SCRIPT_DIR, '..')
     MQD_df = pd.read_csv(os.path.join(filesPath,'MQDB_Master_Expanded2.csv'),low_memory=False) # Main raw database file
 
     #Change 'pass' to 'Pass'
@@ -3562,7 +3562,7 @@ def SenegalDataScript():
 
     #SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
     SCRIPT_DIR = os.getcwd()
-    filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
+    filesPath = os.path.join(SCRIPT_DIR, '..')
     outputFileName = os.path.join(filesPath, 'pickleOutput')
 
     openFile = open(outputFileName, 'rb')  # Read the file
@@ -6489,7 +6489,7 @@ def MQDdataScript():
     import os
     #SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
     SCRIPT_DIR = os.getcwd()
-    filesPath = os.path.join(SCRIPT_DIR, 'MQDfiles')
+    filesPath = os.path.join(SCRIPT_DIR, '..')
     outputFileName = os.path.join(filesPath, 'pickleOutput')
     #sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, 'logistigate', 'exmples','data')))
 

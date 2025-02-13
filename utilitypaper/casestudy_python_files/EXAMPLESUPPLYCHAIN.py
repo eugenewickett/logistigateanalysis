@@ -1,5 +1,6 @@
 """
-Code for the example supply chain of the introduction/Section 3.2 of the paper.
+Code for the example supply chain of the introduction/Section 3.2 of the paper 'Measuring sampling plan utility
+in post-marketing surveillance of medical products'.
 """
 
 from logistigate.logistigate import utilities as util  # Pull from the submodule "develop" branch
@@ -101,9 +102,9 @@ util.plot_marg_util(util_avg_arr, testmax=testmax, testint=testint,
                            colors=['blue','red','green'], titlestr='Example supply chain',
                            labels=['Focused', 'Uniform', 'Adapted'])
 
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_base'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_example_base'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_example_base'), util_lo_arr)
+np.save(os.path.join('../../casestudyoutputs', '31MAY', 'util_avg_arr_example_base'), util_avg_arr)
+np.save(os.path.join('../../casestudyoutputs', '31MAY', 'util_hi_arr_example_base'), util_hi_arr)
+np.save(os.path.join('../../casestudyoutputs', '31MAY', 'util_lo_arr_example_base'), util_lo_arr)
 
 ######################
 # CHANGE THE LOSS SPECIFICATION
@@ -165,6 +166,6 @@ util.plot_marg_util(util_avg_arr, testmax=testmax, testint=testint,
                            colors=['blue','red','green'], titlestr='Example supply chain, loss change',
                            labels=['Focused', 'Uniform', 'Adapted'])
 
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_adj'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_hi_arr_example_adj'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', '31MAY', 'util_lo_arr_example_adj'), util_lo_arr)
+np.save(os.path.join('../../casestudyoutputs', '31MAY', 'util_avg_arr_example_adj'), util_avg_arr)
+np.save(os.path.join('../../casestudyoutputs', '31MAY', 'util_hi_arr_example_adj'), util_hi_arr)
+np.save(os.path.join('../../casestudyoutputs', '31MAY', 'util_lo_arr_example_adj'), util_lo_arr)

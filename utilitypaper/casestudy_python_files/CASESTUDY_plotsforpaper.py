@@ -88,8 +88,8 @@ def nVecs(length, target):
 
 def example_planutility():
     """Produce two plots of the example of plan utility"""
-    baseutil_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_base.npy'))
-    adjutil_arr = np.load(os.path.join('casestudyoutputs', '31MAY', 'util_avg_arr_example_adj.npy'))
+    baseutil_arr = np.load(os.path.join('../../casestudyoutputs', '31MAY', 'util_avg_arr_example_base.npy'))
+    adjutil_arr = np.load(os.path.join('../../casestudyoutputs', '31MAY', 'util_avg_arr_example_adj.npy'))
     testmax, testint = 60, 4
 
     def plot_marg_util(margutilarr, testmax, testint, al=0.6, titlestr='', type='cumulative', colors=[], dashes=[],
@@ -176,7 +176,7 @@ def casestudyplots_existing():
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('utilitypaper', 'existing', 'exist_alloc.npy'))
+    allocArr = np.load(os.path.join('..', 'existing', 'exist_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorinds = [6, 1, 2, 3]
     colors = np.array([colorsset(i) for i in colorinds])
@@ -212,31 +212,31 @@ def casestudyplots_existing():
 
     #######################
     # Policy utility comparison
-    util_arr = np.load(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_fam.npy'))
-    util_arr_hi = np.load(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_fam.npy'))
-    util_arr_lo = np.load(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_fam.npy'))
-    heur_util = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_util_avg.npy'))
-    heur_util_hi = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_util_hi.npy'))
-    heur_util_lo = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_util_lo.npy'))
+    util_arr = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'util_avg_arr_fam.npy'))
+    util_arr_hi = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'util_hi_arr_fam.npy'))
+    util_arr_lo = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'util_lo_arr_fam.npy'))
+    heur_util = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'fam_util_avg.npy'))
+    heur_util_hi = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'fam_util_hi.npy'))
+    heur_util_lo = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'fam_util_lo.npy'))
     util_arr = np.vstack((heur_util,util_arr))
     util_arr_hi = np.vstack((heur_util_hi, util_arr_hi))
     util_arr_lo = np.vstack((heur_util_lo, util_arr_lo))
 
     # 4-NOV updated utility estimates
     # Utility-informed (greedy)
-    greedy_avg = np.load(os.path.join('utilitypaper', 'existing', 'util_avg_greedy_noout.npy'))
-    greedy_hi = np.load(os.path.join('utilitypaper', 'existing', 'util_hi_greedy_noout.npy'))
-    greedy_lo = np.load(os.path.join('utilitypaper', 'existing', 'util_lo_greedy_noout.npy'))
+    greedy_avg = np.load(os.path.join('..', 'existing', 'util_avg_greedy_noout.npy'))
+    greedy_hi = np.load(os.path.join('..', 'existing', 'util_hi_greedy_noout.npy'))
+    greedy_lo = np.load(os.path.join('..', 'existing', 'util_lo_greedy_noout.npy'))
 
     # Uniform
-    unif_avg = np.load(os.path.join('utilitypaper', 'existing', 'util_avg_unif_noout.npy'))
-    unif_hi = np.load(os.path.join('utilitypaper', 'existing', 'util_hi_unif_noout.npy'))
-    unif_lo = np.load(os.path.join('utilitypaper', 'existing', 'util_lo_unif_noout.npy'))
+    unif_avg = np.load(os.path.join('..', 'existing', 'util_avg_unif_noout.npy'))
+    unif_hi = np.load(os.path.join('..', 'existing', 'util_hi_unif_noout.npy'))
+    unif_lo = np.load(os.path.join('..', 'existing', 'util_lo_unif_noout.npy'))
 
     # Rudimentary
-    rudi_avg = np.load(os.path.join('utilitypaper', 'existing', 'util_avg_rudi_noout.npy'))
-    rudi_hi = np.load(os.path.join('utilitypaper', 'existing', 'util_hi_rudi_noout.npy'))
-    rudi_lo = np.load(os.path.join('utilitypaper', 'existing', 'util_lo_rudi_noout.npy'))
+    rudi_avg = np.load(os.path.join('..', 'existing', 'util_avg_rudi_noout.npy'))
+    rudi_hi = np.load(os.path.join('..', 'existing', 'util_hi_rudi_noout.npy'))
+    rudi_lo = np.load(os.path.join('..', 'existing', 'util_lo_rudi_noout.npy'))
 
     util_arr = np.vstack((np.average(greedy_avg, axis=0), np.average(unif_avg, axis=0),
                           np.average(rudi_avg, axis=0)))
@@ -315,7 +315,7 @@ def casestudyplots_allprovinces():
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
+    allocArr = np.load(os.path.join('..', 'allprovinces', 'allprov_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorsset2 = plt.get_cmap('Dark2')
     colorinds = [6, 1, 2, 3, 4, 0, 5, 7]
@@ -366,19 +366,19 @@ def casestudyplots_allprovinces():
     #######################
 
     # Greedy heuristic
-    greedy_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_noout.npy'))
-    greedy_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_noout.npy'))
-    greedy_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_noout.npy'))
+    greedy_avg = np.load(os.path.join('..', 'allprovinces', 'util_avg_greedy_noout.npy'))
+    greedy_hi = np.load(os.path.join('..', 'allprovinces', 'util_hi_greedy_noout.npy'))
+    greedy_lo = np.load(os.path.join('..', 'allprovinces', 'util_lo_greedy_noout.npy'))
 
     # Uniform
-    unif_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_noout.npy'))
-    unif_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_noout.npy'))
-    unif_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_noout.npy'))
+    unif_avg = np.load(os.path.join('..', 'allprovinces', 'util_avg_unif_noout.npy'))
+    unif_hi = np.load(os.path.join('..', 'allprovinces', 'util_hi_unif_noout.npy'))
+    unif_lo = np.load(os.path.join('..', 'allprovinces', 'util_lo_unif_noout.npy'))
 
     # Rudimentary
-    rudi_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_noout.npy'))
-    rudi_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_noout.npy'))
-    rudi_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_noout.npy'))
+    rudi_avg = np.load(os.path.join('..', 'allprovinces', 'util_avg_rudi_noout.npy'))
+    rudi_hi = np.load(os.path.join('..', 'allprovinces', 'util_hi_rudi_noout.npy'))
+    rudi_lo = np.load(os.path.join('..', 'allprovinces', 'util_lo_rudi_noout.npy'))
 
     # Combine
     util_arr = np.vstack((np.average(greedy_avg, axis=0), np.average(unif_avg, axis=0),
@@ -488,7 +488,7 @@ def casestudyplots_familiar_market():
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_market_alloc.npy'))
+    allocArr = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorinds = [6, 1, 2, 3]
     colors = np.array([colorsset(i) for i in colorinds])
@@ -515,12 +515,12 @@ def casestudyplots_familiar_market():
 
     #######################
     # Policy utility comparison
-    util_arr = np.load(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_fam_market.npy'))
-    util_arr_hi = np.load(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_fam_market.npy'))
-    util_arr_lo = np.load(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_fam_market.npy'))
-    heur_util = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_market_util_avg.npy'))
-    heur_util_hi = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_market_util_hi.npy'))
-    heur_util_lo = np.load(os.path.join('casestudyoutputs', 'familiar', 'fam_market_util_lo.npy'))
+    util_arr = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'util_avg_arr_fam_market.npy'))
+    util_arr_hi = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'util_hi_arr_fam_market.npy'))
+    util_arr_lo = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'util_lo_arr_fam_market.npy'))
+    heur_util = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_util_avg.npy'))
+    heur_util_hi = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_util_hi.npy'))
+    heur_util_lo = np.load(os.path.join('../../casestudyoutputs', 'familiar', 'fam_market_util_lo.npy'))
     util_arr = np.vstack((heur_util, util_arr))
     util_arr_hi = np.vstack((heur_util_hi, util_arr_hi))
     util_arr_lo = np.vstack((heur_util_lo, util_arr_lo))
@@ -618,7 +618,7 @@ def casestudyplots_exploratory_market():
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_alloc.npy'))
+    allocArr = np.load(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorsset2 = plt.get_cmap('Dark2')
     colorinds = [6, 1, 2, 3, 4, 0, 5, 7]
@@ -672,12 +672,12 @@ def casestudyplots_exploratory_market():
 
     #######################
     # Policy utility comparison
-    util_arr = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl_market.npy'))
-    util_arr_hi = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl_market.npy'))
-    util_arr_lo = np.load(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl_market.npy'))
-    heur_util = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_avg.npy'))
-    heur_util_hi = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_hi.npy'))
-    heur_util_lo = np.load(os.path.join('casestudyoutputs', 'exploratory', 'expl_market_util_lo.npy'))
+    util_arr = np.load(os.path.join('../../casestudyoutputs', 'exploratory', 'util_avg_arr_expl_market.npy'))
+    util_arr_hi = np.load(os.path.join('../../casestudyoutputs', 'exploratory', 'util_hi_arr_expl_market.npy'))
+    util_arr_lo = np.load(os.path.join('../../casestudyoutputs', 'exploratory', 'util_lo_arr_expl_market.npy'))
+    heur_util = np.load(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_util_avg.npy'))
+    heur_util_hi = np.load(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_util_hi.npy'))
+    heur_util_lo = np.load(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_market_util_lo.npy'))
     util_arr = np.vstack((heur_util,util_arr))
     util_arr_hi = np.vstack((heur_util_hi, util_arr_hi))
     util_arr_lo = np.vstack((heur_util_lo, util_arr_lo))
@@ -2062,13 +2062,13 @@ def allocationsensitivityplots():
     alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
     for i in range(9):
         alloc_list.append(
-            np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_' + str(i) + '.npy')))
+            np.load(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_' + str(i) + '.npy')))
         util_avg_list.append(np.load(
-            os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_' + str(i) + '.npy')))
+            os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_' + str(i) + '.npy')))
         util_hi_list.append(
-            np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_' + str(i) + '.npy')))
+            np.load(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_' + str(i) + '.npy')))
         util_lo_list.append(
-            np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_' + str(i) + '.npy')))
+            np.load(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_' + str(i) + '.npy')))
 
     util_avg_list = np.array(util_avg_list)
     util_hi_list = np.array(util_hi_list)

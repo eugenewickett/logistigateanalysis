@@ -38,10 +38,26 @@ csdict_expl['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26',
                               'MODHIGH_EXPL_1', 'MOD_EXPL_1', 'MODHIGH_EXPL_2', 'MOD_EXPL_2']
 csdict_expl['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
 
+# Which flattened Qs are farthest from our orginal Q
+numBoot = 44  # Average across each TN in original data set
+SNprobs = np.sum(csdict_expl['N'], axis=0) / np.sum(csdict_expl['N'])
+# We used seed 33 in the original allocation
+np.random.seed(33)
+Qvecs_orig = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+normlist = []
+for i in range(34,84,1):
+    np.random.seed(i)
+    Qvecs_curr = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+    currnorm = np.linalg.norm(Qvecs_curr.flatten()-Qvecs_orig.flatten())
+    normlist.append(currnorm)
+ind = np.argpartition(np.array(normlist), -2)[-2:]
+print(ind)
+# seeds 34+26=60 and 34+29=63
+
 # Use observed data to form Q for tested nodes; use bootstrap data for untested nodes
 numBoot = 44  # Average across each TN in original data set
 SNprobs = np.sum(csdict_expl['N'], axis=0) / np.sum(csdict_expl['N'])
-np.random.seed(33)
+np.random.seed(60) # CHANGED FROM 33 TO 60
 Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
 csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 
@@ -62,7 +78,7 @@ np.random.seed(1000) # To replicate draws later
 csdict_expl = methods.GeneratePostSamples(csdict_expl)
 
 # Loss specification
-paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.3,
+paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
 
 # Set limits of data collection and intervals for calculation
@@ -70,7 +86,7 @@ testmax, testint = 180, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 2000
+numtruthdraws, numdatadraws = 75000, 1000
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
@@ -79,13 +95,14 @@ paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict) # Check of used parameters
+
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=False)
 # Store results
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_lo'), util_lo)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_lo'), util_lo)
 
 # Key comparison points
 alloc90 = util_avg[9]
@@ -112,8 +129,8 @@ for testnum in testarr_rudi:
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
 # Store
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_unif_90'), util_avg_unif_90)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_rudi_90'), util_avg_rudi_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_rudi_90'), util_avg_rudi_90)
 
 # Now for comparison with 180; do by 10 for both uniform and rudimentary
 util_avg_unif_180 = []
@@ -135,8 +152,8 @@ for testnum in testarr_rudi:
         util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_unif_180'), util_avg_unif_180)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_03_util_avg_rudi_180'), util_avg_rudi_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_1_util_avg_rudi_180'), util_avg_rudi_180)
 
 # Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -156,19 +173,20 @@ print('Saved vs Rudi at 90: '+str(rudi90saved))
 print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
-##############
-# Change risk slope
-##############
-paramdict['riskdict'].update({'slope': 0.9})
-paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+######################
+# Change sourcing again
+######################
+np.random.seed(63) # CHANGED FROM 33 TO 63
+Qvecs = np.random.multinomial(numBoot, SNprobs, size=4) / numBoot
+csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 
-util.print_param_checks(paramdict) # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=False)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_lo'), util_lo)
+# Store results
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_lo'), util_lo)
 
 # Key comparison points
 alloc90 = util_avg[9]
@@ -195,8 +213,8 @@ for testnum in testarr_rudi:
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
 # Store
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_unif_90'), util_avg_unif_90)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_rudi_90'), util_avg_rudi_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_rudi_90'), util_avg_rudi_90)
 
 # Now for comparison with 180; do by 10 for both uniform and rudimentary
 util_avg_unif_180 = []
@@ -218,8 +236,8 @@ for testnum in testarr_rudi:
         util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_unif_180'), util_avg_unif_180)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_riskslope_09_util_avg_rudi_180'), util_avg_rudi_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_sourcing_2_util_avg_rudi_180'), util_avg_rudi_180)
 
 # Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -238,3 +256,4 @@ print('Saved vs Unif at 90: '+str(unif90saved))
 print('Saved vs Rudi at 90: '+str(rudi90saved))
 print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
+

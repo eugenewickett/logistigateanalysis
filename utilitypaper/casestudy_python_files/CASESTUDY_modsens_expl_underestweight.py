@@ -1,4 +1,4 @@
-"""Script for investigating allocation/utility sensitivity to prior variance selection"""
+"""Script for investigating allocation/utility sensitivity to score underestimation penalty selection"""
 
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
@@ -49,7 +49,7 @@ csdict_expl['Q'] = np.vstack((csdict_expl['Q'][:4], Qvecs))
 SNpriorMean = np.repeat(sps.logit(0.1), numSN)
 # Establish test node priors according to assessment by regulators
 TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
-TNvar, SNvar = 4., 4.  # TNvar changed to 4
+TNvar, SNvar = 2., 4.  # Variances for use with prior; supply nodes are wide due to uncertainty
 csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
                                np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
 
@@ -62,7 +62,7 @@ np.random.seed(1000) # To replicate draws later
 csdict_expl = methods.GeneratePostSamples(csdict_expl)
 
 # Loss specification
-paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
+paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=1., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
 
 # Set limits of data collection and intervals for calculation
@@ -82,10 +82,10 @@ util.print_param_checks(paramdict) # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=False)
 # Store results
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_lo'), util_lo)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_util_lo'), util_lo)
 
 # Key comparison points
 alloc90 = util_avg[9]
@@ -112,8 +112,8 @@ for testnum in testarr_rudi:
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
 # Store
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_unif_90'), util_avg_unif_90)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_rudi_90'), util_avg_rudi_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_util_avg_rudi_90'), util_avg_rudi_90)
 
 # Now for comparison with 180; do by 10 for both uniform and rudimentary
 util_avg_unif_180 = []
@@ -135,8 +135,8 @@ for testnum in testarr_rudi:
         util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_unif_180'), util_avg_unif_180)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_4_util_avg_rudi_180'), util_avg_rudi_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_1_util_avg_rudi_180'), util_avg_rudi_180)
 
 # Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -156,18 +156,11 @@ print('Saved vs Rudi at 90: '+str(rudi90saved))
 print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
 
-################
+#############
 # Now change
-################
-TNvar, SNvar = 1., 4.  # TNvar changed to 1
-csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
-                               np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
-np.random.seed(1000) # To replicate draws later
-csdict_expl = methods.GeneratePostSamples(csdict_expl)
+#############
+paramdict['scoredict'].update({'underestweight': 10})
 
-np.random.seed(444)
-truthdraws, datadraws = util.distribute_truthdata_draws(csdict_expl['postSamples'], numtruthdraws, numdatadraws)
-paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 # Get base loss
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
@@ -175,10 +168,10 @@ util.print_param_checks(paramdict) # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_expl, testmax, testint, paramdict,
                                                                 printupdate=True, plotupdate=False)
 # Store results
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_util_lo'), util_lo)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_util_lo'), util_lo)
 
 # Key comparison points
 alloc90 = util_avg[9]
@@ -205,8 +198,8 @@ for testnum in testarr_rudi:
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
 # Store
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_util_avg_unif_90'), util_avg_unif_90)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_util_avg_rudi_90'), util_avg_rudi_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_util_avg_unif_90'), util_avg_unif_90)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_util_avg_rudi_90'), util_avg_rudi_90)
 
 # Now for comparison with 180; do by 10 for both uniform and rudimentary
 util_avg_unif_180 = []
@@ -228,8 +221,8 @@ for testnum in testarr_rudi:
         util_avg_rudi_180.append(paramdict['baseloss'] - avg_loss)
         print('Rudi at ' + str(testnum) + ' tests: ' + str(paramdict['baseloss'] - avg_loss))
 
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_util_avg_unif_180'), util_avg_unif_180)
-np.save(os.path.join('casestudyoutputs', 'modeling_sensitivity', 'expl_MS_priorvar_1_util_avg_rudi_180'), util_avg_rudi_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_util_avg_unif_180'), util_avg_unif_180)
+np.save(os.path.join('../../casestudyoutputs', 'modeling_sensitivity', 'expl_MS_underestweight_10_util_avg_rudi_180'), util_avg_rudi_180)
 
 # Locate closest sample point for uniform and rudimentary to alloc90 and alloc180
 kInd = next(x for x, val in enumerate(util_avg_unif_90) if val > alloc90)
@@ -248,4 +241,3 @@ print('Saved vs Unif at 90: '+str(unif90saved))
 print('Saved vs Rudi at 90: '+str(rudi90saved))
 print('Saved vs Unif at 180: '+str(unif180saved))
 print('Saved vs Rudi at 180: '+str(rudi180saved))
-

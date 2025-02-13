@@ -84,10 +84,10 @@ Want an interruptible/restartable greedy allocation loop here
 stop = False
 while not stop:
     # Read in the current allocation
-    alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
-    util_avg = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_avg.npy'))
-    util_hi = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_hi.npy'))
-    util_lo = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_lo.npy'))
+    alloc = np.load(os.path.join('..', 'allprovinces', 'allprov_alloc.npy'))
+    util_avg = np.load(os.path.join('..', 'allprovinces', 'allprov_util_avg.npy'))
+    util_hi = np.load(os.path.join('..', 'allprovinces', 'allprov_util_hi.npy'))
+    util_lo = np.load(os.path.join('..', 'allprovinces', 'allprov_util_lo.npy'))
     # Stop if the last allocation column is empty
     if np.sum(alloc[:, -1]) > 0:
         stop = True
@@ -118,10 +118,10 @@ while not stop:
         util_hi[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[0]
         util_lo[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[1]
         # Save as numpy objects
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc'), alloc)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_avg'), util_avg)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_hi'), util_hi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'allprov_util_lo'), util_lo)
+        np.save(os.path.join('..', 'allprovinces', 'allprov_alloc'), alloc)
+        np.save(os.path.join('..', 'allprovinces', 'allprov_util_avg'), util_avg)
+        np.save(os.path.join('..', 'allprovinces', 'allprov_util_hi'), util_hi)
+        np.save(os.path.join('..', 'allprovinces', 'allprov_util_lo'), util_lo)
         print('TN ' + str(nextTN) + ' added, with utility CI of (' + str(util_lo[testnumind + 1]) + ', ' +
               str(util_hi[testnumind + 1]) + ') for ' + str(testnum) + ' tests')
         numint = util_avg.shape[0]
@@ -177,10 +177,10 @@ BEFORE
 ]
 '''
 
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'expl_util_lo'), util_lo)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'expl_util_lo'), util_lo)
 
 ''' 10-OCT-24
 Want an interruptible/restartable utility estimation loop here
@@ -229,18 +229,18 @@ stop = False
 lastrep = 0
 while not stop:
     # We want 10 evaluations of utility for each plan and testnum
-    alloc = np.load(os.path.join('utilitypaper', 'allprovinces', 'allprov_alloc.npy'))
-    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_noout.npy'))
+    alloc = np.load(os.path.join('..', 'allprovinces', 'allprov_alloc.npy'))
+    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join('..', 'allprovinces', 'util_avg_greedy_noout.npy')), \
+        np.load(os.path.join('..', 'allprovinces', 'util_hi_greedy_noout.npy')), \
+        np.load(os.path.join('..', 'allprovinces', 'util_lo_greedy_noout.npy'))
     util_avg_unif, util_hi_unif, util_lo_unif = np.load(
-        os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_noout.npy'))
+        os.path.join('..', 'allprovinces', 'util_avg_unif_noout.npy')), \
+        np.load(os.path.join('..', 'allprovinces', 'util_hi_unif_noout.npy')), \
+        np.load(os.path.join('..', 'allprovinces', 'util_lo_unif_noout.npy'))
     util_avg_rudi, util_hi_rudi, util_lo_rudi = np.load(
-        os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_noout.npy'))
+        os.path.join('..', 'allprovinces', 'util_avg_rudi_noout.npy')), \
+        np.load(os.path.join('..', 'allprovinces', 'util_hi_rudi_noout.npy')), \
+        np.load(os.path.join('..', 'allprovinces', 'util_lo_rudi_noout.npy'))
 
     # Stop if the last utility column isn't zero
     if util_avg_unif[-1, -1] > 0:
@@ -307,12 +307,12 @@ while not stop:
         #np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_greedy_noout'), util_avg_greedy)
         #np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_greedy_noout'), util_hi_greedy)
         #np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_greedy_noout'), util_lo_greedy)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_unif_noout'), util_avg_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_unif_noout'), util_hi_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_unif_noout'), util_lo_unif)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_avg_rudi_noout'), util_avg_rudi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_hi_rudi_noout'), util_hi_rudi)
-        np.save(os.path.join('utilitypaper', 'allprovinces', 'util_lo_rudi_noout'), util_lo_rudi)
+        np.save(os.path.join('..', 'allprovinces', 'util_avg_unif_noout'), util_avg_unif)
+        np.save(os.path.join('..', 'allprovinces', 'util_hi_unif_noout'), util_hi_unif)
+        np.save(os.path.join('..', 'allprovinces', 'util_lo_unif_noout'), util_lo_unif)
+        np.save(os.path.join('..', 'allprovinces', 'util_avg_rudi_noout'), util_avg_rudi)
+        np.save(os.path.join('..', 'allprovinces', 'util_hi_rudi_noout'), util_hi_rudi)
+        np.save(os.path.join('..', 'allprovinces', 'util_lo_rudi_noout'), util_lo_rudi)
     # Plot utilities
 
     '''
@@ -411,6 +411,6 @@ for testind in range(testarr.shape[0]):
                                titlestr='Exploratory Setting, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_avg_arr_expl'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_hi_arr_expl'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', 'exploratory', 'util_lo_arr_expl'), util_lo_arr)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'util_avg_arr_expl'), util_avg_arr)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'util_hi_arr_expl'), util_hi_arr)
+np.save(os.path.join('../../casestudyoutputs', 'exploratory', 'util_lo_arr_expl'), util_lo_arr)

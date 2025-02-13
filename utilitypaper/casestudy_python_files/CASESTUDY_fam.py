@@ -112,7 +112,7 @@ testaddseq = np.array([1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
 for tempind, temp in enumerate(testaddseq):
     alloc[temp,tempind+1:] += 1
 util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint)
-np.save(os.path.join('utilitypaper', 'existing', 'exist_alloc'), alloc)
+np.save(os.path.join('..', 'existing', 'exist_alloc'), alloc)
 
 
 def unif_design_mat(numTN, testmax, testint=1):
@@ -159,19 +159,19 @@ stop = False
 lastrep = 0
 while not stop:
     # We want 10 evaluations of utility for each plan and testnum
-    alloc = np.load(os.path.join('utilitypaper', 'existing', 'exist_alloc.npy'))
+    alloc = np.load(os.path.join('..', 'existing', 'exist_alloc.npy'))
     util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(
-        os.path.join('utilitypaper', 'existing', 'util_avg_greedy_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'existing', 'util_hi_greedy_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'existing', 'util_lo_greedy_noout.npy'))
+        os.path.join('..', 'existing', 'util_avg_greedy_noout.npy')), \
+        np.load(os.path.join('..', 'existing', 'util_hi_greedy_noout.npy')), \
+        np.load(os.path.join('..', 'existing', 'util_lo_greedy_noout.npy'))
     util_avg_unif, util_hi_unif, util_lo_unif = np.load(
-        os.path.join('utilitypaper', 'existing', 'util_avg_unif_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'existing', 'util_hi_unif_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'existing', 'util_lo_unif_noout.npy'))
+        os.path.join('..', 'existing', 'util_avg_unif_noout.npy')), \
+        np.load(os.path.join('..', 'existing', 'util_hi_unif_noout.npy')), \
+        np.load(os.path.join('..', 'existing', 'util_lo_unif_noout.npy'))
     util_avg_rudi, util_hi_rudi, util_lo_rudi = np.load(
-        os.path.join('utilitypaper', 'existing', 'util_avg_rudi_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'existing', 'util_hi_rudi_noout.npy')), \
-        np.load(os.path.join('utilitypaper', 'existing', 'util_lo_rudi_noout.npy'))
+        os.path.join('..', 'existing', 'util_avg_rudi_noout.npy')), \
+        np.load(os.path.join('..', 'existing', 'util_hi_rudi_noout.npy')), \
+        np.load(os.path.join('..', 'existing', 'util_lo_rudi_noout.npy'))
 
     # Stop if the last utility column isn't zero
     if util_avg_greedy[-1, -1] > 0:
@@ -234,15 +234,15 @@ while not stop:
             'Utility at ' + str(currbudget) + ' tests, Rudimentary: ' + str(util_avg_rudi[currrep, currbudgetind + 1]))
 
         # Save updated objects
-        np.save(os.path.join('utilitypaper', 'existing', 'util_avg_greedy_noout'), util_avg_greedy)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_hi_greedy_noout'), util_hi_greedy)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_lo_greedy_noout'), util_lo_greedy)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_avg_unif_noout'), util_avg_unif)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_hi_unif_noout'), util_hi_unif)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_lo_unif_noout'), util_lo_unif)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_avg_rudi_noout'), util_avg_rudi)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_hi_rudi_noout'), util_hi_rudi)
-        np.save(os.path.join('utilitypaper', 'existing', 'util_lo_rudi_noout'), util_lo_rudi)
+        np.save(os.path.join('..', 'existing', 'util_avg_greedy_noout'), util_avg_greedy)
+        np.save(os.path.join('..', 'existing', 'util_hi_greedy_noout'), util_hi_greedy)
+        np.save(os.path.join('..', 'existing', 'util_lo_greedy_noout'), util_lo_greedy)
+        np.save(os.path.join('..', 'existing', 'util_avg_unif_noout'), util_avg_unif)
+        np.save(os.path.join('..', 'existing', 'util_hi_unif_noout'), util_hi_unif)
+        np.save(os.path.join('..', 'existing', 'util_lo_unif_noout'), util_lo_unif)
+        np.save(os.path.join('..', 'existing', 'util_avg_rudi_noout'), util_avg_rudi)
+        np.save(os.path.join('..', 'existing', 'util_hi_rudi_noout'), util_hi_rudi)
+        np.save(os.path.join('..', 'existing', 'util_lo_rudi_noout'), util_lo_rudi)
     # Plot utilities
 
     '''
@@ -308,10 +308,10 @@ while not stop:
 (1.0042917413295647, 1.0287685913425824), (1.0217862509874143, 1.0462029388490077), (1.038252436160777, 1.0634683423858708),
 (1.058442480561017, 1.0845022908644895)]
 '''
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_alloc'), alloc)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_util_avg'), util_avg)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_util_hi'), util_hi)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'fam_util_lo'), util_lo)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_alloc'), alloc)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_util_avg'), util_avg)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_util_hi'), util_hi)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'fam_util_lo'), util_lo)
 
 # Evaluate utility for uniform and rudimentary
 util_avg_unif, util_hi_unif, util_lo_unif = np.zeros((int(testmax / testint) + 1)), \
@@ -349,9 +349,9 @@ for testind in range(testarr.shape[0]):
                                titlestr='Familiar Setting, comparison with other approaches')
 
 # Store matrices
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_avg_arr_fam'), util_avg_arr)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_hi_arr_fam'), util_hi_arr)
-np.save(os.path.join('casestudyoutputs', 'familiar', 'util_lo_arr_fam'), util_lo_arr)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'util_avg_arr_fam'), util_avg_arr)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'util_hi_arr_fam'), util_hi_arr)
+np.save(os.path.join('../../casestudyoutputs', 'familiar', 'util_lo_arr_fam'), util_lo_arr)
 
 targind = 10 # where do we want to gauge budget savings?
 targval = util_avg[targind]

@@ -94,20 +94,20 @@ for rep in range(1, numReps):
                                                                     impwtoutlierprop=0.01,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_'+str(rep)), alloc)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_'+str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_'+str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_'+str(rep)), util_lo)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_' + str(rep)), alloc)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_' + str(rep)), util_lo)
 
 ##################
 # Compare utilities and allocations
 ##################
 alloc_list, util_avg_list, util_hi_list, util_lo_list = [], [], [], []
 for i in range(9):
-    alloc_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_'+str(i)+'.npy')))
-    util_avg_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_'+str(i)+'.npy')))
-    util_hi_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_' + str(i) + '.npy')))
-    util_lo_list.append(np.load(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_' + str(i) + '.npy')))
+    alloc_list.append(np.load(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_alloc_' + str(i) + '.npy')))
+    util_avg_list.append(np.load(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_avg_' + str(i) + '.npy')))
+    util_hi_list.append(np.load(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_hi_' + str(i) + '.npy')))
+    util_lo_list.append(np.load(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'allocsens_util_lo_' + str(i) + '.npy')))
 
 util_avg_list = np.array(util_avg_list)
 util_hi_list = np.array(util_hi_list)
@@ -194,9 +194,9 @@ for rep in range(numReps):
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_avg_'+str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_hi_'+str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_lo_'+str(rep)), util_lo)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_15k_util_lo_' + str(rep)), util_lo)
 # 50k
 for rep in range(numReps):
     print('Rep: '+str(rep)+' for 50k')
@@ -214,9 +214,9 @@ for rep in range(numReps):
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_avg_'+str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_hi_'+str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_lo_'+str(rep)), util_lo)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_50k_util_lo_' + str(rep)), util_lo)
 # 100k
 for rep in range(numReps):
     print('Rep: '+str(rep)+' for 100k')
@@ -234,9 +234,9 @@ for rep in range(numReps):
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_avg_'+str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_hi_'+str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_lo_'+str(rep)), util_lo)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'truthbias_100k_util_lo_' + str(rep)), util_lo)
 
 #####################################
 ### PLOT OF VARIANCE FROM DATA DRAWS
@@ -262,9 +262,9 @@ for rep in range(numReps):
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_avg_'+str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_hi_'+str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_lo_'+str(rep)), util_lo)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_500_util_lo_' + str(rep)), util_lo)
 # 1000
 for rep in range(numReps):
     print('Rep: ' + str(rep) + ' for 1000')
@@ -282,9 +282,9 @@ for rep in range(numReps):
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_avg_' + str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_hi_' + str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_lo_' + str(rep)), util_lo)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_1000_util_lo_' + str(rep)), util_lo)
 # 3000
 for rep in range(numReps):
     print('Rep: ' + str(rep) + ' for 3000')
@@ -302,6 +302,6 @@ for rep in range(numReps):
     alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                     plotupdate=False)
     # Store
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_avg_' + str(rep)), util_avg)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_hi_' + str(rep)), util_hi)
-    np.save(os.path.join('casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_lo_' + str(rep)), util_lo)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_avg_' + str(rep)), util_avg)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_hi_' + str(rep)), util_hi)
+    np.save(os.path.join('../../casestudyoutputs', 'allocation_sensitivity', 'datavar_3000_util_lo_' + str(rep)), util_lo)
