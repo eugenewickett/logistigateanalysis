@@ -178,7 +178,7 @@ for currbatchind in range(len(numbatcharr)):
 ##################
 
 ##################
-# PART 2: B=700, REMOVING OUTLIERS FROM IMP SAMP
+# PART 2: B=700, REMOVING 0.5% OUTLIERS FROM IMP SAMP
 ##################
 # There is a lot of variance/inflation with the imp samp method; does removing largely weighted draws improve things?
 store_utilhi_outlier = np.zeros((len(numbatcharr), numreps))  # Efficient, then imp samp
@@ -213,16 +213,20 @@ for currbatchind in range(len(numbatcharr)):
         flat_utillo = store_utillo.flatten()
         flat_utilhi = store_utilhi.flatten()
         CIavg = (flat_utillo + flat_utilhi) / 2
-        # ax.plot(x, CIavg, marker='o', linestyle='None')
+        flat_utillo = np.concatenate((flat_utillo, store_utillo_outlier.flatten()))
+        flat_utilhi = np.concatenate((flat_utilhi, store_utilhi_outlier.flatten()))
+        CIavg = np.concatenate((CIavg, (store_utillo_outlier.flatten()+store_utilhi_outlier.flatten())/2))
+
         ax.errorbar(x, CIavg, yerr=[CIavg - flat_utillo, flat_utilhi - CIavg],
                     fmt='o', ecolor='g', capthick=4)
         ax.set_title('95% CI for IP-RP solution under different parameters and estimation methods\nB=700')
         # ax.grid('on')
 
-        xticklist = ['' for j in range(numreps * len(numbatcharr) * 2)]
+        xticklist = ['' for j in range(numreps * len(numbatcharr) * 3)]
         for currbatchnameind, currbatchname in enumerate(numbatcharr):
             xticklist[currbatchnameind * 10] = str(currbatchname) + ' batch\nEffic'
             xticklist[currbatchnameind * 10 + 50] = str(currbatchname) + ' batch\nImpSamp'
+            xticklist[currbatchnameind * 10 + 100] = str(currbatchname) + ' batch\nImpSamp_Out'
         plt.xticks(x, xticklist)  # little trick to get textual X labels instead of numerical
         plt.xlabel('Method and parameterization')
         plt.ylabel('Utility estimate')
