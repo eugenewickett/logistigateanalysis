@@ -340,7 +340,58 @@ for currbatchind in range(len(numbatcharr)):
 ##################
 
 ##################
-# PART 4: Impact of extrema elimination; use 25k MCMC draws
+# PART 4: Plot B=700,1400 together
+##################
+utilhi_700 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi.npy'))
+utilhi_700_extm = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi_outlier.npy'))
+utilhi_1400 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi_1400.npy'))
+utillo_700 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo.npy'))
+utillo_700_extm = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo_outlier.npy'))
+utillo_1400 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo_1400.npy'))
+
+
+fig, ax = plt.subplots()
+fig.set_figheight(7)
+fig.set_figwidth(27)
+
+x = np.arange(numreps * len(numbatcharr) * 6)
+flat_utillo = np.concatenate((utillo_700.flatten(), utillo_700_extm.flatten(), utillo_1400.flatten()))
+flat_utilhi = np.concatenate((utilhi_700.flatten(), utilhi_700_extm.flatten(), utilhi_1400.flatten()))
+CIavg = (flat_utillo + flat_utilhi) / 2
+
+ax.errorbar(x, CIavg, yerr=[CIavg - flat_utillo, flat_utilhi - CIavg],
+            fmt='o', ecolor='g', capthick=4)
+ax.set_title('95% CI for IP-RP solution under different parameters, estimation methods, and budgets')
+
+xticklist = ['' for j in range(numreps * len(numbatcharr) * 6)]
+for currbatchnameind, currbatchname in enumerate(numbatcharr):
+    xticklist[currbatchnameind * 10] = str(currbatchname) + ' batch\nEffic,B=700'
+    xticklist[currbatchnameind * 10 + 50] = str(currbatchname) + ' batch\nImpSamp,B=700'
+    xticklist[currbatchnameind * 10 + 100] = str(currbatchname) + ' batch\nImpSamp_Extm,,B=700'
+    xticklist[currbatchnameind * 10 + 150] = str(currbatchname) + ' batch\nEffic,B=1400'
+    xticklist[currbatchnameind * 10 + 200] = str(currbatchname) + ' batch\nImpSamp,B=1400'
+    xticklist[currbatchnameind * 10 + 250] = str(currbatchname) + ' batch\nImpSamp_Extm,,B=1400'
+plt.xticks(x, xticklist)
+plt.xlabel('Method and parameterization')
+plt.ylabel('Utility estimate')
+
+plt.ylim([0, 10])
+ax.tick_params(axis='x', labelsize=6)
+label_X = ax.xaxis.get_label()
+label_Y = ax.yaxis.get_label()
+label_X.set_style('italic')
+label_X.set_size(12)
+label_Y.set_style('italic')
+label_Y.set_size(12)
+
+plt.show()
+
+##################
+# END PART 4
+##################
+
+##################
+# PART 5: Impact of extrema elimination; use 25k MCMC draws
 ##################
 # B=700 first
 deptList_IPRP = ['Dakar', 'Keur Massar', 'Pikine', 'Diourbel', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
@@ -349,99 +400,65 @@ n_IPRP = GetAllocVecFromLists(deptNames, deptList_IPRP, allocList_IPRP)
 testnum = int(np.sum(n_IPRP))
 des = n_IPRP / testnum
 
-deltvec = np.arange(0.00001, 0.5, 0.00001)
-numbatch = 10  # Use 50k draws for this part of the study
+deltvec = [0.0, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+numbatch, numreps = 5, 10  # Use 50k draws for this part of the study
+numdatadrawsforimportance = 1000
+numimportdraws = numbatch * 5000
+zlevel = 0.95
 
-store_utilhi_extrema_700 = np.zeros((len(deltvec), numreps))  # Efficient, then imp samp (no out remove), then imp samp (0.5% out remove)
-store_utillo_extrema_700 = np.zeros((len(deltvec), numreps))  # Efficient, then imp samp (no out remove), then imp samp (0.5% out remove)
+store_util_extrm_700 = np.zeros((numreps, len(deltvec)))
+store_utilhi_extrm_700 = np.zeros((numreps, len(deltvec)))
+store_utillo_extrm_700 = np.zeros((numreps, len(deltvec)))
 
 for rep in range(numreps):
-    # Retrieve 50k previously generated MCMC draws, which are in batches of 5000
+    # Retrieve 25k previously generated MCMC draws, which are in batches of 5000
     RetrieveMCMCBatches(lgdict, numbatch,
                         os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'),
                         maxbatchnum=50, rand=True, randseed=rep + 10 + 24)
     # Set up utility estimation parameter dictionary with desired truth and data draws
     SetupUtilEstParamDict(lgdict, paramdict, numbatch * 5000, 500, randseed=rep + numbatch + 106)
     util.print_param_checks(paramdict)
+    # ADJUSTED LOSS-LIST GENERATION HERE
     # Get utility intervals under each choice of delta
+    roundalg = 'lo'
 
-    # TODO: remove later/add roundalg to paramdict
-    if 'roundalg' in paramdict: # Set default rounding algorithm for plan
-        roundalg = paramdict['roundalg'].copy()
-    else:
-        roundalg = 'lo'
-
-
-
-    currlosslist = sampling_plan_loss_list_importance(des, testnum, lgdict, paramdict, numimportdraws,
-                                                      numdatadrawsforimportance, impweightoutlierprop)
-
-
-
-
-    _, util_IPRP_CI = sampf.getImportanceUtilityEstimate(n_IPRP, lgdict, paramdict,
-                                                         numimportdraws=numbatch * 5000,
-                                                         impweightoutlierprop=0.005,
-                                                         zlevel=0.95)
-# Copied and adjusted from sampf library
-def sampling_plan_loss_list_importance(design, numtests, priordatadict, paramdict, numimportdraws,
-                                 numdatadrawsforimportance=1000, impweightoutlierprop=0.01):
-    """
-    Produces a list of sampling plan losses, a la sampling_plan_loss_list(). This method uses the importance
-    sampling approach, using numdatadrawsforimportance draws to produce an 'average' data set. An MCMC set of
-    numimportdraws is produced assuming this average data set; this MCMC set should be closer to the important region
-    of SFP rates for this design. The importance weights can produce outliers that increase loss variance; parameter
-    impweightoutlierprop indicates the weight quantile for which the corresponding MCMC draws are removed from loss
-    calculations.
-
-    design: sampling probability vector along all test nodes/traces
-    numtests: test budget
-    priordatadict: logistigate data dictionary capturing known data
-    paramdict: parameter dictionary containing a loss matrix, truth and data MCMC draws, and an optional method for
-        rounding the design to an integer allocation
-    """
-    if 'roundalg' in paramdict: # Set default rounding algorithm for plan
-        roundalg = paramdict['roundalg'].copy()
-    else:
-        roundalg = 'lo'
-    # Initialize samples to be drawn from traces, per the design, using a rounding algorithm
-    sampMat = util.generate_sampling_array(design, numtests, roundalg)
-    (numTN, numSN), Q, s, r = priordatadict['N'].shape, priordatadict['Q'], priordatadict['diagSens'], priordatadict['diagSpec']
+    (numTN, numSN), Q, s, r = lgdict['N'].shape, lgdict['Q'], lgdict['diagSens'], lgdict['diagSpec']
     # Identify an 'average' data set that will help establish the important region for importance sampling
     importancedatadrawinds = np.random.choice(np.arange(paramdict['datadraws'].shape[0]),
-                                          size = numdatadrawsforimportance, # Oversample if needed
-                                          replace = paramdict['datadraws'].shape[0] < numdatadrawsforimportance)
+                                              size=numdatadrawsforimportance,  # Oversample if needed
+                                              replace=paramdict['datadraws'].shape[0] < numdatadrawsforimportance)
     importancedatadraws = paramdict['datadraws'][importancedatadrawinds]
     zMatData = util.zProbTrVec(numSN, importancedatadraws, sens=s, spec=r)  # Probs. using data draws
-    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadrawsforimportance)
+    NMat = np.moveaxis(np.array([np.random.multinomial(n_IPRP[tnInd], Q[tnInd], size=numdatadrawsforimportance)
                                  for tnInd in range(numTN)]), 1, 0).astype(int)
     YMat = np.random.binomial(NMat, zMatData)
     # Get average rounded data set from these few draws
     NMatAvg, YMatAvg = np.round(np.average(NMat, axis=0)).astype(int), np.round(np.average(YMat, axis=0)).astype(int)
     # Add these data to a new data dictionary and generate a new set of MCMC draws
-    impdict = priordatadict.copy()
-    impdict['N'], impdict['Y'] = priordatadict['N'] + NMatAvg, priordatadict['Y'] + YMatAvg
+    impdict = lgdict.copy()
+    impdict['N'], impdict['Y'] = lgdict['N'] + NMatAvg, lgdict['Y'] + YMatAvg
     # Generate a new MCMC importance set
     impdict['numPostSamples'] = numimportdraws
     impdict = methods.GeneratePostSamples(impdict, maxTime=5000)
-
     # Get simulated data likelihoods - don't normalize
-    numdatadraws =  paramdict['datadraws'].shape[0]
-    zMatTruth = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities, as a function of SFP rate draws
+    numdatadraws = paramdict['datadraws'].shape[0]
+    zMatTruth = util.zProbTrVec(numSN, impdict['postSamples'], sens=s,
+                                spec=r)  # Matrix of SFP probabilities, as a function of SFP rate draws
     zMatData = util.zProbTrVec(numSN, paramdict['datadraws'], sens=s, spec=r)  # Probs. using data draws
-    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadraws)
+    NMat = np.moveaxis(np.array([np.random.multinomial(n_IPRP[tnInd], Q[tnInd], size=numdatadraws)
                                  for tnInd in range(numTN)]), 1, 0).astype(int)
     YMat = np.random.binomial(NMat, zMatData)
     tempW = np.zeros(shape=(numimportdraws, numdatadraws))
-    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+    for snInd in range(
+            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
         for tnInd in range(numTN):
-            if sampMat[tnInd] > 0 and Q[tnInd, snInd] > 0:  # Save processing by only looking at feasible traces
+            if n_IPRP[tnInd] > 0 and Q[tnInd, snInd] > 0:  # Save processing by only looking at feasible traces
                 # Get zProbs corresponding to current trace
                 bigZtemp = np.transpose(
                     np.reshape(np.tile(zMatTruth[:, tnInd, snInd], numdatadraws), (numdatadraws, numimportdraws)))
                 bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
                 bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
-                combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]), numimportdraws),
+                combNYtemp = np.reshape(np.tile(spsp.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]), numimportdraws),
                                         (numimportdraws, numdatadraws))
                 tempW += (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
                     combNYtemp)
@@ -453,20 +470,23 @@ def sampling_plan_loss_list_importance(design, numtests, priordatadict, paramdic
     q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
 
     # Get likelihood weights WRT original data set: p(gamma|d_0)
-    zMatImport = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities along each trace
-    NMatPrior, YMatPrior = priordatadict['N'], priordatadict['Y']
-    Vimport = np.zeros(shape = numimportdraws)
-    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+    zMatImport = util.zProbTrVec(numSN, impdict['postSamples'], sens=s,
+                                 spec=r)  # Matrix of SFP probabilities along each trace
+    NMatPrior, YMatPrior = lgdict['N'], lgdict['Y']
+    Vimport = np.zeros(shape=numimportdraws)
+    for snInd in range(
+            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
         for tnInd in range(numTN):
             if NMatPrior[tnInd, snInd] > 0:
                 bigZtemp = np.transpose(
                     np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
                 bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
                 bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
-                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                combNYtemp = np.reshape(np.tile(spsp.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
                                                 numimportdraws), (numimportdraws, 1))
-                Vimport += np.squeeze( (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
-                    combNYtemp))
+                Vimport += np.squeeze(
+                    (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                        combNYtemp))
     Vimport = np.exp(Vimport)
 
     # Get likelihood weights WRT average data set: p(gamma|d_0, d_imp)
@@ -480,7 +500,7 @@ def sampling_plan_loss_list_importance(design, numtests, priordatadict, paramdic
                     np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
                 bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
                 bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
-                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                combNYtemp = np.reshape(np.tile(spsp.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
                                                 numimportdraws), (numimportdraws, 1))
                 Uimport += np.squeeze(
                     (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
@@ -491,33 +511,238 @@ def sampling_plan_loss_list_importance(design, numtests, priordatadict, paramdic
     VoverU = (Vimport / Uimport)
 
     # Compile list of optima
-    minslist = []
-    for j in range(Wimport.shape[1]):
-        tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
-        # Remove inds for top impweightoutlierprop of weights
-        tempremoveinds = np.where(tempwtarray>np.quantile(tempwtarray, 1-impweightoutlierprop))
-        tempwtarray = np.delete(tempwtarray, tempremoveinds)
-        tempwtarray = tempwtarray/np.sum(tempwtarray)
-        tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
-        tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
-        est = bayesest_critratio(tempimportancedraws, tempwtarray, q)
-        minslist.append(cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+    for deltind, delt in enumerate(deltvec):
+        print('delta: '+str(delt))
+        minslist = []
+        for j in range(Wimport.shape[1]):
+            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+            # Remove inds for top delt of weights
+            tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1 - delt)) # KEY CHANGE HERE
+            tempwtarray = np.delete(tempwtarray, tempremoveinds)
+            tempwtarray = tempwtarray / np.sum(tempwtarray)
+            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
 
-    return minslist
+        # RETURN minslist
+        currloss_avg, currloss_CI = sampf.process_loss_list(minslist, zlevel=zlevel)
+        store_util_extrm_700[rep, deltind] = paramdict['baseloss'] - currloss_avg
+        store_utillo_extrm_700[rep, deltind] = paramdict['baseloss'] - currloss_CI[1]
+        store_utilhi_extrm_700[rep, deltind] = paramdict['baseloss'] - currloss_CI[0]
 
-def getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws, numdatadrawsforimportance=1000,
-                                  impweightoutlierprop=0.01, zlevel=0.95):
-    """
-    Return a utility estimate average and confidence interval for allocation array n, using a second MCMC set of
-    'importance' draws
-    """
-    testnum = int(np.sum(n))
-    des = n / testnum
-    currlosslist = sampling_plan_loss_list_importance(des, testnum, lgdict, paramdict, numimportdraws,
-                                                            numdatadrawsforimportance, impweightoutlierprop)
-    currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
-    return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss'] - currloss_CI[1],
-                                                  paramdict['baseloss'] - currloss_CI[0])
+        # Plot
+        fig, ax = plt.subplots()
+        fig.set_figheight(7)
+        fig.set_figwidth(11)
+
+        for k in range(numreps):
+            ax.errorbar(deltvec, store_util_extrm_700[k],
+                        yerr=[store_util_extrm_700[k] - store_utillo_extrm_700[k],
+                              store_utilhi_extrm_700[k] - store_util_extrm_700[k]],
+                        fmt='o-', ecolor='g', capthick=4)
+        ax.set_title('95% CI for IP-RP solution, B=700, under different $\delta$\n10 replications')
+        plt.xlabel('$\delta$')
+        plt.ylabel('Utility estimate')
+
+        plt.ylim([0, 10])
+        ax.tick_params(axis='x', labelsize=8)
+        label_X = ax.xaxis.get_label()
+        label_Y = ax.yaxis.get_label()
+        label_X.set_style('italic')
+        label_X.set_size(12)
+        label_Y.set_style('italic')
+        label_Y.set_size(12)
+
+        plt.show()
+        # Store arrays
+        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_util_extrm_700'),
+                store_util_extrm_700)
+        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utillo_extrm_700'),
+                store_utillo_extrm_700)
+        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utilhi_extrm_700'),
+                store_utilhi_extrm_700)
+
 ##################
-# END PART 4
+# END PART 5
+##################
+
+
+##################
+# PART 6: Impact of extrema elimination; use 25k MCMC draws
+##################
+# B=1400
+deptList_IPRP = ['Dakar', 'Keur Massar', 'Pikine', 'Louga', 'Linguere', 'Kaolack', 'Guinguineo',
+                 'Nioro du Rip', 'Kaffrine', 'Birkilane', 'Malem Hoddar', 'Bambey', 'Mbacke',
+                 'Fatick', 'Foundiougne', 'Gossas']
+allocList_IPRP = [19, 21, 7, 7, 11, 38, 9, 18, 8, 8, 8, 10, 7, 11, 10, 9]
+n_IPRP = GetAllocVecFromLists(deptNames, deptList_IPRP, allocList_IPRP)
+testnum = int(np.sum(n_IPRP))
+des = n_IPRP / testnum
+
+deltvec = [0.0, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+numbatch, numreps = 5, 10  # Use 50k draws for this part of the study
+numdatadrawsforimportance = 1000
+numimportdraws = numbatch * 5000
+zlevel = 0.95
+
+store_util_extrm_1400 = np.zeros((numreps, len(deltvec)))
+store_utilhi_extrm_1400 = np.zeros((numreps, len(deltvec)))
+store_utillo_extrm_1400 = np.zeros((numreps, len(deltvec)))
+
+for rep in range(numreps):
+    # Retrieve 25k previously generated MCMC draws, which are in batches of 5000
+    RetrieveMCMCBatches(lgdict, numbatch,
+                        os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'),
+                        maxbatchnum=50, rand=True, randseed=rep + 10 + 24)
+    # Set up utility estimation parameter dictionary with desired truth and data draws
+    SetupUtilEstParamDict(lgdict, paramdict, numbatch * 5000, 500, randseed=rep + numbatch + 106)
+    util.print_param_checks(paramdict)
+    # ADJUSTED LOSS-LIST GENERATION HERE
+    # Get utility intervals under each choice of delta
+    roundalg = 'lo'
+
+    (numTN, numSN), Q, s, r = lgdict['N'].shape, lgdict['Q'], lgdict['diagSens'], lgdict['diagSpec']
+    # Identify an 'average' data set that will help establish the important region for importance sampling
+    importancedatadrawinds = np.random.choice(np.arange(paramdict['datadraws'].shape[0]),
+                                              size=numdatadrawsforimportance,  # Oversample if needed
+                                              replace=paramdict['datadraws'].shape[0] < numdatadrawsforimportance)
+    importancedatadraws = paramdict['datadraws'][importancedatadrawinds]
+    zMatData = util.zProbTrVec(numSN, importancedatadraws, sens=s, spec=r)  # Probs. using data draws
+    NMat = np.moveaxis(np.array([np.random.multinomial(n_IPRP[tnInd], Q[tnInd], size=numdatadrawsforimportance)
+                                 for tnInd in range(numTN)]), 1, 0).astype(int)
+    YMat = np.random.binomial(NMat, zMatData)
+    # Get average rounded data set from these few draws
+    NMatAvg, YMatAvg = np.round(np.average(NMat, axis=0)).astype(int), np.round(np.average(YMat, axis=0)).astype(int)
+    # Add these data to a new data dictionary and generate a new set of MCMC draws
+    impdict = lgdict.copy()
+    impdict['N'], impdict['Y'] = lgdict['N'] + NMatAvg, lgdict['Y'] + YMatAvg
+    # Generate a new MCMC importance set
+    impdict['numPostSamples'] = numimportdraws
+    impdict = methods.GeneratePostSamples(impdict, maxTime=5000)
+    # Get simulated data likelihoods - don't normalize
+    numdatadraws = paramdict['datadraws'].shape[0]
+    zMatTruth = util.zProbTrVec(numSN, impdict['postSamples'], sens=s,
+                                spec=r)  # Matrix of SFP probabilities, as a function of SFP rate draws
+    zMatData = util.zProbTrVec(numSN, paramdict['datadraws'], sens=s, spec=r)  # Probs. using data draws
+    NMat = np.moveaxis(np.array([np.random.multinomial(n_IPRP[tnInd], Q[tnInd], size=numdatadraws)
+                                 for tnInd in range(numTN)]), 1, 0).astype(int)
+    YMat = np.random.binomial(NMat, zMatData)
+    tempW = np.zeros(shape=(numimportdraws, numdatadraws))
+    for snInd in range(
+            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if n_IPRP[tnInd] > 0 and Q[tnInd, snInd] > 0:  # Save processing by only looking at feasible traces
+                # Get zProbs corresponding to current trace
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatTruth[:, tnInd, snInd], numdatadraws), (numdatadraws, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
+                bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
+                combNYtemp = np.reshape(np.tile(spsp.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]), numimportdraws),
+                                        (numimportdraws, numdatadraws))
+                tempW += (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                    combNYtemp)
+    Wimport = np.exp(tempW)
+
+    # Get risk matrix
+    Rimport = lf.risk_check_array(impdict['postSamples'], paramdict['riskdict'])
+    # Get critical ratio
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+
+    # Get likelihood weights WRT original data set: p(gamma|d_0)
+    zMatImport = util.zProbTrVec(numSN, impdict['postSamples'], sens=s,
+                                 spec=r)  # Matrix of SFP probabilities along each trace
+    NMatPrior, YMatPrior = lgdict['N'], lgdict['Y']
+    Vimport = np.zeros(shape=numimportdraws)
+    for snInd in range(
+            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if NMatPrior[tnInd, snInd] > 0:
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                combNYtemp = np.reshape(np.tile(spsp.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                                                numimportdraws), (numimportdraws, 1))
+                Vimport += np.squeeze(
+                    (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                        combNYtemp))
+    Vimport = np.exp(Vimport)
+
+    # Get likelihood weights WRT average data set: p(gamma|d_0, d_imp)
+    NMatPrior, YMatPrior = impdict['N'].copy(), impdict['Y'].copy()
+    Uimport = np.zeros(shape=numimportdraws)
+    for snInd in range(
+            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if NMatPrior[tnInd, snInd] > 0:
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                combNYtemp = np.reshape(np.tile(spsp.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                                                numimportdraws), (numimportdraws, 1))
+                Uimport += np.squeeze(
+                    (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                        combNYtemp))
+    Uimport = np.exp(Uimport)
+
+    # Importance likelihood ratio for importance draws
+    VoverU = (Vimport / Uimport)
+
+    # Compile list of optima
+    for deltind, delt in enumerate(deltvec):
+        print('delta: '+str(delt))
+        minslist = []
+        for j in range(Wimport.shape[1]):
+            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+            # Remove inds for top delt of weights
+            tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1 - delt)) # KEY CHANGE HERE
+            tempwtarray = np.delete(tempwtarray, tempremoveinds)
+            tempwtarray = tempwtarray / np.sum(tempwtarray)
+            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+
+        # RETURN minslist
+        currloss_avg, currloss_CI = sampf.process_loss_list(minslist, zlevel=zlevel)
+        store_util_extrm_1400[rep, deltind] = paramdict['baseloss'] - currloss_avg
+        store_utillo_extrm_1400[rep, deltind] = paramdict['baseloss'] - currloss_CI[1]
+        store_utilhi_extrm_1400[rep, deltind] = paramdict['baseloss'] - currloss_CI[0]
+
+        # Plot
+        fig, ax = plt.subplots()
+        fig.set_figheight(7)
+        fig.set_figwidth(11)
+
+        for k in range(numreps):
+            ax.errorbar(deltvec, store_util_extrm_1400[k],
+                        yerr=[store_util_extrm_1400[k] - store_utillo_extrm_1400[k],
+                              store_utilhi_extrm_1400[k] - store_util_extrm_1400[k]],
+                        fmt='o-', ecolor='g', capthick=4)
+        ax.set_title('95% CI for IP-RP solution, B=1400, under different $\delta$\n10 replications')
+        plt.xlabel('$\delta$')
+        plt.ylabel('Utility estimate')
+
+        plt.ylim([0, 8])
+        ax.tick_params(axis='x', labelsize=8)
+        label_X = ax.xaxis.get_label()
+        label_Y = ax.yaxis.get_label()
+        label_X.set_style('italic')
+        label_X.set_size(12)
+        label_Y.set_style('italic')
+        label_Y.set_size(12)
+
+        plt.show()
+        # Store arrays
+        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_util_extrm_1400'),
+                store_util_extrm_1400)
+        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utillo_extrm_1400'),
+                store_utillo_extrm_1400)
+        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utilhi_extrm_1400'),
+                store_utilhi_extrm_1400)
+
+##################
+# END PART 6
 ##################
