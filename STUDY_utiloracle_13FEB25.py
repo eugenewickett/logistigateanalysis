@@ -545,7 +545,7 @@ for rep in range(numreps):
         plt.xlabel('$\delta$')
         plt.ylabel('Utility estimate')
 
-        plt.ylim([0, 10])
+        plt.ylim([0, 6])
         ax.tick_params(axis='x', labelsize=8)
         label_X = ax.xaxis.get_label()
         label_Y = ax.yaxis.get_label()
