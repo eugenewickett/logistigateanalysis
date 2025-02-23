@@ -456,7 +456,6 @@ def GetInterpVectors(interp_df):
     """Build needed interpolation vectors for use with relaxed program"""
     lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
     for ind in range(interp_df.shape[0]):
-        print(ind)
         row = interp_df.iloc[ind]
         currBound, loval, hival = row['Bounds'], row['Util_lo'], row['Util_hi']
         # Get interpolation values
@@ -605,9 +604,12 @@ def GetAllocationFromOpt(soln, numTN):
 init_n_700 = GetAllocationFromOpt(initsoln_700, numTN)
 
 # todo: COMP2 Evaluate utility with importance sampling
-initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n_700, lgdict, paramdict, numimportdraws=50000)
+initsoln_700_util, initsoln_700_util_CI = sampf.getImportanceUtilityEstimate(init_n_700, lgdict, paramdict,
+                                                                             numimportdraws=30000)
 # 9-APR-24:
 # (1.3213765763534866, (1.3112104189824265, 1.3315427337245467)
+# 23-FEB-25:
+# 1.4101760201917486, (1.1949072961299958, 1.6254447442535014)
 
 ##########################
 # Generate additional candidates for 700 budget
@@ -622,6 +624,7 @@ def GetConstraintsWithPathCut(numVar, numTN, pathInd):
     return spo.LinearConstraint(newconstraintmat, np.ones(1), np.ones(1))
 
 # Identify candidate paths with sufficiently high IP-RP objectives
+# To return all candidate paths, set LB=0
 def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_integ, opt_bds, f_dist, LB,
                         seqlist_trim_df, printUpdate=True):
     """Returns list of path indices for paths with upper bounds above the current lower bound"""
@@ -650,12 +653,16 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
                 print('Path ' + str(pathind) + ' RP utility: ' + str(candpaths_df.iloc[pathind, 3]))
     return candpaths_df
 
-# candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
-#                                       optbounds, f_dept, initsoln_700_util, seqlist_trim, printUpdate=True)
+candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
+                                       optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
 
+
+
+
+# TODO: 23-FEB-25 STOPPED HERE
 # Save to avoid generating later
-# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
-candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+# candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
 
 def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict):
     for pathind in range(candpaths_df.shape[0]):
