@@ -50,10 +50,12 @@ SetupSenegalPriors(lgdict)
 lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 1000, 'delta': 0.4}
 
 # todo: REMOVE LATER ONCE WE'VE GENERATED 100 BATCHES
-GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws62'), 562)
+#  GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws62'), 562)
 
 # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
-RetrieveMCMCBatches(lgdict, 20, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'))
+RetrieveMCMCBatches(lgdict, 10, os.path.join('operationalizedsamplingplans',
+                                             'numpy_objects', 'draws'),
+                    maxbatchnum=50, rand=True, randseed=1122)
 # util.plotPostSamples(lgdict, 'int90')  # Plot if desired
 
 # Add boostrap-sampled sourcing vectors for non-tested test nodes; 20 is the avg number of tests per visited dept
@@ -64,7 +66,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set up utility estimation parameter dictionary with desired truth and data draws
-SetupUtilEstParamDict(lgdict, paramdict, 100000, 300, randseed=56)
+SetupUtilEstParamDict(lgdict, paramdict, 50000, 500, randseed=56)
 util.print_param_checks(paramdict)  # Parameter check
 
 # Set these parameters per the program described in the paper
@@ -75,8 +77,8 @@ bigM = B*ctest
 dept_df_sort = dept_df.sort_values('Department')
 
 FTEcostperday = 200
-f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday
-f_reg = np.array(regcost_mat)*FTEcostperday
+f_dept = np.array(dept_df_sort['DeptFixedCostDays'].tolist())*FTEcostperday  # Fixed district costs
+f_reg = np.array(regcost_mat)*FTEcostperday  # Fixed region-to-region arc costs
 
 ##########################
 ##########################
@@ -86,12 +88,11 @@ f_reg = np.array(regcost_mat)*FTEcostperday
 util.print_param_checks(paramdict)
 
 ### Benchmarks ###
-# IP-RP allocation
+# IP-RP allocation; pulled up from code below
 deptList_IPRP = ['Dakar', 'Keur Massar', 'Pikine', 'Diourbel', 'Bambey', 'Mbacke', 'Fatick', 'Foundiougne', 'Gossas']
 allocList_IPRP = [42, 21, 7, 9, 10, 7, 11, 10, 9]
 n_IPRP = GetAllocVecFromLists(deptNames, deptList_IPRP, allocList_IPRP)
-util_IPRP, util_IPRP_CI = sampf.getImportanceUtilityEstimate(n_IPRP, lgdict, paramdict,
-                                                             numimportdraws=50000)
+util_IPRP, util_IPRP_CI = sampf.getImportanceUtilityEstimate(n_IPRP, lgdict, paramdict, numimportdraws=50000)
 print('IPRP:',util_IPRP, util_IPRP_CI)
 # 1-APR
 # 1.3243255437720034 (1.316541769717496, 1.3321093178265109); 30k imp draws
@@ -208,7 +209,7 @@ print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 # B=1400
 #######
 
-# IP-RP allocation
+# IP-RP allocation; pulled up from code below
 deptList_IPRP = ['Dakar', 'Keur Massar', 'Pikine', 'Louga', 'Linguere', 'Kaolack', 'Guinguineo',
                  'Nioro du Rip', 'Kaffrine', 'Birkilane', 'Malem Hoddar', 'Bambey', 'Mbacke',
                  'Fatick', 'Foundiougne', 'Gossas']
@@ -349,30 +350,32 @@ def GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, csvpath):
         print('Getting utility for ' + deptnames[i] + ', at ' + str(currbd) + ' tests...')
         n[i] = currbd
         # Use the importance method for the upper allocation bound
-        currhi, currhi_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=50000)
+        currhi, currhi_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=30000)
         print(currhi, currhi_CI)
         util_hi.append(currhi)
         util_hi_CI.append(currhi_CI)
 
-    util_df = pd.DataFrame({'DeptName': deptnames, 'Bounds': deptallocbds, 'Util_lo': util_lo, 'Util_lo_CI': util_lo_CI,
+    interp_df = pd.DataFrame({'DeptName': deptnames, 'Bounds': deptallocbds, 'Util_lo': util_lo, 'Util_lo_CI': util_lo_CI,
                             'Util_hi': util_hi, 'Util_hi_CI': util_hi_CI})
-    util_df.to_csv(csvpath, index=False)
+    interp_df.to_csv(csvpath, index=False)
     return
 
-# GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+# TODO: Rerun below if interpolation values are not yet generated
+# GetInterpEvals(deptNames, deptallocbds, paramdict, lgdict, os.path.join('operationalizedsamplingplans',
+#                                                                        'csv_utility', 'interp_df_BASE.csv'))
 
 # Retrieve previously generated interpolation points
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+interp_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'interp_df_BASE.csv'))
 
 ### GENERATE PATHS FOR CASE STUDY ###
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
 maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
-print('Number of regions in any feasible path:',maxregnum)
+print('Number of regions in any feasible path:', maxregnum)
 
 mastlist = []
 for regamt in range(1, maxregnum):
     mastlist = mastlist + list(itertools.combinations(np.arange(1,numReg).tolist(), regamt))
-print('Number of feasible region combinations:',len(mastlist))
+print('Number of feasible region combinations:', len(mastlist))
 
 def GenerateNondominatedPaths(mastlist, optparamdict, csvpath):
     """
@@ -449,11 +452,11 @@ def GetPathSequenceAndCost(paths_df):
 seqlist_trim, seqcostlist_trim, bindistaccessvectors_trim = GetPathSequenceAndCost(paths_df)
 
 # Build interpolated objective slopes
-def GetInterpVectors(util_df):
+def GetInterpVectors(interp_df):
     """Build needed interpolation vectors for use with relaxed program"""
     lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
-    for ind in range(util_df.shape[0]):
-        row = util_df.iloc[ind]
+    for ind in range(interp_df.shape[0]):
+        row = interp_df.iloc[ind]
         currBound, loval, hival = row['Bounds'], row['Util_lo'], row['Util_hi']
         # Get interpolation values
         _, _, l, k, m1, m2 = opf.GetTriangleInterpolation([0, 1, currBound], [0, loval, hival])
@@ -468,7 +471,7 @@ def GetInterpVectors(util_df):
     return lvec, juncvec, m1vec, m2vec, bds, lovals, hivals
 
 # Get vectors of zero intercepts, junctures, and interpolation slopes for each of our Utilde evals at each district
-lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(util_df)
+lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(interp_df)
 
 def PlotInterpHist(lvec, juncvec, m1vec, m2vec, bds):
     """Make histograms of interpolation values"""
@@ -533,15 +536,15 @@ numPath = paths_df.shape[0]
 
 # todo: Variable vectors are in form (z, n, x) [districts, allocations, paths]
 # Variable bounds
-def GetVarBds(numTN, numPath, juncvec, util_df):
+def GetVarBds(numTN, numPath, juncvec, interp_df):
     lbounds = np.concatenate((np.zeros(numTN * 3), np.zeros(numPath)))
     ubounds = np.concatenate((np.ones(numTN),
                               np.array([juncvec[i] - 1 for i in range(numTN)]),
-                              np.array(util_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
+                              np.array(interp_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
                               np.ones(numPath)))
     return spo.Bounds(lbounds, ubounds)
 
-optbounds = GetVarBds(numTN, numPath, juncvec, util_df)
+optbounds = GetVarBds(numTN, numPath, juncvec, interp_df)
 
 # Objective vector
 def GetObjective(lvec, m1vec, m2vec, numPath):
@@ -678,7 +681,7 @@ optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconsta
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
 # Retrieve previously generated interpolation points
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+interp_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'interp_df_BASE.csv'))
 
 maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
 # TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 8 REGIONS; OTHERWISE TOO MANY PATHS ARE GENERATED
@@ -696,10 +699,10 @@ paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths',
 # Get necessary path vectors for IP-RP
 seqlist_trim, seqcostlist_trim, bindistaccessvectors_trim = GetPathSequenceAndCost(paths_df)
 # Get interpolation vectors
-lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(util_df)
+lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(interp_df)
 # Build IP-RP
 numPath = paths_df.shape[0]
-optbounds, optobjvec = GetVarBds(numTN, numPath, juncvec, util_df), GetObjective(lvec, m1vec, m2vec, numPath)
+optbounds, optobjvec = GetVarBds(numTN, numPath, juncvec, interp_df), GetObjective(lvec, m1vec, m2vec, numPath)
 optconstraints, optintegrality = GetConstraints(optparamdict, juncvec, seqcostlist_trim,
                                                 bindistaccessvectors_trim), GetIntegrality(optobjvec)
 
@@ -935,7 +938,7 @@ numPath = paths_df.shape[0]
 lbounds = np.concatenate((np.zeros(numTN*3), np.zeros(numPath)))
 ubounds = np.concatenate((np.ones(numTN),
                           np.array([juncvec[i]-1 for i in range(numTN)]),
-                          np.array(util_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
+                          np.array(interp_df['Bounds'].tolist()) - np.array([juncvec[i] - 1 for i in range(numTN)]),
                           np.ones(numPath)))
 
 optbounds = spo.Bounds(lbounds, ubounds)
