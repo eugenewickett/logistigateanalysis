@@ -456,6 +456,7 @@ def GetInterpVectors(interp_df):
     """Build needed interpolation vectors for use with relaxed program"""
     lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = [], [], [], [], [], [], []
     for ind in range(interp_df.shape[0]):
+        print(ind)
         row = interp_df.iloc[ind]
         currBound, loval, hival = row['Bounds'], row['Util_lo'], row['Util_hi']
         # Get interpolation values
@@ -469,6 +470,9 @@ def GetInterpVectors(interp_df):
         hivals.append(hival)
 
     return lvec, juncvec, m1vec, m2vec, bds, lovals, hivals
+
+# TODO: FIGURE OUT HOW TO ADJUST INTERPOLATION STEP WHEN NMAX*[UTIL@1TEST] IS LESS THAN [UTIL@NMAXTESTS]
+# interp_df[
 
 # Get vectors of zero intercepts, junctures, and interpolation slopes for each of our Utilde evals at each district
 lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(interp_df)
