@@ -653,30 +653,82 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
                 print('Path ' + str(pathind) + ' RP utility: ' + str(candpaths_df.iloc[pathind, 3]))
     return candpaths_df
 
-candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
-                                       optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
+# candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
+#                                        optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
 
-
-
-
-# TODO: 23-FEB-25 STOPPED HERE
 # Save to avoid generating later
-candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
-# candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
 
-def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict):
+def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict, plotupdate=True):
     for pathind in range(candpaths_df.shape[0]):
         # Evaluate the IP-RP allocation for each designated eligible path
         if candpaths_df.at[pathind, 'IPRPobj'] > LB:
             print('Evaluating utility for path ' + candpaths_df.at[pathind, 'Sequence'])
             candsoln_util, candsoln_util_CI = sampf.getImportanceUtilityEstimate(candpaths_df.at[pathind, 'Allocation'], lgdict,
-                                                                       paramdict, numimportdraws=50000)
+                                                                       paramdict, numimportdraws=30000)
             candpaths_df.at[pathind, 'Uoracle'] = candsoln_util
             candpaths_df.at[pathind, 'UoracleCIlo'] = candsoln_util_CI[0]
             candpaths_df.at[pathind, 'UoracleCIhi'] = candsoln_util_CI[1]
     return
-# todo: COMP2 Evaluate utility with importance sampling
-EvaluateCandidateUtility(candpaths_df_700, initsoln_700_util, lgdict, paramdict)
+# EvaluateCandidateUtility(candpaths_df_700, initsoln_700_util, lgdict, paramdict)
+def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=True):
+    """Evaluate each candidate path solution in the order of the IP-RP objective"""
+    # Load the candidate path data frame
+    candpaths_df = pd.read_pickle(pkllocatstr)
+    # Get descending order of indices WRT IP-RP objective
+    IPRPsortinds = np.argsort(candpaths_df['IPRPobj']).tolist()[::-1]
+    for pathind in IPRPsortinds:
+        # Evaluate the utility of the IP-RP allocation for each designated path if not already evaluated
+        if candpaths_df.at[pathind, 'Uoracle'] <= 0.0:
+            print('Evaluating utility for path ' + candpaths_df.at[pathind, 'Sequence'])
+            candsoln_util, candsoln_util_CI = sampf.getImportanceUtilityEstimate(candpaths_df.at[pathind, 'Allocation'],
+                                                                                 lgdict, paramdict,
+                                                                                 numimportdraws=30000)
+            candpaths_df.at[pathind, 'Uoracle'] = candsoln_util
+            candpaths_df.at[pathind, 'UoracleCIlo'] = candsoln_util_CI[0]
+            candpaths_df.at[pathind, 'UoracleCIhi'] = candsoln_util_CI[1]
+            # Store df
+            candpaths_df_700.to_pickle(pkllocatstr)
+        if plotupdate:
+            # Copy candidate df, sorted by IP-RP objectives
+            candpaths_df_sort = candpaths_df.sort_values(by='IPRPobj', ascending=False)
+            # Plot IP-RP objectives and utility estimates
+            xvals = list(candpaths_df_sort.index)
+            xvals =[str(xval) for xval in xvals]
+            IPRPobjs = list(candpaths_df_sort['IPRPobj'])
+            utilevals = list(candpaths_df_sort['Uoracle'])
+            maxind = max(40, np.where(np.array(utilevals)==0.0)[0][0])
+            # Plot
+            fig, ax = plt.subplots()
+            # yerr should be HALF the length of the total error bar
+            ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
+            ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
+            # ax.errorbar(xvals, utilvals, yerr=utilvalCIs, fmt='o',
+            #             color='black', linewidth=0.5, capsize=1.5)
+            ax.set(xticks=xvals[:maxind], ylim=(0., 2.))
+            plt.xticks(fontsize=6)
+            plt.ylabel('Utility', fontsize=12)
+            plt.xlabel('Candidate index', fontsize=12)
+            plt.title('Candidate solution evaluations', fontsize=14)
+            plt.legend(['IP-RP Objective', 'Candidate Utility'],
+                       fontsize=9, loc='upper right')
+            plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
+            plt.show()
+    return
+
+pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
+
+# Initialize candpaths_df with oracle evaluation of initial solution
+initpathind = np.where(np.round(initsoln_700[numTN * 3:]) == 1)[0][0]
+candpaths_df_700.loc[initpathind, 'Uoracle'] = initsoln_700_util
+candpaths_df_700.loc[initpathind, 'UoracleCIlo'] = initsoln_700_util_CI[0]
+candpaths_df_700.loc[initpathind, 'UoracleCIhi'] = initsoln_700_util_CI[1]
+# Save
+candpaths_df_700.to_pickle(pkllocatstr)
+# Now evaluate remaining candidates
+EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr)
+
 
 
 ###################
