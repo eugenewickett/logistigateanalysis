@@ -684,7 +684,8 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             print('Evaluating utility for path ' + candpaths_df.at[pathind, 'Sequence'])
             candsoln_util, candsoln_util_CI = sampf.getImportanceUtilityEstimate(candpaths_df.at[pathind, 'Allocation'],
                                                                                  lgdict, paramdict,
-                                                                                 numimportdraws=30000)
+                                                                                 numimportdraws=30000,
+                                                                                 preservevar=False)
             candpaths_df.at[pathind, 'Uoracle'] = candsoln_util
             candpaths_df.at[pathind, 'UoracleCIlo'] = candsoln_util_CI[0]
             candpaths_df.at[pathind, 'UoracleCIhi'] = candsoln_util_CI[1]
@@ -699,18 +700,22 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             xvals =[str(xval) for xval in xvals]
             IPRPobjs = list(candpaths_df_sort['IPRPobj'])
             utilevals = list(candpaths_df_sort['Uoracle'])
+            util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
+            util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
+            utilevalCIs = [(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i]) for i in range(len(util_CI_lo))]
             maxind = max(40, np.where(np.array(utilevals)==0.0)[0][0])
             # Plot
             fig, ax = plt.subplots()
             # yerr should be HALF the length of the total error bar
             ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
-            ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
-            # ax.errorbar(xvals, utilvals, yerr=utilvalCIs, fmt='o',
-            #             color='black', linewidth=0.5, capsize=1.5)
+            # ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
+            ax.errorbar(xvals, utilevals, yerr=utilevalCIs, fmt='o', markersize=4,
+                        color='black', linewidth=0.5, capsize=1.5)
             ax.set(xticks=xvals[:maxind], ylim=(0., 2.))
-            plt.xticks(fontsize=6)
+            ax.get_xaxis().set_ticks([])
+            plt.xticks(fontsize=6, rotation=90)
             plt.ylabel('Utility', fontsize=12)
-            plt.xlabel('Candidate index', fontsize=12)
+            plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
             plt.title('Candidate solution evaluations', fontsize=14)
             plt.legend(['IP-RP Objective', 'Candidate Utility'],
                        fontsize=9, loc='upper right')
@@ -719,7 +724,6 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
     return
 
 pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
-
 # Initialize candpaths_df with oracle evaluation of initial solution
 initpathind = np.where(np.round(initsoln_700[numTN * 3:]) == 1)[0][0]
 candpaths_df_700.loc[initpathind, 'Uoracle'] = initsoln_700_util
@@ -729,6 +733,86 @@ candpaths_df_700.loc[initpathind, 'UoracleCIhi'] = initsoln_700_util_CI[1]
 candpaths_df_700.to_pickle(pkllocatstr)
 # Now evaluate remaining candidates
 EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr)
+
+# Plot
+candpaths_df_700 = pd.read_pickle(pkllocatstr)
+candpaths_df_sort = candpaths_df_700.sort_values(by='IPRPobj', ascending=False)
+# xvals = list(candpaths_df_sort.index)
+# xvals =[str(xval) for xval in xvals]
+IPRPobjs = list(candpaths_df_sort['IPRPobj'])
+utilevals = list(candpaths_df_sort['Uoracle'])
+util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
+util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
+
+# for i in range(candpaths_df_sort.shape[0]):
+#     candpaths_df_700.at[i, 'UoracleCIlo'] = candpaths_df_700.iloc[i]['Uoracle'] - (candpaths_df_700.iloc[i]['Uoracle'] - candpaths_df_700.iloc[i]['UoracleCIlo']) / 1.3
+#     candpaths_df_700.at[i, 'UoracleCIhi'] = candpaths_df_700.iloc[i]['Uoracle'] + (candpaths_df_700.iloc[i]['UoracleCIhi'] - candpaths_df_700.iloc[i]['Uoracle']) / 1.3
+
+utilvalCIs = [(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i]) for i in range(len(util_CI_lo))]
+
+maxind = 40  # Change to number of evaluated candidates
+xvals = range(1, maxind+1)
+
+fig, ax = plt.subplots()
+# yerr should be HALF the length of the total error bar
+ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
+# ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
+ax.errorbar(xvals[:maxind], utilevals[:maxind],
+            yerr=np.transpose(utilvalCIs[:maxind]), fmt='o', markersize=4,
+            color='black', linewidth=0.5, capsize=1.5)
+ax.set(xticks=xvals[:maxind], ylim=(0., 2.))
+ax.get_xaxis().set_ticks([])
+# plt.xticks(fontsize=6, rotation=90, verticalalignment='center')
+plt.ylabel('Utility', fontsize=12)
+plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
+plt.title('Candidate solution evaluations\nBase setting', fontsize=14)
+plt.legend(['IP-RP Objective', 'Candidate Utility'],
+           fontsize=9, loc='upper right')
+plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
+plt.show()
+
+
+#################
+# Analyze the allocations of poor/good allocations
+#################
+# Break into quintiles, based on IP-RP solution?
+# Metrics:
+    # Number of tests
+    # Number of districts accessed
+    # Ratio of tests/districts
+pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
+candpaths_df_700 = pd.read_pickle(pkllocatstr)
+IPRPsortinds = np.argsort(candpaths_df_700['IPRPobj']).tolist()[::-1]
+divnum = 5  # Number of groups to analyze
+candpaths_df_700_sort = candpaths_df_700.sort_values(by='IPRPobj', ascending=False)
+candpaths_df_700_sort['NumDist'] = candpaths_df_700_sort.apply(lambda row: np.sum(eval(row.DistAccessBinaryVec)), axis=1)
+candpaths_df_700_sort['NumTest'] = candpaths_df_700_sort.apply(lambda row: np.sum(row.Allocation), axis=1)
+candpaths_df_700_sort['TestDistRatio'] = candpaths_df_700_sort.apply(lambda row: row.NumTest/row.NumDist, axis=1)
+grpsize = round(candpaths_df_700_sort.shape[0]/divnum)
+plotmat_numtest = np.empty((divnum, grpsize+2))
+plotmat_numdist = np.empty((divnum, grpsize+2))
+plotmat_ratio = np.empty((divnum, grpsize+2))
+for currdiv in range(divnum):
+    tempinds = (currdiv*grpsize, (currdiv+1)*grpsize)
+    tempdf = candpaths_df_700_sort.iloc[tempinds[0]:tempinds[1]]
+    tempdf['Test'] = df.apply(lambda row: row.Cost -
+                                                  (row.Cost * 0.1), axis=1)
+    plotmat_numtest[currdiv] = np.array(tempdf[''])
+
+plt.plot(candpaths_df_700_sort['NumTest'], candpaths_df_700_sort['IPRPobj'], 'x')
+plt.title('Number of tests allocated vs. IP-RP objective')
+plt.ylim(0, 2)
+plt.show()
+
+plt.plot(candpaths_df_700_sort['NumDist'], candpaths_df_700_sort['IPRPobj'], 'v')
+plt.title('Number of districts visited vs. IP-RP objective')
+plt.ylim(0, 2)
+plt.show()
+
+plt.plot(candpaths_df_700_sort['TestDistRatio'], candpaths_df_700_sort['IPRPobj'], 'o')
+plt.title('Test/district ratio vs. IP-RP objective')
+plt.ylim(0, 2)
+plt.show()
 
 
 
@@ -1473,47 +1557,6 @@ for currpathind in eligPathInds_sort:
     # Save to avoid generating later
     phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
 
-###########
-# For plotting AVOIDCORR results
-avoidcorrlist_noGain = [] # Each item is a list of [ind, util, utilCIlo, utilCIhi]
-# 'ind' corresponds to order in eligPathInds_sort, AFTER our initial feasible solution
-avoidcorrlist_noGain.append([2, 1.1365323217042338, 1.0810216850767471, 1.1920429583317205])
-avoidcorrlist_noGain.append([1, 1.8413414217440174, 1.7541682776352108, 1.928514565852824])
-avoidcorrlist_noGain.append([3, 1.2764127360273676, 1.216187066780611, 1.3366384052741243])
-avoidcorrlist_noGain.append([4, 1.0850895475972102, 1.0344833165187381, 1.1356957786756823])
-avoidcorrlist_noGain.append([5, 1.4506570585604877, 1.3793895780617174, 1.521924539059258])
-avoidcorrlist_noGain.append([6, 1.474908317427456, 1.4039251553566334, 1.5458914794982785])
-avoidcorrlist_noGain.append([7, 1.2897153198917515, 1.2270185964845517, 1.3524120432989513])
-avoidcorrlist_noGain.append([8, 1.5191899560186553, 1.4459312340540311, 1.5924486779832794])
-avoidcorrlist_noGain.append([9, 1.7771955304311646, 1.6889255960662837, 1.8654654647960456])
-avoidcorrlist_noGain.append([10, 1.358353115111278, 1.2938629084789692, 1.4228433217435867])
-avoidcorrlist_noGain.append([11, 1.384470354561941, 1.3170862254994464, 1.4518544836244356])
-avoidcorrlist_noGain.append([12, 1.159810949490371, 1.1099722219037016, 1.2096496770770404])
-avoidcorrlist_noGain.append([13, 1.3929113410344485, 1.3239767748148665, 1.4618459072540304])
-avoidcorrlist_noGain.append([14, 1.4227788138682822, 1.3562471558748275, 1.489310471861737])
-avoidcorrlist_noGain.append([15, 1.4226324882688086, 1.3539410711811293, 1.491323905356488])
-avoidcorrlist_noGain.append([16, 1.5490896524051845, 1.4745067541683117, 1.6236725506420573])
-avoidcorrlist_noGain.append([17, 1.4107884525634784, 1.3421672189217553, 1.4794096862052015])
-avoidcorrlist_noGain.append([18, 1.3936448242971693, 1.3309104835535948, 1.4563791650407438])
-avoidcorrlist_noGain.append([19, 1.357605830559418, 1.2995453701985564, 1.4156662909202797])
-avoidcorrlist_noGain.append([20, 1.3506299017532726, 1.2993090609417202, 1.401950742564825])
-avoidcorrlist_noGain.append([21, 1.518128082496327, 1.449491637894445, 1.5867645270982091])
-avoidcorrlist_noGain.append([22, 1.3766402580796875, 1.3221002505074608, 1.4311802656519141])
-avoidcorrlist_noGain.append([23, 1.291210047182048, 1.2280807170489823, 1.3543393773151138])
-avoidcorrlist_noGain.append([24, 1.3161767085590235, 1.2597308408861814, 1.3726225762318656])
-avoidcorrlist_noGain.append([25, 1.355324837184309, 1.291322751439255, 1.419326922929363])
-avoidcorrlist_noGain.append([26, 1.3828002919504883, 1.3167226409362947, 1.4488779429646819])
-avoidcorrlist_noGain.append([27, 1.1994347195531656, 1.1399588128009928, 1.2589106263053385])
-avoidcorrlist_noGain.append([28, 1.2688401546211114, 1.2199322422560446, 1.3177480669861783])
-avoidcorrlist_noGain.append([29, 1.2697834033770796, 1.2156822459149161, 1.323884560839243])
-avoidcorrlist_noGain.append([30, 1.2936727204013998, 1.233567581324321, 1.3537778594784786])
-
-
-
-avoidcorrlist_Gain = [] # When improvements occur
-avoidcorrlist_Gain.append([12, 1.4046122168968633, 1.3362814309248137, 1.472943002868913])
-avoidcorrlist_Gain.append([20, 1.7710611380324792, 1.6856646041734447, 1.8564576718915138])
-avoidcorrlist_Gain.append([24, 1.3848606156474457, 1.32386079041531, 1.4458604408795814])
 
 '''
 path 0
