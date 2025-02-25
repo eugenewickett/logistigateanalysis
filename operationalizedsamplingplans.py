@@ -689,7 +689,8 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             candpaths_df.at[pathind, 'UoracleCIlo'] = candsoln_util_CI[0]
             candpaths_df.at[pathind, 'UoracleCIhi'] = candsoln_util_CI[1]
             # Store df
-            candpaths_df_700.to_pickle(pkllocatstr)
+            candpaths_df.to_pickle(pkllocatstr)
+            print('Utility: ' + str(candpaths_df.at[pathind, 'Uoracle']))
         if plotupdate:
             # Copy candidate df, sorted by IP-RP objectives
             candpaths_df_sort = candpaths_df.sort_values(by='IPRPobj', ascending=False)
