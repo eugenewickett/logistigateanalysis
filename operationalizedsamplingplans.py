@@ -717,7 +717,7 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             plt.ylabel('Utility', fontsize=12)
             plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
             plt.title('Candidate solution evaluations', fontsize=14)
-            plt.legend(['IP-RP Objective', 'Candidate Utility'],
+            plt.legend(['IP-RP objective', 'Candidate utility est. (95% CI)'],
                        fontsize=9, loc='upper right')
             plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
             plt.show()
@@ -745,8 +745,8 @@ util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
 util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
 
 # for i in range(candpaths_df_sort.shape[0]):
-#     candpaths_df_700.at[i, 'UoracleCIlo'] = candpaths_df_700.iloc[i]['Uoracle'] - (candpaths_df_700.iloc[i]['Uoracle'] - candpaths_df_700.iloc[i]['UoracleCIlo']) / 1.3
-#     candpaths_df_700.at[i, 'UoracleCIhi'] = candpaths_df_700.iloc[i]['Uoracle'] + (candpaths_df_700.iloc[i]['UoracleCIhi'] - candpaths_df_700.iloc[i]['Uoracle']) / 1.3
+#     candpaths_df_700.at[i, 'UoracleCIlo'] = candpaths_df_700.iloc[i]['Uoracle'] - (candpaths_df_700.iloc[i]['Uoracle'] - candpaths_df_700.iloc[i]['UoracleCIlo']) / 1.4
+#     candpaths_df_700.at[i, 'UoracleCIhi'] = candpaths_df_700.iloc[i]['Uoracle'] + (candpaths_df_700.iloc[i]['UoracleCIhi'] - candpaths_df_700.iloc[i]['Uoracle']) / 1.4
 
 utilvalCIs = [(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i]) for i in range(len(util_CI_lo))]
 
@@ -766,7 +766,7 @@ ax.get_xaxis().set_ticks([])
 plt.ylabel('Utility', fontsize=12)
 plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
 plt.title('Candidate solution evaluations\nBase setting', fontsize=14)
-plt.legend(['IP-RP Objective', 'Candidate Utility'],
+plt.legend(['IP-RP objective', 'Candidate utility est. (95% CI)'],
            fontsize=9, loc='upper right')
 plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
 plt.show()
