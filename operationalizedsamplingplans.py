@@ -201,9 +201,11 @@ bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths',
 bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl'))
 
 
-#######
+########
+########
 # B=1400
-#######
+########
+########
 
 # IP-RP allocation; pulled up from code below
 deptList_IPRP = ['Dakar', 'Keur Massar', 'Pikine', 'Louga', 'Linguere', 'Kaolack', 'Guinguineo',
@@ -217,6 +219,10 @@ print('IPRP:',util_IPRP, util_IPRP_CI)
 # 2-APR
 # 2.501114917463534 (2.4907262706226145, 2.511503564304453)
 
+# Initiate/load benchmark data frame
+benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+bench_df_1400 = pd.read_pickle(benchpklstr)
+
 # LeastVisited
 deptList_LeastVisited = ['Keur Massar', 'Pikine', 'Louga', 'Linguere', 'Goudiry', 'Guinguineo',
                          'Nioro du Rip', 'Birkilane', 'Koungheul', 'Malem Hoddar', 'Bambey', 'Mbacke',
@@ -226,6 +232,10 @@ n_LeastVisited = GetAllocVecFromLists(deptNames, deptList_LeastVisited, allocLis
 util_LeastVisited_unif, util_LeastVisited_unif_CI = sampf.getImportanceUtilityEstimate(n_LeastVisited, lgdict,
                                                                 paramdict, numimportdraws=40000, preservevar=False)
 print('LeastVisited:',util_LeastVisited_unif, util_LeastVisited_unif_CI)
+bench_df_1400.loc[0] = ['LeastVisited_unif', deptList_LeastVisited, allocList_LeastVisited, n_LeastVisited,
+                       util_LeastVisited_unif, util_LeastVisited_unif_CI[0], util_LeastVisited_unif_CI[1]]
+bench_df_1400.to_pickle(benchpklstr)
+
 # 2-APR
 # 1.2424693100089677 (1.2265451101386144, 1.2583935098793209)
 
@@ -237,6 +247,9 @@ n_MostSFPs_unif = GetAllocVecFromLists(deptNames, deptList_MostSFPs_unif, allocL
 util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_unif, lgdict,
                                                                 paramdict, numimportdraws=40000, preservevar=False)
 print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
+bench_df_1400.loc[1] = ['MostSFPs_unif', deptList_MostSFPs_unif, allocList_MostSFPs_unif, n_MostSFPs_unif,
+                       util_MostSFPs_unif, util_MostSFPs_unif_CI[0], util_MostSFPs_unif_CI[1]]
+bench_df_1400.to_pickle(benchpklstr)
 # 2-APR
 # 0.3526096663592213 (0.34461075498647453, 0.3606085777319681)
 
@@ -248,6 +261,9 @@ n_MostSFPs_wtd = GetAllocVecFromLists(deptNames, deptList_MostSFPs_wtd, allocLis
 util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_MostSFPs_wtd, lgdict,
                                                                 paramdict, numimportdraws=40000, preservevar=False)
 print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
+bench_df_1400.loc[2] = ['MostSFPs_wtd', deptList_MostSFPs_wtd, allocList_MostSFPs_wtd, n_MostSFPs_wtd,
+                       util_MostSFPs_wtd, util_MostSFPs_wtd_CI[0], util_MostSFPs_wtd_CI[1]]
+bench_df_1400.to_pickle(benchpklstr)
 # 2-APR
 # 0.39343331638029966 (0.3847083229547188, 0.4021583098058805)
 
@@ -261,6 +277,9 @@ n_MoreDist_unif = GetAllocVecFromLists(deptNames, deptList_MoreDist_unif, allocL
 util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_unif, lgdict,
                                                                 paramdict, numimportdraws=40000, preservevar=False)
 print('MoreDistricts (unform):', util_MoreDist_unif, util_MoreDist_unif_CI)
+bench_df_1400.loc[3] = ['MoreDist_unif', deptList_MoreDist_unif, allocList_MoreDist_unif, n_MoreDist_unif,
+                       util_MoreDist_unif, util_MoreDist_unif_CI[0], util_MoreDist_unif_CI[1]]
+bench_df_1400.to_pickle(benchpklstr)
 # 2-APR
 # 1.7779186722467752 (1.7643080846741288, 1.7915292598194217)
 
@@ -274,6 +293,9 @@ n_MoreDist_wtd = GetAllocVecFromLists(deptNames, deptList_MoreDist_wtd, allocLis
 util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreDist_wtd, lgdict,
                                                                 paramdict, numimportdraws=40000, preservevar=False)
 print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
+bench_df_1400.loc[4] = ['MoreDist_wtd', deptList_MoreDist_wtd, allocList_MoreDist_wtd, n_MoreDist_wtd,
+                       util_MoreDist_wtd, util_MoreDist_wtd_CI[0], util_MoreDist_wtd_CI[1]]
+bench_df_1400.to_pickle(benchpklstr)
 # 2-APR
 # 1.9895474436100677 (1.977327771086971, 2.0017671161331645)
 
@@ -285,6 +307,9 @@ n_MoreTests_unif = GetAllocVecFromLists(deptNames, deptList_MoreTests_unif, allo
 util_MoreTests_unif, util_MoreTests_unif_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_unif, lgdict,
                                                                 paramdict, numimportdraws=40000, preservevar=False)
 print('MostTests (unform):', util_MoreTests_unif, util_MoreTests_unif_CI)
+bench_df_1400.loc[5] = ['MoreTests_unif', deptList_MoreTests_unif, allocList_MoreTests_unif, n_MoreTests_unif,
+                        util_MoreTests_unif, util_MoreTests_unif_CI[0], util_MoreTests_unif_CI[1]]
+bench_df_1400.to_pickle(benchpklstr)
 # 2-APR
 # 1.9490316484024035 (1.9400068838417859, 1.9580564129630211)
 
@@ -296,6 +321,9 @@ n_MoreTests_wtd = GetAllocVecFromLists(deptNames, deptList_MoreTests_wtd, allocL
 util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n_MoreTests_wtd, lgdict,
                                                                 paramdict, numimportdraws=40000, preservevar=False)
 print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
+bench_df_1400.loc[6] = ['MoreTests_wtd', deptList_MoreTests_wtd, allocList_MoreTests_wtd, n_MoreTests_wtd,
+                        util_MoreTests_wtd, util_MoreTests_wtd_CI[0], util_MoreTests_wtd_CI[1]]
+bench_df_1400.to_pickle(benchpklstr)
 # 2-APR
 # 1.921811949535421 (1.91282492725934, 1.9307989718115017)
 
