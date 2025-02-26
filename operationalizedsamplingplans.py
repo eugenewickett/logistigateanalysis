@@ -691,21 +691,22 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             candpaths_df_sort = candpaths_df.sort_values(by='IPRPobj', ascending=False)
             # Plot IP-RP objectives and utility estimates
             xvals = list(candpaths_df_sort.index)
-            xvals =[str(xval) for xval in xvals]
+            xvals = [str(xval) for xval in xvals]
             IPRPobjs = list(candpaths_df_sort['IPRPobj'])
             utilevals = list(candpaths_df_sort['Uoracle'])
             util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
             util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
-            utilevalCIs = [(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i]) for i in range(len(util_CI_lo))]
+            utilevalCIs = np.transpose([(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i])
+                                        for i in range(len(util_CI_lo))])
             maxind = max(40, np.where(np.array(utilevals)==0.0)[0][0])
             # Plot
             fig, ax = plt.subplots()
             # yerr should be HALF the length of the total error bar
             ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
             # ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
-            ax.errorbar(xvals, utilevals, yerr=utilevalCIs, fmt='o', markersize=4,
+            ax.errorbar(xvals[:maxind], utilevals[:maxind], yerr=utilevalCIs[:,:maxind], fmt='o', markersize=4,
                         color='black', linewidth=0.5, capsize=1.5)
-            ax.set(xticks=xvals[:maxind], ylim=(0., 2.))
+            ax.set(xticks=xvals[:maxind], ylim=(0., 3.5))
             ax.get_xaxis().set_ticks([])
             plt.xticks(fontsize=6, rotation=90)
             plt.ylabel('Utility', fontsize=12)
@@ -849,8 +850,9 @@ optconstraints, optintegrality = GetConstraints(optparamdict, juncvec, seqcostli
                                                 bindistaccessvectors_trim), GetIntegrality(optobjvec)
 
 spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
-initsoln_1400, initsoln_1400_obj  = spoOutput.x, spoOutput.fun*-1
+initsoln_1400, initsoln_1400_obj = spoOutput.x, spoOutput.fun*-1
 # 9-APR-24: 2.8785152859812526
+# 25-FEB-24: 3.0911879706342247
 
 # Convert solution to legible format
 opf.scipytoallocation(initsoln_1400, deptNames, regNames, seqlist_trim, eliminateZeros=True)
@@ -864,8 +866,35 @@ initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(i
 # 9-APR-24:
 # 2.384194894524951, (2.3736819834182015, 2.3947078056317004)
 
+# Get candidate path solutions
+candpaths_df_1400 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
+                                       optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
 
-optparamdict
+candpklstr_1400 = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_1400.pkl')
+
+# Save to avoid generating later
+candpaths_df_1400.to_pickle(candpklstr_1400)
+# Load here
+candpaths_df_1400 = pd.read_pickle(candpklstr_1400)
+
+EvaluateCandidateUtility_All(lgdict, paramdict, candpklstr_1400)
+
+
+
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
 
 def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray', vlist='NA', sortby='districtcost'):
     """Generate an allocation heat map"""
