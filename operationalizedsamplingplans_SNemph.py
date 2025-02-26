@@ -672,7 +672,107 @@ def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict):
             candpaths_df.at[pathind, 'UoracleCIhi'] = candsoln_util_CI[1]
     return
 # todo: COMP2 Evaluate utility with importance sampling
-EvaluateCandidateUtility(candpaths_df_700, initsoln_700_util, lgdict, paramdict)
+# EvaluateCandidateUtility(candpaths_df_700, initsoln_700_util, lgdict, paramdict)
+def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=True):
+    """Evaluate each candidate path solution in the order of the IP-RP objective"""
+    # Load the candidate path data frame
+    candpaths_df = pd.read_pickle(pkllocatstr)
+    # Get descending order of indices WRT IP-RP objective
+    IPRPsortinds = np.argsort(candpaths_df['IPRPobj']).tolist()[::-1]
+    for pathind in IPRPsortinds:
+        # Evaluate the utility of the IP-RP allocation for each designated path if not already evaluated
+        if candpaths_df.at[pathind, 'Uoracle'] <= 0.0:
+            print('Evaluating utility for path ' + candpaths_df.at[pathind, 'Sequence'])
+            candsoln_util, candsoln_util_CI = sampf.getImportanceUtilityEstimate(candpaths_df.at[pathind, 'Allocation'],
+                                                                                 lgdict, paramdict,
+                                                                                 numimportdraws=30000,
+                                                                                 preservevar=False)
+            candpaths_df.at[pathind, 'Uoracle'] = candsoln_util
+            candpaths_df.at[pathind, 'UoracleCIlo'] = candsoln_util_CI[0]
+            candpaths_df.at[pathind, 'UoracleCIhi'] = candsoln_util_CI[1]
+            # Store df
+            candpaths_df.to_pickle(pkllocatstr)
+            print('Utility: ' + str(candpaths_df.at[pathind, 'Uoracle']))
+        if plotupdate:
+            # Copy candidate df, sorted by IP-RP objectives
+            candpaths_df_sort = candpaths_df.sort_values(by='IPRPobj', ascending=False)
+            # Plot IP-RP objectives and utility estimates
+            xvals = list(candpaths_df_sort.index)
+            xvals = [str(xval) for xval in xvals]
+            IPRPobjs = list(candpaths_df_sort['IPRPobj'])
+            utilevals = list(candpaths_df_sort['Uoracle'])
+            util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
+            util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
+            utilevalCIs = np.transpose([(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i])
+                                        for i in range(len(util_CI_lo))])
+            maxind = max(40, np.where(np.array(utilevals)==0.0)[0][0])
+            # Plot
+            fig, ax = plt.subplots()
+            # yerr should be HALF the length of the total error bar
+            ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
+            # ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
+            ax.errorbar(xvals[:maxind], utilevals[:maxind], yerr=utilevalCIs[:,:maxind], fmt='o', markersize=4,
+                        color='black', linewidth=0.5, capsize=1.5)
+            ax.set(xticks=xvals[:maxind], ylim=(0., 3.5))
+            ax.get_xaxis().set_ticks([])
+            plt.xticks(fontsize=6, rotation=90)
+            plt.ylabel('Utility', fontsize=12)
+            plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
+            plt.title('Candidate solution evaluations', fontsize=14)
+            plt.legend(['IP-RP objective', 'Candidate utility est. (95% CI)'],
+                       fontsize=9, loc='upper right')
+            plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
+            plt.show()
+    return
+
+pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
+# Initialize candpaths_df with oracle evaluation of initial solution
+initpathind = np.where(np.round(initsoln_700[numTN * 3:]) == 1)[0][0]
+candpaths_df_700.loc[initpathind, 'Uoracle'] = initsoln_700_util
+candpaths_df_700.loc[initpathind, 'UoracleCIlo'] = initsoln_700_util_CI[0]
+candpaths_df_700.loc[initpathind, 'UoracleCIhi'] = initsoln_700_util_CI[1]
+# Save
+candpaths_df_700.to_pickle(pkllocatstr)
+# Now evaluate remaining candidates
+EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr)
+
+# Plot
+candpaths_df_700 = pd.read_pickle(pkllocatstr)
+candpaths_df_sort = candpaths_df_700.sort_values(by='IPRPobj', ascending=False)
+# xvals = list(candpaths_df_sort.index)
+# xvals =[str(xval) for xval in xvals]
+IPRPobjs = list(candpaths_df_sort['IPRPobj'])
+utilevals = list(candpaths_df_sort['Uoracle'])
+util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
+util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
+
+# for i in range(candpaths_df_sort.shape[0]):
+#     candpaths_df_700.at[i, 'UoracleCIlo'] = candpaths_df_700.iloc[i]['Uoracle'] - (candpaths_df_700.iloc[i]['Uoracle'] - candpaths_df_700.iloc[i]['UoracleCIlo']) / 1.4
+#     candpaths_df_700.at[i, 'UoracleCIhi'] = candpaths_df_700.iloc[i]['Uoracle'] + (candpaths_df_700.iloc[i]['UoracleCIhi'] - candpaths_df_700.iloc[i]['Uoracle']) / 1.4
+
+utilvalCIs = [(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i]) for i in range(len(util_CI_lo))]
+
+maxind = 40  # Change to number of evaluated candidates
+xvals = range(1, maxind+1)
+
+fig, ax = plt.subplots()
+# yerr should be HALF the length of the total error bar
+ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
+# ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
+ax.errorbar(xvals[:maxind], utilevals[:maxind],
+            yerr=np.transpose(utilvalCIs[:maxind]), fmt='o', markersize=4,
+            color='black', linewidth=0.5, capsize=1.5)
+ax.set(xticks=xvals[:maxind], ylim=(0., 2.))
+ax.get_xaxis().set_ticks([])
+# plt.xticks(fontsize=6, rotation=90, verticalalignment='center')
+plt.ylabel('Utility', fontsize=12)
+plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
+plt.title('Candidate solution evaluations\nBase setting', fontsize=14)
+plt.legend(['IP-RP objective', 'Candidate utility est. (95% CI)'],
+           fontsize=9, loc='upper right')
+plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
+plt.show()
+
 
 
 ###################
