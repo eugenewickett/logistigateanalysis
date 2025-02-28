@@ -360,17 +360,19 @@ def GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, csvpath):
         print('Getting utility for ' + deptnames[i] + ', at ' + str(currbd) + ' tests...')
         n[i] = currbd
         # Use the importance method for the upper allocation bound
-        currhi, currhi_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=50000)
+        currhi, currhi_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=30000,
+                                                               preservevar=False)
         print(currhi, currhi_CI)
         util_hi.append(currhi)
         util_hi_CI.append(currhi_CI)
 
-    util_df = pd.DataFrame({'DeptName': deptnames, 'Bounds': deptallocbds, 'Util_lo': util_lo, 'Util_lo_CI': util_lo_CI,
-                            'Util_hi': util_hi, 'Util_hi_CI': util_hi_CI})
-    util_df.to_csv(csvpath, index=False)
+        util_df = pd.DataFrame({'DeptName': deptnames, 'Bounds': deptallocbds, 'Util_lo': util_lo,
+                                'Util_lo_CI': util_lo_CI, 'Util_hi': util_hi, 'Util_hi_CI': util_hi_CI})
+        util_df.to_csv(csvpath, index=False)
     return
 
-# GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+interplocatstr = os.path.join('operationalizedsamplingplans', 'csv_utility', 'interp_df_SNemph.csv')
+GetInterpEvals(deptNames, deptallocbds, paramdict, lgdict, interplocatstr)
 
 # Retrieve previously generated interpolation points
 util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_SNemph.csv'))
@@ -653,12 +655,13 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
                 print('Path ' + str(pathind) + ' RP utility: ' + str(candpaths_df.iloc[pathind, 3]))
     return candpaths_df
 
-# candpaths_df_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
-#                                       optbounds, f_dept, initsoln_700_util, seqlist_trim, printUpdate=True)
-
+pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl')
+candpaths_df_SNemph_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
+                                      optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
+candpaths_df_SNemph_700.to_pickle(pkllocatstr)
 # Save to avoid generating later
-# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
-candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl'))
+# candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl'))
 
 def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict):
     for pathind in range(candpaths_df.shape[0]):
@@ -713,7 +716,7 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             # ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
             ax.errorbar(xvals[:maxind], utilevals[:maxind], yerr=utilevalCIs[:,:maxind], fmt='o', markersize=4,
                         color='black', linewidth=0.5, capsize=1.5)
-            ax.set(xticks=xvals[:maxind], ylim=(0., 3.5))
+            ax.set(xticks=xvals[:maxind], ylim=(0., 1.1*np.max(IPRPobjs)))
             ax.get_xaxis().set_ticks([])
             plt.xticks(fontsize=6, rotation=90)
             plt.ylabel('Utility', fontsize=12)
@@ -725,15 +728,7 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             plt.show()
     return
 
-pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
-# Initialize candpaths_df with oracle evaluation of initial solution
-initpathind = np.where(np.round(initsoln_700[numTN * 3:]) == 1)[0][0]
-candpaths_df_700.loc[initpathind, 'Uoracle'] = initsoln_700_util
-candpaths_df_700.loc[initpathind, 'UoracleCIlo'] = initsoln_700_util_CI[0]
-candpaths_df_700.loc[initpathind, 'UoracleCIhi'] = initsoln_700_util_CI[1]
-# Save
-candpaths_df_700.to_pickle(pkllocatstr)
-# Now evaluate remaining candidates
+# Evaluate candidates
 EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr)
 
 # Plot

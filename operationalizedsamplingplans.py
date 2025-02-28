@@ -714,36 +714,36 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
             # Store df
             candpaths_df.to_pickle(pkllocatstr)
             print('Utility: ' + str(candpaths_df.at[pathind, 'Uoracle']))
-        if plotupdate:
-            # Copy candidate df, sorted by IP-RP objectives
-            candpaths_df_sort = candpaths_df.sort_values(by='IPRPobj', ascending=False)
-            # Plot IP-RP objectives and utility estimates
-            xvals = list(candpaths_df_sort.index)
-            xvals = [str(xval) for xval in xvals]
-            IPRPobjs = list(candpaths_df_sort['IPRPobj'])
-            utilevals = list(candpaths_df_sort['Uoracle'])
-            util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
-            util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
-            utilevalCIs = np.transpose([(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i])
-                                        for i in range(len(util_CI_lo))])
-            maxind = max(40, np.where(np.array(utilevals)==0.0)[0][0])
-            # Plot
-            fig, ax = plt.subplots()
-            # yerr should be HALF the length of the total error bar
-            ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
-            # ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
-            ax.errorbar(xvals[:maxind], utilevals[:maxind], yerr=utilevalCIs[:,:maxind], fmt='o', markersize=4,
-                        color='black', linewidth=0.5, capsize=1.5)
-            ax.set(xticks=xvals[:maxind], ylim=(0., 3.5))
-            ax.get_xaxis().set_ticks([])
-            plt.xticks(fontsize=6, rotation=90)
-            plt.ylabel('Utility', fontsize=12)
-            plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
-            plt.title('Candidate solution evaluations', fontsize=14)
-            plt.legend(['IP-RP objective', 'Candidate utility est. (95% CI)'],
-                       fontsize=9, loc='upper right')
-            plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
-            plt.show()
+            if plotupdate:
+                # Copy candidate df, sorted by IP-RP objectives
+                candpaths_df_sort = candpaths_df.sort_values(by='IPRPobj', ascending=False)
+                # Plot IP-RP objectives and utility estimates
+                xvals = list(candpaths_df_sort.index)
+                xvals = [str(xval) for xval in xvals]
+                IPRPobjs = list(candpaths_df_sort['IPRPobj'])
+                utilevals = list(candpaths_df_sort['Uoracle'])
+                util_CI_lo = list(candpaths_df_sort['UoracleCIlo'])
+                util_CI_hi = list(candpaths_df_sort['UoracleCIhi'])
+                utilevalCIs = np.transpose([(utilevals[i]-util_CI_lo[i], util_CI_hi[i]-utilevals[i])
+                                            for i in range(len(util_CI_lo))])
+                maxind = max(40, np.where(np.array(utilevals)==0.0)[0][0])
+                # Plot
+                fig, ax = plt.subplots()
+                # yerr should be HALF the length of the total error bar
+                ax.plot(xvals[:maxind], IPRPobjs[:maxind], 'v', color='royalblue', alpha=0.4, markersize=3)
+                # ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
+                ax.errorbar(xvals[:maxind], utilevals[:maxind], yerr=utilevalCIs[:,:maxind], fmt='o', markersize=4,
+                            color='black', linewidth=0.5, capsize=1.5)
+                ax.set(xticks=xvals[:maxind], ylim=(0., 1.1*np.max(IPRPobjs)))
+                ax.get_xaxis().set_ticks([])
+                plt.xticks(fontsize=6, rotation=90)
+                plt.ylabel('Utility', fontsize=12)
+                plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
+                plt.title('Candidate solution evaluations', fontsize=14)
+                plt.legend(['IP-RP objective', 'Candidate utility est. (95% CI)'],
+                           fontsize=9, loc='upper right')
+                plt.axhline(utilevals[0], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
+                plt.show()
     return
 
 pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
@@ -908,23 +908,80 @@ candpaths_df_1400 = pd.read_pickle(candpklstr_1400)
 EvaluateCandidateUtility_All(lgdict, paramdict, candpklstr_1400)
 
 
+# TODO: scratch, REMOVE later
+benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+candpaths_df = pd.read_pickle(candpklstr_1400)
+bench_df = pd.read_pickle(benchpklstr)
 
-####################
-####################
-####################
-####################
-####################
-####################
-####################
-####################
-####################
-####################
-####################
-####################
-####################
-####################
+# Plot candidates with benchmarks
+def PlotCandAndBench(candpaths_df, bench_df, numcand=40):
+    """Generates a plot illustrating candidate evaluations with benchmarks"""
+    # Copy candidate df, sorted by IP-RP objectives
+    candpaths_df_sort = candpaths_df.sort_values(by='IPRPobj', ascending=False)
+    # Plot IP-RP objectives and utility estimates
+    xvals = list(bench_df['Benchmark_Name']) + ['', ''] + list(candpaths_df_sort.index)
+    xvals = [str(xval) for xval in xvals]
+    IPRPobjs = [np.nan for x in range(bench_df.shape[0]+2)] + list(candpaths_df_sort['IPRPobj'])
+    utilevals = list(bench_df['Uoracle']) + [np.nan for x in range(2)] +list(candpaths_df_sort['Uoracle'])
+    util_CI_lo = list(bench_df['UoracleCIlo']) + [np.nan for x in range(2)] + list(candpaths_df_sort['UoracleCIlo'])
+    util_CI_hi = list(bench_df['UoracleCIhi']) + [np.nan for x in range(2)] + list(candpaths_df_sort['UoracleCIhi'])
+    utilevalCIs = np.transpose([(utilevals[i] - util_CI_lo[i], util_CI_hi[i] - utilevals[i])
+                                for i in range(len(util_CI_lo))])
+    maxind = min(numcand, np.where(np.array(utilevals) == 0.0)[0][0])
 
-def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray', vlist='NA', sortby='districtcost'):
+    #
+    xinds = range(len(xvals))
+    fig, ax = plt.subplots(figsize=(12,6))
+    # yerr should be HALF the length of the total error bar
+    candstartind = bench_df.shape[0]+2
+    # candidate IP-RP values
+    ax.plot(xinds[candstartind:(candstartind+maxind)],
+            IPRPobjs[candstartind:(candstartind+maxind)],
+            'v', color='royalblue', alpha=0.4, markersize=3)
+    # ax.plot(xvals[:maxind], utilevals[:maxind], 'o', color='black',markersize=2)
+    # benchmarks
+    ax.errorbar(xinds[:candstartind], utilevals[:candstartind],
+                yerr=utilevalCIs[:, :candstartind], fmt='x',
+                markersize=6, color='red', linewidth=0.5, capsize=1.5)
+    # candidates
+    ax.errorbar(xinds[candstartind:(candstartind+maxind)],
+                utilevals[candstartind:(candstartind+maxind)],
+                yerr=utilevalCIs[:, candstartind:(candstartind+maxind)], fmt='o',
+                markersize=4, color='black', linewidth=0.5, capsize=1.5)
+
+    ax.set(ylim=(0., 1.2*np.nanmax(IPRPobjs,)))
+    ax.get_xaxis().set_ticks(ticks=range(bench_df.shape[0]), labels=xvals[:bench_df.shape[0]])
+    plt.xticks(fontsize=9, rotation=90)
+    plt.ylabel('Utility', fontsize=12)
+    ax.tick_params(axis='x', which='major', pad=15)
+    plt.xlabel('Candidate solutions, indexed by IP-RP objective', fontsize=12)
+    plt.title('Candidate solution evaluations', fontsize=14)
+    plt.legend(['IP-RP objective', 'Benchmark utility est. (95% CI)',
+                'Candidate utility est. (95% CI)'],
+               fontsize=9, loc='upper right')
+    plt.axhline(utilevals[bench_df.shape[0]+2], xmin=0.06, color='gray', linestyle='dashed', alpha=0.4)  # Evaluated utility
+    fig.tight_layout()
+    plt.show()
+
+    return
+
+benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+bench_df_1400 = pd.read_pickle(benchpklstr)
+candpaths_df = pd.read_pickle(candpklstr_1400)
+bench_df = pd.read_pickle(benchpklstr)
+PlotCandAndBench(candpaths_df_700, bench_df_700)
+
+candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+
+# SNemph plot
+cand_SNemph_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl')
+candpaths_SNemph = pd.read_pickle(cand_SNemph_pkl)
+bench_SNemph_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_SNemph_700.pkl')
+bench_SNemph = pd.read_pickle(bench_SNemph_pkl)
+PlotCandAndBench(candpaths_SNemph, bench_SNemph, numcand=36)
+
+def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray',
+                          vlist='NA', sortby='districtcost'):
     """Generate an allocation heat map"""
     distNames = optparamdict['deptnames']
     # Sort regions by distance to HQ, taken to be row 0
@@ -950,7 +1007,10 @@ def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray', vlist='
         distmatind = distinreglist[regmatind].index(currDistName)
         dispmat[regmatind, distmatind] = curralloc
     if vlist != 'NA':
-        plt.imshow(dispmat, cmap=cmapstr, interpolation='nearest', vmin=vlist[0], vmax=vlist[1])
+        fig, ax = plt.subplots()
+        img = plt.imshow(dispmat, cmap=cmapstr, interpolation='nearest',
+                        vmin=vlist[0], vmax=vlist[1])
+        plt.colorbar(img)
     else:
         plt.imshow(dispmat, cmap=cmapstr, interpolation='nearest')
     plt.ylabel('Ranked distance from HQ region')
@@ -959,6 +1019,73 @@ def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray', vlist='
     plt.tight_layout()
     plt.show()
     return
+
+# SNemph allocation
+n_SNemph = candpaths_SNemph.iloc[np.argmax(candpaths_SNemph['IPRPobj'])]['Allocation']
+MakeAllocationHeatMap(n_SNemph, optparamdict,
+                      plotTitle='B=700, upstream emphasis\nIP-RP solution',
+                      cmapstr='Purples', sortby='districtcost', vlist=[0,60])
+
+cand_700_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
+candpaths_700 = pd.read_pickle(cand_700_pkl)
+n_IPRP_700 = candpaths_700.iloc[np.argmax(candpaths_SNemph['IPRPobj'])]['Allocation']
+MakeAllocationHeatMap(n_IPRP_700, optparamdict,
+                      plotTitle='B=700, base setting\nIP-RP solution',
+                      cmapstr='Purples', sortby='districtcost', vlist=[0,60])
+
+cand_1400_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_1400.pkl')
+candpaths_1400 = pd.read_pickle(cand_1400_pkl)
+n_IPRP_1400 = candpaths_1400.iloc[np.argmax(candpaths_SNemph['IPRPobj'])]['Allocation']
+MakeAllocationHeatMap(n_IPRP_1400, optparamdict,
+                      plotTitle='B=1400, base setting\nIP-RP solution',
+                      cmapstr='Purples', sortby='districtcost', vlist=[0,60])
+
+bench_SNemph_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_SNemph_700.pkl')
+bench_SNemph = pd.read_pickle(bench_SNemph_pkl)
+print(bench_SNemph[['Benchmark_Name', 'Uoracle']])
+candpaths_SNemph.iloc[np.argmax(candpaths_SNemph['IPRPobj'])]['Uoracle']
+
+bench_700_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl')
+bench_700 = pd.read_pickle(bench_700_pkl)
+print(bench_700[['Benchmark_Name', 'Uoracle']])
+candpaths_700.iloc[np.argmax(candpaths_700['IPRPobj'])]['Uoracle']
+
+bench_1400_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+bench_1400 = pd.read_pickle(bench_1400_pkl)
+print(bench_1400[['Benchmark_Name', 'Uoracle']])
+candpaths_1400.iloc[np.argmax(candpaths_1400['IPRPobj'])]['Uoracle']
+
+
+n_bench = bench_1400.iloc[np.argmax(bench_1400['Uoracle'])]['Alloc_vec']
+MakeAllocationHeatMap(n_bench, optparamdict,
+                      plotTitle='B=1400, base setting\nMore Districts policy, weighted allocation',
+                      cmapstr='Purples', sortby='districtcost', vlist=[0,60])
+
+n_bench = bench_700.iloc[np.argmax(bench_700['Uoracle'])]['Alloc_vec']
+MakeAllocationHeatMap(n_bench, optparamdict,
+                      plotTitle='B=700, base setting\nLeast Visited policy',
+                      cmapstr='Purples', sortby='districtcost', vlist=[0,60])
+
+n_bench = bench_SNemph.iloc[np.argmax(bench_SNemph['Uoracle'])]['Alloc_vec']
+MakeAllocationHeatMap(n_bench, optparamdict,
+                      plotTitle='B=700, upstream emphasis\nLeast Visited policy',
+                      cmapstr='Purples', sortby='districtcost', vlist=[0,60])
+
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+####################
+
 
 # Base allocations
 init_n_700_BASE = np.array([ 0., 12.,  0.,  0.,  0.,  0., 57.,  0., 10.,  9.,  9.,  0.,  0.,
