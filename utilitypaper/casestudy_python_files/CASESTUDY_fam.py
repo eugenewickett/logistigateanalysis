@@ -56,8 +56,20 @@ csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Generate posterior draws
 numdraws = 75000
 csdict_fam['numPostSamples'] = numdraws
-np.random.seed(1000) # To replicate draws later
-csdict_fam = methods.GeneratePostSamples(csdict_fam)
+filedest = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'numpy_obj', 'mcmc_draws', 'existing')
+'''
+numdraws = 5000  # Blocks of 5k draws
+csdict_fam['numPostSamples'] = numdraws
+for rep in range(1, 40):
+    np.random.seed(rep+1000)
+    csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    np.save(os.path.join(filedest, 'draws'+str(rep)+'.npy'), csdict_fam['postSamples'])
+'''
+
+
+# Load from previously generated MCMC draws
+csdict_fam['postSamples'] = np.load(filedest)
+
 # Print inference from initial data
 # util.plotPostSamples(csdict_fam, 'int90')
 
@@ -70,7 +82,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 2000
+numtruthdraws, numdatadraws = 75000, 500
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -85,7 +97,7 @@ util.print_param_checks(paramdict)  # Check of used parameters
 ###############
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                 numimpdraws=60000, numdatadrawsforimp=5000,
-                                                                impwtoutlierprop=0.005,
+                                                                impwtoutlierprop=0.01,
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Familiar Setting')
 ###
@@ -114,6 +126,10 @@ for tempind, temp in enumerate(testaddseq):
 util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint)
 np.save(os.path.join('..', 'existing', 'exist_alloc'), alloc)
 
+
+#####################
+#####################
+#####################
 
 def unif_design_mat(numTN, testmax, testint=1):
     """
@@ -158,20 +174,20 @@ numreps = 10
 stop = False
 lastrep = 0
 while not stop:
+    leadfilestr = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing')
     # We want 10 evaluations of utility for each plan and testnum
-    alloc = np.load(os.path.join('..', 'existing', 'exist_alloc.npy'))
-    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(
-        os.path.join('..', 'existing', 'util_avg_greedy_noout.npy')), \
-        np.load(os.path.join('..', 'existing', 'util_hi_greedy_noout.npy')), \
-        np.load(os.path.join('..', 'existing', 'util_lo_greedy_noout.npy'))
+    alloc = np.load(os.path.join(leadfilestr, 'exist_alloc.npy'))
+    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join(leadfilestr, 'util_avg_greedy.npy')), \
+        np.load(os.path.join(leadfilestr, 'util_hi_greedy.npy')), \
+        np.load(os.path.join(leadfilestr, 'util_lo_greedy.npy'))
     util_avg_unif, util_hi_unif, util_lo_unif = np.load(
-        os.path.join('..', 'existing', 'util_avg_unif_noout.npy')), \
-        np.load(os.path.join('..', 'existing', 'util_hi_unif_noout.npy')), \
-        np.load(os.path.join('..', 'existing', 'util_lo_unif_noout.npy'))
+        os.path.join(leadfilestr, 'util_avg_unif.npy')), \
+        np.load(os.path.join(leadfilestr, 'util_hi_unif.npy')), \
+        np.load(os.path.join(leadfilestr, 'util_lo_unif.npy'))
     util_avg_rudi, util_hi_rudi, util_lo_rudi = np.load(
-        os.path.join('..', 'existing', 'util_avg_rudi_noout.npy')), \
-        np.load(os.path.join('..', 'existing', 'util_hi_rudi_noout.npy')), \
-        np.load(os.path.join('..', 'existing', 'util_lo_rudi_noout.npy'))
+        os.path.join(leadfilestr, 'util_avg_rudi.npy')), \
+        np.load(os.path.join(leadfilestr, 'util_hi_rudi.npy')), \
+        np.load(os.path.join(leadfilestr, 'util_lo_rudi.npy'))
 
     # Stop if the last utility column isn't zero
     if util_avg_greedy[-1, -1] > 0:
@@ -197,10 +213,10 @@ while not stop:
             lastrep = currrep
 
         # Greedy
-        currlosslist = sampf.sampling_plan_loss_list_importance(des_greedy, currbudget, csdict_fam, paramdict,
-                                                                numimportdraws=10000,
+        currlosslist, _ = sampf.sampling_plan_loss_list_importance(des_greedy, currbudget, csdict_fam, paramdict,
+                                                                numimportdraws=40000,
                                                                 numdatadrawsforimportance=5000,
-                                                                impweightoutlierprop=0.000)
+                                                                extremadelta=0.01, preservevar=False)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_greedy[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
         util_lo_greedy[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
@@ -209,10 +225,10 @@ while not stop:
         print('Utility at ' + str(currbudget) + ' tests, Greedy: ' + str(util_avg_greedy[currrep, currbudgetind + 1]))
 
         # Uniform
-        currlosslist = sampf.sampling_plan_loss_list_importance(des_unif, currbudget, csdict_fam, paramdict,
-                                                                numimportdraws=10000,
+        currlosslist, _ = sampf.sampling_plan_loss_list_importance(des_unif, currbudget, csdict_fam, paramdict,
+                                                                numimportdraws=40000,
                                                                 numdatadrawsforimportance=5000,
-                                                                impweightoutlierprop=0.000)
+                                                                extremadelta=0.01, preservevar=False)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_unif[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
         util_lo_unif[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
@@ -221,10 +237,10 @@ while not stop:
         print('Utility at ' + str(currbudget) + ' tests, Uniform: ' + str(util_avg_unif[currrep, currbudgetind + 1]))
 
         # Rudimentary
-        currlosslist = sampf.sampling_plan_loss_list_importance(des_rudi, currbudget, csdict_fam, paramdict,
-                                                                numimportdraws=10000,
+        currlosslist, _ = sampf.sampling_plan_loss_list_importance(des_rudi, currbudget, csdict_fam, paramdict,
+                                                                numimportdraws=40000,
                                                                 numdatadrawsforimportance=5000,
-                                                                impweightoutlierprop=0.000)
+                                                                extremadelta=0.01, preservevar=False)
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_rudi[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss
         util_lo_rudi[currrep, currbudgetind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
@@ -234,15 +250,15 @@ while not stop:
             'Utility at ' + str(currbudget) + ' tests, Rudimentary: ' + str(util_avg_rudi[currrep, currbudgetind + 1]))
 
         # Save updated objects
-        np.save(os.path.join('..', 'existing', 'util_avg_greedy_noout'), util_avg_greedy)
-        np.save(os.path.join('..', 'existing', 'util_hi_greedy_noout'), util_hi_greedy)
-        np.save(os.path.join('..', 'existing', 'util_lo_greedy_noout'), util_lo_greedy)
-        np.save(os.path.join('..', 'existing', 'util_avg_unif_noout'), util_avg_unif)
-        np.save(os.path.join('..', 'existing', 'util_hi_unif_noout'), util_hi_unif)
-        np.save(os.path.join('..', 'existing', 'util_lo_unif_noout'), util_lo_unif)
-        np.save(os.path.join('..', 'existing', 'util_avg_rudi_noout'), util_avg_rudi)
-        np.save(os.path.join('..', 'existing', 'util_hi_rudi_noout'), util_hi_rudi)
-        np.save(os.path.join('..', 'existing', 'util_lo_rudi_noout'), util_lo_rudi)
+        np.save(os.path.join(leadfilestr, 'util_avg_greedy'), util_avg_greedy)
+        np.save(os.path.join(leadfilestr, 'util_hi_greedy'), util_hi_greedy)
+        np.save(os.path.join(leadfilestr, 'util_lo_greedy'), util_lo_greedy)
+        np.save(os.path.join(leadfilestr, 'util_avg_unif'), util_avg_unif)
+        np.save(os.path.join(leadfilestr, 'util_hi_unif'), util_hi_unif)
+        np.save(os.path.join(leadfilestr, 'util_lo_unif'), util_lo_unif)
+        np.save(os.path.join(leadfilestr, 'util_avg_rudi'), util_avg_rudi)
+        np.save(os.path.join(leadfilestr, 'util_hi_rudi'), util_hi_rudi)
+        np.save(os.path.join(leadfilestr, 'util_lo_rudi'), util_lo_rudi)
     # Plot utilities
 
     '''

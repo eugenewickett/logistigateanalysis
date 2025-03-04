@@ -1,7 +1,8 @@
 """
-Script that generates plots presented in the paper.
+Script that generates plots presented in the utility paper.
 Inference generation requires use of the logistigate package, available at https://logistigate.readthedocs.io/en/main/.
 """
+import sys
 
 from logistigate.logistigate import utilities as util  # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods, lg
@@ -176,7 +177,8 @@ def casestudyplots_existing():
 
     #######################
     # Allocation plot
-    allocArr = np.load(os.path.join('..', 'existing', 'exist_alloc.npy'))
+    allocArr = np.load(os.path.join(os.getcwd(), 'utilitypaper',
+                                    'casestudy_python_files', 'existing', 'exist_alloc.npy'))
     colorsset = plt.get_cmap('Set1')
     colorinds = [6, 1, 2, 3]
     colors = np.array([colorsset(i) for i in colorinds])
@@ -224,19 +226,28 @@ def casestudyplots_existing():
 
     # 4-NOV updated utility estimates
     # Utility-informed (greedy)
-    greedy_avg = np.load(os.path.join('..', 'existing', 'util_avg_greedy_noout.npy'))
-    greedy_hi = np.load(os.path.join('..', 'existing', 'util_hi_greedy_noout.npy'))
-    greedy_lo = np.load(os.path.join('..', 'existing', 'util_lo_greedy_noout.npy'))
+    greedy_avg = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                      'util_avg_greedy_noout.npy'))
+    greedy_hi = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                     'util_hi_greedy_noout.npy'))
+    greedy_lo = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                     'util_lo_greedy_noout.npy'))
 
     # Uniform
-    unif_avg = np.load(os.path.join('..', 'existing', 'util_avg_unif_noout.npy'))
-    unif_hi = np.load(os.path.join('..', 'existing', 'util_hi_unif_noout.npy'))
-    unif_lo = np.load(os.path.join('..', 'existing', 'util_lo_unif_noout.npy'))
+    unif_avg = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                    'util_avg_unif_noout.npy'))
+    unif_hi = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                   'util_hi_unif_noout.npy'))
+    unif_lo = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                   'util_lo_unif_noout.npy'))
 
     # Rudimentary
-    rudi_avg = np.load(os.path.join('..', 'existing', 'util_avg_rudi_noout.npy'))
-    rudi_hi = np.load(os.path.join('..', 'existing', 'util_hi_rudi_noout.npy'))
-    rudi_lo = np.load(os.path.join('..', 'existing', 'util_lo_rudi_noout.npy'))
+    rudi_avg = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                    'util_avg_rudi_noout.npy'))
+    rudi_hi = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                   'util_hi_rudi_noout.npy'))
+    rudi_lo = np.load(os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'existing',
+                                   'util_lo_rudi_noout.npy'))
 
     util_arr = np.vstack((np.average(greedy_avg, axis=0), np.average(unif_avg, axis=0),
                           np.average(rudi_avg, axis=0)))
