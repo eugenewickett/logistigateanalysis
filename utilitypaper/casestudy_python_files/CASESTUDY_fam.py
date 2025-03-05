@@ -53,22 +53,17 @@ csdict_fam['prior'] = priorObj
 
 # Set up MCMC
 csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-# Generate posterior draws
-numdraws = 75000
-csdict_fam['numPostSamples'] = numdraws
-filedest = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'numpy_obj', 'mcmc_draws', 'existing')
+# Path for previously generated MCMC draws
+mcmcfiledest = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'numpy_obj', 'mcmc_draws',
+                            'existing')
 '''
 numdraws = 5000  # Blocks of 5k draws
 csdict_fam['numPostSamples'] = numdraws
 for rep in range(1, 40):
     np.random.seed(rep+1000)
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
-    np.save(os.path.join(filedest, 'draws'+str(rep)+'.npy'), csdict_fam['postSamples'])
+    np.save(os.path.join(mcmcfiledest, 'draws'+str(rep)+'.npy'), csdict_fam['postSamples'])
 '''
-
-
-# Load from previously generated MCMC draws
-csdict_fam['postSamples'] = np.load(filedest)
 
 # Print inference from initial data
 # util.plotPostSamples(csdict_fam, 'int90')
@@ -82,7 +77,7 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 75000, 500
+numtruthdraws, numdatadraws = 50000, 500
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -148,7 +143,6 @@ def unif_design_mat(numTN, testmax, testint=1):
 
     return des / testarr
 
-
 def rudi_design_mat(numTN, testmax, testint=1):
     """
     Generates a design matrix that allocates tests uniformly across all test nodes, for a max number of tests (testmax),
@@ -199,18 +193,30 @@ while not stop:
         print("Current rep: " + str(currrep))
         currbudgetind = currtup[1]
         currbudget = testarr[currbudgetind]
+
+        # Set MCMC draws to use in fast algorithm
+        numtruthdraws, numdatadraws = 50000, 500
+        nummcmcbatches = round(numtruthdraws / 5000)
+        # Grab from previously generated draws
+        np.random.seed(444+currrep+currbudget)
+        groupindlist = np.random.choice(np.arange(0, 40), size=nummcmcbatches, replace=False)
+        tempobj = np.load(os.path.join(mcmcfiledest, 'draws' + str(groupindlist[0]) + '.npy'))
+        for bch in range(1, nummcmcbatches):
+            tempobj = np.concatenate((tempobj, np.load(os.path.join(mcmcfiledest, 'draws' +
+                                                                    str(groupindlist[bch]) + '.npy'))))
+        csdict_fam.update({'numPostSamples': numtruthdraws, 'postSamples':tempobj})
+        # Get random subsets for data draws
+        _, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+        paramdict.update({'truthdraws': csdict_fam['postSamples'], 'datadraws': datadraws})
+        # Get base loss
+        paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
+        util.print_param_checks(paramdict)
+
         # Identify allocation to measure
         curralloc = alloc[:, currbudgetind + 1]
         des_greedy = curralloc / np.sum(curralloc)
         des_unif = unif_mat[:, currbudgetind]
         des_rudi = rudi_mat[:, currbudgetind]
-
-        # Generate new base MCMC draws
-        if lastrep != currrep:  # Only generate again if we have moved to a new replication
-            print("Generating base set of truth draws...")
-            np.random.seed(1000 + currrep)
-            csdict_fam = methods.GeneratePostSamples(csdict_fam)
-            lastrep = currrep
 
         # Greedy
         currlosslist, _ = sampf.sampling_plan_loss_list_importance(des_greedy, currbudget, csdict_fam, paramdict,
