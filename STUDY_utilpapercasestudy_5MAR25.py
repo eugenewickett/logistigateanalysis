@@ -115,10 +115,22 @@ def getUtilityEstimate(n, lgdict, paramdict, zlevel=0.95):
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
 
+stop = False
+rep = 0
+while not stop:
+    store_baseloss = np.load(os.path.join(leadfilestr, 'store_baseloss.npy'))
+    store_utilhi = np.load(os.path.join(leadfilestr, 'store_utilhi.npy'))
+    store_utillo = np.load(os.path.join(leadfilestr, 'store_utillo.npy'))
+    if store_utilhi[-1, -1, -1, -1] > 0:
+        stop = True
+    else:
+        # Establish where we're at
+        currbatchind = np.min(np.where(store_baseloss == 0)[0])
+        rep = np.where(store_baseloss == 0)[1][0]
+        print('Batch: '+str(currbatchind))
+        print('Replication: ' + str(rep))
 
-for currbatchind in range(len(numbatcharr)):  # Number of MCMC batches of 5k to use
-    numbatch = numbatcharr[currbatchind]
-    for rep in range(numreps):
+        numbatch = numbatcharr[currbatchind]
         # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
         RetrieveMCMCBatches(csdict_fam, numbatch, os.path.join(mcmcfiledest,'draws'),
                             maxbatchnum=40, rand=True, randseed=rep+currbatchind+232)
@@ -129,12 +141,12 @@ for currbatchind in range(len(numbatcharr)):  # Number of MCMC batches of 5k to 
 
         for testind in range(len(testindarr)):  # Iterate through each number of tests
             # EFFICIENT ESTIMATE
-            _, util_CI = getUtilityEstimate(alloc[:, testindarr[testind]], csdict_fam, paramdict, zlevel=0.95)
+            _, util_CI = getUtilityEstimate(alloc[:, testindarr[testind]]*10, csdict_fam, paramdict, zlevel=0.95)
             store_utillo[0, currbatchind, testind, rep] = util_CI[0]
             store_utilhi[0, currbatchind, testind, rep] = util_CI[1]
 
             # IMP SAMP ESTIMATE
-            _, util_CI = sampf.getImportanceUtilityEstimate(alloc[:, testindarr[testind]], csdict_fam, paramdict,
+            _, util_CI = sampf.getImportanceUtilityEstimate(alloc[:, testindarr[testind]]*10, csdict_fam, paramdict,
                                                                  numimportdraws=numbatch * 5000, preservevar=False,
                                                                  extremadelta=0.01, zlevel=0.95)
             store_utillo[1, currbatchind, testind, rep] = util_CI[0]
@@ -149,9 +161,18 @@ for currbatchind in range(len(numbatcharr)):  # Number of MCMC batches of 5k to 
             flat_utillo = store_utillo.flatten()
             flat_utilhi = store_utilhi.flatten()
             CIavg = (flat_utillo + flat_utilhi) / 2
-            #ax.plot(x, CIavg, marker='o', linestyle='None')
-            ax.errorbar(x, CIavg, yerr=[CIavg-flat_utillo, flat_utilhi-CIavg],
-                        fmt='o', ecolor='g', capthick=4)
+            currcol = 'red'
+            for xiter in range(int(len(x)/numreps)):
+                ax.errorbar(x[(xiter*numreps):((xiter*numreps)+numreps)],
+                            CIavg[(xiter*numreps):((xiter*numreps)+numreps)],
+                            yerr=[(CIavg-flat_utillo)[(xiter*numreps):((xiter*numreps)+numreps)],
+                                  (flat_utilhi-CIavg)[(xiter*numreps):((xiter*numreps)+numreps)]],
+                            color=currcol, markersize=4, fmt='o', ecolor='black',
+                            capthick=3)
+                if currcol == 'red':
+                    currcol = 'blue'
+                else:
+                    currcol = 'red'
             ax.set_title('95% CI for greedy allocation under different parameters, estimation methods, and numbers of tests')
             #ax.grid('on')
 
@@ -204,6 +225,7 @@ for currbatchind in range(len(numbatcharr)):  # Number of MCMC batches of 5k to 
             # plt.show()
 
             # Save numpy objects
-            np.save(os.path.join('studies', 'utilpapercasestudy_5MAR25', 'store_baseloss'), store_baseloss)
-            np.save(os.path.join('studies', 'utilpapercasestudy_5MAR25', 'store_utillo'), store_utillo)
-            np.save(os.path.join('studies', 'utilpapercasestudy_5MAR25', 'store_utilhi'), store_utilhi)
+            np.save(os.path.join(leadfilestr, 'store_baseloss'), store_baseloss)
+            np.save(os.path.join(leadfilestr, 'store_utillo'), store_utillo)
+            np.save(os.path.join(leadfilestr, 'store_utilhi'), store_utilhi)
+
