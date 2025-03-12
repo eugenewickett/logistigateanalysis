@@ -284,10 +284,143 @@ plt.show()
 
 
 ########
-# PART 3: Verify that additional draws solves issue of
+# PART 3: Verify that additional draws solves issue of estimate bias
 ########
-numbatcharr = [1, 2, 5, 10, 15]
+# Run 200, 300, and 400 tests for this number of batches
+numbatcharr_new = [20, 30, 40, 50, 60]
 
+# Generate expanded storages of utilities
+store_baseloss = np.load(os.path.join(leadfilestr, 'store_baseloss.npy'))
+store_utilhi = np.load(os.path.join(leadfilestr, 'store_utilhi.npy'))
+store_utillo = np.load(os.path.join(leadfilestr, 'store_utillo.npy'))
+# Just add zeros to include new number of batches
+store_baseloss_new = np.zeros(tuple(sum(x) for x in zip(store_baseloss.shape, (len(numbatcharr_new), 0))))
+store_utilhi_new = np.zeros(tuple(sum(x) for x in zip(store_utilhi.shape, (0, len(numbatcharr_new), 0, 0))))
+store_utillo_new = np.zeros(tuple(sum(x) for x in zip(store_utillo.shape, (0, len(numbatcharr_new), 0, 0))))
+store_baseloss_new[:len(numbatcharr_new), :] = store_baseloss.copy()
+store_utilhi_new[:, :len(numbatcharr_new), :, :] = store_utilhi.copy()
+store_utillo_new[:, :len(numbatcharr_new), :, :] = store_utillo.copy()
+
+
+
+stop = False
+rep = 0
+while not stop:
+    store_baseloss_new = np.load(os.path.join(leadfilestr, 'store_baseloss_new.npy'))
+    store_utilhi_new = np.load(os.path.join(leadfilestr, 'store_utilhi_new.npy'))
+    store_utillo_new = np.load(os.path.join(leadfilestr, 'store_utillo_new.npy'))
+    if store_utilhi_new[0, -1, -1, -1] > 0:  # We're not running imp sampling for these
+        stop = True
+    else:
+        # Establish where we're at
+        currbatchind = np.min(np.where(store_baseloss == 0)[0])
+        rep = np.where(store_baseloss == 0)[1][0]
+        print('Batch: '+str(currbatchind))
+        print('Replication: ' + str(rep))
+
+        numbatch = numbatcharr[currbatchind]
+        # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
+        RetrieveMCMCBatches(csdict_fam, numbatch, os.path.join(mcmcfiledest,'draws'),
+                            maxbatchnum=40, rand=True, randseed=rep+currbatchind+232)
+        # Set up utility estimation parameter dictionary with desired truth and data draws
+        SetupUtilEstParamDict(csdict_fam, paramdict, numbatch*5000, 500, randseed=rep+currbatchind+132)
+        util.print_param_checks(paramdict)
+        store_baseloss[currbatchind, rep] = paramdict['baseloss']
+
+        for testind in range(len(testindarr)):  # Iterate through each number of tests
+            # EFFICIENT ESTIMATE
+            _, util_CI = getUtilityEstimate(alloc[:, testindarr[testind]]*10, csdict_fam, paramdict, zlevel=0.95)
+            store_utillo[0, currbatchind, testind, rep] = util_CI[0]
+            store_utilhi[0, currbatchind, testind, rep] = util_CI[1]
+
+            # IMP SAMP ESTIMATE
+            _, util_CI = sampf.getImportanceUtilityEstimate(alloc[:, testindarr[testind]]*10, csdict_fam, paramdict,
+                                                                 numimportdraws=numbatch * 5000, preservevar=False,
+                                                                 extremadelta=0.01, zlevel=0.95)
+            store_utillo[1, currbatchind, testind, rep] = util_CI[0]
+            store_utilhi[1, currbatchind, testind, rep] = util_CI[1]
+
+            # Plot
+            fig, ax = plt.subplots()
+            fig.set_figheight(7)
+            fig.set_figwidth(15)
+
+            x = np.arange(numreps*len(numbatcharr)*len(testindarr)*2)
+            flat_utillo = store_utillo.flatten()
+            flat_utilhi = store_utilhi.flatten()
+            CIavg = (flat_utillo + flat_utilhi) / 2
+            currcol = 'red'
+            for xiter in range(int(len(x)/numreps)):
+                ax.errorbar(x[(xiter*numreps):((xiter*numreps)+numreps)],
+                            CIavg[(xiter*numreps):((xiter*numreps)+numreps)],
+                            yerr=[(CIavg-flat_utillo)[(xiter*numreps):((xiter*numreps)+numreps)],
+                                  (flat_utilhi-CIavg)[(xiter*numreps):((xiter*numreps)+numreps)]],
+                            color=currcol, markersize=4, fmt='o', ecolor='black',
+                            capthick=3)
+                if currcol == 'red':
+                    currcol = 'blue'
+                else:
+                    currcol = 'red'
+            ax.set_title('95% CI for greedy allocation under different parameters, estimation methods, and numbers of tests')
+            #ax.grid('on')
+
+            xticklist = ['' for j in range(numreps*len(numbatcharr)*len(testindarr)*2)]
+            # for currbatchnameind, currbatchname in enumerate(numbatcharr):
+            #     for currtestnum, testnum in enumerate(testindarr):
+            #         xticklist[(currbatchnameind + currtestnum) * numreps] = str(currbatchname) + ' batch\n' +\
+            #                                                               str(testnum) + ' test\nEffic'
+            #         xticklist[(currbatchnameind + currtestnum) * numreps + numreps*len(numbatcharr)*len(testindarr)] =\
+            #             str(currbatchname) + ' batch\n' + str(testnum) + ' test\nImpSamp'
+            plt.xticks(x, xticklist)  # trick to get textual X labels instead of numerical
+            plt.xlabel('Method and parameterization')
+            plt.ylabel('Utility estimate')
+            plt.ylim([0, np.max(flat_utilhi)*1.05])
+            ax.tick_params(axis='x', labelsize=8)
+            label_X = ax.xaxis.get_label()
+            label_Y = ax.yaxis.get_label()
+            label_X.set_style('italic')
+            label_X.set_size(12)
+            label_Y.set_style('italic')
+            label_Y.set_size(12)
+            plt.show()
+
+            # Plot baseloss also
+            # fig, ax = plt.subplots()
+            # fig.set_figheight(7)
+            # fig.set_figwidth(12)
+            #
+            # x = np.arange(numreps * len(numbatcharr))
+            # flat_baseloss = store_baseloss.flatten()
+            # ax.plot(x, flat_baseloss, 'o', color='orange')
+            # ax.set_title('Base loss for IP-RP solution under different parameters and estimation methods\nB=700')
+            #
+            # xticklist = ['' for j in range(numreps * len(numbatcharr))]
+            # for currbatchnameind, currbatchname in enumerate(numbatcharr):
+            #     xticklist[currbatchnameind * 10] = str(currbatchname) + ' batch\nEffic'
+            # plt.xticks(x, xticklist)  # little trick to get textual X labels instead of numerical
+            # plt.xlabel('Method and parameterization')
+            # plt.ylabel('Loss estimate')
+            #
+            # plt.ylim([0,13])
+            # ax.tick_params(axis='x', labelsize=8)
+            # label_X = ax.xaxis.get_label()
+            # label_Y = ax.yaxis.get_label()
+            # label_X.set_style('italic')
+            # label_X.set_size(12)
+            # label_Y.set_style('italic')
+            # label_Y.set_size(12)
+            #
+            # plt.show()
+
+            # Save numpy objects
+            np.save(os.path.join(leadfilestr, 'store_baseloss_new'), store_baseloss_new)
+            np.save(os.path.join(leadfilestr, 'store_utillo_new'), store_utillo_new)
+            np.save(os.path.join(leadfilestr, 'store_utilhi_new'), store_utilhi_new)
+
+
+########
+# PART 4: Verify that additional draws solves issue of
+########
 # How do estimates change for imp sampling with increasing numbers of draws?
 #   [variance reduction]
 # What is the gap between efficient and imp sampling for different numbers of tests?
