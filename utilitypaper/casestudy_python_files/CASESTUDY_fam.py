@@ -59,7 +59,7 @@ mcmcfiledest = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files
 '''
 numdraws = 5000  # Blocks of 5k draws
 csdict_fam['numPostSamples'] = numdraws
-for rep in range(1, 40):
+for rep in range(40, 80):
     np.random.seed(rep+1000)
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
     np.save(os.path.join(mcmcfiledest, 'draws'+str(rep)+'.npy'), csdict_fam['postSamples'])

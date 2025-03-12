@@ -2,7 +2,8 @@
 Attempting to understand odd behavior for utility estimates in the 'existing' setting
 We will estimate utility under different efficient and imp sampling parameters
 Part 1: Greedy allocation
-Part 2: Uniform allocation
+Part 2: Chart differences between efficient and imp sampling
+Part 3: Run example of callibration step
 """
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
@@ -229,3 +230,73 @@ while not stop:
             np.save(os.path.join(leadfilestr, 'store_utillo'), store_utillo)
             np.save(os.path.join(leadfilestr, 'store_utilhi'), store_utilhi)
 
+########
+# PART 2: Examine differences in efficient and imp sampling approaches
+########
+fig, ax = plt.subplots()
+fig.set_figheight(7)
+fig.set_figwidth(15)
+
+x = np.arange(numreps*len(numbatcharr)*len(testindarr)*2)
+# Rearrange storage matrices to group together by tests-->MCMC draws-->method
+origaxislst = [0, 2]
+newaxislst = [2, 0]
+store_utilhi_rearr = np.moveaxis(store_utilhi, origaxislst, newaxislst)
+store_utillo_rearr = np.moveaxis(store_utillo, origaxislst, newaxislst)
+flat_utillo = store_utillo_rearr.flatten()
+flat_utilhi = store_utilhi_rearr.flatten()
+CIavg = (flat_utillo + flat_utilhi) / 2
+currcol = 'red'
+for xiter in range(int(len(x)/numreps)):
+    ax.errorbar(x[(xiter*numreps):((xiter*numreps)+numreps)],
+                CIavg[(xiter*numreps):((xiter*numreps)+numreps)],
+                yerr=[(CIavg-flat_utillo)[(xiter*numreps):((xiter*numreps)+numreps)],
+                      (flat_utilhi-CIavg)[(xiter*numreps):((xiter*numreps)+numreps)]],
+                color=currcol, markersize=4, fmt='o', ecolor='black',
+                capthick=3)
+    if currcol == 'red':
+        currcol = 'blue'
+    else:
+        currcol = 'red'
+ax.set_title('95% CI for greedy allocation under different parameters, estimation methods, and numbers of tests')
+#ax.grid('on')
+
+xticklist = ['' for j in range(numreps*len(numbatcharr)*len(testindarr)*2)]
+# for currbatchnameind, currbatchname in enumerate(numbatcharr):
+#     for currtestnum, testnum in enumerate(testindarr):
+#         xticklist[(currbatchnameind + currtestnum) * numreps] = str(currbatchname) + ' batch\n' +\
+#                                                               str(testnum) + ' test\nEffic'
+#         xticklist[(currbatchnameind + currtestnum) * numreps + numreps*len(numbatcharr)*len(testindarr)] =\
+#             str(currbatchname) + ' batch\n' + str(testnum) + ' test\nImpSamp'
+plt.xticks(x, xticklist)  # trick to get textual X labels instead of numerical
+plt.xlabel('Method and parameterization')
+plt.ylabel('Utility estimate')
+plt.ylim([0, np.max(flat_utilhi)*1.05])
+ax.tick_params(axis='x', labelsize=8)
+label_X = ax.xaxis.get_label()
+label_Y = ax.yaxis.get_label()
+label_X.set_style('italic')
+label_X.set_size(12)
+label_Y.set_style('italic')
+label_Y.set_size(12)
+plt.show()
+
+
+
+
+
+# How do estimates change for imp sampling with increasing numbers of draws?
+#   [variance reduction]
+# What is the gap between efficient and imp sampling for different numbers of tests?
+#   [negative when sufficient draws, positive when insufficient draws
+#   [at 100/200/300/400 tests, what numbers of draws are sufficient?]
+
+
+# PROPOSED CALLIBRATION OF SUFFICIENT MCMC DRAWS:
+#   Choose Nmax for desired analysis; larger Nmax means more needed compute time
+#   Generate enough (?) batches of 5k MCMC draws to be used later
+#   Use 100 (?) data draws for what follows
+#   Run 10 (?) imp samp evals for uniform allocation of Nmax tests, using 25k (?) draws of different batches
+#       Identify U_imp, the average across these imp samp evals
+#   Try different amounts of \Gamma_0 for uniform allocation of Nmax tests, using 10 (?) efficient evals
+#       Stop when U_eff (avg across effic evals) is less than U_imp
