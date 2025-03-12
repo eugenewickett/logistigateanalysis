@@ -3,7 +3,8 @@ Attempting to understand odd behavior for utility estimates in the 'existing' se
 We will estimate utility under different efficient and imp sampling parameters
 Part 1: Greedy allocation
 Part 2: Chart differences between efficient and imp sampling
-Part 3: Run example of callibration step
+Part 3: Verify that adding more draws to efficient method solves bias issue
+Part 4: Run example of callibration step
 """
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
@@ -79,7 +80,7 @@ leadfilestr = os.path.join(os.getcwd(), 'studies', 'utilpapercasestudy_5MAR25')
 
 alloc = np.load(os.path.join(leadfilestr, 'exist_alloc.npy'))
 
-def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring, maxbatchnum=50, rand=False, randseed=1):
+def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring, maxbatchnum=80, rand=False, randseed=1):
     """Adds previously generated MCMC draws to lgdict, using the file destination marked by filedest_leadstring"""
     if rand==False:
         tempobj = np.load(filedest_leadstring + '0.npy')  # Initialize
@@ -282,8 +283,10 @@ label_Y.set_size(12)
 plt.show()
 
 
-
-
+########
+# PART 3: Verify that additional draws solves issue of
+########
+numbatcharr = [1, 2, 5, 10, 15]
 
 # How do estimates change for imp sampling with increasing numbers of draws?
 #   [variance reduction]
