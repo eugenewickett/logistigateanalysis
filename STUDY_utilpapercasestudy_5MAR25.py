@@ -288,18 +288,65 @@ plt.show()
 ########
 # Run 200, 300, and 400 tests for this number of batches
 numbatcharr_new = [20, 30, 40, 50, 60]
+numbatcharr_tot = numbatcharr + numbatcharr_new
 
 # Generate expanded storages of utilities
 store_baseloss = np.load(os.path.join(leadfilestr, 'store_baseloss.npy'))
 store_utilhi = np.load(os.path.join(leadfilestr, 'store_utilhi.npy'))
 store_utillo = np.load(os.path.join(leadfilestr, 'store_utillo.npy'))
-# Just add zeros to include new number of batches
-store_baseloss_new = np.zeros(tuple(sum(x) for x in zip(store_baseloss.shape, (len(numbatcharr_new), 0))))
-store_utilhi_new = np.zeros(tuple(sum(x) for x in zip(store_utilhi.shape, (0, len(numbatcharr_new), 0, 0))))
-store_utillo_new = np.zeros(tuple(sum(x) for x in zip(store_utillo.shape, (0, len(numbatcharr_new), 0, 0))))
-store_baseloss_new[:len(numbatcharr_new), :] = store_baseloss.copy()
-store_utilhi_new[:, :len(numbatcharr_new), :, :] = store_utilhi.copy()
-store_utillo_new[:, :len(numbatcharr_new), :, :] = store_utillo.copy()
+# # Just add zeros to include new number of batches
+# store_baseloss_new = np.zeros(tuple(sum(x) for x in zip(store_baseloss.shape, (len(numbatcharr_new), 0))))
+# store_utilhi_new = np.zeros(tuple(sum(x) for x in zip(store_utilhi.shape, (0, len(numbatcharr_new), 0, 0))))
+# store_utillo_new = np.zeros(tuple(sum(x) for x in zip(store_utillo.shape, (0, len(numbatcharr_new), 0, 0))))
+# store_baseloss_new[:len(numbatcharr_new), :] = store_baseloss.copy()
+# store_utilhi_new[:, :len(numbatcharr_new), :, :] = store_utilhi.copy()
+# store_utillo_new[:, :len(numbatcharr_new), :, :] = store_utillo.copy()
+
+def sampling_plan_loss_list_parallel(design, numtests, priordatadict, paramdict):
+    """
+    Produces a list of sampling plan losses for a test budget under a given data set and specified parameters,
+    using the efficient estimation algorithm, but processing weights one data simulation at a time; this
+    parallelization enables processing of large numbers of truth draws.
+    design: sampling probability vector along all test nodes/traces
+    numtests: test budget
+    priordatadict: logistigate data dictionary capturing known data
+    paramdict: parameter dictionary containing a loss matrix, truth and data MCMC draws, and an optional method for
+        rounding the design to an integer allocation
+    """
+    if 'roundalg' in paramdict:  # Set default rounding algorithm for plan
+        roundalg = paramdict['roundalg'].copy()
+    else:
+        roundalg = 'lo'
+    # Initialize samples to be drawn from traces, per the design, using a rounding algorithm
+    sampMat = util.generate_sampling_array(design, numtests, roundalg)
+    # Get risk matrix
+    R = lf.risk_check_array(paramdict['truthdraws'], paramdict['riskdict'])
+    # Get critical ratio
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+    # Compile list of optima
+    minslist = []
+    for j in range(paramdict['datadraws'].shape[0]):
+        if np.mod(j,10) == 0:
+            print('On data sim: ' + str(j))
+        # Get weights matrix
+        W = sampf.build_weights_matrix(paramdict['truthdraws'],
+                            np.reshape(paramdict['datadraws'][j], (1, paramdict['datadraws'][j].shape[0])),
+                                       sampMat, priordatadict)
+        est = sampf.bayesest_critratio(paramdict['truthdraws'], W[:, 0], q)
+        minslist.append(sampf.cand_obj_val(est, paramdict['truthdraws'], W[:, 0], paramdict, R))
+    return minslist
+
+
+def getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95):
+    """
+    Return a utility estimate average and confidence interval for allocation array n,
+    using efficient estimation (NOT importance sampling)
+    """
+    testnum = int(np.sum(n))
+    des = n/testnum
+    currlosslist = sampling_plan_loss_list_parallel(des, testnum, lgdict, paramdict)
+    currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
+    return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss']-currloss_CI[1], paramdict['baseloss']-currloss_CI[0])
 
 
 
@@ -313,41 +360,37 @@ while not stop:
         stop = True
     else:
         # Establish where we're at
-        currbatchind = np.min(np.where(store_baseloss == 0)[0])
-        rep = np.where(store_baseloss == 0)[1][0]
+        currbatchind = np.min(np.where(store_baseloss_new == 0)[0])
+        rep = np.where(store_baseloss_new == 0)[1][0]
         print('Batch: '+str(currbatchind))
         print('Replication: ' + str(rep))
 
-        numbatch = numbatcharr[currbatchind]
+        numbatch = numbatcharr_tot[currbatchind]
         # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
-        RetrieveMCMCBatches(csdict_fam, numbatch, os.path.join(mcmcfiledest,'draws'),
-                            maxbatchnum=40, rand=True, randseed=rep+currbatchind+232)
+        RetrieveMCMCBatches(csdict_fam, numbatch, os.path.join(mcmcfiledest, 'draws'),
+                            maxbatchnum=80, rand=True, randseed=rep+currbatchind+239)
         # Set up utility estimation parameter dictionary with desired truth and data draws
         SetupUtilEstParamDict(csdict_fam, paramdict, numbatch*5000, 500, randseed=rep+currbatchind+132)
         util.print_param_checks(paramdict)
-        store_baseloss[currbatchind, rep] = paramdict['baseloss']
+        store_baseloss_new[currbatchind, rep] = paramdict['baseloss']
 
-        for testind in range(len(testindarr)):  # Iterate through each number of tests
-            # EFFICIENT ESTIMATE
-            _, util_CI = getUtilityEstimate(alloc[:, testindarr[testind]]*10, csdict_fam, paramdict, zlevel=0.95)
-            store_utillo[0, currbatchind, testind, rep] = util_CI[0]
-            store_utilhi[0, currbatchind, testind, rep] = util_CI[1]
-
-            # IMP SAMP ESTIMATE
-            _, util_CI = sampf.getImportanceUtilityEstimate(alloc[:, testindarr[testind]]*10, csdict_fam, paramdict,
-                                                                 numimportdraws=numbatch * 5000, preservevar=False,
-                                                                 extremadelta=0.01, zlevel=0.95)
-            store_utillo[1, currbatchind, testind, rep] = util_CI[0]
-            store_utilhi[1, currbatchind, testind, rep] = util_CI[1]
+        for testind in range(3, len(testindarr)):  # Skip 10, 50, and 100 tests
+            # EFFICIENT ESTIMATE FOR 100k+ MCMC DRAWS
+            _, util_CI = getUtilityEstimate_parallel(alloc[:, testindarr[testind]]*10, csdict_fam, paramdict,
+                                                     zlevel=0.95)
+            store_utillo_new[0, currbatchind, testind, rep] = util_CI[0]
+            store_utilhi_new[0, currbatchind, testind, rep] = util_CI[1]
 
             # Plot
             fig, ax = plt.subplots()
             fig.set_figheight(7)
             fig.set_figwidth(15)
 
-            x = np.arange(numreps*len(numbatcharr)*len(testindarr)*2)
-            flat_utillo = store_utillo.flatten()
-            flat_utilhi = store_utilhi.flatten()
+            x = np.arange(numreps*len(numbatcharr_tot)*len(testindarr)*2)
+            store_utilhi_rearr = np.moveaxis(store_utilhi_new, origaxislst, newaxislst)
+            store_utillo_rearr = np.moveaxis(store_utillo_new, origaxislst, newaxislst)
+            flat_utillo = store_utillo_rearr.flatten()
+            flat_utilhi = store_utilhi_rearr.flatten()
             CIavg = (flat_utillo + flat_utilhi) / 2
             currcol = 'red'
             for xiter in range(int(len(x)/numreps)):
@@ -355,8 +398,8 @@ while not stop:
                             CIavg[(xiter*numreps):((xiter*numreps)+numreps)],
                             yerr=[(CIavg-flat_utillo)[(xiter*numreps):((xiter*numreps)+numreps)],
                                   (flat_utilhi-CIavg)[(xiter*numreps):((xiter*numreps)+numreps)]],
-                            color=currcol, markersize=4, fmt='o', ecolor='black',
-                            capthick=3)
+                            color=currcol, markersize=3, fmt='o', ecolor='black',
+                            capthick=2)
                 if currcol == 'red':
                     currcol = 'blue'
                 else:
@@ -364,7 +407,7 @@ while not stop:
             ax.set_title('95% CI for greedy allocation under different parameters, estimation methods, and numbers of tests')
             #ax.grid('on')
 
-            xticklist = ['' for j in range(numreps*len(numbatcharr)*len(testindarr)*2)]
+            xticklist = ['' for j in range(numreps*len(numbatcharr_tot)*len(testindarr)*2)]
             # for currbatchnameind, currbatchname in enumerate(numbatcharr):
             #     for currtestnum, testnum in enumerate(testindarr):
             #         xticklist[(currbatchnameind + currtestnum) * numreps] = str(currbatchname) + ' batch\n' +\
@@ -419,7 +462,7 @@ while not stop:
 
 
 ########
-# PART 4: Verify that additional draws solves issue of
+# PART 4: Complete a run-through of the proposed callibration procedure
 ########
 # How do estimates change for imp sampling with increasing numbers of draws?
 #   [variance reduction]
