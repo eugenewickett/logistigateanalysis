@@ -126,7 +126,7 @@ while not stop:
     if store_utilhi[-1, -1, -1, -1] > 0:
         stop = True
     else:
-        # Establish where we're at
+        # Establish where we are at
         currbatchind = np.min(np.where(store_baseloss == 0)[0])
         rep = np.where(store_baseloss == 0)[1][0]
         print('Batch: '+str(currbatchind))

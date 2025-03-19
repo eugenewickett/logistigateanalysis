@@ -59,7 +59,7 @@ mcmcfiledest = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files
 '''
 numdraws = 5000  # Blocks of 5k draws
 csdict_fam['numPostSamples'] = numdraws
-for rep in range(40, 80):
+for rep in range(80, 100):
     np.random.seed(rep+1000)
     csdict_fam = methods.GeneratePostSamples(csdict_fam)
     np.save(os.path.join(mcmcfiledest, 'draws'+str(rep)+'.npy'), csdict_fam['postSamples'])
@@ -76,8 +76,14 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
 testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
+# Generate calibration plots to decide how many truth draws to use
+# sampf.makecalibrationplot(csdict_fam, paramdict, testmax, mcmcfiledest,
+#                     batchlist=[2, 5, 10, 20, 30, 40, 50, 60, 70, 80], nrep=10, numdatadraws=300)
+
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 50000, 500
+numtruthdraws, numdatadraws = 250000, 300
+util.RetrieveMCMCBatches(csdict_fam, int(numtruthdraws/5000), os.path.join(mcmcfiledest, 'draws'), maxbatchnum=100,
+                         rand=True, randseed=122)
 # Get random subsets for truth and data draws
 np.random.seed(444)
 truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
@@ -91,35 +97,39 @@ util.print_param_checks(paramdict)  # Check of used parameters
 # UPDATED HEURISTIC
 ###############
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
-                                                                numimpdraws=60000, numdatadrawsforimp=5000,
-                                                                impwtoutlierprop=0.01,
+                                                                estmethod='parallel',
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Familiar Setting')
+
+np.save(os.path.join('..', 'existing', 'exist_alloc'), alloc)
+np.save(os.path.join('..', 'existing', 'util_avg_greedy'), util_avg)
+np.save(os.path.join('..', 'existing', 'util_hi_greedy'), util_hi)
+np.save(os.path.join('..', 'existing', 'util_lo_greedy'), util_lo)
+
 ###
 # REMOVE THIS BLOCK LATER (23-SEP)
 ###
-bestalloc = [1, 21, 2, 15]
-
-for currTN in range(numTN):  # Loop through each test node and identify best direction via lowest avg loss
-    curralloc = bestalloc.copy()
-    curralloc[currTN] += 1  # Increment 1 at current test node
-    currdes = curralloc / np.sum(curralloc)  # Make a proportion design
-    currlosslist = sampf.sampling_plan_loss_list_importance(currdes, testmax, csdict_fam, paramdict,
-                                                      numimportdraws=60000,
-                                                      numdatadrawsforimportance=5000,
-                                                      impweightoutlierprop=.005)
-    currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-    print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
-
-alloc = np.zeros((numTN, int(testmax / testint) + 1))
-testaddseq = np.array([1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
- 3, 3, 2, 2, 1, 1, 1, 1, 1, 1,
- 1, 1, 1, 1, 1, 3, 3, 3, 3, 3,
- 3, 3, 3, 3, 3, 3, 3, 3, 1, 1])
-for tempind, temp in enumerate(testaddseq):
-    alloc[temp,tempind+1:] += 1
-util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint)
-np.save(os.path.join('..', 'existing', 'exist_alloc'), alloc)
+# bestalloc = [1, 21, 2, 15]
+#
+# for currTN in range(numTN):  # Loop through each test node and identify best direction via lowest avg loss
+#     curralloc = bestalloc.copy()
+#     curralloc[currTN] += 1  # Increment 1 at current test node
+#     currdes = curralloc / np.sum(curralloc)  # Make a proportion design
+#     currlosslist = sampf.sampling_plan_loss_list_importance(currdes, testmax, csdict_fam, paramdict,
+#                                                       numimportdraws=60000,
+#                                                       numdatadrawsforimportance=5000,
+#                                                       impweightoutlierprop=.005)
+#     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+#     print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
+#
+# alloc = np.zeros((numTN, int(testmax / testint) + 1))
+# testaddseq = np.array([1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+#  3, 3, 2, 2, 1, 1, 1, 1, 1, 1,
+#  1, 1, 1, 1, 1, 3, 3, 3, 3, 3,
+#  3, 3, 3, 3, 3, 3, 3, 3, 1, 1])
+# for tempind, temp in enumerate(testaddseq):
+#     alloc[temp,tempind+1:] += 1
+# util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint)
 
 
 #####################
