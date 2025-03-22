@@ -168,12 +168,12 @@ def GetSenegalCSVData():
     Travel out-and-back times for districts/departments are expressed as the proportion of a 10-hour workday, and
     include a 30-minute collection time; traveling to every region outside the HQ region includes a 2.5 hour fixed cost
     """
-    dept_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/deptfixedcosts.csv', header=0)
-    regcost_mat = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/regarcfixedcosts.csv', header=None)
+    dept_df = pd.read_csv('orienteering/senegal_csv_files/deptfixedcosts.csv', header=0)
+    regcost_mat = pd.read_csv('orienteering/senegal_csv_files/regarcfixedcosts.csv', header=None)
     regNames = ['Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
                 'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor']
     # Get testing results
-    testresults_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/dataresults.csv', header=0)
+    testresults_df = pd.read_csv('orienteering/senegal_csv_files/dataresults.csv', header=0)
     manufNames = testresults_df.Manufacturer.sort_values().unique().tolist()
 
     return dept_df, regcost_mat, testresults_df, regNames, manufNames
@@ -245,17 +245,17 @@ lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
 print(time.time()-time0)
 
 tempobj = lgdict['postSamples']
-np.save(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws40'),tempobj)
+np.save(os.path.join('orienteering', 'numpy_objects', 'draws40'),tempobj)
 
-file_name = "operationalizedsamplingplans/numpy_objects/draws35.npy"
+file_name = "orienteering/numpy_objects/draws35.npy"
 file_stats = os.stat(file_name)
 print(f'File Size in MegaBytes is {file_stats.st_size / (1024 * 1024)}')
 '''
 
 # Load draws from files
-tempobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1.npy'))
+tempobj = np.load(os.path.join('orienteering', 'numpy_objects', 'draws1.npy'))
 for drawgroupind in range(2, 41):
-    newobj = np.load(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws' + str(drawgroupind) +'.npy'))
+    newobj = np.load(os.path.join('orienteering', 'numpy_objects', 'draws' + str(drawgroupind) + '.npy'))
     tempobj = np.concatenate((tempobj, newobj))
 lgdict['postSamples'] = tempobj
 # Print inference from initial data
@@ -646,11 +646,11 @@ for i in range(len(deptNames)):
 util_df = pd.DataFrame({'DeptName':deptNames,'Bounds':deptallocbds,'Util_lo':util_lo, 'Util_lo_CI':util_lo_CI,
                         'Util_hi':util_hi, 'Util_hi_CI':util_hi_CI})
 
-util_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+util_df.to_pickle(os.path.join('orienteering', 'numpy_objects', 'utilevals.pkl'))
 '''
 
 # Load previously calculated lower and upper utility evaluations
-util_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'utilevals.pkl'))
+util_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'utilevals.pkl'))
 
 ''' RUNS 29-DEC
 Bakel       0.03344590816593218 (0.03147292119474443, 0.03541889513711993), 
@@ -822,9 +822,9 @@ seqcostlist_trim = seqcostlist_trim.drop(columns='index')
 
 
 # Save to avoid generating later
-# paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
+# paths_df.to_pickle(os.path.join('orienteering', 'numpy_objects', 'paths.pkl'))
 
-# paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'paths.pkl'))
+# paths_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'paths.pkl'))
 ###################################
 ###################################
 ###################################
@@ -1149,13 +1149,13 @@ print(numcomparepaths-pathstoadd) # Target is 93
 # Save comparative paths dictionary
 '''
 comparepathsdict.update({'lossevals':[[] for x in range(numcomparepaths)]})
-with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
+with open(os.path.join('orienteering', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
     pickle.dump(comparepathsdict, fp)
 '''
 
 #########
 # Load previous runs and append to those
-with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'rb') as fp:
+with open(os.path.join('orienteering', 'numpy_objects', 'comparepaths.pkl'), 'rb') as fp:
     comparepathsdict = pickle.load(fp)
 
 # Now loop through feasible budgets and get loss evaluations
@@ -1170,7 +1170,7 @@ for temp_i, pathind in enumerate(comparepathsdict['pathinds'].tolist()):
         currlosslist = sampf.sampling_plan_loss_list(curr_n/curr_n.sum(), curr_n.sum(), lgdict, paramdict)
         comparepathsdict['lossevals'][temp_i] = comparepathsdict['lossevals'][temp_i] + currlosslist
 
-with open(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
+with open(os.path.join('orienteering', 'numpy_objects', 'comparepaths.pkl'), 'wb') as fp:
     pickle.dump(comparepathsdict, fp)
 
 # Plot a histogram
@@ -1313,7 +1313,7 @@ def GetConstraintsWithPathCut(numVar, pathInd):
 # Prep a new paths dataframe
 
 # Or load
-# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+# phase2paths_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 phase2paths_df = paths_df.copy()
 phase2paths_df.insert(3, 'RPobj', np.zeros(numPath).tolist(), True)
@@ -1340,7 +1340,7 @@ for pathind in range(numPath):
         #print('Path RP utility: ' + str(phase2paths_df.iloc[pathind, 3]))
 
 # Save to avoid generating later
-phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+phase2paths_df.to_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 '''
 len(eligPathInds) = 30
 eligPathInds = [1, 13, 14, 15, 18, 25, 26, 29, 31, 32, 33, 34, 35, 91, 92, 95, 97, 100, 157, 160, 165, 169, 174, 195, 376, 384, 388, 393, 409, 412, 
@@ -1377,7 +1377,7 @@ eligPathInds_sort = [eligPathInds[x] for x in np.argsort(eligPathRatioDists).tol
 #####
 
 # Load from pickle if needed
-# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+# phase2paths_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 for currpathind in eligPathInds_sort:
     print('On path index: '+ str(currpathind)+'...')
@@ -1404,7 +1404,7 @@ for currpathind in eligPathInds_sort:
     phase2paths_df.iloc[currpathind, 7] = curr_u_CI[1]
 
     # Save to avoid generating later
-    phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+    phase2paths_df.to_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 ###########
 # For plotting AVOIDCORR results
@@ -1820,7 +1820,7 @@ phase2paths_df.iloc[eligPathInds_sort[28], 7] = 1.3898257691509261
 
 '''
 ####### Or load #######
-# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+# phase2paths_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 
 # Generate a plot for our improvement runs

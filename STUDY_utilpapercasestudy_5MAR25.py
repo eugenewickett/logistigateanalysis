@@ -464,13 +464,6 @@ while not stop:
 ########
 # PART 4: Complete a run-through of the proposed callibration procedure
 ########
-# How do estimates change for imp sampling with increasing numbers of draws?
-#   [variance reduction]
-# What is the gap between efficient and imp sampling for different numbers of tests?
-#   [negative when sufficient draws, positive when insufficient draws
-#   [at 100/200/300/400 tests, what numbers of draws are sufficient?]
-
-
 # PROPOSED CALLIBRATION OF SUFFICIENT MCMC DRAWS:
 #   Choose Nmax for desired analysis; larger Nmax means more needed compute time
 #   Generate enough (?) batches of 5k MCMC draws to be used later

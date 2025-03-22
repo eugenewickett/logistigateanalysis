@@ -164,12 +164,12 @@ def GetSenegalCSVData():
     Travel out-and-back times for districts/departments are expressed as the proportion of a 10-hour workday, and
     include a 30-minute collection time; traveling to every region outside the HQ region includes a 2.5 hour fixed cost
     """
-    dept_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/deptfixedcosts.csv', header=0)
-    regcost_mat = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/regarcfixedcosts.csv', header=None)
+    dept_df = pd.read_csv('orienteering/senegal_csv_files/deptfixedcosts.csv', header=0)
+    regcost_mat = pd.read_csv('orienteering/senegal_csv_files/regarcfixedcosts.csv', header=None)
     regNames = ['Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
                 'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor']
     # Get testing results
-    testresults_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/dataresults.csv', header=0)
+    testresults_df = pd.read_csv('orienteering/senegal_csv_files/dataresults.csv', header=0)
     manufNames = testresults_df.Manufacturer.sort_values().unique().tolist()
 
     return dept_df, regcost_mat, testresults_df, regNames, manufNames

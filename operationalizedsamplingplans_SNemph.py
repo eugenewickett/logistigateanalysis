@@ -5,7 +5,7 @@ from logistigate.logistigate import lossfunctions as lf
 from logistigate.logistigate import samplingplanfunctions as sampf
 from logistigate.logistigate import orienteering as opf
 
-from operationalizedsamplingplans.senegalsetup import *
+from orienteering.senegalsetup import *
 
 import os
 import pickle
@@ -50,10 +50,10 @@ SetupSenegalPriors(lgdict)
 lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 1000, 'delta': 0.4}
 
 # todo: REMOVE LATER ONCE WE'VE GENERATED 100 BATCHES
-#  GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws62'), 562)
+#  GenerateMCMCBatch(lgdict, 5000, os.path.join('orienteering', 'numpy_objects', 'draws62'), 562)
 
 # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
-RetrieveMCMCBatches(lgdict, 10, os.path.join('operationalizedsamplingplans',
+RetrieveMCMCBatches(lgdict, 10, os.path.join('orienteering',
                                              'numpy_objects', 'draws'),
                     maxbatchnum=50, rand=True, randseed=1122)
 # util.plotPostSamples(lgdict, 'int90')  # Plot if desired
@@ -91,7 +91,7 @@ util.print_param_checks(paramdict)
 
 ### Benchmarks ###
 # Initiate/load benchmark data frame
-benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_SNemph_700.pkl')
+benchpklstr = os.path.join('orienteering', 'pkl_paths', 'bench_df_SNemph_700.pkl')
 bench_df_700 = pd.read_pickle(benchpklstr)
 
 # LeastVisited
@@ -208,7 +208,7 @@ print('IPRP:',util_IPRP, util_IPRP_CI)
 
 ### Benchmarks ###
 # Initiate/load benchmark data frame
-benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_SNemph_1400.pkl')
+benchpklstr = os.path.join('orienteering', 'pkl_paths', 'bench_df_SNemph_1400.pkl')
 bench_df_1400 = pd.read_pickle(benchpklstr)
 
 # LeastVisited
@@ -371,11 +371,11 @@ def GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, csvpath):
         util_df.to_csv(csvpath, index=False)
     return
 
-interplocatstr = os.path.join('operationalizedsamplingplans', 'csv_utility', 'interp_df_SNemph.csv')
+interplocatstr = os.path.join('orienteering', 'csv_utility', 'interp_df_SNemph.csv')
 GetInterpEvals(deptNames, deptallocbds, paramdict, lgdict, interplocatstr)
 
 # Retrieve previously generated interpolation points
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_SNemph.csv'))
+util_df = pd.read_csv(os.path.join('orienteering', 'csv_utility', 'utilevals_SNemph.csv'))
 
 ### GENERATE PATHS FOR CASE STUDY ###
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
@@ -441,10 +441,10 @@ def GenerateNondominatedPaths(mastlist, optparamdict, csvpath):
 
     return
 
-# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('orienteering', 'csv_paths', 'paths_BASE.csv'))
 
 # Load previously generated paths data frame
-paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+paths_df = pd.read_csv(os.path.join('orienteering', 'csv_paths', 'paths_BASE.csv'))
 
 def GetPathSequenceAndCost(paths_df):
     """Retrieves optimization-ready lists pertaining to path sequences and costs"""
@@ -655,13 +655,13 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
                 print('Path ' + str(pathind) + ' RP utility: ' + str(candpaths_df.iloc[pathind, 3]))
     return candpaths_df
 
-pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl')
+pkllocatstr = os.path.join('orienteering', 'pkl_paths', 'candpaths_df_SNemph_700.pkl')
 candpaths_df_SNemph_700 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
                                       optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
 candpaths_df_SNemph_700.to_pickle(pkllocatstr)
 # Save to avoid generating later
-# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl'))
-# candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl'))
+# candpaths_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'candpaths_df_SNemph_700.pkl'))
+# candpaths_df_700 = pd.read_pickle(os.path.join('orienteering', 'pkl_paths', 'candpaths_df_SNemph_700.pkl'))
 
 def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict):
     for pathind in range(candpaths_df.shape[0]):
@@ -783,7 +783,7 @@ optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconsta
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
 # Retrieve previously generated interpolation points
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_SNemph.csv'))
+util_df = pd.read_csv(os.path.join('orienteering', 'csv_utility', 'utilevals_SNemph.csv'))
 
 maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
 # TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 8 REGIONS; OTHERWISE TOO MANY PATHS ARE GENERATED
@@ -795,9 +795,9 @@ for regamt in range(1, maxregnum):
 print('Number of feasible region combinations:',len(mastlist))
 
 # Get the data frame of non-dominated paths
-# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('orienteering', 'csv_paths', 'paths_BASE_1400.csv'))
 # Load previously generated paths data frame
-paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+paths_df = pd.read_csv(os.path.join('orienteering', 'csv_paths', 'paths_BASE_1400.csv'))
 # Get necessary path vectors for IP-RP
 seqlist_trim, seqcostlist_trim, bindistaccessvectors_trim = GetPathSequenceAndCost(paths_df)
 # Get interpolation vectors

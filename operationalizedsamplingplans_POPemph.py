@@ -166,12 +166,12 @@ def GetSenegalCSVData():
     Travel out-and-back times for districts/departments are expressed as the proportion of a 10-hour workday, and
     include a 30-minute collection time; traveling to every region outside the HQ region includes a 2.5 hour fixed cost
     """
-    dept_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/deptfixedcosts.csv', header=0)
-    regcost_mat = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/regarcfixedcosts.csv', header=None)
+    dept_df = pd.read_csv('orienteering/senegal_csv_files/deptfixedcosts.csv', header=0)
+    regcost_mat = pd.read_csv('orienteering/senegal_csv_files/regarcfixedcosts.csv', header=None)
     regNames = ['Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
                 'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor']
     # Get testing results
-    testresults_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/dataresults.csv', header=0)
+    testresults_df = pd.read_csv('orienteering/senegal_csv_files/dataresults.csv', header=0)
     manufNames = testresults_df.Manufacturer.sort_values().unique().tolist()
     deptNames = dept_df['Department'].sort_values().tolist()
     testdatadict = {'dataTbl': testresults_df.values.tolist(), 'type': 'Tracked', 'TNnames': deptNames,
@@ -275,7 +275,7 @@ def GenerateMCMCBatch(lgdict, batchsize, randseed, filedest):
     lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
     np.save(filedest, lgdict['postSamples'])
     return
-# GenerateMCMCBatch(lgdict, 5000, 300, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1'))
+# GenerateMCMCBatch(lgdict, 5000, 300, os.path.join('orienteering', 'numpy_objects', 'draws1'))
 
 def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring):
     """Adds previously generated MCMC draws to lgdict, using the file destination marked by filedest_leadstring"""
@@ -286,7 +286,7 @@ def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring):
     lgdict.update({'postSamples': tempobj, 'numPostSamples': tempobj.shape[0]})
     return
 # Pull previously generated MCMC draws
-RetrieveMCMCBatches(lgdict, 20, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'))
+RetrieveMCMCBatches(lgdict, 20, os.path.join('orienteering', 'numpy_objects', 'draws'))
 # util.plotPostSamples(lgdict, 'int90')
 
 def AddBootstrapQ(lgdict, numboot, randseed):
@@ -624,11 +624,11 @@ def GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, csvpath):
     util_df.to_csv(csvpath, index=False)
     return
 
-# GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_BASE.csv'))
+# GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, os.path.join('orienteering', 'csv_utility', 'utilevals_BASE.csv'))
 
 # Retrieve previously generated interpolation points
 
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_POPemph.csv'))
+util_df = pd.read_csv(os.path.join('orienteering', 'csv_utility', 'utilevals_POPemph.csv'))
 
 ### GENERATE PATHS FOR CASE STUDY ###
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
@@ -694,10 +694,10 @@ def GenerateNondominatedPaths(mastlist, optparamdict, csvpath):
 
     return
 
-# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('orienteering', 'csv_paths', 'paths_BASE.csv'))
 
 # Load previously generated paths data frame
-paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+paths_df = pd.read_csv(os.path.join('orienteering', 'csv_paths', 'paths_BASE.csv'))
 
 def GetPathSequenceAndCost(paths_df):
     """Retrieves optimization-ready lists pertaining to path sequences and costs"""
@@ -913,8 +913,8 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
 #                                       optbounds, f_dept, initsoln_700_util, seqlist_trim, printUpdate=True)
 
 # Save to avoid generating later
-# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
-candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+# candpaths_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl'))
+candpaths_df_700 = pd.read_pickle(os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl'))
 
 def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict):
     for pathind in range(candpaths_df.shape[0]):
@@ -944,7 +944,7 @@ optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconsta
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
 # Retrieve previously generated interpolation points
-util_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'utilevals_POPemph.csv'))
+util_df = pd.read_csv(os.path.join('orienteering', 'csv_utility', 'utilevals_POPemph.csv'))
 
 maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
 # TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 8 REGIONS; OTHERWISE TOO MANY PATHS ARE GENERATED
@@ -956,9 +956,9 @@ for regamt in range(1, maxregnum):
 print('Number of feasible region combinations:',len(mastlist))
 
 # Get the data frame of non-dominated paths
-# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('orienteering', 'csv_paths', 'paths_BASE_1400.csv'))
 # Load previously generated paths data frame
-paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+paths_df = pd.read_csv(os.path.join('orienteering', 'csv_paths', 'paths_BASE_1400.csv'))
 # Get necessary path vectors for IP-RP
 seqlist_trim, seqcostlist_trim, bindistaccessvectors_trim = GetPathSequenceAndCost(paths_df)
 # Get interpolation vectors

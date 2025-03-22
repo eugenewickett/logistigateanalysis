@@ -5,7 +5,7 @@ from logistigate.logistigate import lossfunctions as lf
 from logistigate.logistigate import samplingplanfunctions as sampf
 from logistigate.logistigate import orienteering as opf
 
-from operationalizedsamplingplans.senegalsetup import *
+from orienteering.senegalsetup import *
 
 import os
 import pickle
@@ -48,14 +48,15 @@ SetupSenegalPriors(lgdict)
 
 # Set up MCMC
 lgdict['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 1000, 'delta': 0.4}
+mcmcfilestr = os.path.join('orienteering', 'numpy_objects', 'draws')
 
 # todo: REMOVE LATER ONCE WE'VE GENERATED 100 BATCHES
-#  GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws62'), 562)
+# for i in range(66, 100):
+#     GenerateMCMCBatch(lgdict, 5000, mcmcfilestr+str(i), 500+i)
 
 # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
-RetrieveMCMCBatches(lgdict, 10, os.path.join('operationalizedsamplingplans',
-                                             'numpy_objects', 'draws'),
-                    maxbatchnum=50, rand=True, randseed=1122)
+RetrieveMCMCBatches(lgdict, 20, mcmcfilestr,
+                    maxbatchnum=64, rand=True, randseed=1122)
 # util.plotPostSamples(lgdict, 'int90')  # Plot if desired
 
 # Add boostrap-sampled sourcing vectors for non-tested test nodes; 20 is the avg number of tests per visited dept
@@ -65,14 +66,17 @@ AddBootstrapQ(lgdict, numboot=int(np.sum(lgdict['N'])/np.count_nonzero(np.sum(lg
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
                                               marketvec=np.ones(numTN + numSN))
 
+# TODO: RUN THIS LATER
+sampf.makecalibrationplot(lgdict, paramdict, 300, mcmcfilestr, 64, [2, 5, 10, 15, 20, 30, 40],
+                          5000, 10, 200)
+
 # Set up utility estimation parameter dictionary with desired truth and data draws
-SetupUtilEstParamDict(lgdict, paramdict, 50000, 500, randseed=56)
+SetupUtilEstParamDict(lgdict, paramdict, 100000, 500, randseed=56)
 util.print_param_checks(paramdict)  # Parameter check
 
 # Set these parameters per the program described in the paper
 batchcost, batchsize, B, ctest = 0, 700, 700, 2
-batchsize = B
-bigM = B*ctest
+batchsize, bigM = B, B*ctest
 
 dept_df_sort = dept_df.sort_values('Department')
 
@@ -98,7 +102,7 @@ print('IPRP:',util_IPRP, util_IPRP_CI)
 
 ### Benchmarks ###
 # Initiate/load benchmark data frame
-benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl')
+benchpklstr = os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl')
 bench_df_700 = pd.read_pickle(benchpklstr)
 
 # LeastVisited
@@ -123,7 +127,7 @@ util_MostSFPs_unif, util_MostSFPs_unif_CI = sampf.getImportanceUtilityEstimate(n
 print('MostSFPs (unform):',util_MostSFPs_unif, util_MostSFPs_unif_CI)
 bench_df_700.loc[1] = ['MostSFPs_unif', deptList_MostSFPs_unif, allocList_MostSFPs_unif, n_MostSFPs_unif,
                        util_MostSFPs_unif, util_MostSFPs_unif_CI[0], util_MostSFPs_unif_CI[1]]
-bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl'))
+bench_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl'))
 # 1-APR
 # 0.4057327485117437 (0.39745040526376485, 0.4140150917597225); 50k imp draws
 
@@ -137,7 +141,7 @@ util_MostSFPs_wtd, util_MostSFPs_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
 print('MostSFPs (weighted):', util_MostSFPs_wtd, util_MostSFPs_wtd_CI)
 bench_df_700.loc[2] = ['MostSFPs_wtd', deptList_MostSFPs_wtd, allocList_MostSFPs_wtd, n_MostSFPs_wtd,
                        util_MostSFPs_wtd, util_MostSFPs_wtd_CI[0], util_MostSFPs_wtd_CI[1]]
-bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl'))
+bench_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl'))
 # 1-APR
 # 0.34387015916270514 (0.33581437552917137, 0.3519259427962389); 50k imp draws
 
@@ -151,7 +155,7 @@ util_MoreDist_unif, util_MoreDist_unif_CI = sampf.getImportanceUtilityEstimate(n
 print('MoreDistricts (unform):', util_MoreDist_unif, util_MoreDist_unif_CI)
 bench_df_700.loc[3] = ['MoreDist_unif', deptList_MoreDist_unif, allocList_MoreDist_unif, n_MoreDist_unif,
                        util_MoreDist_unif, util_MoreDist_unif_CI[0], util_MoreDist_unif_CI[1]]
-bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl'))
+bench_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl'))
 # 1-APR
 # 0.7142112441221578 (0.7041955514460678, 0.7242269367982477); 50k imp draws
 
@@ -165,7 +169,7 @@ util_MoreDist_wtd, util_MoreDist_wtd_CI = sampf.getImportanceUtilityEstimate(n_M
 print('MoreDistricts (weighted):', util_MoreDist_wtd, util_MoreDist_wtd_CI)
 bench_df_700.loc[4] = ['MoreDist_wtd', deptList_MoreDist_wtd, allocList_MoreDist_wtd, n_MoreDist_wtd,
                        util_MoreDist_wtd, util_MoreDist_wtd_CI[0], util_MoreDist_wtd_CI[1]]
-bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl'))
+bench_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl'))
 # 1-APR
 # 0.9208077574830948 (0.9133589885267988, 0.9282565264393909); 50k imp draws
 
@@ -192,13 +196,13 @@ util_MoreTests_wtd, util_MoreTests_wtd_CI = sampf.getImportanceUtilityEstimate(n
 print('MoreTests (weighted):', util_MoreTests_wtd, util_MoreTests_wtd_CI)
 bench_df_700.loc[6] = ['MoreTests_wtd', deptList_MoreTests_wtd, allocList_MoreTests_wtd, n_MoreTests_wtd,
                        util_MoreTests_wtd, util_MoreTests_wtd_CI[0], util_MoreTests_wtd_CI[1]]
-bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl'))
+bench_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl'))
 # 1-APR
 # 0.7670376446472407 (0.7598361674775553, 0.774239121816926); 50k imp draws
 # Store benchmark dataframe
 # bench_df_700 = pd.DataFrame(bench_df_700, columns=['Benchmark_Name', 'Dept_List', 'Alloc_List', 'Alloc_vec',
 #                                                    'Uoracle', 'UoracleCIlo', 'UoracleCIhi'])
-bench_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl'))
+bench_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl'))
 
 
 ########
@@ -220,7 +224,7 @@ print('IPRP:',util_IPRP, util_IPRP_CI)
 # 2.501114917463534 (2.4907262706226145, 2.511503564304453)
 
 # Initiate/load benchmark data frame
-benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+benchpklstr = os.path.join('orienteering', 'pkl_paths', 'bench_df_1400.pkl')
 bench_df_1400 = pd.read_pickle(benchpklstr)
 
 # LeastVisited
@@ -385,11 +389,11 @@ def GetInterpEvals(deptnames, deptallocbds, paramdict, lgdict, csvpath):
     return
 
 # TODO: Rerun below if interpolation values are not yet generated
-# GetInterpEvals(deptNames, deptallocbds, paramdict, lgdict, os.path.join('operationalizedsamplingplans',
+# GetInterpEvals(deptNames, deptallocbds, paramdict, lgdict, os.path.join('orienteering',
 #                                                                        'csv_utility', 'interp_df_BASE.csv'))
 
 # Retrieve previously generated interpolation points
-interp_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'interp_df_BASE.csv'))
+interp_df = pd.read_csv(os.path.join('orienteering', 'csv_utility', 'interp_df_BASE.csv'))
 
 ### GENERATE PATHS FOR CASE STUDY ###
 # What is the upper bound on the number of regions in any feasible tour that uses at least one test?
@@ -455,10 +459,10 @@ def GenerateNondominatedPaths(mastlist, optparamdict, csvpath):
 
     return
 
-# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('orienteering', 'csv_paths', 'paths_BASE.csv'))
 
 # Load previously generated paths data frame
-paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE.csv'))
+paths_df = pd.read_csv(os.path.join('orienteering', 'csv_paths', 'paths_BASE.csv'))
 
 def GetPathSequenceAndCost(paths_df):
     """Retrieves optimization-ready lists pertaining to path sequences and costs"""
@@ -495,7 +499,7 @@ def GetInterpVectors(interp_df):
     return lvec, juncvec, m1vec, m2vec, bds, lovals, hivals
 
 # TODO: FIGURE OUT HOW TO ADJUST INTERPOLATION STEP WHEN NMAX*[UTIL@1TEST] IS LESS THAN [UTIL@NMAXTESTS]
-# interp_df[
+#
 
 # Get vectors of zero intercepts, junctures, and interpolation slopes for each of our Utilde evals at each district
 lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(interp_df)
@@ -679,8 +683,8 @@ def GetEligiblePathInds(paths_df, distNames, regNames, opt_obj, opt_constr, opt_
 #                                        optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
 
 # Save to avoid generating later
-# candpaths_df_700.to_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
-candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+# candpaths_df_700.to_pickle(os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl'))
+candpaths_df_700 = pd.read_pickle(os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl'))
 
 def EvaluateCandidateUtility(candpaths_df, LB, lgdict, paramdict, plotupdate=True):
     for pathind in range(candpaths_df.shape[0]):
@@ -746,7 +750,7 @@ def EvaluateCandidateUtility_All(lgdict, paramdict, pkllocatstr='', plotupdate=T
                 plt.show()
     return
 
-pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
+pkllocatstr = os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl')
 # Initialize candpaths_df with oracle evaluation of initial solution
 initpathind = np.where(np.round(initsoln_700[numTN * 3:]) == 1)[0][0]
 candpaths_df_700.loc[initpathind, 'Uoracle'] = initsoln_700_util
@@ -803,7 +807,7 @@ plt.show()
     # Number of tests
     # Number of districts accessed
     # Ratio of tests/districts
-pkllocatstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
+pkllocatstr = os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl')
 candpaths_df_700 = pd.read_pickle(pkllocatstr)
 IPRPsortinds = np.argsort(candpaths_df_700['IPRPobj']).tolist()[::-1]
 divnum = 5  # Number of groups to analyze
@@ -852,7 +856,7 @@ optparamdict = {'batchcost':batchcost, 'budget':B, 'pertestcost':ctest, 'Mconsta
                 'deptnames':deptNames, 'regnames':regNames, 'dept_df':dept_df_sort}
 
 # Retrieve previously generated interpolation points
-interp_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_utility', 'interp_df_BASE.csv'))
+interp_df = pd.read_csv(os.path.join('orienteering', 'csv_utility', 'interp_df_BASE.csv'))
 
 maxregnum = opf.GetSubtourMaxCardinality(optparamdict=optparamdict)
 # TODO: UPDATE LATER IF ANY GOOD SOLUTIONS USE 8 REGIONS; OTHERWISE TOO MANY PATHS ARE GENERATED
@@ -864,9 +868,9 @@ for regamt in range(1, maxregnum):
 print('Number of feasible region combinations:',len(mastlist))
 
 # Get the data frame of non-dominated paths
-# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+# GenerateNondominatedPaths(mastlist, optparamdict, os.path.join('orienteering', 'csv_paths', 'paths_BASE_1400.csv'))
 # Load previously generated paths data frame
-paths_df = pd.read_csv(os.path.join('operationalizedsamplingplans', 'csv_paths', 'paths_BASE_1400.csv'))
+paths_df = pd.read_csv(os.path.join('orienteering', 'csv_paths', 'paths_BASE_1400.csv'))
 # Get necessary path vectors for IP-RP
 seqlist_trim, seqcostlist_trim, bindistaccessvectors_trim = GetPathSequenceAndCost(paths_df)
 # Get interpolation vectors
@@ -898,18 +902,18 @@ initsoln_1400_util, initsoln_1400_util_CI = sampf.getImportanceUtilityEstimate(i
 candpaths_df_1400 = GetEligiblePathInds(paths_df, deptNames, regNames, optobjvec, optconstraints, optintegrality,
                                        optbounds, f_dept, 0, seqlist_trim, printUpdate=True)
 
-candpklstr_1400 = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_1400.pkl')
+candpklstr_1400 = os.path.join('orienteering', 'pkl_paths', 'candpaths_df_1400.pkl')
 
 # Save to avoid generating later
 candpaths_df_1400.to_pickle(candpklstr_1400)
 # Load here
 candpaths_df_1400 = pd.read_pickle(candpklstr_1400)
 
+# Evaluate candidates who have not yet been evaluated
 EvaluateCandidateUtility_All(lgdict, paramdict, candpklstr_1400)
 
-
-# TODO: scratch, REMOVE later
-benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+# TODO: scratch from 5-MAR-25, REMOVE later
+benchpklstr = os.path.join('orienteering', 'pkl_paths', 'bench_df_1400.pkl')
 candpaths_df = pd.read_pickle(candpklstr_1400)
 bench_df = pd.read_pickle(benchpklstr)
 
@@ -965,18 +969,18 @@ def PlotCandAndBench(candpaths_df, bench_df, numcand=40):
 
     return
 
-benchpklstr = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+benchpklstr = os.path.join('orienteering', 'pkl_paths', 'bench_df_1400.pkl')
 bench_df_1400 = pd.read_pickle(benchpklstr)
 candpaths_df = pd.read_pickle(candpklstr_1400)
 bench_df = pd.read_pickle(benchpklstr)
 PlotCandAndBench(candpaths_df_700, bench_df_700)
 
-candpaths_df_700 = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl'))
+candpaths_df_700 = pd.read_pickle(os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl'))
 
 # SNemph plot
-cand_SNemph_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_SNemph_700.pkl')
+cand_SNemph_pkl = os.path.join('orienteering', 'pkl_paths', 'candpaths_df_SNemph_700.pkl')
 candpaths_SNemph = pd.read_pickle(cand_SNemph_pkl)
-bench_SNemph_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_SNemph_700.pkl')
+bench_SNemph_pkl = os.path.join('orienteering', 'pkl_paths', 'bench_df_SNemph_700.pkl')
 bench_SNemph = pd.read_pickle(bench_SNemph_pkl)
 PlotCandAndBench(candpaths_SNemph, bench_SNemph, numcand=36)
 
@@ -1026,31 +1030,31 @@ MakeAllocationHeatMap(n_SNemph, optparamdict,
                       plotTitle='B=700, upstream emphasis\nIP-RP solution',
                       cmapstr='Purples', sortby='districtcost', vlist=[0,60])
 
-cand_700_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_700.pkl')
+cand_700_pkl = os.path.join('orienteering', 'pkl_paths', 'candpaths_df_700.pkl')
 candpaths_700 = pd.read_pickle(cand_700_pkl)
 n_IPRP_700 = candpaths_700.iloc[np.argmax(candpaths_SNemph['IPRPobj'])]['Allocation']
 MakeAllocationHeatMap(n_IPRP_700, optparamdict,
                       plotTitle='B=700, base setting\nIP-RP solution',
                       cmapstr='Purples', sortby='districtcost', vlist=[0,60])
 
-cand_1400_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'candpaths_df_1400.pkl')
+cand_1400_pkl = os.path.join('orienteering', 'pkl_paths', 'candpaths_df_1400.pkl')
 candpaths_1400 = pd.read_pickle(cand_1400_pkl)
 n_IPRP_1400 = candpaths_1400.iloc[np.argmax(candpaths_SNemph['IPRPobj'])]['Allocation']
 MakeAllocationHeatMap(n_IPRP_1400, optparamdict,
                       plotTitle='B=1400, base setting\nIP-RP solution',
                       cmapstr='Purples', sortby='districtcost', vlist=[0,60])
 
-bench_SNemph_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_SNemph_700.pkl')
+bench_SNemph_pkl = os.path.join('orienteering', 'pkl_paths', 'bench_df_SNemph_700.pkl')
 bench_SNemph = pd.read_pickle(bench_SNemph_pkl)
 print(bench_SNemph[['Benchmark_Name', 'Uoracle']])
 candpaths_SNemph.iloc[np.argmax(candpaths_SNemph['IPRPobj'])]['Uoracle']
 
-bench_700_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_700.pkl')
+bench_700_pkl = os.path.join('orienteering', 'pkl_paths', 'bench_df_700.pkl')
 bench_700 = pd.read_pickle(bench_700_pkl)
 print(bench_700[['Benchmark_Name', 'Uoracle']])
 candpaths_700.iloc[np.argmax(candpaths_700['IPRPobj'])]['Uoracle']
 
-bench_1400_pkl = os.path.join('operationalizedsamplingplans', 'pkl_paths', 'bench_df_1400.pkl')
+bench_1400_pkl = os.path.join('orienteering', 'pkl_paths', 'bench_df_1400.pkl')
 bench_1400 = pd.read_pickle(bench_1400_pkl)
 print(bench_1400[['Benchmark_Name', 'Uoracle']])
 candpaths_1400.iloc[np.argmax(candpaths_1400['IPRPobj'])]['Uoracle']
@@ -1347,7 +1351,7 @@ LB = u_init
 # Prep a new paths dataframe
 
 # Or load
-# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+# phase2paths_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 phase2paths_df = paths_df.copy()
 phase2paths_df.insert(3, 'RPobj', np.zeros(numPath).tolist(), True)
@@ -1373,7 +1377,7 @@ for pathind in range(numPath):
         print('Path ' + str(pathind) + ' RP utility: ' + str(phase2paths_df.iloc[pathind, 3]))
 
 # Save to avoid generating later
-phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+phase2paths_df.to_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 
 
@@ -1706,7 +1710,7 @@ eligPathInds_sort = [eligPathInds[x] for x in np.argsort(eligPathRatioDists).tol
 #####
 
 # Load from pickle if needed
-# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+# phase2paths_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 for currpathind in eligPathInds_sort:
     print('On path index: '+ str(currpathind)+'...')
@@ -1733,7 +1737,7 @@ for currpathind in eligPathInds_sort:
     phase2paths_df.iloc[currpathind, 7] = curr_u_CI[1]
 
     # Save to avoid generating later
-    phase2paths_df.to_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+    phase2paths_df.to_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 
 '''
@@ -2108,7 +2112,7 @@ phase2paths_df.iloc[eligPathInds_sort[28], 7] = 1.3898257691509261
 
 '''
 ####### Or load #######
-# phase2paths_df = pd.read_pickle(os.path.join('operationalizedsamplingplans', 'numpy_objects', 'phase2paths.pkl'))
+# phase2paths_df = pd.read_pickle(os.path.join('orienteering', 'numpy_objects', 'phase2paths.pkl'))
 
 
 # Generate a plot for our improvement runs

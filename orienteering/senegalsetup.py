@@ -157,12 +157,12 @@ def GetSenegalCSVData():
             (int) number of regions,
             (dict) test result dictionary
     """
-    dept_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/deptfixedcosts.csv', header=0)
-    regcost_mat = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/regarcfixedcosts.csv', header=None)
+    dept_df = pd.read_csv('orienteering/senegal_csv_files/deptfixedcosts.csv', header=0)
+    regcost_mat = pd.read_csv('orienteering/senegal_csv_files/regarcfixedcosts.csv', header=None)
     regNames = ['Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam',
                 'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor']
     # Get testing results
-    testresults_df = pd.read_csv('operationalizedsamplingplans/senegal_csv_files/dataresults.csv', header=0)
+    testresults_df = pd.read_csv('orienteering/senegal_csv_files/dataresults.csv', header=0)
     manufNames = testresults_df.Manufacturer.sort_values().unique().tolist()
     deptNames = dept_df['Department'].sort_values().tolist()
     testdatadict = {'dataTbl': testresults_df.values.tolist(), 'type': 'Tracked', 'TNnames': deptNames,
@@ -249,7 +249,7 @@ def GenerateMCMCBatch(lgdict, batchsize, filedest, randseed=300):
     lgdict = methods.GeneratePostSamples(lgdict, maxTime=5000)
     np.save(filedest, lgdict['postSamples'])
     return
-# GenerateMCMCBatch(lgdict, 5000, os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws1'), 300)
+# GenerateMCMCBatch(lgdict, 5000, os.path.join('orienteering', 'numpy_objects', 'draws1'), 300)
 
 
 def RetrieveMCMCBatches(lgdict, numbatches, filedest_leadstring, maxbatchnum=50, rand=False, randseed=1):

@@ -74,7 +74,7 @@ optparamdict = {'deptnames': ['Bakel', 'Bambey', 'Bignona', 'Birkilane', 'Bounki
         237.6666666, 111.3333334, 226.3333334, 254.6666666, 248.       ,
          90.6666666, 177.3333334, 200.       ,   0.       ]]),
                 'regnames': ['Dakar', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kedougou', 'Kolda', 'Louga', 'Matam', 'Saint-Louis', 'Sedhiou', 'Tambacounda', 'Thies', 'Ziguinchor'],
-                'dept_df': pd.read_csv('operationalizedsamplingplans/senegal_csv_files/deptfixedcosts.csv', header=0)
+                'dept_df': pd.read_csv('orienteering/senegal_csv_files/deptfixedcosts.csv', header=0)
 }
 
 # Base allocations
@@ -453,7 +453,7 @@ def MakeAllocationHeatMap(n, optparamdict, plotTitle='', savename='', cmapstr='g
     plt.text(maxdistnum+0.4, 1, "Districts visited: {:.0f}%".format(percDistVisited), fontsize=8)
     plt.colorbar(location='right', anchor=(0,0.3), shrink=0.7)
     plt.tight_layout()
-    plt.savefig(os.path.join('operationalizedsamplingplans', 'plots', savename), bbox_inches='tight')
+    plt.savefig(os.path.join('orienteering', 'plots', savename), bbox_inches='tight')
     plt.show()
     return
 

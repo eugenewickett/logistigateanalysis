@@ -81,7 +81,7 @@ testarr = np.arange(testint, testmax + testint, testint)
 #                     batchlist=[2, 5, 10, 20, 30, 40, 50, 60, 70, 80], nrep=10, numdatadraws=300)
 
 # Set MCMC draws to use in fast algorithm
-numtruthdraws, numdatadraws = 250000, 300
+numtruthdraws, numdatadraws = 250000, 1000
 util.RetrieveMCMCBatches(csdict_fam, int(numtruthdraws/5000), os.path.join(mcmcfiledest, 'draws'), maxbatchnum=100,
                          rand=True, randseed=122)
 # Get random subsets for truth and data draws
@@ -99,12 +99,18 @@ util.print_param_checks(paramdict)  # Check of used parameters
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
                                                                 estmethod='parallel',
                                                                 printupdate=True, plotupdate=True,
-                                                                plottitlestr='Familiar Setting')
+                                                                plottitlestr='Existing Setting')
 
 np.save(os.path.join('..', 'existing', 'exist_alloc'), alloc)
 np.save(os.path.join('..', 'existing', 'util_avg_greedy'), util_avg)
 np.save(os.path.join('..', 'existing', 'util_hi_greedy'), util_hi)
 np.save(os.path.join('..', 'existing', 'util_lo_greedy'), util_lo)
+
+# 19-MAR-25
+# bestallocnodes = [1, 1, 1, 1, 1,
+#                   0, 1, 1, 0, 1,
+#                   0, 1, 2, 0, 1,
+#                   1, 2, 2, 0, ]
 
 ###
 # REMOVE THIS BLOCK LATER (23-SEP)

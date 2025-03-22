@@ -1,5 +1,5 @@
 """
-This study aims to inspect differences in oracle performance for the efficient and  importance sampling methods of
+This study aims to inspect differences in oracle performance for the efficient and importance sampling methods of
 utility estimation, for different numbers of truth/data draws, using the data of the case study for the
 orienteering paper.
 
@@ -19,7 +19,7 @@ from logistigate.logistigate import lossfunctions as lf
 from logistigate.logistigate import samplingplanfunctions as sampf
 from logistigate.logistigate import orienteering as opf
 
-from operationalizedsamplingplans.senegalsetup import *
+from orienteering.senegalsetup import *
 
 import os
 import pickle
@@ -89,7 +89,7 @@ for currbatchind in range(len(numbatcharr)):
     for rep in range(numreps):
         # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
         RetrieveMCMCBatches(lgdict, numbatch,
-                            os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'),
+                            os.path.join('../../orienteering', 'numpy_objects', 'draws'),
                             maxbatchnum=50, rand=True, randseed=rep+currbatchind+22)
         # Set up utility estimation parameter dictionary with desired truth and data draws
         SetupUtilEstParamDict(lgdict, paramdict, numbatch*5000, 500, randseed=rep+currbatchind+106)
@@ -171,9 +171,9 @@ for currbatchind in range(len(numbatcharr)):
         plt.show()
 
         # Save numpy objects
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_baseloss'), store_baseloss)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo'), store_utillo)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi'), store_utilhi)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_baseloss'), store_baseloss)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_utillo'), store_utillo)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_utilhi'), store_utilhi)
 
 ##################
 # END PART 1
@@ -191,7 +191,7 @@ for currbatchind in range(len(numbatcharr)):
     for rep in range(numreps):
         # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
         RetrieveMCMCBatches(lgdict, numbatch,
-                            os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'),
+                            os.path.join('../../orienteering', 'numpy_objects', 'draws'),
                             maxbatchnum=50, rand=True, randseed=rep+currbatchind+22)
         # Set up utility estimation parameter dictionary with desired truth and data draws
         SetupUtilEstParamDict(lgdict, paramdict, numbatch*5000, 500, randseed=rep+currbatchind+106)
@@ -243,8 +243,8 @@ for currbatchind in range(len(numbatcharr)):
 
         plt.show()
 
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo_outlier'), store_utillo_outlier)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi_outlier'), store_utilhi_outlier)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_utillo_outlier'), store_utillo_outlier)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_utilhi_outlier'), store_utilhi_outlier)
 
 ##################
 # END PART 2
@@ -268,7 +268,7 @@ for currbatchind in range(len(numbatcharr)):
     for rep in range(numreps):
         # Retrieve previously generated MCMC draws, which are in batches of 5000; each batch takes up about 3MB
         RetrieveMCMCBatches(lgdict, numbatch,
-                            os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'),
+                            os.path.join('../../orienteering', 'numpy_objects', 'draws'),
                             maxbatchnum=50, rand=True, randseed=rep+currbatchind+24)
         # Set up utility estimation parameter dictionary with desired truth and data draws
         SetupUtilEstParamDict(lgdict, paramdict, numbatch*5000, 500, randseed=rep+currbatchind+106)
@@ -331,9 +331,9 @@ for currbatchind in range(len(numbatcharr)):
         plt.show()
 
         # Store arrays
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_baseloss_1400'), store_baseloss_1400)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo_1400'), store_utillo_1400)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi_1400'), store_utilhi_1400)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_baseloss_1400'), store_baseloss_1400)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_utillo_1400'), store_utillo_1400)
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'store_utilhi_1400'), store_utilhi_1400)
 
 ##################
 # END PART 3
@@ -342,12 +342,12 @@ for currbatchind in range(len(numbatcharr)):
 ##################
 # PART 4: Plot B=700,1400 together
 ##################
-utilhi_700 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi.npy'))
-utilhi_700_extm = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi_outlier.npy'))
-utilhi_1400 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utilhi_1400.npy'))
-utillo_700 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo.npy'))
-utillo_700_extm = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo_outlier.npy'))
-utillo_1400 = np.load(os.path.join('studies', 'utiloracle_13FEB25', 'store_utillo_1400.npy'))
+utilhi_700 = np.load(os.path.join('..', 'utiloracle_13FEB25', 'store_utilhi.npy'))
+utilhi_700_extm = np.load(os.path.join('..', 'utiloracle_13FEB25', 'store_utilhi_outlier.npy'))
+utilhi_1400 = np.load(os.path.join('..', 'utiloracle_13FEB25', 'store_utilhi_1400.npy'))
+utillo_700 = np.load(os.path.join('..', 'utiloracle_13FEB25', 'store_utillo.npy'))
+utillo_700_extm = np.load(os.path.join('..', 'utiloracle_13FEB25', 'store_utillo_outlier.npy'))
+utillo_1400 = np.load(os.path.join('..', 'utiloracle_13FEB25', 'store_utillo_1400.npy'))
 
 
 fig, ax = plt.subplots()
@@ -413,7 +413,7 @@ store_utillo_extrm_700 = np.zeros((numreps, len(deltvec)))
 for rep in range(numreps):
     # Retrieve 25k previously generated MCMC draws, which are in batches of 5000
     RetrieveMCMCBatches(lgdict, numbatch,
-                        os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'),
+                        os.path.join('../../orienteering', 'numpy_objects', 'draws'),
                         maxbatchnum=50, rand=True, randseed=rep + 10 + 24)
     # Set up utility estimation parameter dictionary with desired truth and data draws
     SetupUtilEstParamDict(lgdict, paramdict, numbatch * 5000, 500, randseed=rep + numbatch + 106)
@@ -556,11 +556,11 @@ for rep in range(numreps):
 
         plt.show()
         # Store arrays
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_util_extrm_700'),
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'extrema_study', 'store_util_extrm_700'),
                 store_util_extrm_700)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utillo_extrm_700'),
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'extrema_study', 'store_utillo_extrm_700'),
                 store_utillo_extrm_700)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utilhi_extrm_700'),
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'extrema_study', 'store_utilhi_extrm_700'),
                 store_utilhi_extrm_700)
 
 ##################
@@ -593,7 +593,7 @@ store_utillo_extrm_1400 = np.zeros((numreps, len(deltvec)))
 for rep in range(numreps):
     # Retrieve 25k previously generated MCMC draws, which are in batches of 5000
     RetrieveMCMCBatches(lgdict, numbatch,
-                        os.path.join('operationalizedsamplingplans', 'numpy_objects', 'draws'),
+                        os.path.join('../../orienteering', 'numpy_objects', 'draws'),
                         maxbatchnum=50, rand=True, randseed=rep + 10 + 24)
     # Set up utility estimation parameter dictionary with desired truth and data draws
     SetupUtilEstParamDict(lgdict, paramdict, numbatch * 5000, 500, randseed=rep + numbatch + 106)
@@ -736,11 +736,11 @@ for rep in range(numreps):
 
         plt.show()
         # Store arrays
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_util_extrm_1400'),
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'extrema_study', 'store_util_extrm_1400'),
                 store_util_extrm_1400)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utillo_extrm_1400'),
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'extrema_study', 'store_utillo_extrm_1400'),
                 store_utillo_extrm_1400)
-        np.save(os.path.join('studies', 'utiloracle_13FEB25', 'extrema_study', 'store_utilhi_extrm_1400'),
+        np.save(os.path.join('..', 'utiloracle_13FEB25', 'extrema_study', 'store_utilhi_extrm_1400'),
                 store_utilhi_extrm_1400)
 
 ##################
