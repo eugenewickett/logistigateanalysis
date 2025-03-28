@@ -112,6 +112,88 @@ def GetInterpVectors(interp_df):
     return lvec, juncvec, m1vec, m2vec, bds, lovals, hivals
 
 # Get vectors of zero intercepts, junctures, and interpolation slopes for each of our Utilde evals at each district
+lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(interp_df)
 lvec_TN, juncvec_TN, m1vec_TN, m2vec_TN, bds_TN, lovals_TN, hivals_TN = GetInterpVectors(interp_TN_df)
 lvec_SN, juncvec_SN, m1vec_SN, m2vec_SN, bds_SN, lovals_SN, hivals_SN = GetInterpVectors(interp_SN_df)
 
+# Construct new objective using TN/SN-element interpolations
+# Check we get the IPRP objective when re-running everything
+def getObjVec(l, m1, m2):
+    return np.concatenate((np.array(l), np.array(m1), np.array(m2)))
+
+ind = 3
+
+objVec = getObjVec(lvec, m1vec, m2vec)
+distaccessVar = np.array(eval(df_main.iloc[ind]['DistAccessBinaryVec']))
+allocVar = df_main.iloc[ind]['Allocation']
+allocVar1, allocVar2 = np.zeros(numTN), np.zeros(numTN)
+for i in range(numTN):
+    if allocVar[i] > juncvec[i]:
+        allocVar1[i] = juncvec[i] - 1
+        allocVar2[i] = allocVar[i] - juncvec[i] + 1
+    elif allocVar[i] > 0:
+        allocVar1[i] = allocVar[i]
+
+
+decvarVec = np.concatenate((distaccessVar, allocVar1, allocVar2))
+print(np.sum(decvarVec*objVec))
+print(df_main.iloc[ind]['IPRPobj'])
+
+# Now build a new objective, using element interpolations
+def getObjVec_elemental(l_TN, m1_TN, m2_TN, l_SN, m1_SN, m2_SN):
+    return np.concatenate((np.array(l_TN), np.array(m1_TN), np.array(m2_TN),
+                           np.array(l_SN), np.array(m1_SN), np.array(m2_SN)))
+
+objVec_elem = getObjVec_elemental(lvec_TN, m1vec_TN, m2vec_TN, lvec_SN, m1vec_SN, m2vec_SN)
+
+store_Uelem, store_Uoracle, store_IPRP = [], [], []
+
+for ind in range(len(df_main)):
+    distaccessVar = np.array(eval(df_main.iloc[ind]['DistAccessBinaryVec']))
+    allocVar = df_main.iloc[ind]['Allocation']
+    allocVar1, allocVar2 = np.zeros(numTN), np.zeros(numTN)
+    for i in range(numTN):
+        if allocVar[i] > juncvec_TN[i]:
+            allocVar1[i] = juncvec_TN[i] - 1
+            allocVar2[i] = allocVar[i] - juncvec_TN[i] + 1
+        elif allocVar[i] > 0:
+            allocVar1[i] = allocVar[i]
+    # Build SN allocations through Q
+    SNallocVar = np.matmul(allocVar, Q)
+    SNallocVar1, SNallocVar2 = np.zeros(numSN), np.zeros(numSN)
+    for j in range(numSN):
+        if SNallocVar[j] > juncvec_SN[j]:
+            SNallocVar1[j] = juncvec_SN[j] - 1
+            SNallocVar2[j] = SNallocVar[j] - juncvec_SN[j] + 1
+        elif SNallocVar[j] > 0:
+            SNallocVar1[j] = SNallocVar[j]
+    SNdistaccessVar = np.zeros(numSN)
+    for j in range(numSN):
+        if SNallocVar[j] > 0:
+            SNdistaccessVar[j] = 1
+
+    decvarVec_elem = np.concatenate((distaccessVar, allocVar1, allocVar2,
+                                 SNdistaccessVar, SNallocVar1, SNallocVar2))
+    store_Uelem.append(np.sum(decvarVec_elem*objVec_elem))
+    store_Uoracle.append(df_main.iloc[ind]['Uoracle'])
+    store_IPRP.append(df_main.iloc[ind]['IPRPobj'])
+    # print(np.sum(decvarVec_elem*objVec_elem))
+    # print(df_main.iloc[ind]['IPRPobj'])
+    # print(df_main.iloc[ind]['Uoracle'])
+
+
+plt.plot(range(len(df_main)), store_IPRP, '^', label='IPRP obj. (UB)')
+plt.plot(range(len(df_main)), store_Uelem, 'x', label='Decomp. est.')
+plt.plot(range(len(df_main)), store_Uoracle, 'o', label='Utility')
+plt.legend()
+plt.show()
+
+plt.plot(store_Uoracle, store_IPRP, '^', label='IPRP obj. (UB)')
+plt.plot(store_Uoracle, store_Uelem, 'x', label='Decomp. est.')
+plt.plot(store_Uoracle, store_Uoracle, '-')
+plt.xlabel('Utility')
+plt.ylabel('Estimate')
+plt.ylim([1.8,3.1])
+plt.xlim([1.8,3.1])
+plt.legend()
+plt.show()
