@@ -1,3 +1,6 @@
+"""
+Utility estimates for the 'all-provinces' setting
+"""
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
 from logistigate.logistigate.priors import prior_normal_assort
@@ -49,15 +52,25 @@ SNpriorMean = np.repeat(sps.logit(0.1), numSN)
 TNpriorMean = sps.logit(np.array([0.1, 0.1, 0.15, 0.15, 0.15, 0.1, 0.15, 0.1]))
 TNvar, SNvar = 2., 4.  # Variances for use with prior; supply nodes are wide due to uncertainty
 csdict_expl['prior'] = prior_normal_assort(np.concatenate((SNpriorMean, TNpriorMean)),
-                               np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN)))))
+                                           np.diag(np.concatenate((np.repeat(SNvar, numSN),
+                                           np.repeat(TNvar, numTN)))))
 
 # Set up MCMC
 csdict_expl['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
-# Generate posterior draws
-numdraws = 75000 # 75000
+# Path for previously generated MCMC draws
+mcmcfiledest = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files',
+                            'numpy_obj', 'mcmc_draws', 'allprovinces')
+'''
+numdraws = 5000  # Blocks of 5k draws
 csdict_expl['numPostSamples'] = numdraws
-np.random.seed(1000) # To replicate draws later
-csdict_expl = methods.GeneratePostSamples(csdict_expl)
+for rep in range(100):
+    print('Rep: '+str(rep))
+    np.random.seed(rep+2000)
+    csdict_expl = methods.GeneratePostSamples(csdict_expl)
+    np.save(os.path.join(mcmcfiledest, 'draws'+str(rep)+'.npy'), csdict_expl['postSamples'])
+'''
+
+
 
 # Loss specification
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
