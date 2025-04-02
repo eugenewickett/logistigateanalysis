@@ -26,9 +26,9 @@ Yfam = np.array([[0., 0., 7., 0., 3., 0., 1., 0., 1., 0., 0., 0., 4.],
                       [0., 0., 15., 3., 2., 0., 0., 2., 0., 1., 1., 2., 5.],
                       [0., 0., 5., 2., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
 (numTN, numSN) = Nfam.shape # For later use
-csdict_fam = util.initDataDict(Nfam, Yfam) # Initialize necessary logistigate keys
-csdict_fam['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
-csdict_fam['SNnames'] = ['MNFR ' + str(i+1) for i in range(numSN)]
+csdict_existing = util.initDataDict(Nfam, Yfam) # Initialize necessary logistigate keys
+csdict_existing['TNnames'] = ['MOD_39', 'MOD_17', 'MODHIGH_95', 'MODHIGH_26']
+csdict_existing['SNnames'] = ['MNFR ' + str(i + 1) for i in range(numSN)]
 
 # Some summaries
 TNtesttotals = np.sum(Nfam, axis=1)
@@ -49,24 +49,24 @@ priorMean = np.concatenate((SNpriorMean, TNpriorMean))
 TNvar, SNvar = 2., 4.  # Variances for use with prior; supply nodes are wide due to large
 priorCovar = np.diag(np.concatenate((np.repeat(SNvar, numSN), np.repeat(TNvar, numTN))))
 priorObj = prior_normal_assort(priorMean, priorCovar)
-csdict_fam['prior'] = priorObj
+csdict_existing['prior'] = priorObj
 
 # Set up MCMC
-csdict_fam['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
+csdict_existing['MCMCdict'] = {'MCMCtype': 'NUTS', 'Madapt': 5000, 'delta': 0.4}
 # Path for previously generated MCMC draws
 mcmcfiledest = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'numpy_obj', 'mcmc_draws',
                             'existing')
 '''
 numdraws = 5000  # Blocks of 5k draws
-csdict_fam['numPostSamples'] = numdraws
+csdict_existing['numPostSamples'] = numdraws
 for rep in range(80, 100):
     np.random.seed(rep+1000)
-    csdict_fam = methods.GeneratePostSamples(csdict_fam)
-    np.save(os.path.join(mcmcfiledest, 'draws'+str(rep)+'.npy'), csdict_fam['postSamples'])
+    csdict_existing = methods.GeneratePostSamples(csdict_existing)
+    np.save(os.path.join(mcmcfiledest, 'draws'+str(rep)+'.npy'), csdict_existing['postSamples'])
 '''
 
 # Print inference from initial data
-# util.plotPostSamples(csdict_fam, 'int90')
+# util.plotPostSamples(csdict_existing, 'int90')
 
 # Loss specification
 paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
@@ -77,16 +77,17 @@ testmax, testint = 400, 10
 testarr = np.arange(testint, testmax + testint, testint)
 
 # Generate calibration plots to decide how many truth draws to use
-# sampf.makecalibrationplot(csdict_fam, paramdict, testmax, mcmcfiledest,
+# sampf.makecalibrationplot(csdict_existing, paramdict, testmax, mcmcfiledest,
 #                     batchlist=[2, 5, 10, 20, 30, 40, 50, 60, 70, 80], nrep=10, numdatadraws=300)
 
 # Set MCMC draws to use in fast algorithm
 numtruthdraws, numdatadraws = 300000, 1000
-util.RetrieveMCMCBatches(csdict_fam, int(numtruthdraws/5000), os.path.join(mcmcfiledest, 'draws'), maxbatchnum=100,
+util.RetrieveMCMCBatches(csdict_existing, int(numtruthdraws / 5000), os.path.join(mcmcfiledest, 'draws'), maxbatchnum=100,
                          rand=True, randseed=122)
+
 # Get random subsets for truth and data draws
 np.random.seed(444)
-truthdraws, datadraws = util.distribute_truthdata_draws(csdict_fam['postSamples'], numtruthdraws, numdatadraws)
+truthdraws, datadraws = util.distribute_truthdata_draws(csdict_existing['postSamples'], numtruthdraws, numdatadraws)
 paramdict.update({'truthdraws': truthdraws, 'datadraws': datadraws})
 # Get base loss
 paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
@@ -94,9 +95,9 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 util.print_param_checks(paramdict)  # Check of used parameters
 
 ###############
-# UPDATED HEURISTIC
+# GREEDY HEURISTIC
 ###############
-alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_fam, testmax, testint, paramdict,
+alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_existing, testmax, testint, paramdict,
                                                                 estmethod='parallel',
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='Existing Setting')
@@ -107,42 +108,6 @@ np.save(os.path.join(storestr, 'exist_alloc'), alloc)
 np.save(os.path.join(storestr, 'util_avg_greedy'), util_avg)
 np.save(os.path.join(storestr, 'util_hi_greedy'), util_hi)
 np.save(os.path.join(storestr, 'util_lo_greedy'), util_lo)
-
-# 19-MAR-25
-# bestallocnodes = [1, 1, 1, 1, 1,
-#                   0, 1, 1, 0, 1,
-#                   0, 1, 2, 0, 1,
-#                   1, 2, 2, 0, 1,
-#                   0, 2, 2, 1, 0,
-#                   1, 1, 1, 0, 2,
-#                   2, 0, 1, 3, 1,
-#                   2, 3, 2, 2, 3]
-
-###
-# REMOVE THIS BLOCK LATER (23-SEP)
-###
-# bestalloc = [1, 21, 2, 15]
-#
-# for currTN in range(numTN):  # Loop through each test node and identify best direction via lowest avg loss
-#     curralloc = bestalloc.copy()
-#     curralloc[currTN] += 1  # Increment 1 at current test node
-#     currdes = curralloc / np.sum(curralloc)  # Make a proportion design
-#     currlosslist = sampf.sampling_plan_loss_list_importance(currdes, testmax, csdict_fam, paramdict,
-#                                                       numimportdraws=60000,
-#                                                       numdatadrawsforimportance=5000,
-#                                                       impweightoutlierprop=.005)
-#     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-#     print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
-#
-# alloc = np.zeros((numTN, int(testmax / testint) + 1))
-# testaddseq = np.array([1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
-#  3, 3, 2, 2, 1, 1, 1, 1, 1, 1,
-#  1, 1, 1, 1, 1, 3, 3, 3, 3, 3,
-#  3, 3, 3, 3, 3, 3, 3, 3, 1, 1])
-# for tempind, temp in enumerate(testaddseq):
-#     alloc[temp,tempind+1:] += 1
-# util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint)
-
 
 #####################
 #####################
@@ -215,7 +180,7 @@ while not stop:
         des_rudi = rudi_mat[:, currind]
 
         # Greedy
-        currlosslist = sampf.sampling_plan_loss_list_parallel(des_greedy, currbudget, csdict_fam, paramdict)
+        currlosslist = sampf.sampling_plan_loss_list_parallel(des_greedy, currbudget, csdict_existing, paramdict)
 
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_greedy[currind + 1] = paramdict['baseloss'] - avg_loss
@@ -225,7 +190,7 @@ while not stop:
         print('Utility at ' + str(currbudget) + ' tests, Greedy: ' + str(util_avg_greedy[currind + 1]))
 
         # Uniform
-        currlosslist = sampf.sampling_plan_loss_list_parallel(des_unif, currbudget, csdict_fam, paramdict)
+        currlosslist = sampf.sampling_plan_loss_list_parallel(des_unif, currbudget, csdict_existing, paramdict)
 
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_unif[currind + 1] = paramdict['baseloss'] - avg_loss
@@ -235,7 +200,7 @@ while not stop:
         print('Utility at ' + str(currbudget) + ' tests, Uniform: ' + str(util_avg_unif[currind + 1]))
 
         # Rudimentary
-        currlosslist = sampf.sampling_plan_loss_list_parallel(des_rudi, currbudget, csdict_fam, paramdict)
+        currlosslist = sampf.sampling_plan_loss_list_parallel(des_rudi, currbudget, csdict_existing, paramdict)
 
         avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
         util_avg_rudi[currind + 1] = paramdict['baseloss'] - avg_loss

@@ -48,7 +48,7 @@ def STUDY_baselineloss():
     numdraws = 80000
     csdict_fam['numPostSamples'] = numdraws
     np.random.seed(1000)  # To replicate draws later
-    # csdict_fam = methods.GeneratePostSamples(csdict_fam)
+    # csdict_existing = methods.GeneratePostSamples(csdict_existing)
 
     # Loss specification
     paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=0.15, riskslope=0.6,
