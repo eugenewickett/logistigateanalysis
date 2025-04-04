@@ -107,16 +107,15 @@ np.save(os.path.join(storestr, 'exist_alloc'), alloc)
 np.save(os.path.join(storestr, 'util_avg_greedy'), util_avg)
 np.save(os.path.join(storestr, 'util_hi_greedy'), util_hi)
 np.save(os.path.join(storestr, 'util_lo_greedy'), util_lo)
-# 19-MAR-25
-# bestallocnodes = [1, 1, 1, 1, 1,
-#                   0, 1, 1, 0, 1,
-#                   0, 1, 2, 0, 1,
-#                   1, 2, 2, 0, 1,
-#                   0, 2, 2, 1, 0,
-#                   1, 1, 1, 0, 2,
-#                   2, 0, 1, 3, 1,
-#                   2, 3, 2, 2, 3]
 
+# 19-MAR-25
+# bestallocnodes = [4, 6, 7
+# ]
+'''
+(0.13763228686300044, 0.14425541844816392)
+(0.26890504514003544, 0.27762338324634106)
+(0.3919619127557854, 0.4025577137367198)
+'''
 #####################
 #####################
 #####################
