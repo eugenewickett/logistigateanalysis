@@ -9,6 +9,7 @@ from logistigate.logistigate import orienteering as opf
 
 import scipy.optimize as spo
 from scipy.optimize import milp
+import scipy.special as sps
 
 plt.rcParams["mathtext.fontset"] = "dejavuserif"
 plt.rcParams["font.family"] = "serif"
@@ -244,6 +245,182 @@ n = scipysoltoallocvec(initsoln, numTN)
 util, util_CI = sampf.getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95)
 print(util)
 print(util_CI)
+
+def sampling_plan_loss_list_importance(design, numtests, priordatadict, paramdict, numimportdraws,
+                                       numdatadrawsforimportance=1000, extremadelta=0.01,
+                                       preservevar=True, preservevarzlevel=0.95):
+    """
+    Produces a list of sampling plan losses, a la sampling_plan_loss_list(). This method uses the importance
+    sampling approach, using numdatadrawsforimportance draws to produce an 'average' data set. An MCMC set of
+    numimportdraws is produced assuming this average data set; this MCMC set should be closer to the important region
+    of SFP rates for this design. The importance weights can produce extrema that increase loss variance and bias;
+    parameter extremadelta indicates the weight quantile for which the corresponding MCMC draws are removed
+    from loss calculations, introducing some bias in the draws used for the estimate in order to eliminate the estimate
+    bias stemming from very large importance weights. Removing extrema artificially reduces the utility estimate
+    variance; option preservevar, when True, returns preserve_CI, the interval when using all draws. The width of this
+    interval can then be transferred onto the estimate obtained when removing the extrema.
+
+    design: sampling probability vector along all test nodes/traces
+    numtests: test budget
+    priordatadict: logistigate data dictionary capturing known data
+    paramdict: parameter dictionary containing a loss matrix, truth and data MCMC draws, and an optional method for
+        rounding the design to an integer allocation
+    numimportdraws: number of MCMC draws to generate in the importance zone
+    numdatadrawsforimportance: number of data sets to simulate for establishing the importance data set average
+    extremadelta: proportion of importance weights to drop from consideration, starting with the largest
+    """
+    if 'roundalg' in paramdict:  # Set default rounding algorithm for plan
+        roundalg = paramdict['roundalg'].copy()
+    else:
+        roundalg = 'lo'
+    # Initialize samples to be drawn from traces, per the design, using a rounding algorithm
+    sampMat = util.generate_sampling_array(design, numtests, roundalg)
+    (numTN, numSN), Q, s, r = priordatadict['N'].shape, priordatadict['Q'], priordatadict['diagSens'], priordatadict['diagSpec']
+    # Identify an 'average' data set that will help establish the important region for importance sampling
+    importancedatadrawinds = np.random.choice(np.arange(paramdict['datadraws'].shape[0]),
+                                          size = numdatadrawsforimportance, # Oversample if needed
+                                          replace = paramdict['datadraws'].shape[0] < numdatadrawsforimportance)
+    importancedatadraws = paramdict['datadraws'][importancedatadrawinds]
+    zMatData = util.zProbTrVec(numSN, importancedatadraws, sens=s, spec=r)  # Probs. using data draws
+    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadrawsforimportance)
+                                 for tnInd in range(numTN)]), 1, 0).astype(int)
+    YMat = np.random.binomial(NMat, zMatData)
+    # Get average rounded data set from these few draws
+    NMatAvg, YMatAvg = np.round(np.average(NMat, axis=0)).astype(int), np.round(np.average(YMat, axis=0)).astype(int)
+    # Add these data to a new data dictionary and generate a new set of MCMC draws
+    impdict = priordatadict.copy()
+    impdict['N'], impdict['Y'] = priordatadict['N'] + NMatAvg, priordatadict['Y'] + YMatAvg
+    # Generate a new MCMC importance set
+    impdict['numPostSamples'] = numimportdraws
+    impdict = methods.GeneratePostSamples(impdict, maxTime=5000)
+
+    # Get simulated data likelihoods - don't normalize
+    numdatadraws =  paramdict['datadraws'].shape[0]
+    zMatTruth = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities, as a function of SFP rate draws
+    zMatData = util.zProbTrVec(numSN, paramdict['datadraws'], sens=s, spec=r)  # Probs. using data draws
+    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadraws)
+                                 for tnInd in range(numTN)]), 1, 0).astype(int)
+    YMat = np.random.binomial(NMat, zMatData)
+    tempW = np.zeros(shape=(numimportdraws, numdatadraws))
+    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if sampMat[tnInd] > 0 and Q[tnInd, snInd] > 0:  # Save processing by only looking at feasible traces
+                # Get zProbs corresponding to current trace
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatTruth[:, tnInd, snInd], numdatadraws), (numdatadraws, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
+                bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
+                combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]), numimportdraws),
+                                        (numimportdraws, numdatadraws))
+                tempW += (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                    combNYtemp)
+    Wimport = np.exp(tempW)
+
+    # Get risk matrix
+    Rimport = lf.risk_check_array(impdict['postSamples'], paramdict['riskdict'])
+    # Get critical ratio
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+
+    # Get likelihood weights WRT original data set: p(gamma|d_0)
+    zMatImport = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities along each trace
+    NMatPrior, YMatPrior = priordatadict['N'], priordatadict['Y']
+    Vimport = np.zeros(shape = numimportdraws)
+    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if NMatPrior[tnInd, snInd] > 0:
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                                                numimportdraws), (numimportdraws, 1))
+                Vimport += np.squeeze( (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                    combNYtemp))
+    Vimport = np.exp(Vimport)
+
+    # Get likelihood weights WRT average data set: p(gamma|d_0, d_imp)
+    NMatPrior, YMatPrior = impdict['N'].copy(), impdict['Y'].copy()
+    Uimport = np.zeros(shape=numimportdraws)
+    for snInd in range(
+            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if NMatPrior[tnInd, snInd] > 0:
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                                                numimportdraws), (numimportdraws, 1))
+                Uimport += np.squeeze(
+                    (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                        combNYtemp))
+    Uimport = np.exp(Uimport)
+
+    # Importance likelihood ratio for importance draws
+    VoverU = (Vimport / Uimport)
+
+    # Compile list of optima
+    # Use minslist WITHOUT extrema removed if preserving variance
+    if preservevar==True:
+        print('Getting preserved variance...')
+        minslist = []
+        for j in range(Wimport.shape[1]):
+            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+            # Don't remove any extrema
+            tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1))
+            tempwtarray = np.delete(tempwtarray, tempremoveinds)
+            tempwtarray = tempwtarray / np.sum(tempwtarray)  # Normalize
+            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+        # Get original variance
+        _, preserve_CI = sampf.process_loss_list(minslist, zlevel=preservevarzlevel)
+    else:
+        preserve_CI = np.empty(0)
+
+    if extremadelta > 0:  # Only regenerate minslist if extremadelta exceeds zero
+        print('Getting estimate with extrema removed...')
+        minslist = []
+        for j in range(Wimport.shape[1]):
+            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+            # Remove inds for top extremadelta of weights
+            tempremoveinds = np.where(tempwtarray>np.quantile(tempwtarray, 1-extremadelta))
+            tempwtarray = np.delete(tempwtarray, tempremoveinds)
+            tempwtarray = tempwtarray/np.sum(tempwtarray)
+            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+    elif extremadelta == -1:  # Identify extrema removal that minimizes the resulting loss estimate
+        print('Getting estimate with extrema removed, while fitting to lowest possible estimate...')
+        estincr = True  # Boolean tracking if the current estimate is decreasing
+        currextremadelta, currminsavg = 0.0, 0.0
+        stepint = max(0.0005, 5/numimportdraws)  # Step interval for trying new extrema deltas
+        while estincr:
+            currextremadelta += stepint
+            print('Current extrema delta: ' + str(currextremadelta))
+            currminslist = []
+            for j in range(Wimport.shape[1]):
+                tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+                # Remove inds for top extremadelta of weights
+                tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1 - currextremadelta))
+                tempwtarray = np.delete(tempwtarray, tempremoveinds)
+                tempwtarray = tempwtarray / np.sum(tempwtarray)
+                tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+                tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+                est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+                currminslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+            print('Current loss: ' + str(np.average(currminslist)))
+            if np.average(currminslist) < currminsavg:
+                minslist = currminslist.copy()
+                estincr = False
+            else:
+                currminsavg = np.average(currminslist)
+
+    return minslist, preserve_CI
+
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, 20000, extremadelta=-1, zlevel=0.95)
 
 ########
 # Now update omegaMat and see what happens
