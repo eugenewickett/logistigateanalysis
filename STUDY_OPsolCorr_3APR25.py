@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from logistigate.logistigate import lossfunctions as lf
+from logistigate.logistigate import utilities as util
 
 from orienteering.senegalsetup import *
 from logistigate.logistigate import orienteering as opf
@@ -42,7 +43,7 @@ paramdict = lf.build_diffscore_checkrisk_dict(scoreunderestwt=5., riskthreshold=
                                               marketvec=np.ones(numTN + numSN))
 
 # Set up utility estimation parameter dictionary with desired truth and data draws
-SetupUtilEstParamDict(lgdict, paramdict, 100000, 300, randseed=56)
+SetupUtilEstParamDict(lgdict, paramdict, 50000, 500, randseed=56)
 util.print_param_checks(paramdict)  # Parameter check
 
 # Set these parameters per the program described in the paper
@@ -235,192 +236,60 @@ Nioro du Rip: 1 0 15
 Pikine: 1 0 9
 Path: Dakar Fatick Kaolack Kaffrine Diourbel
 
-util: 5.636652804231508
-util_CI: (5.289598860601801, 5.9837067478612145)
+util: 2.494192171959302
+util_CI: (2.483419894433508, 2.5049644494850956)
 '''
 def scipysoltoallocvec(spo_x, tnnum):
     return spo_x[tnnum:tnnum*2] + spo_x[tnnum*2:tnnum*3]
 
+def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray',
+                          vlist='NA', sortby='districtcost'):
+    """Generate an allocation heat map"""
+    distNames = optparamdict['deptnames']
+    # Sort regions by distance to HQ, taken to be row 0
+    reg_sortinds = np.argsort(optparamdict['arcfixedcostmat'][0])
+    regNames_sort = [optparamdict['regnames'][x] for x in reg_sortinds]
+    # District list for each region of regNames_sort
+    dist_df = optparamdict['dept_df']
+    distinreglist = []
+    for currReg in regNames_sort:
+        currDists = opf.GetDeptChildren(currReg, dist_df)
+        # todo: CAN SORT BY OTHER THINGS HERE
+        currDistFixedCosts = [dist_df.loc[dist_df['Department'] == x]['DeptFixedCostDays'].to_numpy()[0] for x in currDists]
+        distinreglist.append([currDists[x] for x in np.argsort(currDistFixedCosts)])
+    listlengths = [len(x) for x in distinreglist]
+    maxdistnum = max(listlengths)
+    # Initialize storage matrix
+    dispmat = np.zeros((len(regNames_sort), maxdistnum))
+
+    for distind, curralloc in enumerate(n):
+        currDistName = distNames[distind]
+        currRegName = opf.GetRegion(currDistName, dist_df)
+        regmatind = regNames_sort.index(currRegName)
+        distmatind = distinreglist[regmatind].index(currDistName)
+        dispmat[regmatind, distmatind] = curralloc
+    if vlist != 'NA':
+        fig, ax = plt.subplots()
+        img = plt.imshow(dispmat, cmap=cmapstr, interpolation='nearest',
+                        vmin=vlist[0], vmax=vlist[1])
+        plt.colorbar(img)
+    else:
+        plt.imshow(dispmat, cmap=cmapstr, interpolation='nearest')
+    plt.ylabel('Ranked distance from HQ region')
+    plt.xlabel('Ranked distance from regional capital')
+    plt.title(plotTitle)
+    plt.tight_layout()
+    plt.show()
+    return
+
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
 print(util)
 print(util_CI)
 
-def sampling_plan_loss_list_importance(design, numtests, priordatadict, paramdict, numimportdraws,
-                                       numdatadrawsforimportance=1000, extremadelta=0.01,
-                                       preservevar=True, preservevarzlevel=0.95):
-    """
-    Produces a list of sampling plan losses, a la sampling_plan_loss_list(). This method uses the importance
-    sampling approach, using numdatadrawsforimportance draws to produce an 'average' data set. An MCMC set of
-    numimportdraws is produced assuming this average data set; this MCMC set should be closer to the important region
-    of SFP rates for this design. The importance weights can produce extrema that increase loss variance and bias;
-    parameter extremadelta indicates the weight quantile for which the corresponding MCMC draws are removed
-    from loss calculations, introducing some bias in the draws used for the estimate in order to eliminate the estimate
-    bias stemming from very large importance weights. Removing extrema artificially reduces the utility estimate
-    variance; option preservevar, when True, returns preserve_CI, the interval when using all draws. The width of this
-    interval can then be transferred onto the estimate obtained when removing the extrema.
-
-    design: sampling probability vector along all test nodes/traces
-    numtests: test budget
-    priordatadict: logistigate data dictionary capturing known data
-    paramdict: parameter dictionary containing a loss matrix, truth and data MCMC draws, and an optional method for
-        rounding the design to an integer allocation
-    numimportdraws: number of MCMC draws to generate in the importance zone
-    numdatadrawsforimportance: number of data sets to simulate for establishing the importance data set average
-    extremadelta: proportion of importance weights to drop from consideration, starting with the largest
-    """
-    if 'roundalg' in paramdict:  # Set default rounding algorithm for plan
-        roundalg = paramdict['roundalg'].copy()
-    else:
-        roundalg = 'lo'
-    # Initialize samples to be drawn from traces, per the design, using a rounding algorithm
-    sampMat = util.generate_sampling_array(design, numtests, roundalg)
-    (numTN, numSN), Q, s, r = priordatadict['N'].shape, priordatadict['Q'], priordatadict['diagSens'], priordatadict['diagSpec']
-    # Identify an 'average' data set that will help establish the important region for importance sampling
-    importancedatadrawinds = np.random.choice(np.arange(paramdict['datadraws'].shape[0]),
-                                          size = numdatadrawsforimportance, # Oversample if needed
-                                          replace = paramdict['datadraws'].shape[0] < numdatadrawsforimportance)
-    importancedatadraws = paramdict['datadraws'][importancedatadrawinds]
-    zMatData = util.zProbTrVec(numSN, importancedatadraws, sens=s, spec=r)  # Probs. using data draws
-    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadrawsforimportance)
-                                 for tnInd in range(numTN)]), 1, 0).astype(int)
-    YMat = np.random.binomial(NMat, zMatData)
-    # Get average rounded data set from these few draws
-    NMatAvg, YMatAvg = np.round(np.average(NMat, axis=0)).astype(int), np.round(np.average(YMat, axis=0)).astype(int)
-    # Add these data to a new data dictionary and generate a new set of MCMC draws
-    impdict = priordatadict.copy()
-    impdict['N'], impdict['Y'] = priordatadict['N'] + NMatAvg, priordatadict['Y'] + YMatAvg
-    # Generate a new MCMC importance set
-    impdict['numPostSamples'] = numimportdraws
-    impdict = methods.GeneratePostSamples(impdict, maxTime=5000)
-
-    # Get simulated data likelihoods - don't normalize
-    numdatadraws =  paramdict['datadraws'].shape[0]
-    zMatTruth = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities, as a function of SFP rate draws
-    zMatData = util.zProbTrVec(numSN, paramdict['datadraws'], sens=s, spec=r)  # Probs. using data draws
-    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadraws)
-                                 for tnInd in range(numTN)]), 1, 0).astype(int)
-    YMat = np.random.binomial(NMat, zMatData)
-    tempW = np.zeros(shape=(numimportdraws, numdatadraws))
-    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
-        for tnInd in range(numTN):
-            if sampMat[tnInd] > 0 and Q[tnInd, snInd] > 0:  # Save processing by only looking at feasible traces
-                # Get zProbs corresponding to current trace
-                bigZtemp = np.transpose(
-                    np.reshape(np.tile(zMatTruth[:, tnInd, snInd], numdatadraws), (numdatadraws, numimportdraws)))
-                bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
-                bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
-                combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]), numimportdraws),
-                                        (numimportdraws, numdatadraws))
-                tempW += (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
-                    combNYtemp)
-    Wimport = np.exp(tempW)
-
-    # Get risk matrix
-    Rimport = lf.risk_check_array(impdict['postSamples'], paramdict['riskdict'])
-    # Get critical ratio
-    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
-
-    # Get likelihood weights WRT original data set: p(gamma|d_0)
-    zMatImport = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities along each trace
-    NMatPrior, YMatPrior = priordatadict['N'], priordatadict['Y']
-    Vimport = np.zeros(shape = numimportdraws)
-    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
-        for tnInd in range(numTN):
-            if NMatPrior[tnInd, snInd] > 0:
-                bigZtemp = np.transpose(
-                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
-                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
-                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
-                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
-                                                numimportdraws), (numimportdraws, 1))
-                Vimport += np.squeeze( (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
-                    combNYtemp))
-    Vimport = np.exp(Vimport)
-
-    # Get likelihood weights WRT average data set: p(gamma|d_0, d_imp)
-    NMatPrior, YMatPrior = impdict['N'].copy(), impdict['Y'].copy()
-    Uimport = np.zeros(shape=numimportdraws)
-    for snInd in range(
-            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
-        for tnInd in range(numTN):
-            if NMatPrior[tnInd, snInd] > 0:
-                bigZtemp = np.transpose(
-                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
-                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
-                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
-                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
-                                                numimportdraws), (numimportdraws, 1))
-                Uimport += np.squeeze(
-                    (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
-                        combNYtemp))
-    Uimport = np.exp(Uimport)
-
-    # Importance likelihood ratio for importance draws
-    VoverU = (Vimport / Uimport)
-
-    # Compile list of optima
-    # Use minslist WITHOUT extrema removed if preserving variance
-    if preservevar==True:
-        print('Getting preserved variance...')
-        minslist = []
-        for j in range(Wimport.shape[1]):
-            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
-            # Don't remove any extrema
-            tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1))
-            tempwtarray = np.delete(tempwtarray, tempremoveinds)
-            tempwtarray = tempwtarray / np.sum(tempwtarray)  # Normalize
-            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
-            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
-            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
-            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
-        # Get original variance
-        _, preserve_CI = sampf.process_loss_list(minslist, zlevel=preservevarzlevel)
-    else:
-        preserve_CI = np.empty(0)
-
-    if extremadelta > 0:  # Only regenerate minslist if extremadelta exceeds zero
-        print('Getting estimate with extrema removed...')
-        minslist = []
-        for j in range(Wimport.shape[1]):
-            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
-            # Remove inds for top extremadelta of weights
-            tempremoveinds = np.where(tempwtarray>np.quantile(tempwtarray, 1-extremadelta))
-            tempwtarray = np.delete(tempwtarray, tempremoveinds)
-            tempwtarray = tempwtarray/np.sum(tempwtarray)
-            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
-            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
-            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
-            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
-    elif extremadelta == -1:  # Identify extrema removal that minimizes the resulting loss estimate
-        print('Getting estimate with extrema removed, while fitting to lowest possible estimate...')
-        estincr = True  # Boolean tracking if the current estimate is decreasing
-        currextremadelta, currminsavg = 0.0, 0.0
-        stepint = max(0.0005, 5/numimportdraws)  # Step interval for trying new extrema deltas
-        while estincr:
-            currextremadelta += stepint
-            print('Current extrema delta: ' + str(currextremadelta))
-            currminslist = []
-            for j in range(Wimport.shape[1]):
-                tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
-                # Remove inds for top extremadelta of weights
-                tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1 - currextremadelta))
-                tempwtarray = np.delete(tempwtarray, tempremoveinds)
-                tempwtarray = tempwtarray / np.sum(tempwtarray)
-                tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
-                tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
-                est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
-                currminslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
-            print('Current loss: ' + str(np.average(currminslist)))
-            if np.average(currminslist) < currminsavg:
-                minslist = currminslist.copy()
-                estincr = False
-            else:
-                currminsavg = np.average(currminslist)
-
-    return minslist, preserve_CI
-
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, 20000, extremadelta=-1, zlevel=0.95)
 
 ########
 # Now update omegaMat and see what happens
@@ -455,15 +324,18 @@ Guediawaye: 1 51 30
 Keur Massar: 1 31 50
 Pikine: 1 9 72
 Path: Dakar Fatick
-util: 6.521669243524179
-util_CI: (6.158360526804159, 6.884977960244199)
+util: 1.717267016379056
+util_CI: (1.7069057761018946, 1.7276282566562173)
 '''
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95)
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
 print(util)
 print(util_CI)
 
+###############
 ### TRY Q NORM
+###############
 QnormMat = np.zeros((numTN, numTN))
 for i in range(numTN):
     for j in range(numTN):
@@ -487,13 +359,17 @@ Keur Massar: 1 11 50
 Mbacke: 1 8 73
 Pikine: 1 8 72
 Path: Dakar Diourbel
- 
+util: 1.5969955540687888
+util_CI: (1.5872917331923038, 1.6066993749452738)
 '''
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95)
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
+print(util)
+print(util_CI)
 
 # What if correlation value is too high? Try Jaccard index with a smaller maxratio
-maxratio = 1/100
+maxratio = 1/50
 Jadj = J * maxratio  # adjust for maximum learning importance
 Jadj = Jadj + np.identity(numTN)*(1-maxratio)  # adjust for diagonals to be 1
 omegaMat = Jadj
@@ -506,3 +382,336 @@ scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=Tr
 n = scipysoltoallocvec(initsoln, numTN)
 util, util_CI = sampf.getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95)
 
+###############
+### TRY NEW MEASURE FOR J(): MIN(Q[i,b],Q[j,b], for all b)
+###############
+maxratio = 1/2
+
+# Build Jaccard index for each pair of districts
+J = np.zeros((numTN, numTN))
+for i in range(numTN):
+    for j in range(numTN):
+        J[i, j] = np.sum(np.min(np.vstack((Q[i], Q[j])), axis=0))
+
+Jadj = J * maxratio  # adjust for maximum learning importance
+Jadj = Jadj + np.identity(numTN)*(1-maxratio)  # adjust for diagonals to be 1
+omegaMat = Jadj
+
+optconstraints = GetConstraints(optparamdict, juncvec, seqcostlist_trim, bindistaccessvectors_trim, omegaMat)
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
+scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+
+''' SOLUTION WITH 2ND JACCARD INDEX; STRONGLY RESEMBLES QNORM SOLUTION
+Bambey: 1 0 67
+Dakar: 1 51 25
+Diourbel: 1 77 4
+Guediawaye: 1 51 30
+Keur Massar: 1 25 50
+Mbacke: 1 8 73
+Pikine: 1 9 72
+Path: Dakar Diourbel
+util: 1.50774338106328
+util_CI: (1.4984872911490843, 1.516999470977476)
+'''
+n = scipysoltoallocvec(initsoln, numTN)
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
+print(util)
+print(util_CI)
+
+###############
+### USE NEW J() MEASURE; ADD IN NEW STRUCTURE FOR Z CONSTRAINTS, WHERE Z VALUE IS GAINED ONLY IF ACTUALLY VISITED
+###############
+
+def GetObjective_nozhat(lvec, m1vec, m2vec, numPath):
+    """Negative-ed as milp requires minimization"""
+    return -np.concatenate((np.array(lvec), np.zeros((numTN * 3) + numPath),  np.array(m1vec), np.array(m2vec)))
+
+optobjvec = GetObjective_nozhat(lvec, m1vec, m2vec, numPath)
+optconstraints = GetConstraints(optparamdict, juncvec, seqcostlist_trim, bindistaccessvectors_trim, omegaMat)
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
+scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+''' SOLUTION WITH UPDATED Z FORMULATION; PUSHED IT A LITTLE FARTHER OUT, BUT STILL FOCUSED ON INCREASING TESTS
+Dakar: 1 56 25
+Fatick: 1 13 67
+Foundiougne: 1 10 71
+Gossas: 1 4 72
+Guediawaye: 1 50 30
+Keur Massar: 1 8 50
+Pikine: 1 9 72
+Path: Dakar Fatick
+util: 1.7862346173516759
+util_CI: (1.7768626906763334, 1.7956065440270184)
+'''
+n = scipysoltoallocvec(initsoln, numTN)
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
+print(util)
+print(util_CI)
+
+###############
+### USE NEW J() MEASURE AND NEW Z STRUCTURE;
+# ADD: ONLY GETTING INDICATOR VARS IF PREVIOUSLY VISITED *OR* VISITED NOW
+###############
+# binary indicating prior visit in original data
+TNtests = np.sum(lgdict['N'], axis=1)
+c_visited = np.array([1 if TNtests[x] > 0 else 0 for x in range(numTN)])
+
+def GetConstraints_new(optparamdict, juncvec, seqcostlist, bindistaccessvectors, omegamat):
+    numTN, B, ctest = len(optparamdict['deptnames']), optparamdict['budget'], optparamdict['pertestcost']
+    f_dept, bigM = optparamdict['deptfixedcostvec'], optparamdict['Mconstant']
+    # Build lower and upper inequality values
+    optconstrlower = np.concatenate((np.ones(numTN*4+1) * -np.inf, np.array([1]),
+                                     np.ones(numTN*3)*-np.inf,
+                                    np.ones(numTN)*-np.inf))
+    optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN*2), np.array(juncvec), np.zeros(numTN),
+                                     np.array([1]),
+                                     np.zeros(numTN), np.array(juncvec), np.zeros(numTN),
+                                     bigM*c_visited))
+    # Build A matrix, from left to right
+    # Build z district binaries first
+    optconstraintmat1 = np.vstack((f_dept, -bigM * np.identity(numTN), np.identity(numTN), 0 * np.identity(numTN),
+                                   np.identity(numTN), np.zeros(numTN),
+                                   0 * np.identity(numTN), 0 * np.identity(numTN), 0 * np.identity(numTN),
+                                   0 * np.identity(numTN)))
+    # n^' matrices
+    optconstraintmat2 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN),
+                                   np.identity(numTN), 0 * np.identity(numTN), np.zeros(numTN),
+                                   -omegamat, 0 * np.identity(numTN), 0 * np.identity(numTN),
+                                   -bigM*np.identity(numTN)))
+    # n^'' matrices
+    optconstraintmat3 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN),
+                                   0 * np.identity(numTN), 0 * np.identity(numTN), np.zeros(numTN),
+                                   -omegamat, 0 * np.identity(numTN), 0 * np.identity(numTN),
+                                   -bigM*np.identity(numTN)))
+    # path matrices
+    optconstraintmat4 = np.vstack((np.array(seqcostlist).T, np.zeros((numTN * 3, numPath)),
+                                   (-bindistaccessvectors).T, np.ones(numPath),
+                                    np.zeros((numTN * 4, numPath))))
+    # z_hat matrices
+    optconstraintmat5 = np.vstack((np.zeros(((numTN * 6) + 2, numTN)), np.identity(numTN),
+                                   0 * np.identity(numTN)))
+    # n_hat^' matrices
+    optconstraintmat6 = np.vstack((np.zeros(((numTN*4)+2, numTN)),
+                                   np.identity(numTN), np.identity(numTN), -np.identity(numTN),
+                                   np.identity(numTN)))
+    # n_hat^'' matrices
+    optconstraintmat7 = np.vstack((np.zeros(((numTN*4)+2, numTN)),
+                                   np.identity(numTN), 0 * np.identity(numTN), -np.identity(numTN),
+                                   np.identity(numTN)))
+
+    optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4,
+                                  optconstraintmat5, optconstraintmat6, optconstraintmat7))
+    return spo.LinearConstraint(optconstraintmat, optconstrlower, optconstrupper)
+
+optobjvec = GetObjective_nozhat(lvec, m1vec, m2vec, numPath)
+optconstraints = GetConstraints_new(optparamdict, juncvec, seqcostlist_trim, bindistaccessvectors_trim, omegaMat)
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
+scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=False)
+''' SOLUTION WITH NEW INDICATOR VAR LOGIC;
+*MUCH* DIFFERENT ALLOCATION; NO PRIOR TESTED TNS WERE VISITED (EVEN THE CAPITAL DAKAR);
+MODERATELY EXPLORATIVE PATH CHOSEN, WITH 4 PROVINCES
+Bambey: 1 0 1
+Fatick: 1 13 67
+Foundiougne: 1 7 71
+Gossas: 1 0 1
+Guinguineo: 1 0 6
+Keur Massar: 1 0 2
+Mbacke: 1 8 73
+Nioro du Rip: 1 14 66
+Pikine: 1 6 72
+Path: Dakar Diourbel Kaolack Fatick 
+util: 1.6785062463012945
+util_CI: (1.6690669055971963, 1.6879455870053928)
+'''
+n = scipysoltoallocvec(initsoln, numTN)
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
+print(util)
+print(util_CI)
+
+#0 Bakel: 0 0 0
+#0 Bambey: 1 0 1
+#0 Bignona: 0 0 0
+#0 Birkilane: 0 0 0
+#0 Bounkiling: 0 0 0
+
+#1 Dagana: 0 0 0
+#1 Dakar: 0 0 0
+#1 Diourbel: 0 0 0
+#0 Fatick: 1 13 67
+#0 Foundiougne: 1 7 71
+
+#0 Gossas: 1 0 1
+#0 Goudiry: 0 0 0
+#0 Goudoump: 0 0 0
+#1 Guediawaye: 0 0 0
+#0 Guinguineo: 1 0 6
+
+#1 Kaffrine: 0 0 0
+#1 Kanel: 0 0 0
+#1 Kaolack: 0 0 0
+#1 Kebemer: 0 0 0
+#1 Kedougou: 0 0 0
+
+#0 Keur Massar: 1 0 2
+#1 Kolda: 0 0 0
+#1 Koumpentoum: 0 0 0
+#0 Koungheul: 0 0 0
+#0 Linguere: 0 0 0
+
+#0 Louga: 0 0 0
+#0 Malem Hoddar: 0 0 0
+#1 Matam: 0 0 0
+#0 Mbacke: 1 8 73
+#1 Mbour: 0 0 0
+
+#0 Medina Yoro Foulah: 0 0 0
+#0 Nioro du Rip: 1 14 66
+#0 Oussouye: 0 0 0
+#0 Pikine: 1 6 72
+#1 Podor: 0 0 0
+
+#0 Ranerou Ferlo: 0 0 0
+#1 Rufisque: 0 0 0
+#1 Saint-Louis: 0 0 0
+#0 Salemata: 0 0 0
+#0 Saraya: 0 0 0
+
+#0 Sedhiou: 0 0 0
+#1 Tambacounda: 0 0 0
+#1 Thies: 0 0 0
+#1 Tivaoune: 0 0 0
+#1 Velingara: 0 0 0
+#0 Ziguinchor: 0 0 0
+
+###############
+### USE NEW J() MEASURE, Z STRUCTURE, AND INDICATOR VAR LOGIC;
+# ADD: BOUND ON n + n_hat
+# ADD: MINIMUM on n
+###############
+maxratio = 1/4
+J = np.zeros((numTN, numTN))
+for i in range(numTN):
+    for j in range(numTN):
+        J[i, j] = np.sum(np.min(np.vstack((Q[i], Q[j])), axis=0))
+
+Jadj = J * maxratio  # adjust for maximum learning importance
+Jadj = Jadj + np.identity(numTN)*(1-maxratio)  # adjust for diagonals to be 1
+omegaMat = Jadj
+bdsarr = np.array(bds)
+c_testmin = 5
+def GetConstraints_new_two(optparamdict, juncvec, seqcostlist, bindistaccessvectors, omegamat):
+    numTN, B, ctest = len(optparamdict['deptnames']), optparamdict['budget'], optparamdict['pertestcost']
+    f_dept, bigM = optparamdict['deptfixedcostvec'], optparamdict['Mconstant']
+    # Build lower and upper inequality values
+    optconstrlower = np.concatenate((np.ones(numTN*4+1) * -np.inf, np.array([1]),
+                                     np.ones(numTN*3)*-np.inf,
+                                    np.ones(numTN*2)*-np.inf))
+    optconstrupper = np.concatenate((np.array([B]), np.zeros(numTN*2), np.array(juncvec), np.zeros(numTN),
+                                     np.array([1]),
+                                     np.zeros(numTN), np.array(juncvec), np.zeros(numTN),
+                                     bigM*c_visited, bdsarr))
+    # Build A matrix, from left to right
+    # Build z district binaries first
+    optconstraintmat1 = np.vstack((f_dept, -bigM * np.identity(numTN), c_testmin*np.identity(numTN), 0 * np.identity(numTN),
+                                   np.identity(numTN), np.zeros(numTN),
+                                   0 * np.identity(numTN), 0 * np.identity(numTN), 0 * np.identity(numTN),
+                                   0 * np.identity(numTN), 0 * np.identity(numTN)))
+    # n^' matrices
+    optconstraintmat2 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN),
+                                   np.identity(numTN), 0 * np.identity(numTN), np.zeros(numTN),
+                                   -omegamat, 0 * np.identity(numTN), 0 * np.identity(numTN),
+                                   -bigM*np.identity(numTN), np.identity(numTN)))
+    # n^'' matrices
+    optconstraintmat3 = np.vstack((ctest * np.ones(numTN), np.identity(numTN), -np.identity(numTN),
+                                   0 * np.identity(numTN), 0 * np.identity(numTN), np.zeros(numTN),
+                                   -omegamat, 0 * np.identity(numTN), 0 * np.identity(numTN),
+                                   -bigM*np.identity(numTN), np.identity(numTN)))
+    # path matrices
+    optconstraintmat4 = np.vstack((np.array(seqcostlist).T, np.zeros((numTN * 3, numPath)),
+                                   (-bindistaccessvectors).T, np.ones(numPath),
+                                    np.zeros((numTN * 5, numPath))))
+    # z_hat matrices
+    optconstraintmat5 = np.vstack((np.zeros(((numTN * 6) + 2, numTN)), np.identity(numTN),
+                                   0 * np.identity(numTN), 0 * np.identity(numTN)))
+    # n_hat^' matrices
+    optconstraintmat6 = np.vstack((np.zeros(((numTN*4)+2, numTN)),
+                                   np.identity(numTN), np.identity(numTN), -np.identity(numTN),
+                                   np.identity(numTN), np.identity(numTN)))
+    # n_hat^'' matrices
+    optconstraintmat7 = np.vstack((np.zeros(((numTN*4)+2, numTN)),
+                                   np.identity(numTN), 0 * np.identity(numTN), -np.identity(numTN),
+                                   np.identity(numTN), np.identity(numTN)))
+
+    optconstraintmat = np.hstack((optconstraintmat1, optconstraintmat2, optconstraintmat3, optconstraintmat4,
+                                  optconstraintmat5, optconstraintmat6, optconstraintmat7))
+    return spo.LinearConstraint(optconstraintmat, optconstrlower, optconstrupper)
+
+optconstraints = GetConstraints_new_two(optparamdict, juncvec, seqcostlist_trim,
+                                        bindistaccessvectors_trim, omegaMat)
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
+scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
+# for i in range(numTN):
+#     print(str(initsoln[i]) + ' ' + str(c_visited[i]))
+'''SOLUTION WITH INDICATOR VAR BOUND; WITH maxratio=1/2
+Bambey: 1 0 5
+Birkilane: 1 0 16
+Dakar: 1 0 10
+Fatick: 1 0 5
+Foundiougne: 1 0 39
+Gossas: 1 0 5
+Guinguineo: 1 0 70
+Kaffrine: 1 0 7
+Kaolack: 1 0 26
+Keur Massar: 1 0 5
+Koungheul: 1 0 5
+Malem Hoddar: 1 0 14
+Mbacke: 1 0 59
+Nioro du Rip: 1 0 5
+Pikine: 1 0 5
+Path: Dakar Fatick Kaolack Kaffrine Diourbel
+util: 1.6216637459049839 [pre-min]
+2.4380140438457936
+(2.4285033135552805, 2.4475247741363066)
+'''
+
+n = scipysoltoallocvec(initsoln, numTN)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution', cmapstr='Blues')
+
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
+print(util)
+print(util_CI)
+
+''' WITH maxratio=1/4
+Bambey: 1 0 23
+Birkilane: 1 0 21
+Dakar: 1 0 22
+Diourbel: 1 16 4
+Fatick: 1 0 20
+Foundiougne: 1 0 20
+Gossas: 1 0 22
+Guinguineo: 1 0 21
+Keur Massar: 1 0 23
+Koungheul: 1 0 24
+Malem Hoddar: 1 0 5
+Mbacke: 1 0 19
+Nioro du Rip: 1 0 21
+Pikine: 1 0 20
+Path: Dakar Fatick Kaolack Kaffrine Diourbel
+util: XX
+'''
+
+n = scipysoltoallocvec(initsoln, numTN)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution', cmapstr='Blues')
+
+util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                   extremadelta=-1, preservevar=False)
+print(util)
+print(util_CI)
