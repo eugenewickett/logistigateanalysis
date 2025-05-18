@@ -112,7 +112,7 @@ lvec, juncvec, m1vec, m2vec, bds, lovals, hivals = GetInterpVectors(interp_df)
 numPath = paths_df.shape[0]
 
 ##################
-# TODO: NEW STUFF STARTS HERE: HAVE TO REDESIGN THE LINEAR OPTIMIZATION PROGRAM TO INCLUDE VIRTUAL VARS
+# TODO: NEW STUFF STARTS HERE: HAVE TO REDESIGN THE LINEAR OPTIMIZATION PROGRAM TO INCLUDE COVERAGE VARS
 ##################
 # Weight matrix here
 omegaMat = np.identity(numTN)
@@ -285,10 +285,10 @@ def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray',
 n = scipysoltoallocvec(initsoln, numTN)
 MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
 
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
 
 
 ########
@@ -328,10 +328,11 @@ util: 1.717267016379056
 util_CI: (1.7069057761018946, 1.7276282566562173)
 '''
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
 
 ###############
 ### TRY Q NORM
@@ -363,10 +364,11 @@ util: 1.5969955540687888
 util_CI: (1.5872917331923038, 1.6066993749452738)
 '''
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
 
 # What if correlation value is too high? Try Jaccard index with a smaller maxratio
 maxratio = 1/50
@@ -380,7 +382,8 @@ initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
 scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+# util, util_CI = sampf.getUtilityEstimate_parallel(n, lgdict, paramdict, zlevel=0.95)
 
 ###############
 ### TRY NEW MEASURE FOR J(): MIN(Q[i,b],Q[j,b], for all b)
@@ -415,10 +418,11 @@ util: 1.50774338106328
 util_CI: (1.4984872911490843, 1.516999470977476)
 '''
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
 
 ###############
 ### USE NEW J() MEASURE; ADD IN NEW STRUCTURE FOR Z CONSTRAINTS, WHERE Z VALUE IS GAINED ONLY IF ACTUALLY VISITED
@@ -446,10 +450,11 @@ util: 1.7862346173516759
 util_CI: (1.7768626906763334, 1.7956065440270184)
 '''
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
 
 ###############
 ### USE NEW J() MEASURE AND NEW Z STRUCTURE;
@@ -529,72 +534,19 @@ util: 1.6785062463012945
 util_CI: (1.6690669055971963, 1.6879455870053928)
 '''
 n = scipysoltoallocvec(initsoln, numTN)
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
 
-#0 Bakel: 0 0 0
-#0 Bambey: 1 0 1
-#0 Bignona: 0 0 0
-#0 Birkilane: 0 0 0
-#0 Bounkiling: 0 0 0
-
-#1 Dagana: 0 0 0
-#1 Dakar: 0 0 0
-#1 Diourbel: 0 0 0
-#0 Fatick: 1 13 67
-#0 Foundiougne: 1 7 71
-
-#0 Gossas: 1 0 1
-#0 Goudiry: 0 0 0
-#0 Goudoump: 0 0 0
-#1 Guediawaye: 0 0 0
-#0 Guinguineo: 1 0 6
-
-#1 Kaffrine: 0 0 0
-#1 Kanel: 0 0 0
-#1 Kaolack: 0 0 0
-#1 Kebemer: 0 0 0
-#1 Kedougou: 0 0 0
-
-#0 Keur Massar: 1 0 2
-#1 Kolda: 0 0 0
-#1 Koumpentoum: 0 0 0
-#0 Koungheul: 0 0 0
-#0 Linguere: 0 0 0
-
-#0 Louga: 0 0 0
-#0 Malem Hoddar: 0 0 0
-#1 Matam: 0 0 0
-#0 Mbacke: 1 8 73
-#1 Mbour: 0 0 0
-
-#0 Medina Yoro Foulah: 0 0 0
-#0 Nioro du Rip: 1 14 66
-#0 Oussouye: 0 0 0
-#0 Pikine: 1 6 72
-#1 Podor: 0 0 0
-
-#0 Ranerou Ferlo: 0 0 0
-#1 Rufisque: 0 0 0
-#1 Saint-Louis: 0 0 0
-#0 Salemata: 0 0 0
-#0 Saraya: 0 0 0
-
-#0 Sedhiou: 0 0 0
-#1 Tambacounda: 0 0 0
-#1 Thies: 0 0 0
-#1 Tivaoune: 0 0 0
-#1 Velingara: 0 0 0
-#0 Ziguinchor: 0 0 0
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
 
 ###############
 ### USE NEW J() MEASURE, Z STRUCTURE, AND INDICATOR VAR LOGIC;
 # ADD: BOUND ON n + n_hat
 # ADD: MINIMUM on n
 ###############
-maxratio = 1/4
+maxratio = 1/2
 J = np.zeros((numTN, numTN))
 for i in range(numTN):
     for j in range(numTN):
@@ -684,10 +636,27 @@ util: 1.6216637459049839 [pre-min]
 n = scipysoltoallocvec(initsoln, numTN)
 MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution', cmapstr='Blues')
 
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
+
+
+maxratio = 1/4
+J = np.zeros((numTN, numTN))
+for i in range(numTN):
+    for j in range(numTN):
+        J[i, j] = np.sum(np.min(np.vstack((Q[i], Q[j])), axis=0))
+
+Jadj = J * maxratio  # adjust for maximum learning importance
+Jadj = Jadj + np.identity(numTN)*(1-maxratio)  # adjust for diagonals to be 1
+omegaMat = Jadj
+bdsarr = np.array(bds)
+optconstraints = GetConstraints_new_two(optparamdict, juncvec, seqcostlist_trim,
+                                        bindistaccessvectors_trim, omegaMat)
+spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegrality, bounds=optbounds)
+initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
+scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 ''' WITH maxratio=1/4
 Bambey: 1 0 23
@@ -705,13 +674,237 @@ Mbacke: 1 0 19
 Nioro du Rip: 1 0 21
 Pikine: 1 0 20
 Path: Dakar Fatick Kaolack Kaffrine Diourbel
-util: XX
+util: 2.4261645008151227
+util_CI: (2.415573559999995, 2.4367554416302504)
 '''
 
 n = scipysoltoallocvec(initsoln, numTN)
 MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution', cmapstr='Blues')
 
-util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-                                                   extremadelta=-1, preservevar=False)
-print(util)
-print(util_CI)
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
+
+###########################################
+# TRY IDEA 1 FOR IDENTIFYING MAXRATIO (SN_MAX)
+###########################################
+# Need to restructure the utility output to be a vector across nodes
+
+
+def cand_obj_val_decomp(x, truthdraws, Wvec, paramdict, riskmat):
+    """Returns the objective for the optimization step of identifying a Bayes minimizer"""
+    scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, truthdraws[0].shape[0]), paramdict['scoredict'])[0]
+    return np.sum(scoremat * riskmat * paramdict['marketvec'] * np.reshape(Wvec, (truthdraws.shape[0], 1)), axis=0)
+
+temp = np.sum(scoremat * riskmat * paramdict['marketvec'] * np.reshape(Wvec, (truthdraws.shape[0], 1)), axis=0)
+x=est.copy()
+truthdraws = tempimportancedraws.copy()
+Wvec = tempwtarray.copy()
+riskmat = tempRimport.copy()
+
+thing = scoremat * riskmat * paramdict['marketvec']
+thingbyW = thing*np.reshape(Wvec, (1980,1))
+np.sum(thingbyW)
+cand_obj_val_decomp(est, tempimportancedraws, tempwtarray, paramdict, tempRimport)
+
+def sampling_plan_loss_list_importance_decomp(design, numtests, priordatadict, paramdict,
+                                              numimportdraws, numdatadrawsforimportance=1000,
+                                              extremadelta=0.01, preservevar=False,
+                                              preservevarzlevel=0.95):
+    if 'roundalg' in paramdict:  # Set default rounding algorithm for plan
+        roundalg = paramdict['roundalg'].copy()
+    else:
+        roundalg = 'lo'
+    # Initialize samples to be drawn from traces, per the design, using a rounding algorithm
+    sampMat = util.generate_sampling_array(design, numtests, roundalg)
+    (numTN, numSN), Q, s, r = priordatadict['N'].shape, priordatadict['Q'], priordatadict['diagSens'], priordatadict['diagSpec']
+    # Identify an 'average' data set that will help establish the important region for importance sampling
+    importancedatadrawinds = np.random.choice(np.arange(paramdict['datadraws'].shape[0]),
+                                          size = numdatadrawsforimportance, # Oversample if needed
+                                          replace = paramdict['datadraws'].shape[0] < numdatadrawsforimportance)
+    importancedatadraws = paramdict['datadraws'][importancedatadrawinds]
+    zMatData = util.zProbTrVec(numSN, importancedatadraws, sens=s, spec=r)  # Probs. using data draws
+    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadrawsforimportance)
+                                 for tnInd in range(numTN)]), 1, 0).astype(int)
+    YMat = np.random.binomial(NMat, zMatData)
+    # Get average rounded data set from these few draws
+    NMatAvg, YMatAvg = np.round(np.average(NMat, axis=0)).astype(int), np.round(np.average(YMat, axis=0)).astype(int)
+    # Add these data to a new data dictionary and generate a new set of MCMC draws
+    impdict = priordatadict.copy()
+    impdict['N'], impdict['Y'] = priordatadict['N'] + NMatAvg, priordatadict['Y'] + YMatAvg
+    # Generate a new MCMC importance set
+    impdict['numPostSamples'] = numimportdraws
+    impdict = methods.GeneratePostSamples(impdict, maxTime=5000)
+
+    # Get simulated data likelihoods - don't normalize
+    numdatadraws =  paramdict['datadraws'].shape[0]
+    zMatTruth = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities, as a function of SFP rate draws
+    zMatData = util.zProbTrVec(numSN, paramdict['datadraws'], sens=s, spec=r)  # Probs. using data draws
+    NMat = np.moveaxis(np.array([np.random.multinomial(sampMat[tnInd], Q[tnInd], size=numdatadraws)
+                                 for tnInd in range(numTN)]), 1, 0).astype(int)
+    YMat = np.random.binomial(NMat, zMatData)
+    tempW = np.zeros(shape=(numimportdraws, numdatadraws))
+    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if sampMat[tnInd] > 0 and Q[tnInd, snInd] > 0:  # Save processing by only looking at feasible traces
+                # Get zProbs corresponding to current trace
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatTruth[:, tnInd, snInd], numdatadraws), (numdatadraws, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
+                bigYtemp = np.reshape(np.tile(YMat[:, tnInd, snInd], numimportdraws), (numimportdraws, numdatadraws))
+                combNYtemp = np.reshape(np.tile(sps.comb(NMat[:, tnInd, snInd], YMat[:, tnInd, snInd]), numimportdraws),
+                                        (numimportdraws, numdatadraws))
+                tempW += (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                    combNYtemp)
+    Wimport = np.exp(tempW)
+
+    # Get risk matrix
+    Rimport = lf.risk_check_array(impdict['postSamples'], paramdict['riskdict'])
+    # Get critical ratio
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+
+    # Get likelihood weights WRT original data set: p(gamma|d_0)
+    zMatImport = util.zProbTrVec(numSN, impdict['postSamples'], sens=s, spec=r)  # Matrix of SFP probabilities along each trace
+    NMatPrior, YMatPrior = priordatadict['N'], priordatadict['Y']
+    Vimport = np.zeros(shape = numimportdraws)
+    for snInd in range(numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if NMatPrior[tnInd, snInd] > 0:
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                                                numimportdraws), (numimportdraws, 1))
+                Vimport += np.squeeze( (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                    combNYtemp))
+    Vimport = np.exp(Vimport)
+
+    # Get likelihood weights WRT average data set: p(gamma|d_0, d_imp)
+    NMatPrior, YMatPrior = impdict['N'].copy(), impdict['Y'].copy()
+    Uimport = np.zeros(shape=numimportdraws)
+    for snInd in range(
+            numSN):  # Loop through each SN and TN combination; DON'T vectorize as resulting matrix can be too big
+        for tnInd in range(numTN):
+            if NMatPrior[tnInd, snInd] > 0:
+                bigZtemp = np.transpose(
+                    np.reshape(np.tile(zMatImport[:, tnInd, snInd], 1), (1, numimportdraws)))
+                bigNtemp = np.reshape(np.tile(NMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                bigYtemp = np.reshape(np.tile(YMatPrior[tnInd, snInd], numimportdraws), (numimportdraws, 1))
+                combNYtemp = np.reshape(np.tile(sps.comb(NMatPrior[tnInd, snInd], YMatPrior[tnInd, snInd]),
+                                                numimportdraws), (numimportdraws, 1))
+                Uimport += np.squeeze(
+                    (bigYtemp * np.log(bigZtemp)) + ((bigNtemp - bigYtemp) * np.log(1 - bigZtemp)) + np.log(
+                        combNYtemp))
+    Uimport = np.exp(Uimport)
+
+    # Importance likelihood ratio for importance draws
+    VoverU = (Vimport / Uimport)
+
+    # Compile list of optima
+    # Use minslist WITHOUT extrema removed if preserving variance
+    if preservevar==True:
+        print('Getting preserved variance...')
+        minslist = []
+        for j in range(Wimport.shape[1]):
+            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+            # Don't remove any extrema
+            tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1))
+            tempwtarray = np.delete(tempwtarray, tempremoveinds)
+            tempwtarray = tempwtarray / np.sum(tempwtarray)  # Normalize
+            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+            # todo: UPDATE HERE
+            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+            # todo: UPDATE HERE
+            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+        # Get original variance
+        # todo: UPDATE HERE
+        _, preserve_CI = sampf.process_loss_list(minslist, zlevel=preservevarzlevel)
+    else:
+        preserve_CI = np.empty(0)
+
+    if extremadelta > 0:  # Only regenerate minslist if extremadelta exceeds zero
+        print('Getting estimate with extrema removed...')
+        minslist = []
+        for j in range(Wimport.shape[1]):
+            tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+            # Remove inds for top extremadelta of weights
+            tempremoveinds = np.where(tempwtarray>np.quantile(tempwtarray, 1-extremadelta))
+            tempwtarray = np.delete(tempwtarray, tempremoveinds)
+            tempwtarray = tempwtarray/np.sum(tempwtarray)
+            tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+            tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+            # todo: UPDATE HERE
+            est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+            # todo: UPDATE HERE
+            minslist.append(sampf.cand_obj_val(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+    elif extremadelta == -1:  # Identify extrema removal that minimizes the resulting loss estimate
+        print('Getting estimate with extrema removed, while fitting to lowest possible estimate...')
+        estincr = True  # Boolean tracking if the current estimate is increasing
+        lastminslist = []  # Retain the mins list of the previous iteration
+        stepint = max(0.0005, 5 / numimportdraws)  # Step interval for trying new extrema deltas
+        currextremadelta, currminsavg = 0.01 + stepint, 0.0
+        goleft, firstiter = True, True
+        itercount = 0
+        while estincr:
+            if goleft:
+                currextremadelta -= stepint
+            if not goleft:
+                currextremadelta += stepint
+            print('Current extrema delta: ' + str(currextremadelta))
+            currminslist = []
+            for j in range(Wimport.shape[1]):
+                tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
+                # Remove inds for top extremadelta of weights
+                tempremoveinds = np.where(tempwtarray > np.quantile(tempwtarray, 1 - currextremadelta))
+                tempwtarray = np.delete(tempwtarray, tempremoveinds)
+                tempwtarray = tempwtarray / np.sum(tempwtarray)
+                tempimportancedraws = np.delete(impdict['postSamples'], tempremoveinds, axis=0)
+                tempRimport = np.delete(Rimport, tempremoveinds, axis=0)
+                # todo: UPDATE HERE
+                est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
+                # todo: UPDATE HERE
+                currminslist.append(cand_obj_val_decomp(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
+            print('Current loss: ' + str(np.average(currminslist)))
+            if np.average(currminslist) < currminsavg:
+                if goleft == False:  # We've already gone left and right; we're done
+                    print('tried left and right; done')
+                    minslist = lastminslist.copy()
+                    estincr = False
+                elif firstiter == True:  # We need to try right also
+                    print('try right')
+                    goleft = False
+                    currextremadelta += stepint
+                else:  # We've gone left multiple times, and need to revert to the last minslist
+                    print('stop going left; done')
+                    minslist = lastminslist.copy()
+                    estincr = False
+            else:
+                lastminslist = currminslist.copy()
+                currminsavg = np.average(lastminslist)
+            itercount += 1
+            if itercount > 1:
+                firstiter = False
+
+    return minslist, preserve_CI
+
+def getImportanceUtilityEstimate_decomp(n, lgdict, paramdict, numimportdraws, numdatadrawsforimportance=1000,
+                                  extremadelta=0.01, zlevel=0.95, preservevar=True):
+    testnum = int(np.sum(n))
+    des = n / testnum
+    currlosslist, preserve_CI = sampling_plan_loss_list_importance_decomp(des, testnum, lgdict, paramdict, numimportdraws,
+                                                                   numdatadrawsforimportance, extremadelta,
+                                                                   preservevar=preservevar, preservevarzlevel=zlevel)
+    currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
+    if preservevar==True:  # Use the width of preserve_CI to build currloss_CI
+        currloss_CI = preserve_CI - np.average(preserve_CI) + currloss_avg
+    return paramdict['baseloss'] - currloss_avg, (paramdict['baseloss'] - currloss_CI[1],
+                                                  paramdict['baseloss'] - currloss_CI[0])
+
+
+
+u, CI = getImportanceUtilityEstimate_decomp(n, lgdict, paramdict, numimportdraws=2000,
+                                            extremadelta=-1, preservevar=False)
+
