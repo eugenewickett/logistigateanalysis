@@ -691,22 +691,23 @@ MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution', cmapstr='B
 ###########################################
 # Need to restructure the utility output to be a vector across nodes
 
-
 def cand_obj_val_decomp(x, truthdraws, Wvec, paramdict, riskmat):
     """Returns the objective for the optimization step of identifying a Bayes minimizer"""
     scoremat = lf.score_diff_matrix(truthdraws, x.reshape(1, truthdraws[0].shape[0]), paramdict['scoredict'])[0]
     return np.sum(scoremat * riskmat * paramdict['marketvec'] * np.reshape(Wvec, (truthdraws.shape[0], 1)), axis=0)
 
-temp = np.sum(scoremat * riskmat * paramdict['marketvec'] * np.reshape(Wvec, (truthdraws.shape[0], 1)), axis=0)
-x=est.copy()
-truthdraws = tempimportancedraws.copy()
-Wvec = tempwtarray.copy()
-riskmat = tempRimport.copy()
+def baseloss_decomp(truthdraws, paramdict):
+    """
+    Returns the base loss associated with the set of truthdraws and the scoredict/riskdict included in paramdict;
+    should be used when estimating utility; THIS VERSION RETURNS THE BASE LOSS DECOMPOSED BY NODE
+    """
+    q = paramdict['scoredict']['underestweight'] / (1 + paramdict['scoredict']['underestweight'])
+    est = sampf.bayesest_critratio(truthdraws, np.ones((truthdraws.shape[0])) / truthdraws.shape[0], q)
+    return cand_obj_val_decomp(est, truthdraws, np.ones((truthdraws.shape[0])) / truthdraws.shape[0], paramdict,
+                        lf.risk_check_array(truthdraws, paramdict['riskdict']))
 
-thing = scoremat * riskmat * paramdict['marketvec']
-thingbyW = thing*np.reshape(Wvec, (1980,1))
-np.sum(thingbyW)
-cand_obj_val_decomp(est, tempimportancedraws, tempwtarray, paramdict, tempRimport)
+baselossDecomp = baseloss_decomp(paramdict['truthdraws'], paramdict)
+
 
 def sampling_plan_loss_list_importance_decomp(design, numtests, priordatadict, paramdict,
                                               numimportdraws, numdatadrawsforimportance=1000,
@@ -854,7 +855,7 @@ def sampling_plan_loss_list_importance_decomp(design, numtests, priordatadict, p
             if not goleft:
                 currextremadelta += stepint
             print('Current extrema delta: ' + str(currextremadelta))
-            currminslist = []
+            currminslist = np.empty((Wimport.shape[1], numSN+numTN))
             for j in range(Wimport.shape[1]):
                 tempwtarray = Wimport[:, j] * VoverU * numimportdraws / np.sum(Wimport[:, j] * VoverU)
                 # Remove inds for top extremadelta of weights
@@ -866,9 +867,9 @@ def sampling_plan_loss_list_importance_decomp(design, numtests, priordatadict, p
                 # todo: UPDATE HERE
                 est = sampf.bayesest_critratio(tempimportancedraws, tempwtarray, q)
                 # todo: UPDATE HERE
-                currminslist.append(cand_obj_val_decomp(est, tempimportancedraws, tempwtarray, paramdict, tempRimport))
-            print('Current loss: ' + str(np.average(currminslist)))
-            if np.average(currminslist) < currminsavg:
+                currminslist[j, :] = cand_obj_val_decomp(est, tempimportancedraws, tempwtarray, paramdict, tempRimport)
+            print('Current loss: ' + str(np.average(np.sum(currminslist, axis=1))))
+            if np.average(np.sum(currminslist,axis=1)) < currminsavg:
                 if goleft == False:  # We've already gone left and right; we're done
                     print('tried left and right; done')
                     minslist = lastminslist.copy()
@@ -883,20 +884,28 @@ def sampling_plan_loss_list_importance_decomp(design, numtests, priordatadict, p
                     estincr = False
             else:
                 lastminslist = currminslist.copy()
-                currminsavg = np.average(lastminslist)
+                currminsavg = np.average(np.sum(lastminslist, axis=1))
             itercount += 1
             if itercount > 1:
                 firstiter = False
 
     return minslist, preserve_CI
 
+planlossDecomp = sampling_plan_loss_list_importance_decomp(n/int(np.sum(n)), int(np.sum(n)), lgdict, paramdict,
+                                              numimportdraws=10000, extremadelta=-1, preservevar=False)
+
+def getSNTNbaselossprops():
+    pass
+    return
+
 def getImportanceUtilityEstimate_decomp(n, lgdict, paramdict, numimportdraws, numdatadrawsforimportance=1000,
                                   extremadelta=0.01, zlevel=0.95, preservevar=True):
     testnum = int(np.sum(n))
     des = n / testnum
-    currlosslist, preserve_CI = sampling_plan_loss_list_importance_decomp(des, testnum, lgdict, paramdict, numimportdraws,
-                                                                   numdatadrawsforimportance, extremadelta,
-                                                                   preservevar=preservevar, preservevarzlevel=zlevel)
+    currlosslist, preserve_CI = sampling_plan_loss_list_importance_decomp(des, testnum, lgdict, paramdict,
+                                                                          numimportdraws, numdatadrawsforimportance,
+                                                                          extremadelta, preservevar=preservevar,
+                                                                          preservevarzlevel=zlevel)
     currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=zlevel)
     if preservevar==True:  # Use the width of preserve_CI to build currloss_CI
         currloss_CI = preserve_CI - np.average(preserve_CI) + currloss_avg
