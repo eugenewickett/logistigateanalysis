@@ -218,34 +218,11 @@ def scipytoallocation(spo_x, distNames, regNames, seqlist_trim_df, eliminateZero
 
 scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
-'''SOLUTION UNDER ORIGINAL IP-RP; 
-Bambey: 1 0 11
-Birkilane: 1 0 8
-Dakar: 1 17 25
-Fatick: 1 0 14
-Foundiougne: 1 0 10
-Gossas: 1 0 9
-Guinguineo: 1 0 11
-Kaffrine: 1 0 11
-Kaolack: 1 3 39
-Keur Massar: 1 0 31
-Koungheul: 1 9 36
-Malem Hoddar: 1 0 10
-Mbacke: 1 0 8
-Nioro du Rip: 1 0 15
-Pikine: 1 0 9
-Path: Dakar Fatick Kaolack Kaffrine Diourbel
-
-util: 2.494192171959302
-util_CI: (2.483419894433508, 2.5049644494850956)
-
-SNavg_ratio: 0.281401854653864
-'''
 def scipysoltoallocvec(spo_x, tnnum):
     return spo_x[tnnum:tnnum*2] + spo_x[tnnum*2:tnnum*3]
 
 def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray',
-                          vlist='NA', sortby='districtcost'):
+                          vlist='NA', sortby='districtcost', savefig=False, savelocation=''):
     """Generate an allocation heat map"""
     distNames = optparamdict['deptnames']
     # Sort regions by distance to HQ, taken to be row 0
@@ -281,17 +258,46 @@ def MakeAllocationHeatMap(n, optparamdict, plotTitle='', cmapstr='gray',
     plt.xlabel('Ranked distance from regional capital')
     plt.title(plotTitle)
     plt.tight_layout()
+    if savefig == True:
+        plt.savefig(savelocation)
     plt.show()
+
     return
 
+floc =  os.path.join(os.getcwd(), 'studies', 'OPsolCorr_3APR25')
+
 n = scipysoltoallocvec(initsoln, numTN)
-MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues',
+                      savefig=True, savelocation=os.path.join(floc, 'alloc_base'))
 
 # util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
 #                                                    extremadelta=-1, preservevar=False)
 # print(util)
 # print(util_CI)
 
+'''SOLUTION UNDER ORIGINAL IP-RP; 
+Bambey: 1 0 11
+Birkilane: 1 0 8
+Dakar: 1 17 25
+Fatick: 1 0 14
+Foundiougne: 1 0 10
+Gossas: 1 0 9
+Guinguineo: 1 0 11
+Kaffrine: 1 0 11
+Kaolack: 1 3 39
+Keur Massar: 1 0 31
+Koungheul: 1 9 36
+Malem Hoddar: 1 0 10
+Mbacke: 1 0 8
+Nioro du Rip: 1 0 15
+Pikine: 1 0 9
+Path: Dakar Fatick Kaolack Kaffrine Diourbel
+
+util: 2.494192171959302
+util_CI: (2.483419894433508, 2.5049644494850956)
+
+SNavg_ratio: 0.281401854653864
+'''
 
 ########
 # Now update omegaMat and see what happens
@@ -317,6 +323,15 @@ spoOutput = milp(c=optobjvec, constraints=optconstraints, integrality=optintegra
 initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
 scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
+n = scipysoltoallocvec(initsoln, numTN)
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Solution w/ basic Jaccard index', cmapstr='Blues',
+                      savefig=True, savelocation=os.path.join(floc, 'alloc_basicjaccard'))
+
+# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+#                                                    extremadelta=-1, preservevar=False)
+# print(util)
+# print(util_CI)
+
 ''' SOLUTION WITH INITIAL JACCARD INDEX; TOO MUCH VALUE FROM SIMPLY INCREASING TESTS AT REACHABLE LOCATIONS
 Dakar: 1 26 25
 Fatick: 1 14 67
@@ -331,12 +346,7 @@ util_CI: (1.7069057761018946, 1.7276282566562173)
 
 SNavg_ratio: 0.
 '''
-n = scipysoltoallocvec(initsoln, numTN)
-MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
-# util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
-#                                                    extremadelta=-1, preservevar=False)
-# print(util)
-# print(util_CI)
+
 
 ###############
 ### TRY Q NORM
@@ -410,7 +420,9 @@ initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
 scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 n = scipysoltoallocvec(initsoln, numTN)
-MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Solution w/ improved Jaccard index', cmapstr='Blues',
+                      savefig=True, savelocation=os.path.join(floc, 'alloc_improvedjaccard'))
+
 
 # util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
 #                                                    extremadelta=-1, preservevar=False)
@@ -446,7 +458,8 @@ initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
 scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 n = scipysoltoallocvec(initsoln, numTN)
-MakeAllocationHeatMap(n, optparamdict, plotTitle='Base IP-RP solution', cmapstr='Blues')
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Solution w/ improved Jaccard index', cmapstr='Blues',
+                      savefig=True, savelocation=os.path.join(floc, 'alloc_nozhat'))
 
 # util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
 #                                                    extremadelta=-1, preservevar=False)
@@ -627,8 +640,8 @@ scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=Tr
 #     print(str(initsoln[i]) + ' ' + str(c_visited[i]))
 
 n = scipysoltoallocvec(initsoln, numTN)
-MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution', cmapstr='Blues')
-
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution, maxSNvalue=0.5', cmapstr='Blues',
+                      savefig=True, savelocation=os.path.join(floc, 'alloc_maxratio_50'))
 # util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
 #                                                    extremadelta=-1, preservevar=False)
 # print(util)
@@ -673,7 +686,8 @@ initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
 scipytoallocation(initsoln, deptNames, regNames, seqlist_trim, eliminateZeros=True)
 
 n = scipysoltoallocvec(initsoln, numTN)
-MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution', cmapstr='Blues')
+MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution, maxSNvalue=0.25', cmapstr='Blues',
+                      savefig=True, savelocation=os.path.join(floc, 'alloc_maxratio_25'))
 
 # util, util_CI = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
 #                                                    extremadelta=-1, preservevar=False)
@@ -1107,6 +1121,8 @@ util:
 util_CI: 
 '''
 
+############### EMPIRICAL ANALYSIS OF DIFFERENT MAXRATIOS ########################
+
 # Look at the effect of different maxratios on the ultimate solution
 maxratiovec = np.arange(0.5,0.06,-0.04)
 for maxratio in maxratiovec:
@@ -1125,5 +1141,11 @@ for maxratio in maxratiovec:
     initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
 
     n = scipysoltoallocvec(initsoln, numTN)
-    MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution, maxratio='+str(maxratio), cmapstr='Blues')
+
+    u, _ = sampf.getImportanceUtilityEstimate(n, lgdict, paramdict, numimportdraws=20000,
+                                                    extremadelta=-1, preservevar=False)
+
+    MakeAllocationHeatMap(n, optparamdict, plotTitle='Coverage solution, maxSNvalue='+str(round(maxratio, 3))+\
+                                                     ', utility='+str(round(u, 5)), cmapstr='Blues',
+                            savefig=True, savelocation=os.path.join(floc,'maxratio_'+str(maxratio*100)[:2]))
 
