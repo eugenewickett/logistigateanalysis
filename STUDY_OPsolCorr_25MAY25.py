@@ -276,15 +276,17 @@ numpathiters = 20  # Number of paths to examine for each maxratio
 maxratiovec = np.arange(0.5, -0.01, -0.05)
 
 # Initialize path cuts object for storing the path used in each iteration
-pathcuts = np.empty((maxratiovec.shape[0], numpathiters))
+# pathcuts = np.empty((maxratiovec.shape[0], numpathiters))
 # Initialize results storage list
-# reslist = pd.read_pickle(pklloc).values.tolist()
-reslist = []
+reslist = pd.read_pickle(pklloc).values.tolist()
+# reslist = []
 
-for maxratioind, maxratio in enumerate(maxratiovec):
+for maxratioind, maxratio in enumerate(maxratiovec[2:]):
     print('Max ratio: '+str(maxratio))
     pathcutslist = []
-    for numpathcut in range(numpathiters):
+    for numpathcut in range(1,numpathiters):
+        #if numpathcut > 0:
+        #    pathcutslist = reslist[-1][2]
         print('Num paths cut: '+str(numpathcut))
         J = np.zeros((numTN, numTN))
         for i in range(numTN):
@@ -311,6 +313,7 @@ for maxratioind, maxratio in enumerate(maxratiovec):
             spoOutput = milp(c=optobjvec_corr, constraints=(optconstraints_corr, pathconstraints),
                          integrality=optintegrality, bounds=optbounds,
                          options={'disp': False, 'mip_rel_gap': 0.001, 'node_limit': 1000000})
+            print('Opt gap: '+str(spoOutput.mip_gap))
         initsoln, initsoln_obj = spoOutput.x, spoOutput.fun*-1
 
         currpathind = np.where(initsoln[3*numTN:3*numTN+numPath] == 1)[0][0]
@@ -325,16 +328,27 @@ for maxratioind, maxratio in enumerate(maxratiovec):
                               cmapstr='Blues', savefig=True,
                               savelocation=os.path.join(floc, 'maxratio_'+str(maxratio*100)[:2]+'_'+str(numpathcut)))
 
+        # Add current path ind to pathcuts list
+        pathcutslist.append(currpathind)
+
         # Save our results
-        newrow = [maxratio, numpathcut, pathcutslist, currpathind, n, u]
+        newrow = [maxratio, numpathcut, pathcutslist[:-1], currpathind, n, u]
         reslist.append(newrow)
         resdict = pd.DataFrame(reslist)
         resdict.columns = ['maxratio', 'numpathcuts', 'pathcutslist', 'pathind', 'n', 'utility']
         resdict.to_pickle(pklloc)
 
-        # Add current path ind to pathcuts list
-        pathcuts[maxratioind, numpathcut] = currpathind
-        pathcutslist.append(currpathind)
+        # Plot utilities across maxratios
+        plotpoints = []
+        for maxratiotemp in maxratiovec:
+            currutilvec = resdict[resdict['maxratio']==maxratiotemp]['utility'].tolist()
+            if not len(currutilvec) == 0:
+                if len(currutilvec) < numpathiters:
+                    currutilvec = currutilvec + [np.nan for i in range(numpathiters-len(currutilvec))]
+                plotpoints.append(currutilvec)
+        plt.plot(np.array(plotpoints).T)
+        plt.ylim([0, 3.3])
+        plt.show()
 
 
 
