@@ -274,6 +274,7 @@ numpathiters = 20  # Number of paths to examine for each maxratio
 
 # Max ratios we wish to examine
 maxratiovec = np.arange(0.5, -0.01, -0.05)
+maxratiovec[-1] = 0  # numpy makes 0 a very small number instead, for some reason
 
 # Initialize path cuts object for storing the path used in each iteration
 # pathcuts = np.empty((maxratiovec.shape[0], numpathiters))
@@ -281,10 +282,10 @@ maxratiovec = np.arange(0.5, -0.01, -0.05)
 reslist = pd.read_pickle(pklloc).values.tolist()
 # reslist = []
 
-for maxratioind, maxratio in enumerate(maxratiovec[2:]):
+for maxratioind, maxratio in enumerate(maxratiovec[10:]):
     print('Max ratio: '+str(maxratio))
     pathcutslist = []
-    for numpathcut in range(1,numpathiters):
+    for numpathcut in range(1, numpathiters):
         #if numpathcut > 0:
         #    pathcutslist = reslist[-1][2]
         print('Num paths cut: '+str(numpathcut))
@@ -324,9 +325,10 @@ for maxratioind, maxratio in enumerate(maxratiovec[2:]):
                                                         extremadelta=-1, preservevar=False)
         print('Utility: '+str(u))
         MakeAllocationHeatMap(n, optparamdict,
-                              plotTitle='Coverage sol., maxSNval='+str(round(maxratio, 3))+', U='+str(round(u, 5))+', pathInd='+str(currpathind),
+                              plotTitle='Coverage sol., maxSNval='+str(round(maxratio, 3))+', U='+str(round(u, 5))+\
+                                        ', pathInd='+str(currpathind),
                               cmapstr='Blues', savefig=True,
-                              savelocation=os.path.join(floc, 'maxratio_'+str(maxratio*100)[:2]+'_'+str(numpathcut)))
+                              savelocation=os.path.join(floc, 'maxratio_'+str(maxratio*100)[:1]+'_'+str(numpathcut)))
 
         # Add current path ind to pathcuts list
         pathcutslist.append(currpathind)
@@ -350,9 +352,23 @@ for maxratioind, maxratio in enumerate(maxratiovec[2:]):
         plt.ylim([0, 3.3])
         plt.show()
 
+# Make a plot of utilities vs maxratio
+res_df = pd.read_pickle(pklloc)
+xlist = []
+ylist = []
+xax = [str(round(maxratiovec[i],2)) for i in range(maxratiovec.shape[0])]
+for maxratind, maxrat in enumerate(maxratiovec):
+    currutils = res_df[res_df['maxratio'] == maxrat]['utility']
+    for val in currutils:
+        xlist.append(maxrat)
+        ylist.append(val)
 
-
-
+plt.plot(xlist, ylist, 'x',)
+plt.title("Util. eval. for top 20 path candidates vs.\nMax SN ratio")
+plt.xlabel("Max SN ratio")
+plt.ylabel("Utility")
+plt.ylim([0,3])
+plt.show()
 
 
 
