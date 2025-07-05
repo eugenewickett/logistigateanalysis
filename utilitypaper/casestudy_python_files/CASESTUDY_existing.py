@@ -230,9 +230,7 @@ while not stop:
 
 
 
-
-
-targind = 10 # where do we want to gauge budget savings?
+targind = 10 # what do we want to gauge budget savings against (our "peg")?
 targval = util_avg[targind]
 
 # Uniform

@@ -1,5 +1,9 @@
 """
 Utility estimates for the 'all-provinces' setting
+5-JUL UPDATE: For the 300k/1k fast estimation, we use the previously identified allocation rather
+                than generate the allocation all over again AND identify the utility estimates, for
+                time considerations. This shouldn't drastically affect the allocation produced by
+                the greedy heuristic.
 """
 from logistigate.logistigate import utilities as util # Pull from the submodule "develop" branch
 from logistigate.logistigate import methods
@@ -93,6 +97,9 @@ paramdict['baseloss'] = sampf.baseloss(paramdict['truthdraws'], paramdict)
 
 util.print_param_checks(paramdict)  # Check of used parameters
 
+storestr = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'allprovinces')
+
+
 ###############
 # GREEDY HEURISTIC
 ###############
@@ -101,17 +108,23 @@ alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_allprov, 
                                                                 printupdate=True, plotupdate=True,
                                                                 plottitlestr='All-provinces Setting')
 
-storestr = os.path.join(os.getcwd(), 'utilitypaper', 'casestudy_python_files', 'allprovinces')
+# np.save(os.path.join(storestr, 'exist_alloc'), alloc)
+# np.save(os.path.join(storestr, 'util_avg_greedy'), util_avg)
+# np.save(os.path.join(storestr, 'util_hi_greedy'), util_hi)
+# np.save(os.path.join(storestr, 'util_lo_greedy'), util_lo)
 
-np.save(os.path.join(storestr, 'exist_alloc'), alloc)
-np.save(os.path.join(storestr, 'util_avg_greedy'), util_avg)
-np.save(os.path.join(storestr, 'util_hi_greedy'), util_hi)
-np.save(os.path.join(storestr, 'util_lo_greedy'), util_lo)
+alloc = np.load(os.path.join(storestr, 'allprov_alloc.npy'))
 
-# 19-MAR-25
-# bestallocnodes = [4, 6, 7, 5, 1,
-#                   7,
-# ]
+# 5-JUL-25: TRANSCRIBED FROM OLD ALLOCATION PLOT
+bestallocnodes = [4, 6, 7, 5, 1,
+                  7, 7, 5, 0, 5,
+                  7, 4, 4, 6, 6,
+                  6, 3, 2, 2, 6,
+                  1, 1, 1, 1, 3,
+                  1, 4, 1, 4, 7,
+                  7, 1, 1, 3, 6,
+                  6, 6, 3, 1, 3]
+
 '''
 (0.13763228686300044, 0.14425541844816392)
 (0.26890504514003544, 0.27762338324634106)
@@ -120,19 +133,146 @@ np.save(os.path.join(storestr, 'util_lo_greedy'), util_lo)
 (0.5741617853005092, 0.5888570926643819)
 (0.6363024343700694, 0.6510312563696932)
 '''
-#####################
-#####################
-#####################
+
+def unif_design_mat(numTN, testmax, testint=1):
+    """
+    Generates a design matrix that allocates tests uniformly across all test nodes, for a max number of tests (testmax),
+    a testing interval (testint), and a number of test nodes (numTN)
+    """
+    numcols = int(testmax / testint)
+    testarr = np.arange(testint, testmax + testint, testint)
+    des = np.zeros((numTN, int(testmax / testint)))
+    for j in range(numcols):
+        des[:, j] = np.ones(numTN) * np.floor(testarr[j] / numTN)
+        numtoadd = testarr[j] - np.sum(des[:, j])
+        if numtoadd > 0:
+            for k in range(int(numtoadd)):
+                des[k, j] += 1
+
+    return des / testarr
+
+def rudi_design_mat(numTN, testmax, testint=1):
+    """
+    Generates a design matrix that allocates tests uniformly across all test nodes, for a max number of tests (testmax),
+    a testing interval (testint), and a number of test nodes (numTN)
+    """
+    numcols = int(testmax / testint)
+    testarr = np.arange(testint, testmax + testint, testint)
+    des = np.zeros((numTN, numcols))
+    for j in range(numcols):
+        des[:, j] = np.concatenate((np.floor(np.divide(np.sum(Nexpl[:4], axis=1), np.sum(Nexpl[:4])) * testarr[j]),
+                                   np.zeros((4))))
+        numtoadd = testarr[j] - np.sum(des[:, j])
+        if numtoadd > 0:
+            for k in range(int(numtoadd)):
+                des[k, j] += 1
+
+    return des / testarr
+
+unif_mat = unif_design_mat(numTN, testmax, testint)
+rudi_mat = rudi_design_mat(numTN, testmax, testint)
+
+# Initialize our utility estimate storage arrays
+# util_avg_greedy, util_hi_greedy, util_lo_greedy = np.zeros(alloc.shape[1]), np.zeros(alloc.shape[1]), np.zeros(alloc.shape[1])
+# util_avg_unif, util_hi_unif, util_lo_unif = np.zeros(alloc.shape[1]), np.zeros(alloc.shape[1]), np.zeros(alloc.shape[1])
+# util_avg_rudi, util_hi_rudi, util_lo_rudi = np.zeros(alloc.shape[1]), np.zeros(alloc.shape[1]), np.zeros(alloc.shape[1])
+# np.save(os.path.join(storestr, 'util_avg_greedy_eff'), util_avg_greedy)
+# np.save(os.path.join(storestr, 'util_hi_greedy_eff'), util_hi_greedy)
+# np.save(os.path.join(storestr, 'util_lo_greedy_eff'), util_lo_greedy)
+# np.save(os.path.join(storestr, 'util_avg_unif_eff'), util_avg_unif)
+# np.save(os.path.join(storestr, 'util_hi_unif_eff'), util_hi_unif)
+# np.save(os.path.join(storestr, 'util_lo_unif_eff'), util_lo_unif)
+# np.save(os.path.join(storestr, 'util_avg_rudi_eff'), util_avg_rudi)
+# np.save(os.path.join(storestr, 'util_hi_rudi_eff'), util_hi_rudi)
+# np.save(os.path.join(storestr, 'util_lo_rudi_eff'), util_lo_rudi)
+
+
+stop = False
+while not stop:
+    alloc = np.load(os.path.join(storestr, 'allprov_alloc.npy'))
+    util_avg_greedy, util_hi_greedy, util_lo_greedy = np.load(os.path.join(storestr, 'util_avg_greedy_eff.npy')), \
+        np.load(os.path.join(storestr, 'util_hi_greedy_eff.npy')), \
+        np.load(os.path.join(storestr, 'util_lo_greedy_eff.npy'))
+    util_avg_unif, util_hi_unif, util_lo_unif = np.load(os.path.join(storestr, 'util_avg_unif_eff.npy')), \
+        np.load(os.path.join(storestr, 'util_hi_unif_eff.npy')), \
+        np.load(os.path.join(storestr, 'util_lo_unif_eff.npy'))
+    util_avg_rudi, util_hi_rudi, util_lo_rudi = np.load(os.path.join(storestr, 'util_avg_rudi_eff.npy')), \
+        np.load(os.path.join(storestr, 'util_hi_rudi_eff.npy')), \
+        np.load(os.path.join(storestr, 'util_lo_rudi_eff.npy'))
+
+    if util_avg_greedy[-1] > 0:
+        stop = True
+    else:  # Do a set of utility estimates at the next zero
+        # Index skips first column, which should be zeros for all
+        currind = np.where(util_avg_greedy[1:] == 0)[0][0]
+        print("Current testnum: " + str((currind+1)*testint))
+        currbudget = testarr[currind]
+
+        curralloc = alloc[:, currind + 1]
+        des_greedy = curralloc / np.sum(curralloc)
+        des_unif = unif_mat[:, currind]
+        des_rudi = rudi_mat[:, currind]
+
+        # Greedy
+        currlosslist = sampf.sampling_plan_loss_list_parallel(des_greedy, currbudget, csdict_allprov, paramdict)
+
+        avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_greedy[currind + 1] = paramdict['baseloss'] - avg_loss
+        util_lo_greedy[currind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
+        util_hi_greedy[currind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
+        print(des_greedy)
+        print('Utility at ' + str(currbudget) + ' tests, Greedy: ' + str(util_avg_greedy[currind + 1]))
+
+        # Uniform
+        currlosslist = sampf.sampling_plan_loss_list_parallel(des_unif, currbudget, csdict_allprov, paramdict)
+
+        avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_unif[currind + 1] = paramdict['baseloss'] - avg_loss
+        util_lo_unif[currind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
+        util_hi_unif[currind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
+        print(des_unif)
+        print('Utility at ' + str(currbudget) + ' tests, Uniform: ' + str(util_avg_unif[currind + 1]))
+
+        # Rudimentary
+        currlosslist = sampf.sampling_plan_loss_list_parallel(des_rudi, currbudget, csdict_allprov, paramdict)
+
+        avg_loss, avg_loss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+        util_avg_rudi[currind + 1] = paramdict['baseloss'] - avg_loss
+        util_lo_rudi[currind + 1] = paramdict['baseloss'] - avg_loss_CI[1]
+        util_hi_rudi[currind + 1] = paramdict['baseloss'] - avg_loss_CI[0]
+        print(des_rudi)
+        print('Utility at ' + str(currbudget) + ' tests, Rudimentary: ' + str(util_avg_rudi[currind + 1]))
+
+        np.save(os.path.join(storestr, 'util_avg_greedy_eff'), util_avg_greedy)
+        np.save(os.path.join(storestr, 'util_hi_greedy_eff'), util_hi_greedy)
+        np.save(os.path.join(storestr, 'util_lo_greedy_eff'), util_lo_greedy)
+        np.save(os.path.join(storestr, 'util_avg_unif_eff'), util_avg_unif)
+        np.save(os.path.join(storestr, 'util_hi_unif_eff'), util_hi_unif)
+        np.save(os.path.join(storestr, 'util_lo_unif_eff'), util_lo_unif)
+        np.save(os.path.join(storestr, 'util_avg_rudi_eff'), util_avg_rudi)
+        np.save(os.path.join(storestr, 'util_hi_rudi_eff'), util_hi_rudi)
+        np.save(os.path.join(storestr, 'util_lo_rudi_eff'), util_lo_rudi)
+
+    # Plot
+    #numint = util_avg.shape[0]
+    util.plot_marg_util_CI(np.vstack((util_avg_greedy, util_avg_unif, util_avg_rudi)),
+                           np.vstack((util_hi_greedy, util_hi_unif, util_hi_rudi)),
+                           np.vstack((util_lo_greedy, util_lo_unif, util_lo_rudi)),
+                           testmax, testint, titlestr="Greedy, Uniform, and Rudimentary",
+                           labels=['Greedy', 'Uniform', 'Rudimentary'])
+
+
+
 
 
 
 stop = False
 while not stop:
     # Read in the current allocation
-    alloc = np.load(os.path.join('..', 'allprovinces', 'allprov_alloc.npy'))
-    util_avg = np.load(os.path.join('..', 'allprovinces', 'allprov_util_avg.npy'))
-    util_hi = np.load(os.path.join('..', 'allprovinces', 'allprov_util_hi.npy'))
-    util_lo = np.load(os.path.join('..', 'allprovinces', 'allprov_util_lo.npy'))
+    alloc = np.load(os.path.join(storestr, 'allprov_alloc.npy'))
+    util_avg = np.load(os.path.join(storestr, 'allprov_util_avg.npy'))
+    util_hi = np.load(os.path.join(storestr, 'allprov_util_hi.npy'))
+    util_lo = np.load(os.path.join(storestr, 'allprov_util_lo.npy'))
     # Stop if the last allocation column is empty
     if np.sum(alloc[:, -1]) > 0:
         stop = True
@@ -178,6 +318,23 @@ END RESTARTABLE GREEDY ALLOCATION
 '''
 
 
+
+
+
+
+############################
+############################
+############################
+############################
+############################
+############################
+
+
+
+'''
+5-JUL
+DISREGARD EVERYTHING BELOW HERE, WHICH IS COPIED FROM BEFORE AND OLD
+'''
 
 alloc, util_avg, util_hi, util_lo = sampf.get_greedy_allocation(csdict_allprov, testmax, testint, paramdict,
                                                                 numimpdraws=60000, numdatadrawsforimp=5000,
