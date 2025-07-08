@@ -74,22 +74,23 @@ for tn in range(Nfam.shape[0]):
 
 Nlist_sort, Ylist_sort, simlist_sort = zip(*sorted(zip(Nlist, Ylist, simlist), key=lambda x: x[0]))
 
-fig, axs = plt.subplots(9, 4, figsize=(5, 6))
+fig, axs = plt.subplots(4, 9, figsize=(7, 4))
 currpltrow, currpltcol = 0, 0
 for i in range(len(Nlist_sort)):
     _, _, patches = axs[currpltrow, currpltcol].hist(simlist_sort[i],
                                      bins=np.arange(0, Nlist_sort[i]+2),
                                      color='cyan')
-    patches[int(Ylist_sort[i])].set_fc('red')
+    patches[int(Ylist_sort[i])].set_fc('black')
     axs[currpltrow, currpltcol].set_xticks([])
     axs[currpltrow, currpltcol].set_yticks([])
-    if currpltcol == 3:
+    if currpltcol == 8:
         currpltrow += 1
         currpltcol = 0
     else:
         currpltcol += 1
 plt.suptitle('Prior predictive distributions vs. observed SFPs,\nfor 36 traces',
              size=14)
+plt.tight_layout()
 plt.show()
 
 
