@@ -265,54 +265,54 @@ while not stop:
 
 
 
-
-stop = False
-while not stop:
-    # Read in the current allocation
-    alloc = np.load(os.path.join(storestr, 'allprov_alloc.npy'))
-    util_avg = np.load(os.path.join(storestr, 'allprov_util_avg.npy'))
-    util_hi = np.load(os.path.join(storestr, 'allprov_util_hi.npy'))
-    util_lo = np.load(os.path.join(storestr, 'allprov_util_lo.npy'))
-    # Stop if the last allocation column is empty
-    if np.sum(alloc[:, -1]) > 0:
-        stop = True
-    else:
-        testnumind = np.argmax(np.sum(alloc, axis=0))
-        bestalloc = alloc[:, testnumind]
-        nextTN = -1 # Initialize next best node
-        currbestloss_avg, currbestloss_CI = -1, (-1, -1) # Initialize next best utility
-        for currTN in range(numTN):  # Loop through each test node and identify best direction via lowest avg loss
-            curralloc = bestalloc.copy()
-            curralloc[currTN] += 1  # Increment 1 at current test node
-            testnum = np.sum(curralloc) * testint
-            currdes = curralloc / np.sum(curralloc)  # Make a proportion design
-            currlosslist = sampf.sampling_plan_loss_list_importance(currdes, testnum, csdict_allprov, paramdict,
-                                                                    numimportdraws=60000,
-                                                                    numdatadrawsforimportance=5000,
-                                                                    impweightoutlierprop=0.005)
-            currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
-            print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
-            if nextTN == -1 or currloss_avg < currbestloss_avg:  # Update with better loss
-                nextTN = currTN
-                currbestloss_avg = currloss_avg
-                currbestloss_CI = currloss_CI
-        # Store best results
-        alloc[:, testnumind + 1] = bestalloc.copy()
-        alloc[nextTN, testnumind + 1] += 1
-        util_avg[testnumind + 1] = paramdict['baseloss'] - currbestloss_avg
-        util_hi[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[0]
-        util_lo[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[1]
-        # Save as numpy objects
-        np.save(os.path.join('..', 'allprovinces', 'allprov_alloc'), alloc)
-        np.save(os.path.join('..', 'allprovinces', 'allprov_util_avg'), util_avg)
-        np.save(os.path.join('..', 'allprovinces', 'allprov_util_hi'), util_hi)
-        np.save(os.path.join('..', 'allprovinces', 'allprov_util_lo'), util_lo)
-        print('TN ' + str(nextTN) + ' added, with utility CI of (' + str(util_lo[testnumind + 1]) + ', ' +
-              str(util_hi[testnumind + 1]) + ') for ' + str(testnum) + ' tests')
-        numint = util_avg.shape[0]
-        util.plot_marg_util_CI(util_avg.reshape(1, numint), util_hi.reshape(1, numint), util_lo.reshape(1, numint),
-                               testmax, testint, titlestr='')
-        util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint, titlestr='')
+#
+# stop = False
+# while not stop:
+#     # Read in the current allocation
+#     alloc = np.load(os.path.join(storestr, 'allprov_alloc.npy'))
+#     util_avg = np.load(os.path.join(storestr, 'allprov_util_avg.npy'))
+#     util_hi = np.load(os.path.join(storestr, 'allprov_util_hi.npy'))
+#     util_lo = np.load(os.path.join(storestr, 'allprov_util_lo.npy'))
+#     # Stop if the last allocation column is empty
+#     if np.sum(alloc[:, -1]) > 0:
+#         stop = True
+#     else:
+#         testnumind = np.argmax(np.sum(alloc, axis=0))
+#         bestalloc = alloc[:, testnumind]
+#         nextTN = -1 # Initialize next best node
+#         currbestloss_avg, currbestloss_CI = -1, (-1, -1) # Initialize next best utility
+#         for currTN in range(numTN):  # Loop through each test node and identify best direction via lowest avg loss
+#             curralloc = bestalloc.copy()
+#             curralloc[currTN] += 1  # Increment 1 at current test node
+#             testnum = np.sum(curralloc) * testint
+#             currdes = curralloc / np.sum(curralloc)  # Make a proportion design
+#             currlosslist = sampf.sampling_plan_loss_list_importance(currdes, testnum, csdict_allprov, paramdict,
+#                                                                     numimportdraws=60000,
+#                                                                     numdatadrawsforimportance=5000,
+#                                                                     impweightoutlierprop=0.005)
+#             currloss_avg, currloss_CI = sampf.process_loss_list(currlosslist, zlevel=0.95)
+#             print('TN ' + str(currTN) + ' loss avg.: ' + str(currloss_avg))
+#             if nextTN == -1 or currloss_avg < currbestloss_avg:  # Update with better loss
+#                 nextTN = currTN
+#                 currbestloss_avg = currloss_avg
+#                 currbestloss_CI = currloss_CI
+#         # Store best results
+#         alloc[:, testnumind + 1] = bestalloc.copy()
+#         alloc[nextTN, testnumind + 1] += 1
+#         util_avg[testnumind + 1] = paramdict['baseloss'] - currbestloss_avg
+#         util_hi[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[0]
+#         util_lo[testnumind + 1] = paramdict['baseloss'] - currbestloss_CI[1]
+#         # Save as numpy objects
+#         np.save(os.path.join('..', 'allprovinces', 'allprov_alloc'), alloc)
+#         np.save(os.path.join('..', 'allprovinces', 'allprov_util_avg'), util_avg)
+#         np.save(os.path.join('..', 'allprovinces', 'allprov_util_hi'), util_hi)
+#         np.save(os.path.join('..', 'allprovinces', 'allprov_util_lo'), util_lo)
+#         print('TN ' + str(nextTN) + ' added, with utility CI of (' + str(util_lo[testnumind + 1]) + ', ' +
+#               str(util_hi[testnumind + 1]) + ') for ' + str(testnum) + ' tests')
+#         numint = util_avg.shape[0]
+#         util.plot_marg_util_CI(util_avg.reshape(1, numint), util_hi.reshape(1, numint), util_lo.reshape(1, numint),
+#                                testmax, testint, titlestr='')
+#         util.plot_plan(alloc, np.arange(0, testmax + 1, testint), testint, titlestr='')
 '''
 END RESTARTABLE GREEDY ALLOCATION
 '''
