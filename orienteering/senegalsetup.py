@@ -9,6 +9,8 @@ import numpy as np
 from numpy.random import choice
 import random
 import scipy.special as spsp
+import matplotlib
+import matplotlib.pyplot as plt
 
 
 def GetSenegalDataMatrices(deidentify=False):
